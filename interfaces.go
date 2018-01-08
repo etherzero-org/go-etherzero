@@ -75,7 +75,7 @@ type ChainReader interface {
 // The returned error is NotFound if the requested item does not exist.
 type TransactionReader interface {
 	// TransactionByHash checks the pool of pending transactions in addition to the
-	// blockchain. The isPending return value indicates whetzer the transaction has been
+	// blockchain. The isPending return value indicates whether the transaction has been
 	// mined yet. Note that the transaction may not be part of the canonical chain even if
 	// it's not pending.
 	TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error)

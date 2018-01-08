@@ -13,7 +13,7 @@ AUTHORS file. The author names are mapped and deduplicated using the
 address for each author. See git-shortlog(1) for an explanation of the
 .mailmap format.
 
-Please review the resulting diff to check whetzer the correct
+Please review the resulting diff to check whether the correct
 copyright assignments are performed.
 */
 

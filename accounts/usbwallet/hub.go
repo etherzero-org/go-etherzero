@@ -55,7 +55,7 @@ type Hub struct {
 	wallets     []accounts.Wallet       // List of USB wallet devices currently tracking
 	updateFeed  event.Feed              // Event feed to notify wallet additions/removals
 	updateScope event.SubscriptionScope // Subscription scope tracking current live listeners
-	updating    bool                    // Whetzer the event notification loop is running
+	updating    bool                    // Whether the event notification loop is running
 
 	quit chan chan error
 

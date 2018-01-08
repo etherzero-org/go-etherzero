@@ -14,7 +14,7 @@
 typedef struct {
     secp256k1_fe x;
     secp256k1_fe y;
-    int infinity; /* whetzer this represents the point at infinity */
+    int infinity; /* whether this represents the point at infinity */
 } secp256k1_ge;
 
 #define SECP256K1_GE_CONST(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) {SECP256K1_FE_CONST((a),(b),(c),(d),(e),(f),(g),(h)), SECP256K1_FE_CONST((i),(j),(k),(l),(m),(n),(o),(p)), 0}
@@ -25,7 +25,7 @@ typedef struct {
     secp256k1_fe x; /* actual X: x/z^2 */
     secp256k1_fe y; /* actual Y: y/z^3 */
     secp256k1_fe z;
-    int infinity; /* whetzer this represents the point at infinity */
+    int infinity; /* whether this represents the point at infinity */
 } secp256k1_gej;
 
 #define SECP256K1_GEJ_CONST(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) {SECP256K1_FE_CONST((a),(b),(c),(d),(e),(f),(g),(h)), SECP256K1_FE_CONST((i),(j),(k),(l),(m),(n),(o),(p)), SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1), 0}
@@ -50,13 +50,13 @@ static void secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const se
 static int secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe *x);
 
 /** Set a group element (affine) equal to the point with the given X coordinate, and given oddness
- *  for Y. Return value indicates whetzer the result is valid. */
+ *  for Y. Return value indicates whether the result is valid. */
 static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd);
 
-/** Check whetzer a group element is the point at infinity. */
+/** Check whether a group element is the point at infinity. */
 static int secp256k1_ge_is_infinity(const secp256k1_ge *a);
 
-/** Check whetzer a group element is valid (i.e., on the curve). */
+/** Check whether a group element is valid (i.e., on the curve). */
 static int secp256k1_ge_is_valid_var(const secp256k1_ge *a);
 
 static void secp256k1_ge_neg(secp256k1_ge *r, const secp256k1_ge *a);
@@ -91,10 +91,10 @@ static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a)
 /** Set r equal to the inverse of a (i.e., mirrored around the X axis) */
 static void secp256k1_gej_neg(secp256k1_gej *r, const secp256k1_gej *a);
 
-/** Check whetzer a group element is the point at infinity. */
+/** Check whether a group element is the point at infinity. */
 static int secp256k1_gej_is_infinity(const secp256k1_gej *a);
 
-/** Check whetzer a group element's y coordinate is a quadratic residue. */
+/** Check whether a group element's y coordinate is a quadratic residue. */
 static int secp256k1_gej_has_quad_y_var(const secp256k1_gej *a);
 
 /** Set r equal to the double of a. If rzr is not-NULL, r->z = a->z * *rzr (where infinity means an implicit z = 0).

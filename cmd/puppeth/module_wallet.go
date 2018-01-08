@@ -152,8 +152,8 @@ func (info *walletInfos) Report() map[string]string {
 	return report
 }
 
-// checkWallet does a health-check against web wallet server to verify whetzer
-// it's running, and if yes, whetzer it's responsive.
+// checkWallet does a health-check against web wallet server to verify whether
+// it's running, and if yes, whether it's responsive.
 func checkWallet(client *sshClient, network string) (*walletInfos, error) {
 	// Inspect a possible web wallet container on the host
 	infos, err := inspectContainer(client, fmt.Sprintf("%s_wallet_1", network))

@@ -80,17 +80,17 @@ func MustParseUint64(s string) uint64 {
 
 // NOTE: The following Methods need to be optimised using either bit checking or asm
 
-// SafeSub returns subtraction result and whetzer overflow occurred.
+// SafeSub returns subtraction result and whether overflow occurred.
 func SafeSub(x, y uint64) (uint64, bool) {
 	return x - y, x < y
 }
 
-// SafeAdd returns the result and whetzer overflow occurred.
+// SafeAdd returns the result and whether overflow occurred.
 func SafeAdd(x, y uint64) (uint64, bool) {
 	return x + y, y > MaxUint64-x
 }
 
-// SafeMul returns multiplication result and whetzer overflow occurred.
+// SafeMul returns multiplication result and whether overflow occurred.
 func SafeMul(x, y uint64) (uint64, bool) {
 	if x == 0 || y == 0 {
 		return 0, false

@@ -117,7 +117,7 @@ func TestDPA_capacity(t *testing.T) {
 	}
 	// Clear memStore
 	memStore.setCapacity(0)
-	// check whetzer it is, indeed, empty
+	// check whether it is, indeed, empty
 	dpa.ChunkStore = memStore
 	resultReader = dpa.Retrieve(key)
 	if _, err = resultReader.ReadAt(resultSlice, 0); err == nil {

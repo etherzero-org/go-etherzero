@@ -467,7 +467,7 @@ type Node struct {
 	// Config if the config used to created the node
 	Config *adapters.NodeConfig `json:"config"`
 
-	// Up tracks whetzer or not the node is running
+	// Up tracks whether or not the node is running
 	Up bool `json:"up"`
 }
 
@@ -514,14 +514,14 @@ type Conn struct {
 	// Other is the node which the connection was made to
 	Other discover.NodeID `json:"other"`
 
-	// Up tracks whetzer or not the connection is active
+	// Up tracks whether or not the connection is active
 	Up bool `json:"up"`
 
 	one   *Node
 	other *Node
 }
 
-// nodesUp returns whetzer both nodes are currently up
+// nodesUp returns whether both nodes are currently up
 func (self *Conn) nodesUp() error {
 	if !self.one.Up {
 		return fmt.Errorf("one %v is not up", self.One)

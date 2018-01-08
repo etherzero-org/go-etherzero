@@ -385,7 +385,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_ecdsa_verify(
  *  Args: ctx:    a secp256k1 context object
  *  Out:  sigout: a pointer to a signature to fill with the normalized form,
  *                or copy if the input was already normalized. (can be NULL if
- *                you're only interested in whetzer the input was already
+ *                you're only interested in whether the input was already
  *                normalized).
  *  In:   sigin:  a pointer to a signature to check/normalize (cannot be NULL,
  *                can be identical to sigout)

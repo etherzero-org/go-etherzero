@@ -40,8 +40,8 @@ type GlogHandler struct {
 	origin Handler // The origin handler this wraps
 
 	level     uint32 // Current log level, atomically accessible
-	override  uint32 // Flag whetzer overrides are used, atomically accessible
-	backtrace uint32 // Flag whetzer backtrace location is set
+	override  uint32 // Flag whether overrides are used, atomically accessible
+	backtrace uint32 // Flag whether backtrace location is set
 
 	patterns  []pattern       // Current list of patterns to override with
 	siteCache map[uintptr]Lvl // Cache of callsite pattern evaluations
@@ -174,7 +174,7 @@ func (h *GlogHandler) BacktraceAt(location string) error {
 // Log implements Handler.Log, filtering a log record through the global, local
 // and backtrace filters, finally emitting it if either allow it through.
 func (h *GlogHandler) Log(r *Record) error {
-	// If backtracing is requested, check whetzer this is the callsite
+	// If backtracing is requested, check whether this is the callsite
 	if atomic.LoadUint32(&h.backtrace) > 0 {
 		// Everything below here is slow. Although we could cache the call sites the
 		// same way as for vmodule, backtracing is so rare it's not worth the extra

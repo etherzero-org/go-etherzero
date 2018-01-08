@@ -263,7 +263,7 @@ func (d *Downloader) Progress() ethzero.SyncProgress {
 	}
 }
 
-// Synchronising returns whetzer the downloader is currently retrieving blocks.
+// Synchronising returns whether the downloader is currently retrieving blocks.
 func (d *Downloader) Synchronising() bool {
 	return atomic.LoadInt32(&d.synchronising) > 0
 }

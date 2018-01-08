@@ -38,7 +38,7 @@ static int secp256k1_num_jacobi(const secp256k1_num *a, const secp256k1_num *b);
 /** Compare the absolute value of two numbers. */
 static int secp256k1_num_cmp(const secp256k1_num *a, const secp256k1_num *b);
 
-/** Test whetzer two number are equal (including sign). */
+/** Test whether two number are equal (including sign). */
 static int secp256k1_num_eq(const secp256k1_num *a, const secp256k1_num *b);
 
 /** Add two (signed) numbers. */
@@ -57,13 +57,13 @@ static void secp256k1_num_mod(secp256k1_num *r, const secp256k1_num *m);
 /** Right-shift the passed number by bits bits. */
 static void secp256k1_num_shift(secp256k1_num *r, int bits);
 
-/** Check whetzer a number is zero. */
+/** Check whether a number is zero. */
 static int secp256k1_num_is_zero(const secp256k1_num *a);
 
-/** Check whetzer a number is one. */
+/** Check whether a number is one. */
 static int secp256k1_num_is_one(const secp256k1_num *a);
 
-/** Check whetzer a number is strictly negative. */
+/** Check whether a number is strictly negative. */
 static int secp256k1_num_is_neg(const secp256k1_num *a);
 
 /** Change a number's sign. */

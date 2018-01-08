@@ -234,7 +234,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 		logFn("Generated ethash verification cache", "elapsed", common.PrettyDuration(elapsed))
 	}()
 
-	// Figure out whetzer the bytes need to be swapped for the machine
+	// Figure out whether the bytes need to be swapped for the machine
 	swapped := !isLittleEndian()
 
 	// Convert our destination slice to a byte buffer

@@ -154,7 +154,7 @@ func (tm *testMatcher) findConfig(name string) *params.ChainConfig {
 	return new(params.ChainConfig)
 }
 
-// checkFailure checks whetzer a failure is expected.
+// checkFailure checks whether a failure is expected.
 func (tm *testMatcher) checkFailure(t *testing.T, name string, err error) error {
 	// TODO(fjl): name can be derived from t when min Go version is 1.8
 	failReason := ""

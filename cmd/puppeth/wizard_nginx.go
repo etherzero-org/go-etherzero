@@ -22,7 +22,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 )
 
-// ensureVirtualHost checks whetzer a reverse-proxy is running on the specified
+// ensureVirtualHost checks whether a reverse-proxy is running on the specified
 // host machine, and if yes requests a virtual host from the user to host a
 // specific web service on. If no proxy exists, the Method will offer to deploy
 // one.

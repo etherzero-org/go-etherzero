@@ -82,7 +82,7 @@ def infinite(p):
 
 
 def law_jacobian_weierstrass_add(A, B, pa, pb, pA, pB, pC):
-  """Check whetzer the passed set of coordinates is a valid Jacobian add, given assumptions"""
+  """Check whether the passed set of coordinates is a valid Jacobian add, given assumptions"""
   assumeLaw = (good_affine_point(pa) +
                good_affine_point(pb) +
                good_jacobian_point(pA) +
@@ -98,7 +98,7 @@ def law_jacobian_weierstrass_add(A, B, pa, pb, pA, pB, pC):
 
 
 def law_jacobian_weierstrass_double(A, B, pa, pb, pA, pB, pC):
-  """Check whetzer the passed set of coordinates is a valid Jacobian doubling, given assumptions"""
+  """Check whether the passed set of coordinates is a valid Jacobian doubling, given assumptions"""
   assumeLaw = (good_affine_point(pa) +
                good_affine_point(pb) +
                good_jacobian_point(pA) +

@@ -91,7 +91,7 @@ type stateObject struct {
 	onDirty   func(addr common.Address) // Callback Method to mark a state object newly dirty
 }
 
-// empty returns whetzer the account is considered empty.
+// empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
 	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
 }

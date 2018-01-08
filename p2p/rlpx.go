@@ -117,7 +117,7 @@ func (t *rlpx) close(err error) {
 
 // doEncHandshake runs the protocol handshake using authenticated
 // messages. the protocol handshake is the first authenticated message
-// and also verifies whetzer the encryption handshake 'worked' and the
+// and also verifies whether the encryption handshake 'worked' and the
 // remote side actually provided the right public key.
 func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err error) {
 	// Writing our handshake happens concurrently, we prefer
@@ -210,7 +210,7 @@ type secrets struct {
 
 // RLPx v4 handshake auth (defined in EIP-8).
 type authMsgV4 struct {
-	gotPlain bool // whetzer read packet had plain format.
+	gotPlain bool // whether read packet had plain format.
 
 	Signature       [sigLen]byte
 	InitiatorPubkey [pubLen]byte

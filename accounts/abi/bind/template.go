@@ -39,7 +39,7 @@ type tmplContract struct {
 type tmplMethod struct {
 	Original   abi.Method // Original Method as parsed by the abi package
 	Normalized abi.Method // Normalized version of the parsed Method (capitalized names, non-anonymous args/returns)
-	Structured bool       // Whetzer the returns should be accumulated into a contract
+	Structured bool       // Whether the returns should be accumulated into a contract
 }
 
 // tmplSource is language to template mapping containing all the supported

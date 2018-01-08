@@ -27,7 +27,7 @@ import (
 // instruction.
 type destinations map[common.Hash]bitvec
 
-// has checks whetzer code has a JUMPDEST at dest.
+// has checks whether code has a JUMPDEST at dest.
 func (d destinations) has(codehash common.Hash, code []byte, dest *big.Int) bool {
 	// PC cannot go beyond len(code) and certainly can't be bigger than 63bits.
 	// Don't bother checking for JUMPDEST in that case.

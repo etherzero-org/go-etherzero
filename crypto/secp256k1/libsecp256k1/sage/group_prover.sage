@@ -31,9 +31,9 @@
 #   - For others, we try to prove the require constraints hold, assuming the
 #     information in assumeLaw + assumeFormula + assumeBranch, and if this does
 #     not succeed, we fail.
-#     + To prove an expression is zero, we check whetzer it belongs to the
+#     + To prove an expression is zero, we check whether it belongs to the
 #       ideal with the assumed zero expressions as basis. This test is exact.
-#     + To prove an expression is nonzero, we check whetzer each of its
+#     + To prove an expression is nonzero, we check whether each of its
 #       factors is contained in the set of nonzero assumptions' factors.
 #       This test is not exact, so various combinations of original and
 #       reduced expressions' factors are tried.
@@ -61,7 +61,7 @@ class fastfrac:
       self.bot = R(denominator(top)) * bot
 
   def iszero(self,I):
-    """Return whetzer this fraction is zero given an ideal."""
+    """Return whether this fraction is zero given an ideal."""
     return self.top in I and self.bot not in I
 
   def reduce(self,assumeZero):
@@ -174,11 +174,11 @@ class constraints:
 
 
 def conflicts(R, con):
-  """Check whetzer any of the passed non-zero assumptions is implied by the zero assumptions"""
+  """Check whether any of the passed non-zero assumptions is implied by the zero assumptions"""
   zero = R.ideal(map(numerator, con.zero))
   if 1 in zero:
     return True
-  # First a cheap check whetzer any of the individual nonzero terms conflict on
+  # First a cheap check whether any of the individual nonzero terms conflict on
   # their own.
   for nonzero in con.nonzero:
     if nonzero.iszero(zero):
@@ -207,7 +207,7 @@ def get_nonzero_set(R, assume):
 
 
 def prove_nonzero(R, exprs, assume):
-  """Check whetzer an expression is provably nonzero, given assumptions"""
+  """Check whether an expression is provably nonzero, given assumptions"""
   zero = R.ideal(map(numerator, assume.zero))
   nonzero = get_nonzero_set(R, assume)
   expl = set()
@@ -246,7 +246,7 @@ def prove_nonzero(R, exprs, assume):
 
 
 def prove_zero(R, exprs, assume):
-  """Check whetzer all of the passed expressions are provably zero, given assumptions"""
+  """Check whether all of the passed expressions are provably zero, given assumptions"""
   r, e = prove_nonzero(R, dict(map(lambda x: (fastfrac(R, x.bot, 1), exprs[x]), exprs)), assume)
   if not r:
     return (False, map(lambda x: "Possibly zero denominator: %s" % x, e))

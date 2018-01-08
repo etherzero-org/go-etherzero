@@ -164,7 +164,7 @@ func discover(out chan<- *upnp, target string, matcher func(*goupnp.RootDevice, 
 			if upnp == nil {
 				return
 			}
-			// check whetzer port mapping is enabled
+			// check whether port mapping is enabled
 			if _, nat, err := upnp.client.GetNATRSIPStatus(); err != nil || !nat {
 				return
 			}

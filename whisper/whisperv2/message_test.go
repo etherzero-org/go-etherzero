@@ -25,7 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/crypto"
 )
 
-// Tests whetzer a message can be wrapped without any identity or encryption.
+// Tests whether a message can be wrapped without any identity or encryption.
 func TestMessageSimpleWrap(t *testing.T) {
 	payload := []byte("hello world")
 
@@ -47,7 +47,7 @@ func TestMessageSimpleWrap(t *testing.T) {
 	}
 }
 
-// Tests whetzer a message can be signed, and wrapped in plain-text.
+// Tests whether a message can be signed, and wrapped in plain-text.
 func TestMessageCleartextSignRecover(t *testing.T) {
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -79,7 +79,7 @@ func TestMessageCleartextSignRecover(t *testing.T) {
 	}
 }
 
-// Tests whetzer a message can be encrypted and decrypted using an anonymous
+// Tests whether a message can be encrypted and decrypted using an anonymous
 // sender (i.e. no signature).
 func TestMessageAnonymousEncryptDecrypt(t *testing.T) {
 	key, err := crypto.GenerateKey()
@@ -111,7 +111,7 @@ func TestMessageAnonymousEncryptDecrypt(t *testing.T) {
 	}
 }
 
-// Tests whetzer a message can be properly signed and encrypted.
+// Tests whether a message can be properly signed and encrypted.
 func TestMessageFullCrypto(t *testing.T) {
 	fromKey, err := crypto.GenerateKey()
 	if err != nil {

@@ -119,7 +119,7 @@ func (l *Netlist) Add(cidr string) {
 	*l = append(*l, *n)
 }
 
-// Contains reports whetzer the given IP is contained in the list.
+// Contains reports whether the given IP is contained in the list.
 func (l *Netlist) Contains(ip net.IP) bool {
 	if l == nil {
 		return false
@@ -132,7 +132,7 @@ func (l *Netlist) Contains(ip net.IP) bool {
 	return false
 }
 
-// IsLAN reports whetzer an IP is a local network address.
+// IsLAN reports whether an IP is a local network address.
 func IsLAN(ip net.IP) bool {
 	if ip.IsLoopback() {
 		return true
@@ -143,7 +143,7 @@ func IsLAN(ip net.IP) bool {
 	return lan6.Contains(ip)
 }
 
-// IsSpecialNetwork reports whetzer an IP is located in a special-use network range
+// IsSpecialNetwork reports whether an IP is located in a special-use network range
 // This includes broadcast, multicast and documentation addresses.
 func IsSpecialNetwork(ip net.IP) bool {
 	if ip.IsMulticast() {
@@ -163,7 +163,7 @@ var (
 	errLAN         = errors.New("LAN address from WAN host")
 )
 
-// CheckRelayIP reports whetzer an IP relayed from the given sender IP
+// CheckRelayIP reports whether an IP relayed from the given sender IP
 // is a valid connection target.
 //
 // There are four rules:

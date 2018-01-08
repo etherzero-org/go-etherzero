@@ -46,7 +46,7 @@ type Event struct {
 	// Time is the time the event happened
 	Time time.Time `json:"time"`
 
-	// Control indicates whetzer the event is the result of a controlled
+	// Control indicates whether the event is the result of a controlled
 	// action in the network
 	Control bool `json:"control"`
 

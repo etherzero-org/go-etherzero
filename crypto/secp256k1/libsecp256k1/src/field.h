@@ -41,11 +41,11 @@ static void secp256k1_fe_normalize_weak(secp256k1_fe *r);
 /** Normalize a field element, without constant-time guarantee. */
 static void secp256k1_fe_normalize_var(secp256k1_fe *r);
 
-/** Verify whetzer a field element represents zero i.e. would normalize to a zero value. The field
+/** Verify whether a field element represents zero i.e. would normalize to a zero value. The field
  *  implementation may optionally normalize the input, but this should not be relied upon. */
 static int secp256k1_fe_normalizes_to_zero(secp256k1_fe *r);
 
-/** Verify whetzer a field element represents zero i.e. would normalize to a zero value. The field
+/** Verify whether a field element represents zero i.e. would normalize to a zero value. The field
  *  implementation may optionally normalize the input, but this should not be relied upon. */
 static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r);
 
@@ -55,7 +55,7 @@ static void secp256k1_fe_set_int(secp256k1_fe *r, int a);
 /** Sets a field element equal to zero, initializing all fields. */
 static void secp256k1_fe_clear(secp256k1_fe *a);
 
-/** Verify whetzer a field element is zero. Requires the input to be normalized. */
+/** Verify whether a field element is zero. Requires the input to be normalized. */
 static int secp256k1_fe_is_zero(const secp256k1_fe *a);
 
 /** Check the "oddness" of a field element. Requires the input to be normalized. */
@@ -102,7 +102,7 @@ static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a);
  *  itself. */
 static int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a);
 
-/** Checks whetzer a field element is a quadratic residue. */
+/** Checks whether a field element is a quadratic residue. */
 static int secp256k1_fe_is_quad_var(const secp256k1_fe *a);
 
 /** Sets a field element to be the (modular) inverse of another. Requires the input's magnitude to be

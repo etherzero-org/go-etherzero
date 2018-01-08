@@ -169,7 +169,7 @@ func (c *testChain) State() (*state.StateDB, error) {
 }
 
 // This test simulates a scenario where a new block is imported during a
-// state reset and tests whetzer the pending state is in sync with the
+// state reset and tests whether the pending state is in sync with the
 // block head event that initiated the resetState().
 func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
 	t.Parallel()
@@ -922,7 +922,7 @@ func TestTransactionPendingLimiting(t *testing.T) {
 	}
 }
 
-// Tests that the transaction limits are enforced the same way irrelevant whetzer
+// Tests that the transaction limits are enforced the same way irrelevant whether
 // the transactions are added one by one or in batches.
 func TestTransactionQueueLimitingEquivalency(t *testing.T)   { testTransactionLimitingEquivalency(t, 1) }
 func TestTransactionPendingLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 0) }

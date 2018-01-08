@@ -88,7 +88,7 @@ func (n *Node) Incomplete() bool {
 	return n.IP == nil
 }
 
-// checks whetzer n is a valid complete node.
+// checks whether n is a valid complete node.
 func (n *Node) validateComplete() error {
 	if n.Incomplete() {
 		return errors.New("incomplete node")

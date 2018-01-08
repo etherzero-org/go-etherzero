@@ -100,7 +100,7 @@ func (info *nginxInfos) Report() map[string]string {
 	}
 }
 
-// checkNginx does a health-check against an nginx reverse-proxy to verify whetzer
+// checkNginx does a health-check against an nginx reverse-proxy to verify whether
 // it's running, and if yes, gathering a collection of useful infos about it.
 func checkNginx(client *sshClient, network string) (*nginxInfos, error) {
 	// Inspect a possible nginx container on the host

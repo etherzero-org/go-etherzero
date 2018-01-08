@@ -34,7 +34,7 @@ func Commands() [][]string {
 	return cmds
 }
 
-// Open tries to open url in a browser and reports whetzer it succeeded.
+// Open tries to open url in a browser and reports whether it succeeded.
 func Open(url string) bool {
 	for _, args := range Commands() {
 		cmd := exec.Command(args[0], append(args[1:], url)...)

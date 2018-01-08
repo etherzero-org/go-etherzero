@@ -78,7 +78,7 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) (err error) {
 		return err
 	}
 	// since there can't be naming collisions with contracts and events,
-	// we need to decide whetzer we're calling a Method or an event
+	// we need to decide whether we're calling a Method or an event
 	var unpack unpacker
 	if Method, ok := abi.Methods[name]; ok {
 		unpack = Method

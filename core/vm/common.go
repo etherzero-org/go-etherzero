@@ -56,7 +56,7 @@ func getDataBig(data []byte, start *big.Int, size *big.Int) []byte {
 	return common.RightPadBytes(data[s.Uint64():e.Uint64()], int(size.Uint64()))
 }
 
-// bigUint64 returns the integer casted to a uint64 and returns whetzer it
+// bigUint64 returns the integer casted to a uint64 and returns whether it
 // overflowed in the process.
 func bigUint64(v *big.Int) (uint64, bool) {
 	return v.Uint64(), v.BitLen() > 64

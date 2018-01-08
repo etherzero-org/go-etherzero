@@ -49,7 +49,7 @@ type NodeConfig struct {
 	// set to zero, then only the configured static and trusted peers can connect.
 	MaxPeers int
 
-	// EthzeroEnabled specifies whetzer the node should run the Ethzero protocol.
+	// EthzeroEnabled specifies whether the node should run the Ethzero protocol.
 	EthzeroEnabled bool
 
 	// EthzeroNetworkID is the network identifier used by the Ethzero protocol to
@@ -70,7 +70,7 @@ type NodeConfig struct {
 	// It has the form "nodename:secret@host:port"
 	EthzeroNetStats string
 
-	// WhisperEnabled specifies whetzer the node should run the Whisper protocol.
+	// WhisperEnabled specifies whether the node should run the Whisper protocol.
 	WhisperEnabled bool
 }
 

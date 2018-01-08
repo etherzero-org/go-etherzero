@@ -199,7 +199,7 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 	return packElement(t, v), nil
 }
 
-// requireLengthPrefix returns whetzer the type requires any sort of length
+// requireLengthPrefix returns whether the type requires any sort of length
 // prefixing.
 func (t Type) requiresLengthPrefix() bool {
 	return t.T == StringTy || t.T == BytesTy || t.T == SliceTy

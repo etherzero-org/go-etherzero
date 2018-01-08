@@ -54,7 +54,7 @@ var (
 	dumpMagic = []uint32{0xbaddcafe, 0xfee1dead}
 )
 
-// isLittleEndian returns whetzer the local system is running in little or big
+// isLittleEndian returns whether the local system is running in little or big
 // endian byte order.
 func isLittleEndian() bool {
 	n := uint32(0x01020304)

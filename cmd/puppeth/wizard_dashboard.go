@@ -133,7 +133,7 @@ func (w *wizard) deployDashboard() {
 			infos.faucet = page
 		}
 	}
-	// If we have etzstats running, ask whetzer to make the secret public or not
+	// If we have etzstats running, ask whether to make the secret public or not
 	if w.conf.etzstats != "" {
 		fmt.Println()
 		fmt.Println("Include etzstats secret on dashboard (y/n)? (default = yes)")

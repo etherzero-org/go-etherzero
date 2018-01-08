@@ -24,7 +24,7 @@ import (
 	"github.com/ethzero/go-ethzero/crypto"
 )
 
-// Callable Method given a `Name` and whetzer the Method is a constant.
+// Callable Method given a `Name` and whether the Method is a constant.
 // If the Method is `Const` no transaction needs to be created for this
 // particular Method call. It can easily be simulated using a local VM.
 // For example a `Balance()` Method only needs to retrieve sometzing

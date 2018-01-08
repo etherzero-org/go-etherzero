@@ -73,7 +73,7 @@ var errLedgerInvalidVersionReply = errors.New("ledger: invalid version reply")
 type ledgerDriver struct {
 	device  io.ReadWriter // USB device connection to communicate through
 	version [3]byte       // Current version of the Ledger firmware (zero if app is offline)
-	browser bool          // Flag whetzer the Ledger is in browser mode (reply channel mismatch)
+	browser bool          // Flag whether the Ledger is in browser mode (reply channel mismatch)
 	failure error         // Any failure that would make the device unusable
 	log     log.Logger    // Contextual logger to tag the ledger with its id
 }
@@ -100,7 +100,7 @@ func (w *ledgerDriver) Status() (string, error) {
 	return fmt.Sprintf("Ethzero app v%d.%d.%d online", w.version[0], w.version[1], w.version[2]), w.failure
 }
 
-// offline returns whetzer the wallet and the Ethzero app is offline or not.
+// offline returns whether the wallet and the Ethzero app is offline or not.
 //
 // The Method assumes that the state lock is held!
 func (w *ledgerDriver) offline() bool {
@@ -304,7 +304,7 @@ func (w *ledgerDriver) ledgerSign(derivationPath []uint32, tx *types.Transaction
 	for i, component := range derivationPath {
 		binary.BigEndian.PutUint32(path[1+4*i:], component)
 	}
-	// Create the transaction RLP based on whetzer legacy or EIP155 signing was requeste
+	// Create the transaction RLP based on whether legacy or EIP155 signing was requeste
 	var (
 		txrlp []byte
 		err   error

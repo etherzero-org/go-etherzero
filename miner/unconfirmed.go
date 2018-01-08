@@ -25,7 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 )
 
-// headerRetriever is used by the unconfirmed block set to verify whetzer a previously
+// headerRetriever is used by the unconfirmed block set to verify whether a previously
 // mined block is part of the canonical chain or not.
 type headerRetriever interface {
 	// GetHeaderByNumber retrieves the canonical header associated with a block number.

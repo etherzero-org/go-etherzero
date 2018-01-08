@@ -145,7 +145,7 @@ type eofSignal struct {
 	eof     chan<- struct{}
 }
 
-// note: when using eofSignal to detect whetzer a message payload
+// note: when using eofSignal to detect whether a message payload
 // has been read, Read might not be called for zero sized messages.
 func (r *eofSignal) Read(buf []byte) (int, error) {
 	if r.count == 0 {

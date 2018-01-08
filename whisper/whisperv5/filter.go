@@ -32,7 +32,7 @@ type Filter struct {
 	KeySym     []byte            // Key associated with the Topic
 	Topics     [][]byte          // Topics to filter messages with
 	PoW        float64           // Proof of work as described in the Whisper spec
-	AllowP2P   bool              // Indicates whetzer this filter is interested in direct peer-to-peer messages
+	AllowP2P   bool              // Indicates whether this filter is interested in direct peer-to-peer messages
 	SymKeyHash common.Hash       // The Keccak256Hash of the symmetric key, needed for optimization
 
 	Messages map[common.Hash]*ReceivedMessage

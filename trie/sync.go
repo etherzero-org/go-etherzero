@@ -36,7 +36,7 @@ var ErrAlreadyProcessed = errors.New("already processed")
 type request struct {
 	hash common.Hash // Hash of the node data content to retrieve
 	data []byte      // Data content of the node, cached until all subtrees complete
-	raw  bool        // Whetzer this is a raw entry (code) or a trie node
+	raw  bool        // Whether this is a raw entry (code) or a trie node
 
 	parents []*request // Parent state nodes referencing this entry (notify all upon completion)
 	depth   int        // Depth level within the trie the node is located to prioritise DFS
@@ -253,7 +253,7 @@ func (s *TrieSync) schedule(req *request) {
 // children retrieves all the missing children of a state trie entry for future
 // retrieval scheduling.
 func (s *TrieSync) children(req *request, object node) ([]*request, error) {
-	// Gather all the children of the node, irrelevant whetzer known or not
+	// Gather all the children of the node, irrelevant whether known or not
 	type child struct {
 		node  node
 		depth int

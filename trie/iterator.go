@@ -171,7 +171,7 @@ func (it *nodeIterator) Error() error {
 	return it.err
 }
 
-// Next moves the iterator to the next node, returning whetzer there are any
+// Next moves the iterator to the next node, returning whether there are any
 // further nodes. In case of an internal error this Method returns false and
 // sets the Error field to the encountered failure. If `descend` is false,
 // skips iterating over any subnodes of the current node.

@@ -104,8 +104,8 @@ func New(p *TreePool) *Hasher {
 type Node struct {
 	level, index int   // position of node for information/logging only
 	initial      bool  // first and last node
-	root         bool  // whetzer the node is root to a smaller BMT
-	isLeft       bool  // whetzer it is left side of the parent double segment
+	root         bool  // whether the node is root to a smaller BMT
+	isLeft       bool  // whether it is left side of the parent double segment
 	unbalanced   bool  // indicates if a node has only the left segment
 	parent       *Node // BMT connections
 	state        int32 // atomic increment impl concurrent boolean toggle

@@ -112,7 +112,7 @@ with a `Step` which has the following fields:
 
 * `Action` - a function which performs some action in the network
 
-* `Expect` - an expectation function which returns whetzer or not a
+* `Expect` - an expectation function which returns whether or not a
     given node meets the expectation
 
 * `Trigger` - a channel which receives node IDs which then trigger a check

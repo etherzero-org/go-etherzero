@@ -38,7 +38,7 @@ const (
 // calcGas returns the actual gas cost of the call.
 //
 // The cost of gas was changed during the homestead price change HF. To allow for EIP150
-// to be implemented. The returned gas is gas - base * 63 / 64.
+//  To allow for EIP150 to be implemented. The returned gas is gas - base * 63 / 64.
 func callGas(gasTable params.GasTable, availableGas, base uint64, callCost *big.Int) (uint64, error) {
 	if gasTable.CreateBySuicide > 0 {
 		availableGas = availableGas - base
