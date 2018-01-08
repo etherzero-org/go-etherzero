@@ -16,11 +16,11 @@
 
 package params
 
-// MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
+// MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the main Ethzero network.
 // the main Ethzero network.
 var MainnetBootnodes = []string{
 	// Ethzero Foundation Go Bootnodes
-	"enode://4de21c1cddada60891eaa8ebbfa80499ca627972af7d503de3a6b611b23b61c8642e1d72bd48a047ec17cdcf2cd9d66167b44c6814ad0b19ef7b84220bc76d77@39.108.171.51:21212", // IE
+	//"enode://4de21c1cddada60891eaa8ebbfa80499ca627972af7d503de3a6b611b23b61c8642e1d72bd48a047ec17cdcf2cd9d66167b44c6814ad0b19ef7b84220bc76d77@39.108.171.51:21212", // IE
 	//"enode://3f1d12044546b76342d59d4a05532c14b85aa669704bfe1f864fe079415aa2c02d743e03218e57a33fb94523adb54032871a6c51b2cc5514cb7c7e35b3ed0a99@13.93.211.84:30303",  // US-WEST
 	//"enode://78de8a0916848093c73790ead81d1928bec737d565119932b98c6b100d944b7a95e94f847f689fc723399d2e31129d182f7ef3863f2b4c820abbf3ab2722344d@191.235.84.50:30303", // BR
 	//"enode://158f8aab45f6d19c6cbf4a089c2670541a8da11978a2f90dbf6a502a4a3bab80d288afdbeb7ec0ef6d92de563767f3b1ea9e8e334ca711e9f8e2df5a0385e8e6@13.75.154.138:30303", // AU
@@ -33,7 +33,7 @@ var MainnetBootnodes = []string{
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Ropsten test network.
 var TestnetBootnodes = []string{
-	"enode://4de21c1cddada60891eaa8ebbfa80499ca627972af7d503de3a6b611b23b61c8642e1d72bd48a047ec17cdcf2cd9d66167b44c6814ad0b19ef7b84220bc76d77@39.108.171.51:21212",	//"enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303", // IE
+	//"enode://4de21c1cddada60891eaa8ebbfa80499ca627972af7d503de3a6b611b23b61c8642e1d72bd48a047ec17cdcf2cd9d66167b44c6814ad0b19ef7b84220bc76d77@39.108.171.51:21212",	//"enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303", // IE
 }
 
 // RinkebyBootnodes are the enode URLs of the P2P bootstrap nodes running on the

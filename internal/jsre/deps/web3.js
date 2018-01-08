@@ -2508,7 +2508,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         var RequestManager = require('./web3/requestmanager');
         var Iban = require('./web3/iban');
-        var Eth = require('./web3/methods/eth');
+        var Etz = require('./web3/methods/etz');
         var DB = require('./web3/methods/db');
         var Shh = require('./web3/methods/shh');
         var Net = require('./web3/methods/net');
@@ -2530,7 +2530,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         function Web3 (provider) {
             this._requestManager = new RequestManager(provider);
             this.currentProvider = provider;
-            this.eth = new Eth(this);
+            this.etz = new Etz(this);
             this.db = new DB(this);
             this.shh = new Shh(this);
             this.net = new Net(this);
@@ -2610,7 +2610,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 }),
                 new Property({
                     name: 'version.ethereum',
-                    getter: 'eth_protocolVersion',
+                    getter: 'etz_protocolVersion',
                     inputFormatter: utils.toDecimal
                 }),
                 new Property({
@@ -2632,7 +2632,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Web3;
 
 
-    },{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+    },{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/etz":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
         /*
     This file is part of web3.js.
 
@@ -2711,7 +2711,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var o = this.encode(options);
             var formatter = this.decode.bind(this);
-            return new Filter(o, 'eth', this._requestManager, watches.eth(), formatter, callback);
+            return new Filter(o, 'etz', this._requestManager, watches.etz(), formatter, callback);
         };
 
         AllSolidityEvents.prototype.attachToContract = function (contract) {
@@ -2955,8 +2955,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @method ContractFactory
          * @param {Array} abi
          */
-        var ContractFactory = function (eth, abi) {
-            this.eth = eth;
+        var ContractFactory = function (etz, abi) {
+            this.etz = etz;
             this.abi = abi;
 
             /**
@@ -2972,7 +2972,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             this.new = function () {
                 /*jshint maxcomplexity: 7 */
 
-                var contract = new Contract(this.eth, this.abi);
+                var contract = new Contract(this.etz, this.abi);
 
                 // parse arguments
                 var options = {}; // required!
@@ -3004,7 +3004,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 if (callback) {
 
                     // wait for the contract address adn check if the code was deployed
-                    this.eth.sendTransaction(options, function (err, hash) {
+                    this.etz.sendTransaction(options, function (err, hash) {
                         if (err) {
                             callback(err);
                         } else {
@@ -3018,7 +3018,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         }
                     });
                 } else {
-                    var hash = this.eth.sendTransaction(options);
+                    var hash = this.etz.sendTransaction(options);
                     // add the transaction hash
                     contract.transactionHash = hash;
                     checkForContractAddress(contract);
@@ -3053,7 +3053,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * otherwise calls callback function (err, contract)
          */
         ContractFactory.prototype.at = function (address, callback) {
-            var contract = new Contract(this.eth, this.abi, address);
+            var contract = new Contract(this.etz, this.abi, address);
 
             // this functions are not part of prototype,
             // because we dont want to spoil the interface
@@ -3093,8 +3093,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Array} abi
          * @param {Address} contract address
          */
-        var Contract = function (eth, abi, address) {
-            this._eth = eth;
+        var Contract = function (etz, abi, address) {
+            this._eth = etz;
             this.transactionHash = null;
             this.address = address;
             this.abi = abi;
@@ -3336,7 +3336,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var o = this.encode(indexed, options);
             var formatter = this.decode.bind(this);
-            return new Filter(o, 'eth', this._requestManager, watches.eth(), formatter, callback);
+            return new Filter(o, 'etz', this._requestManager, watches.etz(), formatter, callback);
         };
 
         /**
@@ -3470,7 +3470,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
 
             switch(type) {
-                case 'eth':
+                case 'etz':
 
                     // make sure topics, get converted to hex
                     options.topics = options.topics || [];
@@ -3996,8 +3996,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         /**
          * This prototype should be used to call/sendTransaction to solidity functions
          */
-        var SolidityFunction = function (eth, json, address) {
-            this._eth = eth;
+        var SolidityFunction = function (etz, json, address) {
+            this._eth = etz;
             this._inputTypes = json.inputs.map(function (i) {
                 return i.type;
             });
@@ -4203,7 +4203,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             var format = this.unpackOutput.bind(this);
 
             return {
-                method: this._constant ? 'eth_call' : 'eth_sendTransaction',
+                method: this._constant ? 'etz_call' : 'etz_sendTransaction',
                 callback: callback,
                 params: [payload],
                 format: format
@@ -4535,7 +4535,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @return {Iban} the IBAN object
          */
         Iban.createIndirect = function (options) {
-            return Iban.fromBban('ETH' + options.institution + options.identifier);
+            return Iban.fromBban('ETZ' + options.institution + options.identifier);
         };
 
         /**
@@ -4557,7 +4557,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @returns {Boolean} true if it is, otherwise false
          */
         Iban.prototype.isValid = function () {
-            return /^XE[0-9]{2}(ETH[0-9A-Z]{13}|[0-9A-Z]{30,31})$/.test(this._iban) &&
+            return /^XE[0-9]{2}(ETZ[0-9A-Z]{13}|[0-9A-Z]{30,31})$/.test(this._iban) &&
                 mod9710(iso13616Prepare(this._iban)) === 1;
         };
 
@@ -5185,7 +5185,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
     along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
 */
         /**
-         * @file eth.js
+         * @file etz.js
          * @author Marek Kotewicz <marek@ethdev.com>
          * @author Fabian Vogelsteller <fabian@ethdev.com>
          * @date 2015
@@ -5207,26 +5207,26 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         var transfer = require('../transfer');
 
         var blockCall = function (args) {
-            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "eth_getBlockByHash" : "eth_getBlockByNumber";
+            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "etz_getBlockByHash" : "etz_getBlockByNumber";
         };
 
         var transactionFromBlockCall = function (args) {
-            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'eth_getTransactionByBlockHashAndIndex' : 'eth_getTransactionByBlockNumberAndIndex';
+            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'etz_getTransactionByBlockHashAndIndex' : 'etz_getTransactionByBlockNumberAndIndex';
         };
 
         var uncleCall = function (args) {
-            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'eth_getUncleByBlockHashAndIndex' : 'eth_getUncleByBlockNumberAndIndex';
+            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'etz_getUncleByBlockHashAndIndex' : 'etz_getUncleByBlockNumberAndIndex';
         };
 
         var getBlockTransactionCountCall = function (args) {
-            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'eth_getBlockTransactionCountByHash' : 'eth_getBlockTransactionCountByNumber';
+            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'etz_getBlockTransactionCountByHash' : 'etz_getBlockTransactionCountByNumber';
         };
 
         var uncleCountCall = function (args) {
-            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'eth_getUncleCountByBlockHash' : 'eth_getUncleCountByBlockNumber';
+            return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'etz_getUncleCountByBlockHash' : 'etz_getUncleCountByBlockNumber';
         };
 
-        function Eth(web3) {
+        function Etz(web3) {
             this._requestManager = web3._requestManager;
 
             var self = this;
@@ -5246,7 +5246,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             this.sendIBANTransaction = transfer.bind(null, this);
         }
 
-        Object.defineProperty(Eth.prototype, 'defaultBlock', {
+        Object.defineProperty(Etz.prototype, 'defaultBlock', {
             get: function () {
                 return c.defaultBlock;
             },
@@ -5256,7 +5256,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
         });
 
-        Object.defineProperty(Eth.prototype, 'defaultAccount', {
+        Object.defineProperty(Etz.prototype, 'defaultAccount', {
             get: function () {
                 return c.defaultAccount;
             },
@@ -5269,7 +5269,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         var methods = function () {
             var getBalance = new Method({
                 name: 'getBalance',
-                call: 'eth_getBalance',
+                call: 'etz_getBalance',
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
                 outputFormatter: formatters.outputBigNumberFormatter
@@ -5277,14 +5277,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var getStorageAt = new Method({
                 name: 'getStorageAt',
-                call: 'eth_getStorageAt',
+                call: 'etz_getStorageAt',
                 params: 3,
                 inputFormatter: [null, utils.toHex, formatters.inputDefaultBlockNumberFormatter]
             });
 
             var getCode = new Method({
                 name: 'getCode',
-                call: 'eth_getCode',
+                call: 'etz_getCode',
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter]
             });
@@ -5308,7 +5308,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var getCompilers = new Method({
                 name: 'getCompilers',
-                call: 'eth_getCompilers',
+                call: 'etz_getCompilers',
                 params: 0
             });
 
@@ -5330,7 +5330,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var getTransaction = new Method({
                 name: 'getTransaction',
-                call: 'eth_getTransactionByHash',
+                call: 'etz_getTransactionByHash',
                 params: 1,
                 outputFormatter: formatters.outputTransactionFormatter
             });
@@ -5345,14 +5345,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var getTransactionReceipt = new Method({
                 name: 'getTransactionReceipt',
-                call: 'eth_getTransactionReceipt',
+                call: 'etz_getTransactionReceipt',
                 params: 1,
                 outputFormatter: formatters.outputTransactionReceiptFormatter
             });
 
             var getTransactionCount = new Method({
                 name: 'getTransactionCount',
-                call: 'eth_getTransactionCount',
+                call: 'etz_getTransactionCount',
                 params: 2,
                 inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
                 outputFormatter: utils.toDecimal
@@ -5360,42 +5360,42 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var sendRawTransaction = new Method({
                 name: 'sendRawTransaction',
-                call: 'eth_sendRawTransaction',
+                call: 'etz_sendRawTransaction',
                 params: 1,
                 inputFormatter: [null]
             });
 
             var sendTransaction = new Method({
                 name: 'sendTransaction',
-                call: 'eth_sendTransaction',
+                call: 'etz_sendTransaction',
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
 
             var signTransaction = new Method({
                 name: 'signTransaction',
-                call: 'eth_signTransaction',
+                call: 'etz_signTransaction',
                 params: 1,
                 inputFormatter: [formatters.inputTransactionFormatter]
             });
 
             var sign = new Method({
                 name: 'sign',
-                call: 'eth_sign',
+                call: 'etz_sign',
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter, null]
             });
 
             var call = new Method({
                 name: 'call',
-                call: 'eth_call',
+                call: 'etz_call',
                 params: 2,
                 inputFormatter: [formatters.inputCallFormatter, formatters.inputDefaultBlockNumberFormatter]
             });
 
             var estimateGas = new Method({
                 name: 'estimateGas',
-                call: 'eth_estimateGas',
+                call: 'etz_estimateGas',
                 params: 1,
                 inputFormatter: [formatters.inputCallFormatter],
                 outputFormatter: utils.toDecimal
@@ -5403,31 +5403,31 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var compileSolidity = new Method({
                 name: 'compile.solidity',
-                call: 'eth_compileSolidity',
+                call: 'etz_compileSolidity',
                 params: 1
             });
 
             var compileLLL = new Method({
                 name: 'compile.lll',
-                call: 'eth_compileLLL',
+                call: 'etz_compileLLL',
                 params: 1
             });
 
             var compileSerpent = new Method({
                 name: 'compile.serpent',
-                call: 'eth_compileSerpent',
+                call: 'etz_compileSerpent',
                 params: 1
             });
 
             var submitWork = new Method({
                 name: 'submitWork',
-                call: 'eth_submitWork',
+                call: 'etz_submitWork',
                 params: 3
             });
 
             var getWork = new Method({
                 name: 'getWork',
-                call: 'eth_getWork',
+                call: 'etz_getWork',
                 params: 0
             });
 
@@ -5463,65 +5463,65 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return [
                 new Property({
                     name: 'coinbase',
-                    getter: 'eth_coinbase'
+                    getter: 'etz_coinbase'
                 }),
                 new Property({
                     name: 'mining',
-                    getter: 'eth_mining'
+                    getter: 'etz_mining'
                 }),
                 new Property({
                     name: 'hashrate',
-                    getter: 'eth_hashrate',
+                    getter: 'etz_hashrate',
                     outputFormatter: utils.toDecimal
                 }),
                 new Property({
                     name: 'syncing',
-                    getter: 'eth_syncing',
+                    getter: 'etz_syncing',
                     outputFormatter: formatters.outputSyncingFormatter
                 }),
                 new Property({
                     name: 'gasPrice',
-                    getter: 'eth_gasPrice',
+                    getter: 'etz_gasPrice',
                     outputFormatter: formatters.outputBigNumberFormatter
                 }),
                 new Property({
                     name: 'accounts',
-                    getter: 'eth_accounts'
+                    getter: 'etz_accounts'
                 }),
                 new Property({
                     name: 'blockNumber',
-                    getter: 'eth_blockNumber',
+                    getter: 'etz_blockNumber',
                     outputFormatter: utils.toDecimal
                 }),
                 new Property({
                     name: 'protocolVersion',
-                    getter: 'eth_protocolVersion'
+                    getter: 'etz_protocolVersion'
                 })
             ];
         };
 
-        Eth.prototype.contract = function (abi) {
+        Etz.prototype.contract = function (abi) {
             var factory = new Contract(this, abi);
             return factory;
         };
 
-        Eth.prototype.filter = function (options, callback, filterCreationErrorCallback) {
-            return new Filter(options, 'eth', this._requestManager, watches.eth(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
+        Etz.prototype.filter = function (options, callback, filterCreationErrorCallback) {
+            return new Filter(options, 'etz', this._requestManager, watches.etz(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
         };
 
-        Eth.prototype.namereg = function () {
+        Etz.prototype.namereg = function () {
             return this.contract(namereg.global.abi).at(namereg.global.address);
         };
 
-        Eth.prototype.icapNamereg = function () {
+        Etz.prototype.icapNamereg = function () {
             return this.contract(namereg.icap.abi).at(namereg.icap.address);
         };
 
-        Eth.prototype.isSyncing = function (callback) {
+        Etz.prototype.isSyncing = function (callback) {
             return new IsSyncing(this._requestManager, callback);
         };
 
-        module.exports = Eth;
+        module.exports = Etz;
 
     },{"../../utils/config":18,"../../utils/utils":20,"../contract":25,"../filter":29,"../formatters":30,"../iban":33,"../method":36,"../namereg":44,"../property":45,"../syncing":48,"../transfer":49,"./watches":43}],39:[function(require,module,exports){
         /*
@@ -5540,7 +5540,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
     You should have received a copy of the GNU Lesser General Public License
     along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
 */
-        /** @file eth.js
+        /** @file etz.js
          * @authors:
          *   Marek Kotewicz <marek@ethdev.com>
          * @date 2015
@@ -5560,7 +5560,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             });
         };
 
-/// @returns an array of objects describing web3.eth api properties
+/// @returns an array of objects describing web3.etz api properties
         var properties = function () {
             return [
                 new Property({
@@ -5595,7 +5595,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
     along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
 */
         /**
-         * @file eth.js
+         * @file etz.js
          * @author Marek Kotewicz <marek@ethdev.com>
          * @author Fabian Vogelsteller <fabian@ethdev.com>
          * @date 2015
@@ -6012,8 +6012,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         var Method = require('../method');
 
-/// @returns an array of objects describing web3.eth.filter api methods
-        var eth = function () {
+/// @returns an array of objects describing web3.etz.filter api methods
+        var etz = function () {
             var newFilterCall = function (args) {
                 var type = args[0];
 
@@ -6021,13 +6021,13 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     case 'latest':
                         args.shift();
                         this.params = 0;
-                        return 'eth_newBlockFilter';
+                        return 'etz_newBlockFilter';
                     case 'pending':
                         args.shift();
                         this.params = 0;
-                        return 'eth_newPendingTransactionFilter';
+                        return 'etz_newPendingTransactionFilter';
                     default:
-                        return 'eth_newFilter';
+                        return 'etz_newFilter';
                 }
             };
 
@@ -6039,19 +6039,19 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var uninstallFilter = new Method({
                 name: 'uninstallFilter',
-                call: 'eth_uninstallFilter',
+                call: 'etz_uninstallFilter',
                 params: 1
             });
 
             var getLogs = new Method({
                 name: 'getLogs',
-                call: 'eth_getFilterLogs',
+                call: 'etz_getFilterLogs',
                 params: 1
             });
 
             var poll = new Method({
                 name: 'poll',
-                call: 'eth_getFilterChanges',
+                call: 'etz_getFilterChanges',
                 params: 1
             });
 
@@ -6091,7 +6091,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
         module.exports = {
-            eth: eth,
+            etz: etz,
             shh: shh
         };
 
@@ -6625,7 +6625,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             };
 
             self.requestManager.startPolling({
-                method: 'eth_syncing',
+                method: 'etz_syncing',
                 params: [],
             }, self.pollId, onMessage, self.stopWatching.bind(self));
 
@@ -6691,23 +6691,23 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Value} value to be tranfered
          * @param {Function} callback, callback
          */
-        var transfer = function (eth, from, to, value, callback) {
+        var transfer = function (etz, from, to, value, callback) {
             var iban = new Iban(to);
             if (!iban.isValid()) {
                 throw new Error('invalid iban address');
             }
 
             if (iban.isDirect()) {
-                return transferToAddress(eth, from, iban.address(), value, callback);
+                return transferToAddress(etz, from, iban.address(), value, callback);
             }
 
             if (!callback) {
-                var address = eth.icapNamereg().addr(iban.institution());
-                return deposit(eth, from, address, value, iban.client());
+                var address = etz.icapNamereg().addr(iban.institution());
+                return deposit(etz, from, address, value, iban.client());
             }
 
-            eth.icapNamereg().addr(iban.institution(), function (err, address) {
-                return deposit(eth, from, address, value, iban.client(), callback);
+            etz.icapNamereg().addr(iban.institution(), function (err, address) {
+                return deposit(etz, from, address, value, iban.client(), callback);
             });
 
         };
@@ -6721,8 +6721,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Value} value to be tranfered
          * @param {Function} callback, callback
          */
-        var transferToAddress = function (eth, from, to, value, callback) {
-            return eth.sendTransaction({
+        var transferToAddress = function (etz, from, to, value, callback) {
+            return etz.sendTransaction({
                 address: to,
                 from: from,
                 value: value
@@ -6739,9 +6739,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {String} client unique identifier
          * @param {Function} callback, callback
          */
-        var deposit = function (eth, from, to, value, client, callback) {
+        var deposit = function (etz, from, to, value, client, callback) {
             var abi = exchangeAbi;
-            return eth.contract(abi).at(to).deposit(client, {
+            return etz.contract(abi).at(to).deposit(client, {
                 from: from,
                 value: value
             }, callback);
