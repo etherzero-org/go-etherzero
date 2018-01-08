@@ -426,7 +426,6 @@ func (self *worker) commitNewWork() {
 		return
 	}
 
-	//modify by roger on 201712/04 这块代码主要是为了防止TheDAO事件，可以将该代码去掉。
 	// If we are care about TheDAO hard-fork check whetzer to override the extra-data or not
 	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
 		// Check whetzer the block is among the fork extra-override range
