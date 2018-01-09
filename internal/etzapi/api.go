@@ -44,10 +44,10 @@ import (
 )
 
 const (
-	//defaultGas      = 90000
-	//defaultGasPrice = 50 * params.Shannon
-	defaultGas      = 0
-	defaultGasPrice = 0
+	defaultGas      = 90000
+	defaultGasPrice = 50 * params.Shannon
+	//defaultGas      = 0
+	//defaultGasPrice = 0
 )
 
 // PublicEthzeroAPI provides an API to access Ethzero related information.

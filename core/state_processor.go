@@ -64,7 +64,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
 
-	//此处为DAO事件的判断代码，可以在后续的版本中去掉。
 	// Mutate the the block and state according to any hard-fork specs
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
 		misc.ApplyDAOHardFork(statedb)

@@ -241,10 +241,11 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
-	if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
-		return st.buyEtzerGas()
-	}
-	return st.buyGas()
+	//if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+	//	return st.buyEtzerGas()
+	//}
+	//return st.buyGas()
+	return st.buyEtzerGas()
 }
 
 // TransitionDb will transition the state by applying the current message and returning the result
@@ -284,23 +285,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 
-		// Increment the txblockheight and heighttxcount for the next transaction
-
-		//number:=evm.Context.BlockNumber
-		//height:=evm.BlockNumber
-		//blockheight:=st.state.TxBlockHeight(sender.Address())
-		//
-		//fmt.Println("sender.Address 's vlaue:%s",sender.Address().String())
-		//if blockheight.Cmp(number) == 0{
-		//	heightTxCount:=st.state.HeightTxCount(sender.Address())
-		//	fmt.Println("heightTxCount :%s, height:%s",heightTxCount,height)
-		//	st.state.SetHeightTxCount(sender.Address(),heightTxCount+1)
-		//
-		//}else{
-		//	st.state.SetTxBlockHeight(sender.Address(),*evm.Context.BlockNumber)
-		//	st.state.SetHeightTxCount(sender.Address(),1)
-		//}
-
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
 	if vmerr != nil {
@@ -314,10 +298,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
-	if !evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		st.refundGas()
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
-	}
+	//if !evm.ChainConfig().IsEthzero(evm.BlockNumber) {
+	//	st.refundGas()
+	//	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	//}
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }

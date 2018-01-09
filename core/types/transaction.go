@@ -70,7 +70,7 @@ type txdata struct {
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 
-	//用于重放保护字段
+	//for Replay Attacks
 	IsEtherzero bool `json:"isetherzero" gencodec:"required"`
 }
 
@@ -107,6 +107,7 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
+		IsEtherzero:  true,
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
