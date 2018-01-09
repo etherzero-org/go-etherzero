@@ -197,10 +197,8 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 			if err != nil  {
 				return nil, ErrOutOfGas
 			}
-			if !in.evm.chainConfig.IsEthzero(in.evm.BlockNumber) {
-				if contract.UseGas(cost) {
-					return nil, ErrOutOfGas
-				}
+			if contract.UseGas(cost) {
+				return nil, ErrOutOfGas
 			}
 		}
 		if memorySize > 0 {

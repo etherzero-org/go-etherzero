@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package vm
 
@@ -580,12 +580,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 		gas -= gas / 64
 	}
 
-	if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		contract.UseGasByEthzero(gas)
-	}else{
-		contract.UseGas(gas)
-	}
-
+	contract.UseGas(gas)
 	res, addr, returnGas, suberr := evm.Create(contract, input, gas, value)
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
@@ -598,12 +593,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	} else {
 		stack.push(addr.Big())
 	}
-
-	if ! evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		contract.Gas += returnGas
-
-	}
-
+	contract.Gas += returnGas
 	evm.interpreter.intPool.put(value, offset, size)
 
 	if suberr == errExecutionReverted {
@@ -635,10 +625,7 @@ func opCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	if ! evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		contract.Gas += returnGas
-
-	}
+	contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
 	return ret, nil
@@ -667,10 +654,7 @@ func opCallCode(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	if ! evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		contract.Gas += returnGas
-
-	}
+	contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
 	return ret, nil
@@ -695,10 +679,7 @@ func opDelegateCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, st
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	if ! evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		contract.Gas += returnGas
-
-	}
+	contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
 	return ret, nil
@@ -723,10 +704,7 @@ func opStaticCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	if ! evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-		contract.Gas += returnGas
-
-	}
+	contract.Gas += returnGas
 
 	evm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
 	return ret, nil

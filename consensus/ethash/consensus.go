@@ -43,7 +43,7 @@ var (
 	//ETHZeroBlockReward *big.Int = new(big.Int).Mul(big.NewInt(5e+18),big.NewInt(4)) //Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroBlockReward =  big.NewInt(2e+18)
 
-
+	EthzeroBlock = big.NewInt(4936270)
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
 )
 
@@ -323,7 +323,7 @@ var (
 // parent block's time and difficulty. The calculation uses the ETHZero rules.
 func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 	diff := new(big.Int)
-	adjust := new(big.Int).Div(parent.Difficulty, params.EthzeroDifficultyBoundDivisor)
+	adjust := new(big.Int).Div(parent.Difficulty, params.DifficultyBoundDivisor)
 	bigTime := new(big.Int)
 	bigParentTime := new(big.Int)
 
@@ -335,20 +335,20 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 	} else {
 		diff.Sub(parent.Difficulty, adjust)
 	}
-	//if diff.Cmp(params.EthzeroMinimumDifficulty) < 0 {
-	//	diff.Set(params.EthzeroMinimumDifficulty)
-	//}
-	diff.Set(params.EthzeroMinimumDifficulty)
-	periodCount := new(big.Int).Add(parent.Number, big1)
+	if diff.Cmp(params.MinimumDifficulty) < 0 {
+		diff.Set(params.MinimumDifficulty)
+	}
+
+
+	periodCount := new(big.Int).Add((parent.Number.Sub(parent.Number,EthzeroBlock)), big1)
 	periodCount.Div(periodCount, expDiffPeriod)
 	if periodCount.Cmp(big1) > 0 {
 		// diff = diff + 2^(periodCount - 2)
 		expDiff := periodCount.Sub(periodCount, big2)
 		expDiff.Exp(big2, expDiff, nil)
 		diff.Add(diff, expDiff)
-		diff = math.BigMax(diff, params.EthzeroMinimumDifficulty)
+		diff = math.BigMax(diff, params.MinimumDifficulty)
 	}
-	diff=params.EthzeroMinimumDifficulty
 	return diff
 }
 

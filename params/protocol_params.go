@@ -29,9 +29,9 @@ const (
 	//TxDataZeroGas         uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions.
 
 	//modify by roger on 20171205 begin
-	TxGas                 uint64 = 0 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.
-	TxGasContractCreation uint64 = 0 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
-	TxDataZeroGas         uint64 = 0     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions.
+	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.
+	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
+	TxDataZeroGas         uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions.
 	//modify by roger on 20171205 end
 	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
 	SstoreSetGas          uint64 = 20000 // Once per SLOAD operation.
@@ -89,5 +89,6 @@ var (
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
 	EthzeroMinimumDifficulty      = big.NewInt(65536)                // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	//DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	DurationLimit          = big.NewInt(10)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 )

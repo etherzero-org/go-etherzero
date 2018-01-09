@@ -28,8 +28,11 @@ import (
 )
 
 var (
+
+	expMinimumGasLimit = big.NewInt(4712388)
 	Big0 = big.NewInt(0)
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+	errInsufficientStakeForGas = errors.New("insufficient Stake to pay for gas")
 )
 
 /*
@@ -165,6 +168,41 @@ func (st *StateTransition) useGas(amount uint64) error {
 	return nil
 }
 
+
+func (st *StateTransition) buyEtzerGas() error {
+	mgas := st.msg.Gas()
+	if mgas.BitLen() > 64 {
+		return vm.ErrOutOfGas
+	}
+
+	mgval := new(big.Int).Mul(mgas, st.gasPrice)
+
+	var (
+		state  = st.state
+		sender = st.from()
+	)
+	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
+		return errInsufficientBalanceForGas
+	}
+	if err := st.gp.SubGas(mgas); err != nil {
+		return err
+	}
+	st.gas += mgas.Uint64()
+
+	st.initialGas.Set(mgas)
+
+	maxGasLimit := (new(big.Int).Mul(state.GetBalance(sender.Address()),st.gasPrice))
+
+	maxGasLimit.Add(expMinimumGasLimit,maxGasLimit)
+
+	if st.initialGas.Cmp(maxGasLimit) > 0 {
+		return errInsufficientStakeForGas
+	}
+	//state.SubBalance(sender.Address(), mgval)
+	return nil
+}
+
+
 func (st *StateTransition) buyGas() error {
 	mgas := st.msg.Gas()
 	if mgas.BitLen() > 64 {
@@ -202,6 +240,9 @@ func (st *StateTransition) preCheck() error {
 		} else if nonce > msg.Nonce() {
 			return ErrNonceTooLow
 		}
+	}
+	if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+		return st.buyEtzerGas()
 	}
 	return st.buyGas()
 }
@@ -273,11 +314,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
-	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	if !evm.ChainConfig().IsEthzero(evm.BlockNumber) {
+		st.refundGas()
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	}
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
+
 
 func (st *StateTransition) refundGas() {
 	// Return etz for remaining gas to the sender account,

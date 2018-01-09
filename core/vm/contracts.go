@@ -73,16 +73,12 @@ var PrecompiledContractsEthzero = map[common.Address]PrecompiledContract{
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract , evm *EVM) (ret []byte, err error) {
-
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {
 	gas := p.RequiredGas(input)
-	if evm.chainConfig.IsEthzero(evm.BlockNumber) {
-		if contract.UseGas(gas) {
-			return p.Run(input)
-		}
-		return nil, ErrOutOfGas
+	if contract.UseGas(gas) {
+		return p.Run(input)
 	}
-	return p.Run(input)
+	return nil, ErrOutOfGas
 }
 
 // ECRECOVER implemented as a native contract.

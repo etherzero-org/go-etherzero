@@ -69,6 +69,9 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+
+	//用于重放保护字段
+	IsEtherzero bool `json:"isetherzero" gencodec:"required"`
 }
 
 type txdataMarshaling struct {

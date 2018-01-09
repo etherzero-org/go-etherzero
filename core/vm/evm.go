@@ -48,7 +48,7 @@ func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, erro
 			precompiles = PrecompiledContractsByzantium
 		}
 		if p := precompiles[*contract.CodeAddr]; p != nil {
-			return RunPrecompiledContract(p, input, contract,evm)
+			return RunPrecompiledContract(p, input, contract)
 		}
 	}
 	return evm.interpreter.Run(snapshot, contract, input)
@@ -184,12 +184,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-
-			if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-				contract.UseGasByEthzero(gas)
-			}else{
-				contract.UseGas(gas)
-			}
+			contract.UseGas(gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -230,11 +225,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-				contract.UseGasByEthzero(gas)
-			}else{
-				contract.UseGas(gas)
-			}
+			contract.UseGas(gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -267,12 +258,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-
-			if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-				contract.UseGasByEthzero(gas)
-			}else{
-				contract.UseGas(gas)
-			}
+			contract.UseGas(gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -315,11 +301,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-				contract.UseGasByEthzero(gas)
-			}else{
-				contract.UseGas(gas)
-			}
+			contract.UseGas(gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -372,12 +354,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	if err == nil && !maxCodeSizeExceeded {
 
 		var createDataGas uint64
-
-		if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-			createDataGas = 0
-		}else{
-			createDataGas = uint64(len(ret)) * params.CreateDataGas
-		}
+		createDataGas = uint64(len(ret)) * params.CreateDataGas
 
 		if contract.UseGas(createDataGas) {
 			evm.StateDB.SetCode(contractAddr, ret)
@@ -392,12 +369,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	if maxCodeSizeExceeded || (err != nil && (evm.ChainConfig().IsHomestead(evm.BlockNumber) || err != ErrCodeStoreOutOfGas)) {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-
-			if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-				contract.UseGasByEthzero(gas)
-			}else{
-				contract.UseGas(gas)
-			}
+			contract.UseGas(gas)
 		}
 	}
 	// Assign err if contract code size exceeds the max while the err is still empty.
