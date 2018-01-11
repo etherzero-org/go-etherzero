@@ -141,7 +141,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // WithSignature returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	R, S, V, err = EthzeroSigner{}.SignatureValues(tx, sig)
+	R, S, V, err = HomesteadSigner{}.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -189,23 +189,65 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 
 // EthzeroTransaction implements TransactionInterface using the
 // Ethzero rules.
-type EthzeroSigner struct{ FrontierSigner }
+type EthzeroSigner struct{
+	chainId, chainIdMul *big.Int
+}
+
+func NewEthzeroSigner(chainId *big.Int) EthzeroSigner {
+	if chainId == nil {
+		chainId = new(big.Int)
+	}
+	return EthzeroSigner{
+		chainId:    chainId,
+		chainIdMul: new(big.Int).Mul(chainId, big.NewInt(2)),
+	}
+}
 
 func (s EthzeroSigner) Equal(s2 Signer) bool {
-	_, ok := s2.(EthzeroSigner)
-	return ok
+	etherzero, ok := s2.(EthzeroSigner)
+	return ok && etherzero.chainId.Cmp(s.chainId) == 0
 }
 
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (hs EthzeroSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
-	return hs.FrontierSigner.SignatureValues(tx, sig)
+func (hs EthzeroSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	R, S, V, err = HomesteadSigner{}.SignatureValues(tx, sig)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if hs.chainId.Sign() != 0 {
+		V = big.NewInt(int64(sig[64] + 35))
+		V.Add(V, hs.chainIdMul)
+	}
+	return R, S, V, nil
 }
 
 func (hs EthzeroSigner) Sender(tx *Transaction) (common.Address, error) {
-	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
+	if !tx.Protected() {
+		return HomesteadSigner{}.Sender(tx)
+	}
+	if tx.ChainId().Cmp(hs.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+	V := new(big.Int).Sub(tx.data.V, hs.chainIdMul)
+	V.Sub(V, big8)
+	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
 
+// Hash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (hs EthzeroSigner) Hash(tx *Transaction) common.Hash {
+	return rlpHash([]interface{}{
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+		tx.data.IsEtherzero,
+		hs.chainId, uint(0), uint(0),
+	})
+}
 
 type FrontierSigner struct{}
 
