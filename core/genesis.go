@@ -191,6 +191,10 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
 	if genesis == nil && stored != params.MainnetGenesisHash {
+
+		//modify by roger on 2018-01-10 for forkGenesisBlock
+		storedcfg.EthzeroForkGenesisBlock = big.NewInt(10)
+		storedcfg.EthzeroBlock = big.NewInt(11)
 		return storedcfg, stored, nil
 	}
 
@@ -210,7 +214,8 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	switch {
 	case g != nil:
-		return g.Config
+		//return g.Config
+		return params.AllEthashProtocolChanges
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
 	case ghash == params.TestnetGenesisHash:

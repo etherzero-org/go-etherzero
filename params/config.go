@@ -32,16 +32,18 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainId:        big.NewInt(1),
-		HomesteadBlock: big.NewInt(1150000),
+		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   big.NewInt(1920000),
 		DAOForkSupport: true,
 		EIP150Block:    big.NewInt(2463000),
 		EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:    big.NewInt(2675000),
 		EIP158Block:    big.NewInt(2675000),
-		ByzantiumBlock: big.NewInt(4370000),
-		EthzeroBlock: big.NewInt(4936270),
-
+		ByzantiumBlock: big.NewInt(1),
+		EthzeroBlock: big.NewInt(11),
+		EthzeroForkGenesisBlock: big.NewInt(10),
+		//EthzeroBlock: big.NewInt(4936270),
+		//EthzeroForkGenesisBlock: big.NewInt(4936271),
 		Ethash: new(EthashConfig),
 	}
 
@@ -56,9 +58,8 @@ var (
 		EIP155Block:    big.NewInt(10),
 		EIP158Block:    big.NewInt(10),
 		ByzantiumBlock: big.NewInt(1700000),
-		EthzeroBlock: big.NewInt(4936270),
-
-
+		EthzeroBlock: big.NewInt(11),
+		EthzeroForkGenesisBlock: big.NewInt(10),
 		Ethash: new(EthashConfig),
 	}
 
@@ -74,6 +75,7 @@ var (
 		EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(1035301),
 		EthzeroBlock: big.NewInt(4936270),
+		EthzeroForkGenesisBlock: big.NewInt(4936271),
 
 		Clique: &CliqueConfig{
 			Period: 15,
@@ -81,23 +83,23 @@ var (
 		},
 	}
 
-	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
+	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced and accepted by the Ethzero core developers into the Ethash consensus.
 	// and accepted by the Ethzero core developers into the Ethash consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(11),big.NewInt(10), new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethzero core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(68), big.NewInt(69), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 	//AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(68), big.NewInt(69), new(EthashConfig), nil}
 	//TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 
 	TestRules       = TestChainConfig.Rules(new(big.Int))
@@ -126,6 +128,8 @@ type ChainConfig struct {
 	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
 
 	EthzeroBlock *big.Int `json:"ethzeroBlock,omitempty"` // Ethzero switch block (nil = no fork, 0 = already ethzero)
+
+	EthzeroForkGenesisBlock *big.Int `json:"ethzeroForkGenesisBlock,omitempty"` // Etherzero Fork genesis block block (nil = no fork, 0 = already ethzero)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -162,7 +166,7 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Ethzero: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Ethzero: %v EtherzeroForkGenesisBlock: %v Engine: %v}",
 		c.ChainId,
 		c.HomesteadBlock,
 		c.DAOForkBlock,
@@ -172,6 +176,7 @@ func (c *ChainConfig) String() string {
 		c.EIP158Block,
 		c.ByzantiumBlock,
 		c.EthzeroBlock,
+		c.EthzeroForkGenesisBlock,
 		engine,
 	)
 }
@@ -205,6 +210,11 @@ func (c *ChainConfig) IsByzantium(num *big.Int) bool {
 // IsEthzero returns whether num is either equal to the homestead block or greater.
 func (c *ChainConfig) IsEthzero(num *big.Int) bool {
 	return isForked(c.EthzeroBlock, num)
+}
+
+// IsEthzero returns whether num is either equal to the homestead block or greater.
+func (c *ChainConfig) IsEtherzeroForkGenesisBlock(num *big.Int) bool {
+	return configNumEqual(c.EthzeroForkGenesisBlock, num)
 }
 
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
@@ -270,7 +280,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.EthzeroBlock, newcfg.EthzeroBlock, head) {
 		return newCompatError("Ethzero fork block", c.EthzeroBlock, newcfg.EthzeroBlock)
 	}
-
+	if isForkIncompatible(c.EthzeroForkGenesisBlock, newcfg.EthzeroForkGenesisBlock, head) {
+		return newCompatError("EthzeroForkGenesisBlock fork block", c.EthzeroForkGenesisBlock, newcfg.EthzeroForkGenesisBlock)
+	}
 	return nil
 }
 
@@ -339,6 +351,7 @@ type Rules struct {
 	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
 	IsByzantium                               bool
 	IsEthzero                                 bool
+	IsEtherzeroForkGenesisBlock               bool
 }
 
 func (c *ChainConfig) Rules(num *big.Int) Rules {
@@ -346,5 +359,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainId == nil {
 		chainId = new(big.Int)
 	}
-	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num),IsEthzero: c.IsEthzero(num)}
+	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num),IsEthzero: c.IsEthzero(num),IsEtherzeroForkGenesisBlock: c.IsEtherzeroForkGenesisBlock(num)}
 }

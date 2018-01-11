@@ -60,6 +60,8 @@ func setDefaults(cfg *Config) {
 			EIP150Block:    new(big.Int),
 			EIP155Block:    new(big.Int),
 			EIP158Block:    new(big.Int),
+			EthzeroBlock:   big.NewInt(10),
+			EthzeroForkGenesisBlock: big.NewInt(9),
 		}
 	}
 

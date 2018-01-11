@@ -43,6 +43,8 @@ var (
 	//ETHZeroBlockReward *big.Int = new(big.Int).Mul(big.NewInt(5e+18),big.NewInt(4)) //Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroBlockReward =  big.NewInt(2e+18)
 
+	EthzeroForkBlockGenesisReward = new(big.Int).Mul(big.NewInt(2e+18),big.NewInt(1000))
+
 	EthzeroBlock = big.NewInt(4936270)
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
 )
@@ -571,13 +573,14 @@ var (
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
-	blockReward := FrontierBlockReward
-	if config.IsByzantium(header.Number) {
-		blockReward = ByzantiumBlockReward
+
+	blockReward := EthzeroBlockReward
+
+	if config.IsEtherzeroForkGenesisBlock(header.Number) {
+
+		blockReward = EthzeroForkBlockGenesisReward
 	}
-	if config.IsEthzero(header.Number) {
-		blockReward = EthzeroBlockReward
-	}
+
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)

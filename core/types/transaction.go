@@ -301,7 +301,9 @@ func (tx *Transaction) String() string {
 	V:        %#x
 	R:        %#x
 	S:        %#x
+	IsEtherzero:      %s
 	Hex:      %x
+
 `,
 		tx.Hash(),
 		tx.data.Recipient == nil,
@@ -315,6 +317,7 @@ func (tx *Transaction) String() string {
 		tx.data.V,
 		tx.data.R,
 		tx.data.S,
+		tx.data.IsEtherzero,
 		enc,
 	)
 }
