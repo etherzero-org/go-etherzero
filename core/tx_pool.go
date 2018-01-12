@@ -572,11 +572,13 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
-		if pool.priced.Underpriced(tx, pool.locals) {
-			log.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
-			underpricedTxCounter.Inc(1)
-			return false, ErrUnderpriced
-		}
+		//
+		//if pool.priced.Underpriced(tx, pool.locals) {
+		//	log.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
+		//	underpricedTxCounter.Inc(1)
+		//	return false, ErrUnderpriced
+		//}
+
 		// New transaction is better than our worse ones, make room for it
 		drop := pool.priced.Discard(len(pool.all)-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
 		for _, tx := range drop {
@@ -1039,19 +1041,22 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
-		for _, tx := range drops {
-			hash := tx.Hash()
-			log.Trace("Removed unpayable pending transaction", "hash", hash)
-			delete(pool.all, hash)
-			pool.priced.Removed()
-			pendingNofundsCounter.Inc(1)
-		}
-		for _, tx := range invalids {
-			hash := tx.Hash()
-			log.Trace("Demoting pending transaction", "hash", hash)
-			pool.enqueueTx(hash, tx)
-		}
+
+		//modify by roger on 2018-01-12
+		//drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		//for _, tx := range drops {
+		//	hash := tx.Hash()
+		//	log.Trace("Removed unpayable pending transaction", "hash", hash)
+		//	delete(pool.all, hash)
+		//	pool.priced.Removed()
+		//	pendingNofundsCounter.Inc(1)
+		//}
+		//
+		//for _, tx := range invalids {
+		//	hash := tx.Hash()
+		//	log.Trace("Demoting pending transaction", "hash", hash)
+		//	pool.enqueueTx(hash, tx)
+		//}
 		// If there's a gap in front, warn (should never happen) and postpone all transactions
 		if list.Len() > 0 && list.txs.Get(nonce) == nil {
 			for _, tx := range list.Cap(0) {

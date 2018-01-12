@@ -54,7 +54,6 @@ type TransactOpts struct {
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 
-	IsEtherzero bool
 }
 
 // BoundContract is the base wrapper object that reflects a contract on the

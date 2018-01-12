@@ -69,9 +69,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
-	if tx.Gas().Cmp(intrGas) < 0 {
-		return ErrIntrinsicGas
-	}
+	//modify by roger on 2017-01-12
+	//intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	//if tx.Gas().Cmp(intrGas) < 0 {
+	//	return ErrIntrinsicGas
+	//}
 	return nil
 }

@@ -44,9 +44,9 @@ import (
 )
 
 const (
-	defaultGas      = 90000
+	//defaultGas      = 90000
 	defaultGasPrice = 50 * params.Shannon
-	//defaultGas      = 0
+	defaultGas      = 1
 	//defaultGasPrice = 0
 )
 
@@ -362,7 +362,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	tx := args.toTransaction()
 
 	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEthzero(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
 	signed, err := wallet.SignTxWithPassphrase(account, passwd, tx, chainID)
@@ -651,7 +651,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr r
 	return (hexutil.Bytes)(result), err
 }
 
-// EstimateGas returns an estimate of the amount of gas needed to execute the
+// EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the current pending block
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*hexutil.Big, error) {
 	// Determine the lowest and highest possible gas limits to binary search in between
@@ -1058,7 +1058,7 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	}
 	// Request the wallet to sign the transaction
 	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEthzero(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
 	return wallet.SignTx(account, tx, chainID)
@@ -1077,6 +1077,10 @@ type SendTxArgs struct {
 
 // prepareSendTxArgs is a helper function that fills in default values for unspecified tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
+
+
+	//if args.Gas.ToInt().Cmp(new(int))
+
 	if args.Gas == nil {
 		args.Gas = (*hexutil.Big)(big.NewInt(defaultGas))
 	}
@@ -1153,7 +1157,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	tx := args.toTransaction()
 
 	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEthzero(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
 	signed, err := wallet.SignTx(account, tx, chainID)

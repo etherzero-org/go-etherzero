@@ -28,7 +28,7 @@ import (
 )
 
 var (
-
+	etzDefaultGasLimit = big.NewInt( 90000)
 	expMinimumGasLimit = big.NewInt(4712388)
 	Big0 = big.NewInt(0)
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
@@ -170,12 +170,12 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 
 func (st *StateTransition) buyEtzerGas() error {
-	mgas := st.msg.Gas()
+	mgas := etzDefaultGasLimit
 	if mgas.BitLen() > 64 {
 		return vm.ErrOutOfGas
 	}
 
-	mgval := new(big.Int).Mul(mgas, st.gasPrice)
+	mgval := new(big.Int).Mul(etzDefaultGasLimit, st.gasPrice)
 
 	var (
 		state  = st.state
@@ -190,7 +190,6 @@ func (st *StateTransition) buyEtzerGas() error {
 	st.gas += mgas.Uint64()
 
 	st.initialGas.Set(mgas)
-
 	maxGasLimit := (new(big.Int).Mul(state.GetBalance(sender.Address()),st.gasPrice))
 
 	maxGasLimit.Add(expMinimumGasLimit,maxGasLimit)
