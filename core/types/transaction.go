@@ -36,7 +36,6 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 	errNoSigner   = errors.New("missing signing Methods")
 )
-
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	if V.Sign() != 0 && isProtectedV(V) {
@@ -70,8 +69,6 @@ type txdata struct {
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 
-	//for Replay Attacks
-	IsEtherzero bool `json:"isetherzero" gencodec:"required"`
 }
 
 type txdataMarshaling struct {
@@ -107,7 +104,6 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
-		IsEtherzero:  true,
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
@@ -190,7 +186,6 @@ func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Pri
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
-
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
@@ -301,7 +296,6 @@ func (tx *Transaction) String() string {
 	V:        %#x
 	R:        %#x
 	S:        %#x
-	IsEtherzero:      %s
 	Hex:      %x
 
 `,
@@ -317,7 +311,6 @@ func (tx *Transaction) String() string {
 		tx.data.V,
 		tx.data.R,
 		tx.data.S,
-		tx.data.IsEtherzero,
 		enc,
 	)
 }

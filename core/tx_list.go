@@ -478,6 +478,7 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 		return false
 	}
 	cheapest := []*types.Transaction(*l.items)[0]
+
 	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
 }
 

@@ -53,6 +53,8 @@ type TransactOpts struct {
 	GasLimit *big.Int // Gas limit to set for the transaction execution (nil = estimate + 10%)
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
+
+	IsEtherzero bool
 }
 
 // BoundContract is the base wrapper object that reflects a contract on the

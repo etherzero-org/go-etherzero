@@ -58,6 +58,9 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
 	h := s.Hash(tx)
 	sig, err := crypto.Sign(h[:], prv)
+
+	//fmt.Println(" signtx 's value:%s,sig.len:%s",sig,len(sig))
+
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +165,6 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-		tx.data.IsEtherzero,
 		s.chainId, uint(0), uint(0),
 	})
 }
@@ -231,7 +233,7 @@ func (hs EthzeroSigner) Sender(tx *Transaction) (common.Address, error) {
 	}
 	V := new(big.Int).Sub(tx.data.V, hs.chainIdMul)
 	V.Sub(V, big8)
-	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, V, true)
+	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, V, false)
 }
 
 // Hash returns the hash to be signed by the sender.
@@ -244,7 +246,6 @@ func (hs EthzeroSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-		tx.data.IsEtherzero,
 		hs.chainId, uint(0), uint(0),
 	})
 }
@@ -278,7 +279,6 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-		tx.data.IsEtherzero,
 	})
 }
 
@@ -310,6 +310,8 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (commo
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
+
+	//fmt.Println("addr:value:%s",addr)
 	return addr, nil
 }
 

@@ -362,7 +362,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	tx := args.toTransaction()
 
 	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config.IsEthzero(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
 	signed, err := wallet.SignTxWithPassphrase(account, passwd, tx, chainID)
@@ -387,7 +387,7 @@ func signHash(data []byte) []byte {
 // Sign calculates an Ethzero ECDSA signature for:
 // keccack256("\x19Ethzero Signed Message:\n" + len(message) + message))
 //
-// Note, the produced signature conforms to the secp256k1 curve R, S and V values,
+// Note, the produced signature conforms to the secp256k1 curve R, S and V values,where the V value will be 27 or 28 for legacy reasons
 // where the V value will be 27 or 28 for legacy reasons.
 //
 // The key used to calculate the signature is decrypted with the given password.
@@ -847,6 +847,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
 
+
 	result := &RPCTransaction{
 		From:     from,
 		Gas:      (*hexutil.Big)(tx.Gas()),
@@ -1057,7 +1058,7 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	}
 	// Request the wallet to sign the transaction
 	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config.IsEthzero(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
 	return wallet.SignTx(account, tx, chainID)
@@ -1152,7 +1153,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	tx := args.toTransaction()
 
 	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
+	if config := s.b.ChainConfig(); config.IsEthzero(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
 	signed, err := wallet.SignTx(account, tx, chainID)
