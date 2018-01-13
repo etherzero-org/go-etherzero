@@ -104,6 +104,8 @@ func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 	if err == nil {
 		return val
 	}
+
+
 	// Wallet open failed, report error unless it's a PIN entry
 	if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
 		throwJSException(err.Error())
