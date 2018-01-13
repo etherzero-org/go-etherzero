@@ -171,6 +171,8 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	if genesis != nil {
 		block, _ := genesis.ToBlock()
 		hash := block.Hash()
+
+		genesis.Config.ChainId = params.DefaultChainId
 		if hash != stored {
 			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
 		}
@@ -179,6 +181,9 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
 	storedcfg, err := GetChainConfig(db, stored)
+	//modify by roger on 20180113
+	storedcfg.ChainId = params.DefaultChainId
+
 	if err != nil {
 		if err == ErrChainConfigNotFound {
 			// This case happens if a genesis write was interrupted.
@@ -317,7 +322,7 @@ func DefaultGenesisBlock() *Genesis {
 		Config:     params.MainnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
+		GasLimit:   1,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
 	}

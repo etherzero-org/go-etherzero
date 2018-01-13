@@ -31,7 +31,7 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId:        big.NewInt(1),
+		ChainId:        big.NewInt(88),
 		HomesteadBlock: big.NewInt(1),
 		DAOForkBlock:   big.NewInt(1920000),
 		DAOForkSupport: true,
@@ -89,7 +89,8 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(11),big.NewInt(10), new(EthashConfig), nil}
+	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(11),big.NewInt(10), new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(88), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(11),big.NewInt(10), new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethzero core developers into the Clique consensus.
@@ -103,6 +104,8 @@ var (
 	//TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 
 	TestRules       = TestChainConfig.Rules(new(big.Int))
+
+	DefaultChainId  =  big.NewInt(88)
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
