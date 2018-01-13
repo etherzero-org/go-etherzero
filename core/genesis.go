@@ -172,7 +172,10 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 		block, _ := genesis.ToBlock()
 		hash := block.Hash()
 
-		genesis.Config.ChainId = params.DefaultChainId
+		if genesis.Config.ChainId.Cmp(big.NewInt(1)) == 0{
+			genesis.Config.ChainId = params.DefaultChainId
+		}
+
 		if hash != stored {
 			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
 		}
@@ -181,8 +184,10 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
 	storedcfg, err := GetChainConfig(db, stored)
-	//modify by roger on 20180113
-	storedcfg.ChainId = params.DefaultChainId
+
+	if storedcfg.ChainId.Cmp(big.NewInt(1)) == 0{
+		storedcfg.ChainId = params.DefaultChainId
+	}
 
 	if err != nil {
 		if err == ErrChainConfigNotFound {
