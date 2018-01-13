@@ -22,7 +22,7 @@ var Modules = map[string]string{
 	"chequebook": Chequebook_JS,
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
-	"etz":        Etz_JS,
+	"eth":        Eth_JS,
 	"miner":      Miner_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
@@ -371,43 +371,43 @@ web3._extend({
 });
 `
 
-const Etz_JS = `
+const Eth_JS = `
 web3._extend({
-	property: 'etz',
+	property: 'eth',
 	methods: [
 		new web3._extend.Method({
 			name: 'sign',
-			call: 'etz_sign',
+			call: 'eth_sign',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'resend',
-			call: 'etz_resend',
+			call: 'eth_resend',
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, web3._extend.utils.fromDecimal, web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
 			name: 'signTransaction',
-			call: 'etz_signTransaction',
+			call: 'eth_signTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'submitTransaction',
-			call: 'etz_submitTransaction',
+			call: 'eth_submitTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getRawTransaction',
-			call: 'etz_getRawTransactionByHash',
+			call: 'eth_getRawTransactionByHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getRawTransactionFromBlock',
 			call: function(args) {
-				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'etz_getRawTransactionByBlockHashAndIndex' : 'etz_getRawTransactionByBlockNumberAndIndex';
+				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'eth_getRawTransactionByBlockHashAndIndex' : 'eth_getRawTransactionByBlockNumberAndIndex';
 			},
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
@@ -416,7 +416,7 @@ web3._extend({
 	properties: [
 		new web3._extend.Property({
 			name: 'pendingTransactions',
-			getter: 'etz_pendingTransactions',
+			getter: 'eth_pendingTransactions',
 			outputFormatter: function(txs) {
 				var formatted = [];
 				for (var i = 0; i < txs.length; i++) {
@@ -445,8 +445,8 @@ web3._extend({
 			call: 'miner_stop'
 		}),
 		new web3._extend.Method({
-			name: 'setEtzerbase',
-			call: 'miner_setEtzerbase',
+			name: 'setEtherbase',
+			call: 'miner_setEtherbase',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
 		}),

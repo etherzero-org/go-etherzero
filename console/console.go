@@ -103,11 +103,11 @@ func New(config Config) (*Console, error) {
 func (c *Console) init(preload []string) error {
 	// Initialize the JavaScript <-> Go RPC bridge
 	bridge := newBridge(c.client, c.prompter, c.printer)
-	c.jsre.Set("jetz", struct{}{})
+	c.jsre.Set("jeth", struct{}{})
 
-	jetzObj, _ := c.jsre.Get("jetz")
-	jetzObj.Object().Set("send", bridge.Send)
-	jetzObj.Object().Set("sendAsync", bridge.Send)
+	jethObj, _ := c.jsre.Get("jeth")
+	jethObj.Object().Set("send", bridge.Send)
+	jethObj.Object().Set("sendAsync", bridge.Send)
 
 	consoleObj, _ := c.jsre.Get("console")
 	consoleObj.Object().Set("log", c.consoleOutput)
@@ -123,7 +123,7 @@ func (c *Console) init(preload []string) error {
 	if _, err := c.jsre.Run("var Web3 = require('web3');"); err != nil {
 		return fmt.Errorf("web3 require: %v", err)
 	}
-	if _, err := c.jsre.Run("var web3 = new Web3(jetz);"); err != nil {
+	if _, err := c.jsre.Run("var web3 = new Web3(jeth);"); err != nil {
 		return fmt.Errorf("web3 provider: %v", err)
 	}
 	// Load the supported APIs into the JavaScript runtime environment
@@ -131,7 +131,7 @@ func (c *Console) init(preload []string) error {
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-	flatten := "var etz = web3.etz; var personal = web3.personal; "
+	flatten := "var eth = web3.eth; var personal = web3.personal; "
 
 	for api := range apis {
 		if api == "web3" {
@@ -153,7 +153,7 @@ func (c *Console) init(preload []string) error {
 		return fmt.Errorf("namespace flattening: %v", err)
 	}
 	// Initialize the global name register (disabled for now)
-	//c.jsre.Run(`var GlobalRegistrar = etz.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
+	//c.jsre.Run(`var GlobalRegistrar = eth.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
 
 	// If the console is in interactive mode, instrument password related Methods to query the user
 	if c.prompter != nil {
@@ -164,20 +164,20 @@ func (c *Console) init(preload []string) error {
 		}
 		// Override the openWallet, unlockAccount, newAccount and sign Methods since
 		// these require user interaction. Assign these Method in the Console the
-		// original web3 callbacks. These will be called by the jetz.* Methods after
+		// original web3 callbacks. These will be called by the jeth.* Methods after
 		// they got the password from the user and send the original web3 request to
 		// the backend.
 		if obj := personal.Object(); obj != nil { // make sure the personal api is enabled over the interface
-			if _, err = c.jsre.Run(`jetz.openWallet = personal.openWallet;`); err != nil {
+			if _, err = c.jsre.Run(`jeth.openWallet = personal.openWallet;`); err != nil {
 				return fmt.Errorf("personal.openWallet: %v", err)
 			}
-			if _, err = c.jsre.Run(`jetz.unlockAccount = personal.unlockAccount;`); err != nil {
+			if _, err = c.jsre.Run(`jeth.unlockAccount = personal.unlockAccount;`); err != nil {
 				return fmt.Errorf("personal.unlockAccount: %v", err)
 			}
-			if _, err = c.jsre.Run(`jetz.newAccount = personal.newAccount;`); err != nil {
+			if _, err = c.jsre.Run(`jeth.newAccount = personal.newAccount;`); err != nil {
 				return fmt.Errorf("personal.newAccount: %v", err)
 			}
-			if _, err = c.jsre.Run(`jetz.sign = personal.sign;`); err != nil {
+			if _, err = c.jsre.Run(`jeth.sign = personal.sign;`); err != nil {
 				return fmt.Errorf("personal.sign: %v", err)
 			}
 			obj.Set("openWallet", bridge.OpenWallet)
@@ -237,7 +237,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 		return "", nil, ""
 	}
 	// Chunck data to relevant part for autocompletion
-	// E.g. in case of nested lines etz.getBalance(etz.coinb<tab><tab>
+	// E.g. in case of nested lines eth.getBalance(eth.coinb<tab><tab>
 	start := pos - 1
 	for ; start > 0; start-- {
 		// Skip all Methods and namespaces (i.e. including the dot)
@@ -263,8 +263,8 @@ func (c *Console) Welcome() {
 	fmt.Fprintf(c.printer, "Welcome to the Getz JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
-		console.log("coinbase: " + etz.coinbase);
-		console.log("at block: " + etz.blockNumber + " (" + new Date(1000 * etz.getBlock(etz.blockNumber).timestamp) + ")");
+		console.log("coinbase: " + eth.coinbase);
+		console.log("at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")");
 		console.log(" datadir: " + admin.datadir);
 	`)
 	// List all the supported modules for the user to call

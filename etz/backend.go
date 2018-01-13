@@ -250,17 +250,17 @@ func (s *Ethzero) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicEthzeroAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
@@ -270,7 +270,7 @@ func (s *Ethzero) APIs() []rpc.API {
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
 			Public:    true,
