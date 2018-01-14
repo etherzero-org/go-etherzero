@@ -186,7 +186,7 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	newcfg := genesis.configOrDefault(stored)
 	storedcfg, err := GetChainConfig(db, stored)
 
-	if storedcfg.ChainId.Cmp(big.NewInt(1)) == 0{
+	if storedcfg != nil && storedcfg.ChainId.Cmp(big.NewInt(1)) == 0{
 		storedcfg.ChainId = params.DefaultChainId
 	}
 
