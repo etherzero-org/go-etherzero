@@ -105,7 +105,7 @@ out:
 
 func (self *Miner) Start(coinbase common.Address) {
 	atomic.StoreInt32(&self.shouldStart, 1)
-	self.worker.setEtzerbase(coinbase)
+	self.worker.setEtherbase(coinbase)
 	self.coinbase = coinbase
 
 	if atomic.LoadInt32(&self.canStart) == 0 {
@@ -177,7 +177,7 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-func (self *Miner) SetEtzerbase(addr common.Address) {
+func (self *Miner) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
-	self.worker.setEtzerbase(addr)
+	self.worker.setEtherbase(addr)
 }

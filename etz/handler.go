@@ -256,8 +256,10 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 	p.Log().Debug("Ethzero peer connected", "name", p.Name())
 
+	fmt.Println("handler.go handle is debug value: Ethzero peer connected","name", p.Name())
 	// Execute the Ethzero handshake
 	td, head, genesis := pm.blockchain.Status()
+	fmt.Println("handler.go handle is debug value: genesis",genesis.String())
 	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
 		p.Log().Debug("Ethzero handshake failed", "err", err)
 		p.Log().Info("Ethzero handshake failed", "err", err)

@@ -753,9 +753,9 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	return accs[index], nil
 }
 
-// setEtzerbase retrieves the etzerbase either from the directly specified
+// setEtherbase retrieves the etzerbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtzerbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *etz.Config) {
+func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *etz.Config) {
 	if ctx.GlobalIsSet(EtzerbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(EtzerbaseFlag.Name))
 		if err != nil {
@@ -988,7 +988,7 @@ func SetEtzConfig(ctx *cli.Context, stack *node.Node, cfg *etz.Config) {
 	checkExclusive(ctx, LightServFlag, SyncModeFlag, "light")
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setEtzerbase(ctx, ks, cfg)
+	setEtherbase(ctx, ks, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
@@ -1039,6 +1039,7 @@ func SetEtzConfig(ctx *cli.Context, stack *node.Node, cfg *etz.Config) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
+		//modify by roger on 2018-01-13 by testnet
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {

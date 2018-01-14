@@ -99,8 +99,7 @@ func (s *Ethzero) AddLesServer(ls LesServer) {
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
 
-// New creates a new Ethzero object (including the
-// initialisation of the common Ethzero object)
+// New creates a new Ethzero object (including the initialisation of the common Ethzero object)
 func New(ctx *node.ServiceContext, config *Config) (*Ethzero, error) {
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run etz.Ethzero in light sync mode, use les.LightEthzero")
@@ -114,6 +113,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethzero, error) {
 	}
 	stopDbUpgrade := upgradeDeduplicateData(chainDb)
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
+
+	fmt.Println("backend.go geneisisHash 's value:",genesisHash.String())
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
@@ -317,12 +318,12 @@ func (s *Ethzero) Etzerbase() (eb common.Address, err error) {
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (self *Ethzero) SetEtzerbase(etzerbase common.Address) {
+func (self *Ethzero) SetEtherbase(etzerbase common.Address) {
 	self.lock.Lock()
 	self.etzerbase = etzerbase
 	self.lock.Unlock()
 
-	self.miner.SetEtzerbase(etzerbase)
+	self.miner.SetEtherbase(etzerbase)
 }
 
 func (s *Ethzero) StartMining(local bool) error {

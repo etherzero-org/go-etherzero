@@ -42,7 +42,7 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:     88,
+	NetworkId:     1,
 	LightPeers:    20,
 	DatabaseCache: 128,
 	GasPrice:      big.NewInt(18 * params.Shannon),
