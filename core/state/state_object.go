@@ -399,8 +399,8 @@ func (self *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
 }
 
-//add by roger on 2017-12-16
-
+////add by roger on 2017-12-16
+//
 func (self *stateObject) setHeightTxCount(heighttxcount uint64){
 
 	self.data.HeightTxCount=heighttxcount

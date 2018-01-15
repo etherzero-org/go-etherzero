@@ -114,7 +114,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethzero, error) {
 	stopDbUpgrade := upgradeDeduplicateData(chainDb)
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 
-	fmt.Println("backend.go geneisisHash 's value:",genesisHash.String())
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}

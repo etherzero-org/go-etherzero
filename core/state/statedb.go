@@ -75,6 +75,11 @@ type StateDB struct {
 	lock sync.Mutex
 }
 
+
+func (self *StateDB) GetTrieHash()common.Hash{
+
+	return self.trie.Hash()
+}
 // Create a new state from a given trie
 func New(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
@@ -544,7 +549,7 @@ func (self *StateDB) GetRefund() *big.Int {
 	return self.refund
 }
 
-// Finalise finalises the state by removing the self destructed objects
+// Finalise finalises the state by removing the self destructed objects and clears the journal as well as the refunds.
 // and clears the journal as well as the refunds.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	for addr := range s.stateObjectsDirty {

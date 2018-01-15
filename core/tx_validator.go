@@ -33,6 +33,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
+
+
 	//确保交易金额能有满足执行交易需要的规则。
 	//fmt.Println("from.Address 's vlaue:%s",from.String())
 	heightCount:= pool.currentState.HeightTxCount(from)

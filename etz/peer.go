@@ -279,7 +279,7 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 
-	fmt.Println("peer.go readStatus is debug value: status.GenesisBlock :%s and genesis value:%s", status.GenesisBlock.String(), genesis.String())
+	//fmt.Println("peer.go readStatus is debug value: status.GenesisBlock :%s and genesis value:%s", status.GenesisBlock.String(), genesis.String())
 	if status.GenesisBlock != genesis {
 		return errResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
 	}

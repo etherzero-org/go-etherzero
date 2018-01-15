@@ -193,7 +193,7 @@ type storageblock struct {
 // and receipts.
 func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
-
+	//fmt.Println("1 block.go NewBlock hash.string 's value: ",b.Hash().String())
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
@@ -202,14 +202,14 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
-
+	//fmt.Println("2 block.go NewBlock hash.string 's value: ",b.Hash().String())
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
 		b.header.Bloom = CreateBloom(receipts)
 	}
-
+	//fmt.Println("3 block.go NewBlock hash.string 's value: ",b.Hash().String())
 	if len(uncles) == 0 {
 		b.header.UncleHash = EmptyUncleHash
 	} else {
@@ -219,7 +219,7 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
 	}
-
+	//fmt.Println("4 block.go NewBlock hash.string 's value: ",b.Hash().String())
 	return b
 }
 

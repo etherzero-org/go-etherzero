@@ -264,6 +264,7 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")
+			fmt.Println("InsertHeaderChain Premature abort during headers import")
 			return i, errors.New("aborted")
 		}
 		// If the header's already known, skip it, otherwise store
@@ -272,6 +273,7 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 			continue
 		}
 		if err := writeHeader(header); err != nil {
+			fmt.Println("InsertHeaderChain writeHeader",err)
 			return i, err
 		}
 		stats.processed++

@@ -41,9 +41,7 @@ var (
 	ByzantiumBlockReward = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
 	//ETHZeroBlockReward *big.Int = new(big.Int).Mul(big.NewInt(5e+18),big.NewInt(4)) //Block reward in wei for successfully mining a block upward from Ethzero
-	EthzeroBlockReward =  big.NewInt(2e+18)
-
-	EthzeroForkBlockGenesisReward = new(big.Int).Mul(big.NewInt(2e+18),big.NewInt(1000))
+	EthzeroBlockReward =  big.NewInt(4e+18)
 
 	EthzeroBlock = big.NewInt(4936270)
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
@@ -576,10 +574,6 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 
 	blockReward := EthzeroBlockReward
 
-	if config.IsEtherzeroForkGenesisBlock(header.Number) {
-
-		blockReward = EthzeroForkBlockGenesisReward
-	}
 
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)

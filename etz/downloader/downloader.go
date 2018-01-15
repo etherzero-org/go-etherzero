@@ -414,6 +414,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 
 	log.Debug("Synchronising with the network", "peer", p.id, "eth", p.version, "head", hash, "td", td, "mode", d.mode)
+//	fmt.Println("Synchronising with the network", "peer", p.id, "eth", p.version, "head", hash, "td", td, "mode", d.mode)
 	defer func(start time.Time) {
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
@@ -553,7 +554,7 @@ func (d *Downloader) Terminate() {
 // fetchHeight retrieves the head header of the remote peer to aid in estimating
 // the total time a pending synchronisation would take.
 func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
-	p.log.Debug("Retrieving remote chain height")
+	p.log.Info("Retrieving remote chain height")
 
 	// Request the advertised remote head block and wait for the response
 	head, _ := p.peer.Head()
@@ -655,6 +656,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
+
 					return 0, errInvalidChain
 				}
 			}
@@ -1352,6 +1354,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 			"firstnum", first.Number, "firsthash", first.Hash(),
 			"lastnum", last.Number, "lasthash", last.Hash(),
 		)
+
 		blocks := make([]*types.Block, items)
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)

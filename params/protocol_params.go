@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package params
 
@@ -24,15 +24,9 @@ const (
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
-	//TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.
-	//TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
-	//TxDataZeroGas         uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions.
-
-	//modify by roger on 20171205 begin
 	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.
 	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
 	TxDataZeroGas         uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions.
-	//modify by roger on 20171205 end
 	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
 	SstoreSetGas          uint64 = 20000 // Once per SLOAD operation.
 	LogDataGas            uint64 = 8     // Per byte in a LOG* operation's data.
@@ -57,8 +51,6 @@ const (
 	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
 	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
 	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
-
-	//TxDataNonZeroGas uint64 = 0    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
 	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
@@ -81,14 +73,11 @@ const (
 
 var (
 	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(4712388)               // Gas limit of the Genesis block.
+	MinGasLimit            = big.NewInt(1)                  // Minimum the gas limit may ever be.
+	GenesisGasLimit        = big.NewInt(1)               // Gas limit of the Genesis block.
 	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
 	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
-	EthzeroDifficultyBoundDivisor = big.NewInt(1024)                  // The bound divisor of the difficulty, used in the update calculations.
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
-	EthzeroMinimumDifficulty      = big.NewInt(65536)                // The minimum that the difficulty may ever be.
-	//DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 	DurationLimit          = big.NewInt(10)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 )

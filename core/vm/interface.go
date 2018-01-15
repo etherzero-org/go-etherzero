@@ -63,13 +63,13 @@ type StateDB interface {
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
 
-	SetHeightTxCount(addr common.Address, heighttxcount uint64)
-
-	HeightTxCount( addr common.Address ) uint64
-
-	SetTxBlockHeight(addr common.Address , txblockheight big.Int)
-
-	TxBlockHeight( addr common.Address ) big.Int
+	//SetHeightTxCount(addr common.Address, heighttxcount uint64)
+	//
+	//HeightTxCount( addr common.Address ) uint64
+	//
+	//SetTxBlockHeight(addr common.Address , txblockheight big.Int)
+	//
+	//TxBlockHeight( addr common.Address ) big.Int
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

@@ -116,7 +116,7 @@ func (h *storageJSON) UnmarshalText(text []byte) error {
 	}
 	offset := len(h) - len(text)/2 // pad on the left
 	if _, err := hex.Decode(h[offset:], text); err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return fmt.Errorf("invalid hex storage key/value %q", text)
 	}
 	return nil
@@ -145,8 +145,8 @@ func (e *GenesisMismatchError) Error() string {
 //     db has genesis    |  from DB           |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
-// specify a fork block below the local head block). In case of a conflict, the
-// error is a *params.ConfigCompatError and the new, unwritten config is returned.
+// i.e. does not specify a fork block below the local head block). In case of a conflict, the
+// the error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
@@ -172,7 +172,7 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 		block, _ := genesis.ToBlock()
 		hash := block.Hash()
 
-		fmt.Println("genesis.go",hash.String())
+	//	fmt.Println("genesis.go",hash.String())
 		if genesis.Config.ChainId.Cmp(big.NewInt(1)) == 0{
 			genesis.Config.ChainId = params.DefaultChainId
 		}
@@ -202,10 +202,6 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
 	if genesis == nil && stored != params.MainnetGenesisHash {
-
-		//modify by roger on 2018-01-10 for forkGenesisBlock
-		storedcfg.EthzeroForkGenesisBlock = big.NewInt(10)
-		storedcfg.EthzeroBlock = big.NewInt(11)
 		return storedcfg, stored, nil
 	}
 
@@ -240,6 +236,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	db, _ := etzdb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
+
 	for addr, account := range g.Alloc {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
@@ -248,7 +245,13 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			statedb.SetState(addr, key, value)
 		}
 	}
+
+	//fmt.Println("genesis.go toblock update  statedb's rire hash :",statedb.GetTrieHash().String())
 	root := statedb.IntermediateRoot(false)
+	//fmt.Println("genesis.go toblock finale  statedb's rire hash :",statedb.GetTrieHash().String())
+	//fmt.Println("string to hash",common.StringToHash("d7f8974fb5ac78d9ac099b9ad5018bedc2ce0a72dad1827a1709da30580f0544").String())
+
+	//fmt.Println("genesis.go root 's hashvalue :",root.String() )
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -268,6 +271,9 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	if g.Difficulty == nil {
 		head.Difficulty = params.GenesisDifficulty
 	}
+	//fmt.Println("genesis.go head.string 's value: ",head.String())
+	//fmt.Println("genesis.go head.hash 's value:",head.Hash().String())
+
 	return types.NewBlock(head, nil, nil, nil), statedb
 }
 
@@ -281,21 +287,27 @@ func (g *Genesis) Commit(db etzdb.Database) (*types.Block, error) {
 	if _, err := statedb.CommitTo(db, false); err != nil {
 		return nil, fmt.Errorf("cannot write state: %v", err)
 	}
+
 	if err := WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty); err != nil {
 		return nil, err
 	}
+
 	if err := WriteBlock(db, block); err != nil {
 		return nil, err
 	}
+
 	if err := WriteBlockReceipts(db, block.Hash(), block.NumberU64(), nil); err != nil {
 		return nil, err
 	}
+
 	if err := WriteCanonicalHash(db, block.Hash(), block.NumberU64()); err != nil {
 		return nil, err
 	}
+
 	if err := WriteHeadBlockHash(db, block.Hash()); err != nil {
 		return nil, err
 	}
+
 	if err := WriteHeadHeaderHash(db, block.Hash()); err != nil {
 		return nil, err
 	}
