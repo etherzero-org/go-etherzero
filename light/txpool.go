@@ -357,10 +357,12 @@ func (pool *TxPool) validateTx(ctx context.Context, tx *types.Transaction) error
 
 	// Check the transaction doesn't exceed the current
 	// block limit gas.
-	header := pool.chain.GetHeaderByHash(pool.head)
-	if header.GasLimit.Cmp(tx.Gas()) < 0 {
-		return core.ErrGasLimit
-	}
+
+	//modify by roger on 2018-01-16
+	//header := pool.chain.GetHeaderByHash(pool.head)
+	//if header.GasLimit.Cmp(tx.Gas()) < 0 {
+	//	return core.ErrGasLimit
+	//}
 
 	// Transactions can't be negative. This may never happen
 	// using RLP decoded transactions but may occur if you create
