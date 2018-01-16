@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 )
 
@@ -30,7 +30,7 @@ type TestManager struct {
 	// stateManager *StateManager
 	eventMux *event.TypeMux
 
-	db         etzdb.Database
+	db         ethdb.Database
 	txPool     *TxPool
 	blockChain *BlockChain
 	Blocks     []*types.Block
@@ -72,12 +72,12 @@ func (tm *TestManager) EventMux() *event.TypeMux {
 // 	return nil
 // }
 
-func (tm *TestManager) Db() etzdb.Database {
+func (tm *TestManager) Db() ethdb.Database {
 	return tm.db
 }
 
 func NewTestManager() *TestManager {
-	db, err := etzdb.NewMemDatabase()
+	db, err := ethdb.NewMemDatabase()
 	if err != nil {
 		fmt.Println("Could not create mem-db, failing")
 		return nil

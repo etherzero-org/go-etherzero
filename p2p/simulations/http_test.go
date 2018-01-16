@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulations
 
@@ -519,7 +519,7 @@ func (t *expectEvents) expect(events ...*Event) {
 	}
 }
 
-// TestHTTPNodeRPC tests calling RPC Methods on nodes via the HTTP API
+// TestHTTPNodeRPC tests calling RPC methods on nodes via the HTTP API
 func TestHTTPNodeRPC(t *testing.T) {
 	// start the server
 	_, s := testHTTPServer(t)
@@ -555,13 +555,13 @@ func TestHTTPNodeRPC(t *testing.T) {
 	}
 	defer sub.Unsubscribe()
 
-	// call some RPC Methods using client 2
+	// call some RPC methods using client 2
 	if err := rpcClient2.CallContext(ctx, nil, "test_add", 10); err != nil {
-		t.Fatalf("error calling RPC Method: %s", err)
+		t.Fatalf("error calling RPC method: %s", err)
 	}
 	var result int64
 	if err := rpcClient2.CallContext(ctx, &result, "test_get"); err != nil {
-		t.Fatalf("error calling RPC Method: %s", err)
+		t.Fatalf("error calling RPC method: %s", err)
 	}
 	if result != 10 {
 		t.Fatalf("expected result to be 10, got %d", result)

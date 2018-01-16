@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -30,13 +30,13 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/params"
 )
 
 // newTestBlockChain creates a blockchain without validation.
 func newTestBlockChain(fake bool) *BlockChain {
-	db, _ := etzdb.NewMemDatabase()
+	db, _ := ethdb.NewMemDatabase()
 	gspec := &Genesis{
 		Config:     params.TestChainConfig,
 		Difficulty: big.NewInt(1),
@@ -577,7 +577,7 @@ func testInsertNonceError(t *testing.T, full bool) {
 func TestFastVsFullChains(t *testing.T) {
 	// Configure and generate a sample block chain
 	var (
-		gendb, _ = etzdb.NewMemDatabase()
+		gendb, _ = ethdb.NewMemDatabase()
 		key, _   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		address  = crypto.PubkeyToAddress(key.PublicKey)
 		funds    = big.NewInt(1000000000)
@@ -607,7 +607,7 @@ func TestFastVsFullChains(t *testing.T) {
 		}
 	})
 	// Import the chain as an archive node for the comparison baseline
-	archiveDb, _ := etzdb.NewMemDatabase()
+	archiveDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(archiveDb)
 	archive, _ := NewBlockChain(archiveDb, gspec.Config, ethash.NewFaker(), vm.Config{})
 	defer archive.Stop()
@@ -616,7 +616,7 @@ func TestFastVsFullChains(t *testing.T) {
 		t.Fatalf("failed to process block %d: %v", n, err)
 	}
 	// Fast import the chain as a non-archive node to test
-	fastDb, _ := etzdb.NewMemDatabase()
+	fastDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(fastDb)
 	fast, _ := NewBlockChain(fastDb, gspec.Config, ethash.NewFaker(), vm.Config{})
 	defer fast.Stop()
@@ -660,12 +660,12 @@ func TestFastVsFullChains(t *testing.T) {
 	}
 }
 
-// Tests that various import Methods move the chain head pointers to the correct
+// Tests that various import methods move the chain head pointers to the correct
 // positions.
 func TestLightVsFastVsFullChainHeads(t *testing.T) {
 	// Configure and generate a sample block chain
 	var (
-		gendb, _ = etzdb.NewMemDatabase()
+		gendb, _ = ethdb.NewMemDatabase()
 		key, _   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		address  = crypto.PubkeyToAddress(key.PublicKey)
 		funds    = big.NewInt(1000000000)
@@ -680,7 +680,7 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 	for _, block := range blocks[height/2:] {
 		remove = append(remove, block.Hash())
 	}
-	// Create a small assertion Method to check the three heads
+	// Create a small assertion method to check the three heads
 	assert := func(t *testing.T, kind string, chain *BlockChain, header uint64, fast uint64, block uint64) {
 		if num := chain.CurrentBlock().NumberU64(); num != block {
 			t.Errorf("%s head block mismatch: have #%v, want #%v", kind, num, block)
@@ -693,7 +693,7 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 		}
 	}
 	// Import the chain as an archive node and ensure all pointers are updated
-	archiveDb, _ := etzdb.NewMemDatabase()
+	archiveDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(archiveDb)
 
 	archive, _ := NewBlockChain(archiveDb, gspec.Config, ethash.NewFaker(), vm.Config{})
@@ -707,7 +707,7 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 	assert(t, "archive", archive, height/2, height/2, height/2)
 
 	// Import the chain as a non-archive node and ensure all pointers are updated
-	fastDb, _ := etzdb.NewMemDatabase()
+	fastDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(fastDb)
 	fast, _ := NewBlockChain(fastDb, gspec.Config, ethash.NewFaker(), vm.Config{})
 	defer fast.Stop()
@@ -727,7 +727,7 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 	assert(t, "fast", fast, height/2, height/2, 0)
 
 	// Import the chain as a light node and ensure all pointers are updated
-	lightDb, _ := etzdb.NewMemDatabase()
+	lightDb, _ := ethdb.NewMemDatabase()
 	gspec.MustCommit(lightDb)
 
 	light, _ := NewBlockChain(lightDb, gspec.Config, ethash.NewFaker(), vm.Config{})
@@ -750,7 +750,7 @@ func TestChainTxReorgs(t *testing.T) {
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
 		addr3   = crypto.PubkeyToAddress(key3.PublicKey)
-		db, _   = etzdb.NewMemDatabase()
+		db, _   = ethdb.NewMemDatabase()
 		gspec   = &Genesis{
 			Config:   params.TestChainConfig,
 			GasLimit: 3141592,
@@ -862,7 +862,7 @@ func TestLogReorgs(t *testing.T) {
 	var (
 		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
-		db, _   = etzdb.NewMemDatabase()
+		db, _   = ethdb.NewMemDatabase()
 		// this code generates a log
 		code    = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
 		gspec   = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
@@ -906,7 +906,7 @@ func TestLogReorgs(t *testing.T) {
 
 func TestReorgSideEvent(t *testing.T) {
 	var (
-		db, _   = etzdb.NewMemDatabase()
+		db, _   = ethdb.NewMemDatabase()
 		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		gspec   = &Genesis{
@@ -1031,7 +1031,7 @@ func TestCanonicalBlockRetrieval(t *testing.T) {
 func TestEIP155Transition(t *testing.T) {
 	// Configure and generate a sample block chain
 	var (
-		db, _      = etzdb.NewMemDatabase()
+		db, _      = ethdb.NewMemDatabase()
 		key, _     = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		address    = crypto.PubkeyToAddress(key.PublicKey)
 		funds      = big.NewInt(1000000000)
@@ -1135,7 +1135,7 @@ func TestEIP155Transition(t *testing.T) {
 func TestEIP161AccountRemoval(t *testing.T) {
 	// Configure and generate a sample block chain
 	var (
-		db, _   = etzdb.NewMemDatabase()
+		db, _   = ethdb.NewMemDatabase()
 		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		address = crypto.PubkeyToAddress(key.PublicKey)
 		funds   = big.NewInt(1000000000)

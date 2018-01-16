@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -30,9 +30,9 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 )
 
-// nodeDockerfile is the Dockerfile required to run an Ethzero node.
+// nodeDockerfile is the Dockerfile required to run an Ethereum node.
 var nodeDockerfile = `
-FROM ethzero/client-go:latest
+FROM ethereum/client-go:latest
 
 ADD genesis.json /genesis.json
 {{if .Unlock}}
@@ -40,15 +40,15 @@ ADD genesis.json /genesis.json
 	ADD signer.pass /signer.pass
 {{end}}
 RUN \
-  echo 'getz --cache 512 init /genesis.json' > getz.sh && \{{if .Unlock}}
-	echo 'mkdir -p /root/.ethzero/keystore/ && cp /signer.json /root/.ethzero/keystore/' >> getz.sh && \{{end}}
-	echo $'getz --networkid {{.NetworkID}} --cache 512 --port {{.Port}} --maxpeers {{.Peers}} {{.LightFlag}} --etzstats \'{{.Ethstats}}\' {{if .BootV4}}--bootnodesv4 {{.BootV4}}{{end}} {{if .BootV5}}--bootnodesv5 {{.BootV5}}{{end}} {{if .Etzerbase}}--etzerbase {{.Etzerbase}} --mine --minerthreads 1{{end}} {{if .Unlock}}--unlock 0 --password /signer.pass --mine{{end}} --targetgaslimit {{.GasTarget}} --gasprice {{.GasPrice}}' >> getz.sh
+  echo 'geth --cache 512 init /genesis.json' > geth.sh && \{{if .Unlock}}
+	echo 'mkdir -p /root/.ethereum/keystore/ && cp /signer.json /root/.ethereum/keystore/' >> geth.sh && \{{end}}
+	echo $'geth --networkid {{.NetworkID}} --cache 512 --port {{.Port}} --maxpeers {{.Peers}} {{.LightFlag}} --ethstats \'{{.Ethstats}}\' {{if .BootV4}}--bootnodesv4 {{.BootV4}}{{end}} {{if .BootV5}}--bootnodesv5 {{.BootV5}}{{end}} {{if .Etherbase}}--etherbase {{.Etherbase}} --mine --minerthreads 1{{end}} {{if .Unlock}}--unlock 0 --password /signer.pass --mine{{end}} --targetgaslimit {{.GasTarget}} --gasprice {{.GasPrice}}' >> geth.sh
 
-ENTRYPOINT ["/bin/sh", "getz.sh"]
+ENTRYPOINT ["/bin/sh", "geth.sh"]
 `
 
 // nodeComposefile is the docker-compose.yml file required to deploy and maintain
-// an Ethzero node (bootnode or miner for now).
+// an Ethereum node (bootnode or miner for now).
 var nodeComposefile = `
 version: '2'
 services:
@@ -60,7 +60,7 @@ services:
       - "{{.FullPort}}:{{.FullPort}}/udp"{{if .Light}}
       - "{{.LightPort}}:{{.LightPort}}/udp"{{end}}
     volumes:
-      - {{.Datadir}}:/root/.ethzero{{if .Ethashdir}}
+      - {{.Datadir}}:/root/.ethereum{{if .Ethashdir}}
       - {{.Ethashdir}}:/root/.ethash{{end}}
     environment:
       - FULL_PORT={{.FullPort}}/tcp
@@ -68,7 +68,7 @@ services:
       - TOTAL_PEERS={{.TotalPeers}}
       - LIGHT_PEERS={{.LightPeers}}
       - STATS_NAME={{.Ethstats}}
-      - MINER_NAME={{.Etzerbase}}
+      - MINER_NAME={{.Etherbase}}
       - GAS_TARGET={{.GasTarget}}
       - GAS_PRICE={{.GasPrice}}
     logging:
@@ -79,12 +79,12 @@ services:
     restart: always
 `
 
-// deployNode deploys a new Ethzero node container to a remote machine via SSH,
+// deployNode deploys a new Ethereum node container to a remote machine via SSH,
 // docker and docker-compose. If an instance with the specified network name
 // already exists there, it will be overwritten!
 func deployNode(client *sshClient, network string, bootv4, bootv5 []string, config *nodeInfos, nocache bool) ([]byte, error) {
 	kind := "sealnode"
-	if config.keyJSON == "" && config.etzerbase == "" {
+	if config.keyJSON == "" && config.etherbase == "" {
 		kind = "bootnode"
 		bootv4 = make([]string, 0)
 		bootv5 = make([]string, 0)
@@ -105,8 +105,8 @@ func deployNode(client *sshClient, network string, bootv4, bootv5 []string, conf
 		"LightFlag": lightFlag,
 		"BootV4":    strings.Join(bootv4, ","),
 		"BootV5":    strings.Join(bootv5, ","),
-		"Ethstats":  config.etzstats,
-		"Etzerbase": config.etzerbase,
+		"Ethstats":  config.ethstats,
+		"Etherbase": config.etherbase,
 		"GasTarget": uint64(1000000 * config.gasTarget),
 		"GasPrice":  uint64(1000000000 * config.gasPrice),
 		"Unlock":    config.keyJSON != "",
@@ -124,8 +124,8 @@ func deployNode(client *sshClient, network string, bootv4, bootv5 []string, conf
 		"Light":      config.peersLight > 0,
 		"LightPort":  config.portFull + 1,
 		"LightPeers": config.peersLight,
-		"Ethstats":   config.etzstats[:strings.Index(config.etzstats, ":")],
-		"Etzerbase":  config.etzerbase,
+		"Ethstats":   config.ethstats[:strings.Index(config.ethstats, ":")],
+		"Etherbase":  config.etherbase,
 		"GasTarget":  config.gasTarget,
 		"GasPrice":   config.gasPrice,
 	})
@@ -156,14 +156,14 @@ type nodeInfos struct {
 	network    int64
 	datadir    string
 	ethashdir  string
-	etzstats   string
+	ethstats   string
 	portFull   int
 	portLight  int
 	enodeFull  string
 	enodeLight string
 	peersTotal int
 	peersLight int
-	etzerbase  string
+	etherbase  string
 	keyJSON    string
 	keyPass    string
 	gasTarget  float64
@@ -178,7 +178,7 @@ func (info *nodeInfos) Report() map[string]string {
 		"Listener port (full nodes)": strconv.Itoa(info.portFull),
 		"Peer count (all total)":     strconv.Itoa(info.peersTotal),
 		"Peer count (light nodes)":   strconv.Itoa(info.peersLight),
-		"Ethstats username":          info.etzstats,
+		"Ethstats username":          info.ethstats,
 	}
 	if info.peersLight > 0 {
 		// Light server enabled
@@ -189,10 +189,10 @@ func (info *nodeInfos) Report() map[string]string {
 		report["Gas limit (baseline target)"] = fmt.Sprintf("%0.3f MGas", info.gasTarget)
 		report["Gas price (minimum accepted)"] = fmt.Sprintf("%0.3f GWei", info.gasPrice)
 
-		if info.etzerbase != "" {
+		if info.etherbase != "" {
 			// Ethash proof-of-work miner
 			report["Ethash directory"] = info.ethashdir
-			report["Miner account"] = info.etzerbase
+			report["Miner account"] = info.etherbase
 		}
 		if info.keyJSON != "" {
 			// Clique proof-of-authority signer
@@ -232,7 +232,7 @@ func checkNode(client *sshClient, network string, boot bool) (*nodeInfos, error)
 
 	// Container available, retrieve its node ID and its genesis json
 	var out []byte
-	if out, err = client.Run(fmt.Sprintf("docker exec %s_%s_1 getz --exec admin.nodeInfo.id attach", network, kind)); err != nil {
+	if out, err = client.Run(fmt.Sprintf("docker exec %s_%s_1 geth --exec admin.nodeInfo.id attach", network, kind)); err != nil {
 		return nil, ErrServiceUnreachable
 	}
 	id := bytes.Trim(bytes.TrimSpace(out), "\"")
@@ -257,14 +257,14 @@ func checkNode(client *sshClient, network string, boot bool) (*nodeInfos, error)
 	// Assemble and return the useful infos
 	stats := &nodeInfos{
 		genesis:    genesis,
-		datadir:    infos.volumes["/root/.ethzero"],
+		datadir:    infos.volumes["/root/.ethereum"],
 		ethashdir:  infos.volumes["/root/.ethash"],
 		portFull:   infos.portmap[infos.envvars["FULL_PORT"]],
 		portLight:  infos.portmap[infos.envvars["LIGHT_PORT"]],
 		peersTotal: totalPeers,
 		peersLight: lightPeers,
-		etzstats:   infos.envvars["STATS_NAME"],
-		etzerbase:  infos.envvars["MINER_NAME"],
+		ethstats:   infos.envvars["STATS_NAME"],
+		etherbase:  infos.envvars["MINER_NAME"],
 		keyJSON:    keyJSON,
 		keyPass:    keyPass,
 		gasTarget:  gasTarget,

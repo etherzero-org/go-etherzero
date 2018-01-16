@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -76,7 +76,7 @@ func (w *wizard) makeServer() string {
 
 	client, err := dial(input, nil)
 	if err != nil {
-		log.Error("Server not ready for puppetz", "err", err)
+		log.Error("Server not ready for puppeth", "err", err)
 		return ""
 	}
 	// All checks passed, start tracking the server
@@ -195,6 +195,6 @@ func (w *wizard) deployComponent() {
 	case "7":
 		w.deployDashboard()
 	default:
-		log.Error("That's not sometzing I can do")
+		log.Error("That's not something I can do")
 	}
 }

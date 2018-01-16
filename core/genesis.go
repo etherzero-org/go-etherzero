@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -30,7 +30,7 @@ import (
 	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
@@ -116,7 +116,7 @@ func (h *storageJSON) UnmarshalText(text []byte) error {
 	}
 	offset := len(h) - len(text)/2 // pad on the left
 	if _, err := hex.Decode(h[offset:], text); err != nil {
-		//fmt.Println(err)
+		fmt.Println(err)
 		return fmt.Errorf("invalid hex storage key/value %q", text)
 	}
 	return nil
@@ -145,11 +145,11 @@ func (e *GenesisMismatchError) Error() string {
 //     db has genesis    |  from DB           |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
-// i.e. does not specify a fork block below the local head block). In case of a conflict, the
-// the error is a *params.ConfigCompatError and the new, unwritten config is returned.
+// specify a fork block below the local head block). In case of a conflict, the
+// error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -169,14 +169,8 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-		block, _ := genesis.ToBlock()
+		block, _ := genesis.ToEthBlock()
 		hash := block.Hash()
-
-	//	fmt.Println("genesis.go",hash.String())
-		if genesis.Config.ChainId.Cmp(big.NewInt(1)) == 0{
-			genesis.Config.ChainId = params.DefaultChainId
-		}
-
 		if hash != stored {
 			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
 		}
@@ -185,11 +179,6 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
 	storedcfg, err := GetChainConfig(db, stored)
-
-	if storedcfg != nil && storedcfg.ChainId.Cmp(big.NewInt(1)) == 0{
-		storedcfg.ChainId = params.DefaultChainId
-	}
-
 	if err != nil {
 		if err == ErrChainConfigNotFound {
 			// This case happens if a genesis write was interrupted.
@@ -221,8 +210,7 @@ func SetupGenesisBlock(db etzdb.Database, genesis *Genesis) (*params.ChainConfig
 func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	switch {
 	case g != nil:
-		//return g.Config
-		return params.AllEthashProtocolChanges
+		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
 	case ghash == params.TestnetGenesisHash:
@@ -234,9 +222,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 
 // ToBlock creates the block and state of a genesis specification.
 func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
-	db, _ := etzdb.NewMemDatabase()
+	db, _ := ethdb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
-
 	for addr, account := range g.Alloc {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
@@ -245,13 +232,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 			statedb.SetState(addr, key, value)
 		}
 	}
-
-	//fmt.Println("genesis.go toblock update  statedb's rire hash :",statedb.GetTrieHash().String())
 	root := statedb.IntermediateRoot(false)
-	//fmt.Println("genesis.go toblock finale  statedb's rire hash :",statedb.GetTrieHash().String())
-	//fmt.Println("string to hash",common.StringToHash("d7f8974fb5ac78d9ac099b9ad5018bedc2ce0a72dad1827a1709da30580f0544").String())
-
-	//fmt.Println("genesis.go root 's hashvalue :",root.String() )
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -271,43 +252,73 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	if g.Difficulty == nil {
 		head.Difficulty = params.GenesisDifficulty
 	}
-	//fmt.Println("genesis.go head.string 's value: ",head.String())
 	//fmt.Println("genesis.go head.hash 's value:",head.Hash().String())
+	return types.NewBlock(head, nil, nil, nil), statedb
+}
 
+
+// ToBlock creates the block and state of a genesis specification.
+func (g *Genesis) ToEthBlock() (*types.Block, *state.StateEthDB) {
+	db, _ := ethdb.NewMemDatabase()
+	statedb, _ := state.NewEthDB(common.Hash{}, state.NewDatabase(db))
+
+	for addr, account := range g.Alloc {
+		statedb.AddBalance(addr, account.Balance)
+		statedb.SetCode(addr, account.Code)
+		statedb.SetNonce(addr, account.Nonce)
+		for key, value := range account.Storage {
+			statedb.SetState(addr, key, value)
+		}
+	}
+
+	root := statedb.IntermediateRoot(false)
+	head := &types.Header{
+		Number:     new(big.Int).SetUint64(g.Number),
+		Nonce:      types.EncodeNonce(g.Nonce),
+		Time:       new(big.Int).SetUint64(g.Timestamp),
+		ParentHash: g.ParentHash,
+		Extra:      g.ExtraData,
+		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
+		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
+		Difficulty: g.Difficulty,
+		MixDigest:  g.Mixhash,
+		Coinbase:   g.Coinbase,
+		Root:       root,
+	}
+	if g.GasLimit == 0 {
+		head.GasLimit = params.GenesisGasLimit
+	}
+	if g.Difficulty == nil {
+		head.Difficulty = params.GenesisDifficulty
+	}
 	return types.NewBlock(head, nil, nil, nil), statedb
 }
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
-func (g *Genesis) Commit(db etzdb.Database) (*types.Block, error) {
-	block, statedb := g.ToBlock()
+func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
+	block, statedb := g.ToEthBlock()
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
 	if _, err := statedb.CommitTo(db, false); err != nil {
 		return nil, fmt.Errorf("cannot write state: %v", err)
 	}
-
 	if err := WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty); err != nil {
 		return nil, err
 	}
-
 	if err := WriteBlock(db, block); err != nil {
 		return nil, err
 	}
-
 	if err := WriteBlockReceipts(db, block.Hash(), block.NumberU64(), nil); err != nil {
 		return nil, err
 	}
-
 	if err := WriteCanonicalHash(db, block.Hash(), block.NumberU64()); err != nil {
 		return nil, err
 	}
-
 	if err := WriteHeadBlockHash(db, block.Hash()); err != nil {
 		return nil, err
 	}
-
 	if err := WriteHeadHeaderHash(db, block.Hash()); err != nil {
 		return nil, err
 	}
@@ -320,7 +331,7 @@ func (g *Genesis) Commit(db etzdb.Database) (*types.Block, error) {
 
 // MustCommit writes the genesis block and state to db, panicking on error.
 // The block is committed as the canonical head block.
-func (g *Genesis) MustCommit(db etzdb.Database) *types.Block {
+func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 	block, err := g.Commit(db)
 	if err != nil {
 		panic(err)
@@ -329,18 +340,18 @@ func (g *Genesis) MustCommit(db etzdb.Database) *types.Block {
 }
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
-func GenesisBlockForTesting(db etzdb.Database, addr common.Address, balance *big.Int) *types.Block {
+func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)
 }
 
-// DefaultGenesisBlock returns the Ethzero main net genesis block.
+// DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   1,
+		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
 	}
@@ -370,7 +381,7 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 	}
 }
 
-// DeveloperGenesisBlock returns the 'getz --dev' genesis block. Note, this must
+// DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must
 // be seeded with the
 func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 	// Override the default period to the user requested one

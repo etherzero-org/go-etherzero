@@ -1,20 +1,20 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package les implements the Light Ethzero Subprotocol.
+// Package les implements the Light Ethereum Subprotocol.
 package les
 
 import (
@@ -29,13 +29,13 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/bloombits"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etz"
-	"github.com/ethzero/go-ethzero/etz/downloader"
-	"github.com/ethzero/go-ethzero/etz/filters"
-	"github.com/ethzero/go-ethzero/etz/gasprice"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/eth"
+	"github.com/ethzero/go-ethzero/eth/downloader"
+	"github.com/ethzero/go-ethzero/eth/filters"
+	"github.com/ethzero/go-ethzero/eth/gasprice"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/internal/etzapi"
+	"github.com/ethzero/go-ethzero/internal/ethapi"
 	"github.com/ethzero/go-ethzero/light"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/node"
@@ -45,7 +45,7 @@ import (
 	rpc "github.com/ethzero/go-ethzero/rpc"
 )
 
-type LightEthzero struct {
+type LightEthereum struct {
 	odr         *LesOdr
 	relay       *LesTxRelay
 	chainConfig *params.ChainConfig
@@ -60,7 +60,7 @@ type LightEthzero struct {
 	reqDist         *requestDistributor
 	retriever       *retrieveManager
 	// DB interfaces
-	chainDb etzdb.Database // Block chain database
+	chainDb ethdb.Database // Block chain database
 
 	bloomRequests                              chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer, chtIndexer, bloomTrieIndexer *core.ChainIndexer
@@ -72,13 +72,13 @@ type LightEthzero struct {
 	accountManager *accounts.Manager
 
 	networkId     uint64
-	netRPCService *etzapi.PublicNetAPI
+	netRPCService *ethapi.PublicNetAPI
 
 	wg sync.WaitGroup
 }
 
-func New(ctx *node.ServiceContext, config *etz.Config) (*LightEthzero, error) {
-	chainDb, err := etz.CreateDB(ctx, config, "lightchaindata")
+func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
+	chainDb, err := eth.CreateDB(ctx, config, "lightchaindata")
 	if err != nil {
 		return nil, err
 	}
@@ -91,48 +91,48 @@ func New(ctx *node.ServiceContext, config *etz.Config) (*LightEthzero, error) {
 	peers := newPeerSet()
 	quitSync := make(chan struct{})
 
-	letz := &LightEthzero{
+	leth := &LightEthereum{
 		chainConfig:      chainConfig,
 		chainDb:          chainDb,
 		eventMux:         ctx.EventMux,
 		peers:            peers,
 		reqDist:          newRequestDistributor(peers, quitSync),
 		accountManager:   ctx.AccountManager,
-		engine:           etz.CreateConsensusEngine(ctx, &config.Ethash, chainConfig, chainDb),
+		engine:           eth.CreateConsensusEngine(ctx, &config.Ethash, chainConfig, chainDb),
 		shutdownChan:     make(chan bool),
 		networkId:        config.NetworkId,
 		bloomRequests:    make(chan chan *bloombits.Retrieval),
-		bloomIndexer:     etz.NewBloomIndexer(chainDb, light.BloomTrieFrequency),
+		bloomIndexer:     eth.NewBloomIndexer(chainDb, light.BloomTrieFrequency),
 		chtIndexer:       light.NewChtIndexer(chainDb, true),
 		bloomTrieIndexer: light.NewBloomTrieIndexer(chainDb, true),
 	}
 
-	letz.relay = NewLesTxRelay(peers, letz.reqDist)
-	letz.serverPool = newServerPool(chainDb, quitSync, &letz.wg)
-	letz.retriever = newRetrieveManager(peers, letz.reqDist, letz.serverPool)
-	letz.odr = NewLesOdr(chainDb, letz.chtIndexer, letz.bloomTrieIndexer, letz.bloomIndexer, letz.retriever)
-	if letz.blockchain, err = light.NewLightChain(letz.odr, letz.chainConfig, letz.engine); err != nil {
+	leth.relay = NewLesTxRelay(peers, leth.reqDist)
+	leth.serverPool = newServerPool(chainDb, quitSync, &leth.wg)
+	leth.retriever = newRetrieveManager(peers, leth.reqDist, leth.serverPool)
+	leth.odr = NewLesOdr(chainDb, leth.chtIndexer, leth.bloomTrieIndexer, leth.bloomIndexer, leth.retriever)
+	if leth.blockchain, err = light.NewLightChain(leth.odr, leth.chainConfig, leth.engine); err != nil {
 		return nil, err
 	}
-	letz.bloomIndexer.Start(letz.blockchain)
+	leth.bloomIndexer.Start(leth.blockchain)
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-		letz.blockchain.SetHead(compat.RewindTo)
+		leth.blockchain.SetHead(compat.RewindTo)
 		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
 
-	letz.txPool = light.NewTxPool(letz.chainConfig, letz.blockchain, letz.relay)
-	if letz.protocolManager, err = NewProtocolManager(letz.chainConfig, true, ClientProtocolVersions, config.NetworkId, letz.eventMux, letz.engine, letz.peers, letz.blockchain, nil, chainDb, letz.odr, letz.relay, quitSync, &letz.wg); err != nil {
+	leth.txPool = light.NewTxPool(leth.chainConfig, leth.blockchain, leth.relay)
+	if leth.protocolManager, err = NewProtocolManager(leth.chainConfig, true, ClientProtocolVersions, config.NetworkId, leth.eventMux, leth.engine, leth.peers, leth.blockchain, nil, chainDb, leth.odr, leth.relay, quitSync, &leth.wg); err != nil {
 		return nil, err
 	}
-	letz.ApiBackend = &LesApiBackend{letz, nil}
+	leth.ApiBackend = &LesApiBackend{leth, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
 	}
-	letz.ApiBackend.gpo = gasprice.NewOracle(letz.ApiBackend, gpoParams)
-	return letz, nil
+	leth.ApiBackend.gpo = gasprice.NewOracle(leth.ApiBackend, gpoParams)
+	return leth, nil
 }
 
 func lesTopic(genesisHash common.Hash, protocolVersion uint) discv5.Topic {
@@ -150,12 +150,12 @@ func lesTopic(genesisHash common.Hash, protocolVersion uint) discv5.Topic {
 
 type LightDummyAPI struct{}
 
-// Etzerbase is the address that mining rewards will be send to
-func (s *LightDummyAPI) Etzerbase() (common.Address, error) {
+// Etherbase is the address that mining rewards will be send to
+func (s *LightDummyAPI) Etherbase() (common.Address, error) {
 	return common.Address{}, fmt.Errorf("not supported")
 }
 
-// Coinbase is the address that mining rewards will be send to (alias for Etzerbase)
+// Coinbase is the address that mining rewards will be send to (alias for Etherbase)
 func (s *LightDummyAPI) Coinbase() (common.Address, error) {
 	return common.Address{}, fmt.Errorf("not supported")
 }
@@ -170,22 +170,22 @@ func (s *LightDummyAPI) Mining() bool {
 	return false
 }
 
-// APIs returns the collection of RPC services the ethzero package offers.
+// APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *LightEthzero) APIs() []rpc.API {
-	return append(etzapi.GetAPIs(s.ApiBackend), []rpc.API{
+func (s *LightEthereum) APIs() []rpc.API {
+	return append(ethapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   &LightDummyAPI{},
 			Public:    true,
 		}, {
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
-			Namespace: "etz",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, true),
 			Public:    true,
@@ -198,29 +198,29 @@ func (s *LightEthzero) APIs() []rpc.API {
 	}...)
 }
 
-func (s *LightEthzero) ResetWithGenesisBlock(gb *types.Block) {
+func (s *LightEthereum) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *LightEthzero) BlockChain() *light.LightChain      { return s.blockchain }
-func (s *LightEthzero) TxPool() *light.TxPool              { return s.txPool }
-func (s *LightEthzero) Engine() consensus.Engine           { return s.engine }
-func (s *LightEthzero) LesVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *LightEthzero) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *LightEthzero) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *LightEthereum) BlockChain() *light.LightChain      { return s.blockchain }
+func (s *LightEthereum) TxPool() *light.TxPool              { return s.txPool }
+func (s *LightEthereum) Engine() consensus.Engine           { return s.engine }
+func (s *LightEthereum) LesVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *LightEthereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *LightEthereum) EventMux() *event.TypeMux           { return s.eventMux }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *LightEthzero) Protocols() []p2p.Protocol {
+func (s *LightEthereum) Protocols() []p2p.Protocol {
 	return s.protocolManager.SubProtocols
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Ethzero protocol implementation.
-func (s *LightEthzero) Start(srvr *p2p.Server) error {
+// Ethereum protocol implementation.
+func (s *LightEthereum) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers()
 	log.Warn("Light client mode is an experimental feature")
-	s.netRPCService = etzapi.NewPublicNetAPI(srvr, s.networkId)
+	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.networkId)
 	// search the topic belonging to the oldest supported protocol because
 	// servers always advertise all supported protocols
 	protocolVersion := ClientProtocolVersions[len(ClientProtocolVersions)-1]
@@ -230,8 +230,8 @@ func (s *LightEthzero) Start(srvr *p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Ethzero protocol.
-func (s *LightEthzero) Stop() error {
+// Ethereum protocol.
+func (s *LightEthereum) Stop() error {
 	s.odr.Stop()
 	if s.bloomIndexer != nil {
 		s.bloomIndexer.Close()

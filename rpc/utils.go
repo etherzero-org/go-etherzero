@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -83,17 +83,17 @@ func isSubscriptionType(t reflect.Type) bool {
 	return t == subscriptionType
 }
 
-// isPubSub tests whether the given Method has as as first argument a context.Context
+// isPubSub tests whether the given method has as as first argument a context.Context
 // and returns the pair (Subscription, error)
-func isPubSub(MethodType reflect.Type) bool {
+func isPubSub(methodType reflect.Type) bool {
 	// numIn(0) is the receiver type
-	if MethodType.NumIn() < 2 || MethodType.NumOut() != 2 {
+	if methodType.NumIn() < 2 || methodType.NumOut() != 2 {
 		return false
 	}
 
-	return isContextType(MethodType.In(1)) &&
-		isSubscriptionType(MethodType.Out(0)) &&
-		isErrorType(MethodType.Out(1))
+	return isContextType(methodType.In(1)) &&
+		isSubscriptionType(methodType.Out(0)) &&
+		isErrorType(methodType.Out(1))
 }
 
 // formatName will convert to first character to lower case
@@ -119,7 +119,7 @@ func isHexNum(t reflect.Type) bool {
 	return t == bigIntType
 }
 
-// suitableCallbacks iterates over the Methods of the given type. It will determine if a Method satisfies the criteria
+// suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria
 // for a RPC callback or a subscription callback and adds it to the collection of callbacks or subscriptions. See server
 // documentation for a summary of these criteria.
 func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscriptions) {
@@ -128,17 +128,17 @@ func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscri
 
 METHODS:
 	for m := 0; m < typ.NumMethod(); m++ {
-		Method := typ.Method(m)
-		mtype := Method.Type
-		mname := formatName(Method.Name)
-		if Method.PkgPath != "" { // Method must be exported
+		method := typ.Method(m)
+		mtype := method.Type
+		mname := formatName(method.Name)
+		if method.PkgPath != "" { // method must be exported
 			continue
 		}
 
 		var h callback
 		h.isSubscribe = isPubSub(mtype)
 		h.rcvr = rcvr
-		h.Method = Method
+		h.method = method
 		h.errPos = -1
 
 		firstArg := 1
@@ -163,7 +163,7 @@ METHODS:
 			continue METHODS
 		}
 
-		// determine Method arguments, ignore first arg since it's the receiver type
+		// determine method arguments, ignore first arg since it's the receiver type
 		// Arguments must be exported or builtin types
 		h.argTypes = make([]reflect.Type, numIn-firstArg)
 		for i := firstArg; i < numIn; i++ {
@@ -181,7 +181,7 @@ METHODS:
 			}
 		}
 
-		// when a Method returns an error it must be the last returned value
+		// when a method returns an error it must be the last returned value
 		h.errPos = -1
 		for i := 0; i < mtype.NumOut(); i++ {
 			if isErrorType(mtype.Out(i)) {
@@ -196,7 +196,7 @@ METHODS:
 
 		switch mtype.NumOut() {
 		case 0, 1, 2:
-			if mtype.NumOut() == 2 && h.errPos == -1 { // Method must one return value and 1 error
+			if mtype.NumOut() == 2 && h.errPos == -1 { // method must one return value and 1 error
 				continue METHODS
 			}
 			callbacks[mname] = &h

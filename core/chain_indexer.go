@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -25,12 +25,12 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 )
 
-// ChainIndexerBackend defines the Methods needed to process chain segments in
+// ChainIndexerBackend defines the methods needed to process chain segments in
 // the background and write the segment results into the database. These can be
 // used to create filter blooms or CHTs.
 type ChainIndexerBackend interface {
@@ -65,8 +65,8 @@ type ChainIndexerChain interface {
 // after an entire section has been finished or in case of rollbacks that might
 // affect already finished sections.
 type ChainIndexer struct {
-	chainDb  etzdb.Database      // Chain database to index the data from
-	indexDb  etzdb.Database      // Prefixed table-view of the db to write index metadata into
+	chainDb  ethdb.Database      // Chain database to index the data from
+	indexDb  ethdb.Database      // Prefixed table-view of the db to write index metadata into
 	backend  ChainIndexerBackend // Background processor generating the index data content
 	children []*ChainIndexer     // Child indexers to cascade chain updates to
 
@@ -90,7 +90,7 @@ type ChainIndexer struct {
 // NewChainIndexer creates a new chain indexer to do background processing on
 // chain segments of a given size after certain number of confirmations passed.
 // The throttling parameter might be used to prevent database thrashing.
-func NewChainIndexer(chainDb, indexDb etzdb.Database, backend ChainIndexerBackend, section, confirm uint64, throttling time.Duration, kind string) *ChainIndexer {
+func NewChainIndexer(chainDb, indexDb ethdb.Database, backend ChainIndexerBackend, section, confirm uint64, throttling time.Duration, kind string) *ChainIndexer {
 	c := &ChainIndexer{
 		chainDb:     chainDb,
 		indexDb:     indexDb,

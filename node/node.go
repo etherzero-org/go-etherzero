@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package node
 
@@ -27,7 +27,7 @@ import (
 	"sync"
 
 	"github.com/ethzero/go-ethzero/accounts"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/internal/debug"
 	"github.com/ethzero/go-ethzero/log"
@@ -95,8 +95,8 @@ func New(conf *Config) (*Node, error) {
 	if strings.HasSuffix(conf.Name, ".ipc") {
 		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
 	}
-	// Ensure that the AccountManager Method works before the node has started.
-	// We rely on this in cmd/getz.
+	// Ensure that the AccountManager method works before the node has started.
+	// We rely on this in cmd/geth.
 	am, ephemeralKeystore, err := makeAccountManager(conf)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func (n *Node) openDataDir() error {
 	return nil
 }
 
-// startRPC is a helper Method to start all the various RPC endpoint during node
+// startRPC is a helper method to start all the various RPC endpoint during node
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
 func (n *Node) startRPC(services map[reflect.Type]Service) error {
@@ -518,8 +518,9 @@ func (n *Node) Stop() error {
 	}
 	return nil
 }
+
 // Wait blocks the thread until the node is stopped. If the node is not running
-// at the time of invocation, the Method immediately returns.
+// at the time of invocation, the method immediately returns.
 func (n *Node) Wait() {
 	n.lock.RLock()
 	if n.server == nil {
@@ -566,7 +567,7 @@ func (n *Node) RPCHandler() (*rpc.Server, error) {
 	return n.inprocHandler, nil
 }
 
-// Server retrieves the currently running P2P network layer. This Method is meant
+// Server retrieves the currently running P2P network layer. This method is meant
 // only to inspect fields of the currently running server, life cycle management
 // should be left to this Node entity.
 func (n *Node) Server() *p2p.Server {
@@ -634,11 +635,11 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (etzdb.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int) (ethdb.Database, error) {
 	if n.config.DataDir == "" {
-		return etzdb.NewMemDatabase()
+		return ethdb.NewMemDatabase()
 	}
-	return etzdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	return ethdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

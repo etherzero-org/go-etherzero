@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -121,7 +121,7 @@ func (n *Notifier) unsubscribe(id ID) error {
 }
 
 // activate enables a subscription. Until a subscription is enabled all
-// notifications are dropped. This Method is called by the RPC server after
+// notifications are dropped. This method is called by the RPC server after
 // the subscription ID was sent to client. This prevents notifications being
 // send to the client before the subscription ID is send to the client.
 func (n *Notifier) activate(id ID, namespace string) {

@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -28,7 +28,7 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/hashicorp/golang-lru"
@@ -48,7 +48,7 @@ const (
 type HeaderChain struct {
 	config *params.ChainConfig
 
-	chainDb       etzdb.Database
+	chainDb       ethdb.Database
 	genesisHeader *types.Header
 
 	currentHeader     *types.Header // Current head of the header chain (may be above the block chain!)
@@ -68,7 +68,7 @@ type HeaderChain struct {
 //  getValidator should return the parent's validator
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
-func NewHeaderChain(chainDb etzdb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
 	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)
@@ -123,7 +123,7 @@ func (hc *HeaderChain) GetBlockNumber(hash common.Hash) uint64 {
 // already known. If the total difficulty of the newly inserted header becomes
 // greater than the current known TD, the canonical chain is re-routed.
 //
-// Note: This Method is not concurrent-safe with inserting blocks simultaneously
+// Note: This method is not concurrent-safe with inserting blocks simultaneously
 // into the chain, as side effects caused by reorganisations cannot be emulated
 // without the real blocks. Hence, writing headers directly should only be done
 // in two scenarios: pure-header mode of operation (light clients), or properly
@@ -264,7 +264,6 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			log.Debug("Premature abort during headers import")
-			fmt.Println("InsertHeaderChain Premature abort during headers import")
 			return i, errors.New("aborted")
 		}
 		// If the header's already known, skip it, otherwise store
@@ -273,7 +272,6 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 			continue
 		}
 		if err := writeHeader(header); err != nil {
-			fmt.Println("InsertHeaderChain writeHeader",err)
 			return i, err
 		}
 		stats.processed++

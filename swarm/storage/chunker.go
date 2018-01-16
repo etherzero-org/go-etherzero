@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package storage
 
@@ -272,7 +272,7 @@ func (self *TreeChunker) hashWorker(jobC chan *hashJob, chunkC chan *Chunk, errC
 	}
 }
 
-// The treeChunkers own Hash hashes togetzer
+// The treeChunkers own Hash hashes together
 // - the size (of the subtree encoded in the Chunk)
 // - the Chunk, ie. the contents read from the input reader
 func (self *TreeChunker) hashChunk(hasher SwarmHash, job *hashJob, chunkC chan *Chunk, swg *sync.WaitGroup) {
@@ -452,7 +452,7 @@ func (self *LazyChunkReader) join(b []byte, off int64, eoff int64, depth int, tr
 	} //for
 }
 
-// the helper Method submits chunks for a key to a oueue (DPA) and
+// the helper method submits chunks for a key to a oueue (DPA) and
 // block until they time out or arrive
 // abort if quitC is readable
 func retrieve(key Key, chunkC chan *Chunk, quitC chan bool) *Chunk {

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package bmt provides a binary merkle tree implementation
 package bmt
@@ -275,7 +275,7 @@ func NewTree(hasher BaseHasher, segmentSize, segmentCount int) *Tree {
 	}
 }
 
-// Methods needed by hash.Hash
+// methods needed by hash.Hash
 
 // Size returns the size
 func (self *Hasher) Size() int {
@@ -288,7 +288,7 @@ func (self *Hasher) BlockSize() int {
 }
 
 // Sum returns the hash of the buffer
-// hash.Hash interface Sum Method appends the byte slice to the underlying
+// hash.Hash interface Sum method appends the byte slice to the underlying
 // data before it calculates and returns the hash of the chunk
 func (self *Hasher) Sum(b []byte) (r []byte) {
 	t := self.bmt

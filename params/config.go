@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package params
 
@@ -25,22 +25,22 @@ import (
 
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Testnet genesis hash to enforce below configs on
+	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 )
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainId:        big.NewInt(88),
-		HomesteadBlock: big.NewInt(1920000),
+		HomesteadBlock: big.NewInt(1150000),
 		DAOForkBlock:   big.NewInt(1920000),
 		DAOForkSupport: true,
 		EIP150Block:    big.NewInt(2463000),
 		EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:    big.NewInt(2675000),
 		EIP158Block:    big.NewInt(2675000),
-		ByzantiumBlock: big.NewInt(2675000),
-		EthzeroBlock: big.NewInt(0),
+		ByzantiumBlock: big.NewInt(4370000),
+
 		Ethash: new(EthashConfig),
 	}
 
@@ -50,12 +50,12 @@ var (
 		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
 		DAOForkSupport: true,
-		EIP150Block:    big.NewInt(15555),
+		EIP150Block:    big.NewInt(0),
 		EIP150Hash:     common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d"),
 		EIP155Block:    big.NewInt(10),
 		EIP158Block:    big.NewInt(10),
 		ByzantiumBlock: big.NewInt(1700000),
-		EthzeroBlock: big.NewInt(11),
+
 		Ethash: new(EthashConfig),
 	}
 
@@ -70,36 +70,29 @@ var (
 		EIP155Block:    big.NewInt(3),
 		EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(1035301),
-		EthzeroBlock: big.NewInt(4936270),
+
 		Clique: &CliqueConfig{
 			Period: 15,
 			Epoch:  30000,
 		},
 	}
 
-	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced and accepted by the Ethzero core developers into the Ethash consensus.
-	// and accepted by the Ethzero core developers into the Ethash consensus.
+	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
+	// and accepted by the Ethereum core developers into the Ethash consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
-	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(11),big.NewInt(10), new(EthashConfig), nil}
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(88), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(55555), big.NewInt(55555),big.NewInt(0), new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
-	// and accepted by the Ethzero core developers into the Clique consensus.
+	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(55555), big.NewInt(55555),big.NewInt(0),  nil, &CliqueConfig{Period: 0, Epoch: 30000}}
-	//AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(89), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(55555), big.NewInt(55555),big.NewInt(0),  new(EthashConfig), nil}
-	//TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
-
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
-
-	DefaultChainId  =  big.NewInt(88)
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -115,7 +108,7 @@ type ChainConfig struct {
 	DAOForkBlock   *big.Int `json:"daoForkBlock,omitempty"`   // TheDAO hard-fork switch block (nil = no fork)
 	DAOForkSupport bool     `json:"daoForkSupport,omitempty"` // Whether the nodes supports or opposes the DAO hard-fork
 
-	// EIP150 implements the Gas price changes (https://github.com/ethzero/EIPs/issues/150)
+	// EIP150 implements the Gas price changes (https://github.com/ethereum/EIPs/issues/150)
 	EIP150Block *big.Int    `json:"eip150Block,omitempty"` // EIP150 HF block (nil = no fork)
 	EIP150Hash  common.Hash `json:"eip150Hash,omitempty"`  // EIP150 HF hash (needed for header only clients as only gas pricing changed)
 
@@ -123,8 +116,6 @@ type ChainConfig struct {
 	EIP158Block *big.Int `json:"eip158Block,omitempty"` // EIP158 HF block
 
 	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
-
-	EthzeroBlock *big.Int `json:"ethzeroBlock,omitempty"` // Ethzero switch block (nil = no fork, 0 = already ethzero)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -161,7 +152,7 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Ethzero: %v EtherzeroForkGenesisBlock: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Engine: %v}",
 		c.ChainId,
 		c.HomesteadBlock,
 		c.DAOForkBlock,
@@ -170,7 +161,6 @@ func (c *ChainConfig) String() string {
 		c.EIP155Block,
 		c.EIP158Block,
 		c.ByzantiumBlock,
-		c.EthzeroBlock,
 		engine,
 	)
 }
@@ -200,12 +190,6 @@ func (c *ChainConfig) IsEIP158(num *big.Int) bool {
 func (c *ChainConfig) IsByzantium(num *big.Int) bool {
 	return isForked(c.ByzantiumBlock, num)
 }
-
-// IsEthzero returns whether num is either equal to the homestead block or greater.
-func (c *ChainConfig) IsEthzero(num *big.Int) bool {
-	return isForked(c.EthzeroBlock, num)
-}
-
 
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
 //
@@ -267,10 +251,6 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
 		return newCompatError("Byzantium fork block", c.ByzantiumBlock, newcfg.ByzantiumBlock)
 	}
-	if isForkIncompatible(c.EthzeroBlock, newcfg.EthzeroBlock, head) {
-		return newCompatError("Ethzero fork block", c.EthzeroBlock, newcfg.EthzeroBlock)
-	}
-
 	return nil
 }
 
@@ -338,7 +318,6 @@ type Rules struct {
 	ChainId                                   *big.Int
 	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
 	IsByzantium                               bool
-	IsEthzero                                 bool
 }
 
 func (c *ChainConfig) Rules(num *big.Int) Rules {
@@ -346,5 +325,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainId == nil {
 		chainId = new(big.Int)
 	}
-	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num),IsEthzero: c.IsEthzero(num)}
+	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num)}
 }

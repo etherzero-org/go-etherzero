@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -30,20 +30,20 @@ import (
 
 // explorerDockerfile is the Dockerfile required to run a block explorer.
 var explorerDockerfile = `
-FROM puppetz/explorer:latest
+FROM puppeth/explorer:latest
 
-ADD etzstats.json /etzstats.json
+ADD ethstats.json /ethstats.json
 ADD chain.json /chain.json
 
 RUN \
-  echo '(cd ../etz-net-intelligence-api && pm2 start /etzstats.json)' >  explorer.sh && \
-	echo '(cd ../etzerchain-light && npm start &)'                      >> explorer.sh && \
+  echo '(cd ../eth-net-intelligence-api && pm2 start /ethstats.json)' >  explorer.sh && \
+	echo '(cd ../etherchain-light && npm start &)'                      >> explorer.sh && \
 	echo '/parity/parity --chain=/chain.json --port={{.NodePort}} --tracing=on --fat-db=on --pruning=archive' >> explorer.sh
 
 ENTRYPOINT ["/bin/sh", "explorer.sh"]
 `
 
-// explorerEthstats is the configuration file for the etzstats javascript client.
+// explorerEthstats is the configuration file for the ethstats javascript client.
 var explorerEthstats = `[
   {
     "name"              : "node-app",
@@ -82,7 +82,7 @@ services:
       - "{{.NodePort}}:{{.NodePort}}/udp"{{if not .VHost}}
       - "{{.WebPort}}:3000"{{end}}
     volumes:
-      - {{.Datadir}}:/root/.local/share/io.parity.ethzero
+      - {{.Datadir}}:/root/.local/share/io.parity.ethereum
     environment:
       - NODE_PORT={{.NodePort}}/tcp
       - STATS={{.Ethstats}}{{if .VHost}}
@@ -110,14 +110,14 @@ func deployExplorer(client *sshClient, network string, chainspec []byte, config 
 	})
 	files[filepath.Join(workdir, "Dockerfile")] = dockerfile.Bytes()
 
-	etzstats := new(bytes.Buffer)
-	template.Must(template.New("").Parse(explorerEthstats)).Execute(etzstats, map[string]interface{}{
+	ethstats := new(bytes.Buffer)
+	template.Must(template.New("").Parse(explorerEthstats)).Execute(ethstats, map[string]interface{}{
 		"Port":   config.nodePort,
-		"Name":   config.etzstats[:strings.Index(config.etzstats, ":")],
-		"Secret": config.etzstats[strings.Index(config.etzstats, ":")+1 : strings.Index(config.etzstats, "@")],
-		"Host":   config.etzstats[strings.Index(config.etzstats, "@")+1:],
+		"Name":   config.ethstats[:strings.Index(config.ethstats, ":")],
+		"Secret": config.ethstats[strings.Index(config.ethstats, ":")+1 : strings.Index(config.ethstats, "@")],
+		"Host":   config.ethstats[strings.Index(config.ethstats, "@")+1:],
 	})
-	files[filepath.Join(workdir, "etzstats.json")] = etzstats.Bytes()
+	files[filepath.Join(workdir, "ethstats.json")] = ethstats.Bytes()
 
 	composefile := new(bytes.Buffer)
 	template.Must(template.New("").Parse(explorerComposefile)).Execute(composefile, map[string]interface{}{
@@ -126,7 +126,7 @@ func deployExplorer(client *sshClient, network string, chainspec []byte, config 
 		"NodePort": config.nodePort,
 		"VHost":    config.webHost,
 		"WebPort":  config.webPort,
-		"Ethstats": config.etzstats[:strings.Index(config.etzstats, ":")],
+		"Ethstats": config.ethstats[:strings.Index(config.ethstats, ":")],
 	})
 	files[filepath.Join(workdir, "docker-compose.yaml")] = composefile.Bytes()
 
@@ -149,7 +149,7 @@ func deployExplorer(client *sshClient, network string, chainspec []byte, config 
 // various configuration parameters.
 type explorerInfos struct {
 	datadir  string
-	etzstats string
+	ethstats string
 	nodePort int
 	webHost  string
 	webPort  int
@@ -161,7 +161,7 @@ func (info *explorerInfos) Report() map[string]string {
 	report := map[string]string{
 		"Data directory":         info.datadir,
 		"Node listener port ":    strconv.Itoa(info.nodePort),
-		"Ethstats username":      info.etzstats,
+		"Ethstats username":      info.ethstats,
 		"Website address ":       info.webHost,
 		"Website listener port ": strconv.Itoa(info.webPort),
 	}
@@ -201,11 +201,11 @@ func checkExplorer(client *sshClient, network string) (*explorerInfos, error) {
 	}
 	// Assemble and return the useful infos
 	stats := &explorerInfos{
-		datadir:  infos.volumes["/root/.local/share/io.parity.ethzero"],
+		datadir:  infos.volumes["/root/.local/share/io.parity.ethereum"],
 		nodePort: nodePort,
 		webHost:  host,
 		webPort:  webPort,
-		etzstats: infos.envvars["STATS"],
+		ethstats: infos.envvars["STATS"],
 	}
 	return stats, nil
 }

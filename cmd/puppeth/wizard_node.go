@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -33,8 +33,8 @@ func (w *wizard) deployNode(boot bool) {
 		log.Error("No genesis block configured")
 		return
 	}
-	if w.conf.etzstats == "" {
-		log.Error("No etzstats server configured")
+	if w.conf.ethstats == "" {
+		log.Error("No ethstats server configured")
 		return
 	}
 	// Select the server to interact with
@@ -94,29 +94,29 @@ func (w *wizard) deployNode(boot bool) {
 
 	// Set a proper name to report on the stats page
 	fmt.Println()
-	if infos.etzstats == "" {
+	if infos.ethstats == "" {
 		fmt.Printf("What should the node be called on the stats page?\n")
-		infos.etzstats = w.readString() + ":" + w.conf.etzstats
+		infos.ethstats = w.readString() + ":" + w.conf.ethstats
 	} else {
-		fmt.Printf("What should the node be called on the stats page? (default = %s)\n", infos.etzstats)
-		infos.etzstats = w.readDefaultString(infos.etzstats) + ":" + w.conf.etzstats
+		fmt.Printf("What should the node be called on the stats page? (default = %s)\n", infos.ethstats)
+		infos.ethstats = w.readDefaultString(infos.ethstats) + ":" + w.conf.ethstats
 	}
 	// If the node is a miner/signer, load up needed credentials
 	if !boot {
 		if w.conf.Genesis.Config.Ethash != nil {
-			// Ethash based miners only need an etzerbase to mine against
+			// Ethash based miners only need an etherbase to mine against
 			fmt.Println()
-			if infos.etzerbase == "" {
+			if infos.etherbase == "" {
 				fmt.Printf("What address should the miner user?\n")
 				for {
 					if address := w.readAddress(); address != nil {
-						infos.etzerbase = address.Hex()
+						infos.etherbase = address.Hex()
 						break
 					}
 				}
 			} else {
-				fmt.Printf("What address should the miner user? (default = %s)\n", infos.etzerbase)
-				infos.etzerbase = w.readDefaultAddress(common.HexToAddress(infos.etzerbase)).Hex()
+				fmt.Printf("What address should the miner user? (default = %s)\n", infos.etherbase)
+				infos.etherbase = w.readDefaultAddress(common.HexToAddress(infos.etherbase)).Hex()
 			}
 		} else if w.conf.Genesis.Config.Clique != nil {
 			// If a previous signer was already set, offer to reuse it
@@ -164,7 +164,7 @@ func (w *wizard) deployNode(boot bool) {
 		nocache = w.readDefaultString("n") != "n"
 	}
 	if out, err := deployNode(client, w.network, w.conf.bootFull, w.conf.bootLight, infos, nocache); err != nil {
-		log.Error("Failed to deploy Ethzero node container", "err", err)
+		log.Error("Failed to deploy Ethereum node container", "err", err)
 		if len(out) > 0 {
 			fmt.Printf("%s\n", out)
 		}

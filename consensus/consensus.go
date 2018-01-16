@@ -1,20 +1,20 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package consensus implements different Ethzero consensus engines.
+// Package consensus implements different Ethereum consensus engines.
 package consensus
 
 import (
@@ -25,7 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/rpc"
 )
 
-// ChainReader defines a small collection of Methods needed to access the local
+// ChainReader defines a small collection of methods needed to access the local
 // blockchain during header and/or uncle verification.
 type ChainReader interface {
 	// Config retrieves the blockchain's chain configuration.
@@ -49,18 +49,18 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 type Engine interface {
-	// Author retrieves the Ethzero address of the account that minted the given
+	// Author retrieves the Ethereum address of the account that minted the given
 	// block, which may be different from the header's coinbase if a consensus
 	// engine is based on signatures.
 	Author(header *types.Header) (common.Address, error)
 
 	// VerifyHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
-	// via the VerifySeal Method.
+	// via the VerifySeal method.
 	VerifyHeader(chain ChainReader, header *types.Header, seal bool) error
 
 	// VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
-	// concurrently. The Method returns a quit channel to abort the operations and
+	// concurrently. The method returns a quit channel to abort the operations and
 	// a results channel to retrieve the async verifications (the order is that of
 	// the input slice).
 	VerifyHeaders(chain ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)

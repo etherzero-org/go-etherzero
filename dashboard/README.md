@@ -1,6 +1,6 @@
-## Go Ethzero Dashboard
+## Go Ethereum Dashboard
 
-The dashboard is a data visualizer integrated into getz, intended to collect and visualize useful information of an Ethzero node. It consists of two parts:
+The dashboard is a data visualizer integrated into geth, intended to collect and visualize useful information of an Ethereum node. It consists of two parts:
 
 * The client visualizes the collected data.
 * The server collects the data, and updates the clients.
@@ -9,20 +9,20 @@ The client's UI uses [React][React] with JSX syntax, which is validated by the [
 
 ### Development and bundling
 
-As the dashboard depends on certain NPM packages (which are not included in the go-ethzero repo), these need to be installed first:
+As the dashboard depends on certain NPM packages (which are not included in the go-ethereum repo), these need to be installed first:
 
 ```
 $ (cd dashboard/assets && npm install)
 ```
 
-Normally the dashboard assets are bundled into Getz via `go-bindata` to avoid external dependencies. Rebuilding Getz after each UI modification however is not feasible from a developer perspective. Instead, we can run `webpack` in watch mode to automatically rebundle the UI, and ask `getz` to use external assets to not rely on compiled resources:
+Normally the dashboard assets are bundled into Geth via `go-bindata` to avoid external dependencies. Rebuilding Geth after each UI modification however is not feasible from a developer perspective. Instead, we can run `webpack` in watch mode to automatically rebundle the UI, and ask `geth` to use external assets to not rely on compiled resources:
 
 ```
 $ (cd dashboard/assets && ./node_modules/.bin/webpack --watch)
-$ getz --dashboard --dashboard.assets=dashboard/assets/public --vmodule=dashboard=5
+$ geth --dashboard --dashboard.assets=dashboard/assets/public --vmodule=dashboard=5
 ```
 
-To bundle up the final UI into Getz, run `webpack` and `go generate`:
+To bundle up the final UI into Geth, run `webpack` and `go generate`:
 
 ```
 $ (cd dashboard/assets && ./node_modules/.bin/webpack)

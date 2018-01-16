@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package types
 
@@ -46,8 +46,6 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 		signer = NewEIP155Signer(config.ChainId)
 	case config.IsHomestead(blockNumber):
 		signer = HomesteadSigner{}
-	case config.IsEthzero(blockNumber) :
-		signer = EthzeroSigner{}
 	default:
 		signer = FrontierSigner{}
 	}
@@ -58,9 +56,6 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
 	h := s.Hash(tx)
 	sig, err := crypto.Sign(h[:], prv)
-
-	//fmt.Println(" signtx 's value:%s,sig.len:%s",sig,len(sig))
-
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +67,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // signature.
 //
 // Sender may cache the address, allowing it to be used regardless of
-// signing Method. The cache is invalidated if the cached signer does
+// signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	if sc := tx.from.Load(); sc != nil {
@@ -188,68 +183,6 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
 }
 
-
-// EthzeroTransaction implements TransactionInterface using the
-// Ethzero rules.
-type EthzeroSigner struct{
-	chainId, chainIdMul *big.Int
-}
-
-func NewEthzeroSigner(chainId *big.Int) EthzeroSigner {
-	if chainId == nil {
-		chainId = new(big.Int)
-	}
-	return EthzeroSigner{
-		chainId:    chainId,
-		chainIdMul: new(big.Int).Mul(chainId, big.NewInt(2)),
-	}
-}
-
-func (s EthzeroSigner) Equal(s2 Signer) bool {
-	etherzero, ok := s2.(EthzeroSigner)
-	return ok && etherzero.chainId.Cmp(s.chainId) == 0
-}
-
-// SignatureValues returns signature values. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (hs EthzeroSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	R, S, V, err = HomesteadSigner{}.SignatureValues(tx, sig)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if hs.chainId.Sign() != 0 {
-		V = big.NewInt(int64(sig[64] + 35))
-		V.Add(V, hs.chainIdMul)
-	}
-	return R, S, V, nil
-}
-
-func (hs EthzeroSigner) Sender(tx *Transaction) (common.Address, error) {
-	if !tx.Protected() {
-		return HomesteadSigner{}.Sender(tx)
-	}
-	if tx.ChainId().Cmp(hs.chainId) != 0 {
-		return common.Address{}, ErrInvalidChainId
-	}
-	V := new(big.Int).Sub(tx.data.V, hs.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, V, false)
-}
-
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (hs EthzeroSigner) Hash(tx *Transaction) common.Hash {
-	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
-		hs.chainId, uint(0), uint(0),
-	})
-}
-
 type FrontierSigner struct{}
 
 func (s FrontierSigner) Equal(s2 Signer) bool {
@@ -310,8 +243,6 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (commo
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
-
-	//fmt.Println("addr:value:%s",addr)
 	return addr, nil
 }
 

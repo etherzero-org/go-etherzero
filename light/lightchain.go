@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package light
 
@@ -27,7 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
@@ -45,7 +45,7 @@ var (
 // interface. It only does header validation during chain insertion.
 type LightChain struct {
 	hc            *core.HeaderChain
-	chainDb       etzdb.Database
+	chainDb       ethdb.Database
 	odr           OdrBackend
 	chainFeed     event.Feed
 	chainSideFeed event.Feed
@@ -70,7 +70,7 @@ type LightChain struct {
 }
 
 // NewLightChain returns a fully initialised light chain using information
-// available in the database. It initialises the default Ethzero header
+// available in the database. It initialises the default Ethereum header
 // validator.
 func NewLightChain(odr OdrBackend, config *params.ChainConfig, engine consensus.Engine) (*LightChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
@@ -138,7 +138,7 @@ func (self *LightChain) Odr() OdrBackend {
 	return self.odr
 }
 
-// loadLastState loads the last known chain state from the database. This Method
+// loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (self *LightChain) loadLastState() error {
 	if head := core.GetHeadHeaderHash(self.chainDb); head == (common.Hash{}) {

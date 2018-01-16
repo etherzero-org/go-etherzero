@@ -1,20 +1,20 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package types contains data types related to Ethzero consensus.
+// Package types contains data types related to Ethereum consensus.
 package types
 
 import (
@@ -66,7 +66,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
-// Header represents a block header in the Ethzero blockchain.
+// Header represents a block header in the Ethereum blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
@@ -129,13 +129,13 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
-// a block's data contents (transactions and uncles) togetzer.
+// a block's data contents (transactions and uncles) together.
 type Body struct {
 	Transactions []*Transaction
 	Uncles       []*Header
 }
 
-// Block represents an entire block in the Ethzero blockchain.
+// Block represents an entire block in the Ethereum blockchain.
 type Block struct {
 	header       *Header
 	uncles       []*Header
@@ -149,7 +149,7 @@ type Block struct {
 	// of the chain up to and including the block.
 	td *big.Int
 
-	// These fields are used by package etz to track
+	// These fields are used by package eth to track
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
@@ -162,20 +162,20 @@ func (b *Block) DeprecatedTd() *big.Int {
 	return b.td
 }
 
-// [deprecated by etz/63]
+// [deprecated by eth/63]
 // StorageBlock defines the RLP encoding of a Block stored in the
 // state database. The StorageBlock encoding contains fields that
 // would otherwise need to be recomputed.
 type StorageBlock Block
 
-// "external" block encoding. used for etz protocol, etc.
+// "external" block encoding. used for eth protocol, etc.
 type extblock struct {
 	Header *Header
 	Txs    []*Transaction
 	Uncles []*Header
 }
 
-// [deprecated by etz/63]
+// [deprecated by eth/63]
 // "storage" block encoding. used for database.
 type storageblock struct {
 	Header *Header
@@ -193,7 +193,7 @@ type storageblock struct {
 // and receipts.
 func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
-	//fmt.Println("1 block.go NewBlock hash.string 's value: ",b.Hash().String())
+
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
@@ -202,14 +202,14 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
-	//fmt.Println("2 block.go NewBlock hash.string 's value: ",b.Hash().String())
+
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
 		b.header.Bloom = CreateBloom(receipts)
 	}
-	//fmt.Println("3 block.go NewBlock hash.string 's value: ",b.Hash().String())
+
 	if len(uncles) == 0 {
 		b.header.UncleHash = EmptyUncleHash
 	} else {
@@ -219,7 +219,7 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
 	}
-	//fmt.Println("4 block.go NewBlock hash.string 's value: ",b.Hash().String())
+
 	return b
 }
 
@@ -256,7 +256,7 @@ func CopyHeader(h *Header) *Header {
 	return &cpy
 }
 
-// DecodeRLP decodes the Ethzero
+// DecodeRLP decodes the Ethereum
 func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	var eb extblock
 	_, size, _ := s.Kind()
@@ -268,7 +268,7 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// EncodeRLP serializes b into the Ethzero RLP block format.
+// EncodeRLP serializes b into the Ethereum RLP block format.
 func (b *Block) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, extblock{
 		Header: b.header,
@@ -277,7 +277,7 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 	})
 }
 
-// [deprecated by etz/63]
+// [deprecated by eth/63]
 func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
 	var sb storageblock
 	if err := s.Decode(&sb); err != nil {

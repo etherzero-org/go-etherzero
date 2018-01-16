@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package ethash
 
@@ -81,7 +81,7 @@ func seedHash(block uint64) []byte {
 // memory, then performing two passes of Sergio Demian Lerner's RandMemoHash
 // algorithm from Strict Memory Hard Hashing Functions (2014). The output is a
 // set of 524288 64-byte values.
-// This Method places the result into dest in machine byte order.
+// This method places the result into dest in machine byte order.
 func generateCache(dest []uint32, epoch uint64, seed []byte) {
 	// Print some debug logs to allow analysis on low end devices
 	logger := log.New("epoch", epoch)
@@ -102,7 +102,7 @@ func generateCache(dest []uint32, epoch uint64, seed []byte) {
 	header.Cap *= 4
 	cache := *(*[]byte)(unsafe.Pointer(&header))
 
-	// Calculate the number of theoretical rows (we'll store in one buffer nonetzeless)
+	// Calculate the number of theoretical rows (we'll store in one buffer nonetheless)
 	size := uint64(len(cache))
 	rows := int(size) / hashBytes
 
@@ -161,7 +161,7 @@ func swap(buffer []byte) {
 }
 
 // prepare converts an ethash cache or dataset from a byte stream into the internal
-// int representation. All ethash Methods work with ints to avoid constant byte to
+// int representation. All ethash methods work with ints to avoid constant byte to
 // int conversions as well as to handle both little and big endian systems.
 func prepare(dest []uint32, src []byte) {
 	for i := 0; i < len(dest); i++ {
@@ -177,7 +177,7 @@ func fnv(a, b uint32) uint32 {
 	return a*0x01000193 ^ b
 }
 
-// fnvHash mixes in data into mix using the ethash fnv Method.
+// fnvHash mixes in data into mix using the ethash fnv method.
 func fnvHash(mix []uint32, data []uint32) {
 	for i := 0; i < len(mix); i++ {
 		mix[i] = mix[i]*0x01000193 ^ data[i]
@@ -187,7 +187,7 @@ func fnvHash(mix []uint32, data []uint32) {
 // generateDatasetItem combines data from 256 pseudorandomly selected cache nodes,
 // and hashes that to compute a single dataset node.
 func generateDatasetItem(cache []uint32, index uint32, keccak512 hasher) []byte {
-	// Calculate the number of theoretical rows (we use one buffer nonetzeless)
+	// Calculate the number of theoretical rows (we use one buffer nonetheless)
 	rows := uint32(len(cache) / hashWords)
 
 	// Initialize the mix
@@ -218,7 +218,7 @@ func generateDatasetItem(cache []uint32, index uint32, keccak512 hasher) []byte 
 }
 
 // generateDataset generates the entire ethash dataset for mining.
-// This Method places the result into dest in machine byte order.
+// This method places the result into dest in machine byte order.
 func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 	// Print some debug logs to allow analysis on low end devices
 	logger := log.New("epoch", epoch)
@@ -249,7 +249,6 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 
 	var pend sync.WaitGroup
 	pend.Add(threads)
-
 
 	var progress uint32
 	for i := 0; i < threads; i++ {
@@ -288,7 +287,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 // hashimoto aggregates data from the full dataset in order to produce our final
 // value for a particular header hash and nonce.
 func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32) []uint32) ([]byte, []byte) {
-	// Calculate the number of theoretical rows (we use one buffer nonetzeless)
+	// Calculate the number of theoretical rows (we use one buffer nonetheless)
 	rows := uint32(size / mixBytes)
 
 	// Combine header+nonce into a 64 byte seed

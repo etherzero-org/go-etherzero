@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package console
 
@@ -29,10 +29,10 @@ import (
 	"github.com/robertkrimen/otto"
 )
 
-// bridge is a collection of JavaScript utility Methods to bride the .js runtime
-// environment and the Go RPC connection backing the remote Method calls.
+// bridge is a collection of JavaScript utility methods to bride the .js runtime
+// environment and the Go RPC connection backing the remote method calls.
 type bridge struct {
-	client   *rpc.Client  // RPC client to execute Ethzero requests through
+	client   *rpc.Client  // RPC client to execute Ethereum requests through
 	prompter UserPrompter // Input prompter to allow interactive user feedback
 	printer  io.Writer    // Output writer to serialize any display strings to
 }
@@ -46,9 +46,9 @@ func newBridge(client *rpc.Client, prompter UserPrompter, printer io.Writer) *br
 	}
 }
 
-// NewAccount is a wrapper around the personal.newAccount RPC Method that uses a
+// NewAccount is a wrapper around the personal.newAccount RPC method that uses a
 // non-echoing password prompt to acquire the passphrase and executes the original
-// RPC Method (saved in jeth.newAccount) with it to actually execute the RPC call.
+// RPC method (saved in jeth.newAccount) with it to actually execute the RPC call.
 func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {
 	var (
 		password string
@@ -104,8 +104,6 @@ func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 	if err == nil {
 		return val
 	}
-
-
 	// Wallet open failed, report error unless it's a PIN entry
 	if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
 		throwJSException(err.Error())
@@ -129,9 +127,9 @@ func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
-// UnlockAccount is a wrapper around the personal.unlockAccount RPC Method that
+// UnlockAccount is a wrapper around the personal.unlockAccount RPC method that
 // uses a non-echoing password prompt to acquire the passphrase and executes the
-// original RPC Method (saved in jeth.unlockAccount) with it to actually execute
+// original RPC method (saved in jeth.unlockAccount) with it to actually execute
 // the RPC call.
 func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 	// Make sure we have an account specified to unlock
@@ -172,8 +170,8 @@ func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
-// Sign is a wrapper around the personal.sign RPC Method that uses a non-echoing password
-// prompt to acquire the passphrase and executes the original RPC Method (saved in
+// Sign is a wrapper around the personal.sign RPC method that uses a non-echoing password
+// prompt to acquire the passphrase and executes the original RPC method (saved in
 // jeth.sign) with it to actually execute the RPC call.
 func (b *bridge) Sign(call otto.FunctionCall) (response otto.Value) {
 	var (
@@ -278,7 +276,7 @@ type jsonrpcCall struct {
 	Params []interface{}
 }
 
-// Send implements the web3 provider "send" Method.
+// Send implements the web3 provider "send" method.
 func (b *bridge) Send(call otto.FunctionCall) (response otto.Value) {
 	// Remarshal the request into a Go value.
 	JSON, _ := call.Otto.Object("JSON")

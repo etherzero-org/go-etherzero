@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package vm
 
@@ -54,46 +54,7 @@ var (
 	frontierInstructionSet  = NewFrontierInstructionSet()
 	homesteadInstructionSet = NewHomesteadInstructionSet()
 	byzantiumInstructionSet = NewByzantiumInstructionSet()
-	ethzeroInstructionSet = NewEthzeroInstructionSet()
 )
-
-// NewEthzeroInstructionSet returns the frontier, byzantium and
-// Ethzero instructions.
-func NewEthzeroInstructionSet() [256]operation {
-	// instructions that can be executed during the homestead phase.
-	instructionSet := NewHomesteadInstructionSet()
-	instructionSet[STATICCALL] = operation{
-		execute:       opStaticCall,
-		gasCost:       gasStaticCall,
-		validateStack: makeStackFunc(6, 1),
-		memorySize:    memoryStaticCall,
-		valid:         true,
-		returns:       true,
-	}
-	instructionSet[RETURNDATASIZE] = operation{
-		execute:       opReturnDataSize,
-		gasCost:       constGasFunc(GasQuickStep),
-		validateStack: makeStackFunc(0, 1),
-		valid:         true,
-	}
-	instructionSet[RETURNDATACOPY] = operation{
-		execute:       opReturnDataCopy,
-		gasCost:       gasReturnDataCopy,
-		validateStack: makeStackFunc(3, 0),
-		memorySize:    memoryReturnDataCopy,
-		valid:         true,
-	}
-	instructionSet[REVERT] = operation{
-		execute:       opRevert,
-		gasCost:       gasRevert,
-		validateStack: makeStackFunc(2, 0),
-		memorySize:    memoryRevert,
-		valid:         true,
-		reverts:       true,
-		returns:       true,
-	}
-	return instructionSet
-}
 
 // NewByzantiumInstructionSet returns the frontier, homestead and
 // byzantium instructions.

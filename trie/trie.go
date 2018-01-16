@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package trie implements Merkle Patricia Tries.
 package trie
@@ -63,13 +63,13 @@ type Database interface {
 	DatabaseWriter
 }
 
-// DatabaseReader wraps the Get Method of a backing store for the trie.
+// DatabaseReader wraps the Get method of a backing store for the trie.
 type DatabaseReader interface {
 	Get(key []byte) (value []byte, err error)
 	Has(key []byte) (bool, error)
 }
 
-// DatabaseWriter wraps the Put Method of a backing store for the trie.
+// DatabaseWriter wraps the Put method of a backing store for the trie.
 type DatabaseWriter interface {
 	// Put stores the mapping key->value in the database.
 	// Implementations must not hold onto the value bytes, the trie

@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package types
 
@@ -34,8 +34,9 @@ import (
 
 var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
-	errNoSigner   = errors.New("missing signing Methods")
+	errNoSigner   = errors.New("missing signing methods")
 )
+
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	if V.Sign() != 0 && isProtectedV(V) {
@@ -68,7 +69,6 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
-
 }
 
 type txdataMarshaling struct {
@@ -186,6 +186,7 @@ func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Pri
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
+
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
@@ -222,7 +223,7 @@ func (tx *Transaction) Size() common.StorageSize {
 //
 // AsMessage requires a signer to derive the sender.
 //
-// XXX Rename message to sometzing less arbitrary?
+// XXX Rename message to something less arbitrary?
 func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	msg := Message{
 		nonce:      tx.data.AccountNonce,
@@ -297,7 +298,6 @@ func (tx *Transaction) String() string {
 	R:        %#x
 	S:        %#x
 	Hex:      %x
-
 `,
 		tx.Hash(),
 		tx.data.Recipient == nil,

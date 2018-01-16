@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -128,7 +128,7 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 	return resp.Body, nil
 }
 
-// httpReadWriteNopCloser wraps a io.Reader and io.Writer with a NOP Close Method.
+// httpReadWriteNopCloser wraps a io.Reader and io.Writer with a NOP Close method.
 type httpReadWriteNopCloser struct {
 	io.Reader
 	io.Writer
@@ -170,7 +170,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // request is invalid.
 func validateRequest(r *http.Request) (int, error) {
 	if r.Method == "PUT" || r.Method == "DELETE" {
-		return http.StatusMethodNotAllowed, errors.New("Method not allowed")
+		return http.StatusMethodNotAllowed, errors.New("method not allowed")
 	}
 	if r.ContentLength > maxHTTPRequestContentLength {
 		err := fmt.Errorf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength)

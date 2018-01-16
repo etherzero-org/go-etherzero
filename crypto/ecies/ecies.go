@@ -117,7 +117,7 @@ func MaxSharedKeyLength(pub *PublicKey) int {
 	return (pub.Curve.Params().BitSize + 7) / 8
 }
 
-// ECDH key agreement Method used to establish secret keys for encryption.
+// ECDH key agreement method used to establish secret keys for encryption.
 func (prv *PrivateKey) GenerateShared(pub *PublicKey, skLen, macLen int) (sk []byte, err error) {
 	if prv.PublicKey.Curve != pub.Curve {
 		return nil, ErrInvalidCurve

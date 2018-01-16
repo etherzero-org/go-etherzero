@@ -1,20 +1,20 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-// bootnode runs a bootstrap node for the Ethzero Discovery Protocol.
+// bootnode runs a bootstrap node for the Ethereum Discovery Protocol.
 package main
 
 import (
@@ -34,7 +34,7 @@ import (
 
 func main() {
 	var (
-		listenAddr  = flag.String("addr", ":21211", "listen address")
+		listenAddr  = flag.String("addr", ":21210", "listen address")
 		genKey      = flag.String("genkey", "", "generate a node key")
 		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
 		nodeKeyFile = flag.String("nodekey", "", "private key filename")

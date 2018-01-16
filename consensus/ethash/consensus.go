@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package ethash
 
@@ -31,19 +31,13 @@ import (
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/params"
-
-	"gopkg.in/fatih/set.v0"
+	set "gopkg.in/fatih/set.v0"
 )
 
 // Ethash proof-of-work protocol constants.
 var (
-	FrontierBlockReward  = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-
-	//ETHZeroBlockReward *big.Int = new(big.Int).Mul(big.NewInt(5e+18),big.NewInt(4)) //Block reward in wei for successfully mining a block upward from Ethzero
-	EthzeroBlockReward =  big.NewInt(4e+18)
-
-	EthzeroBlock = big.NewInt(4936270)
+	FrontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
+	ByzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
 )
 
@@ -71,7 +65,7 @@ func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
-// stock Ethzero ethash engine.
+// stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.config.PowMode == ModeFullFake {
@@ -91,7 +85,7 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainReader, header *types.He
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
-// concurrently. The Method returns a quit channel to abort the operations and
+// concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications.
 func (ethash *Ethash) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	// If we're running a full engine faking, accept any input as valid
@@ -172,7 +166,7 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 }
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
-// rules of the stock Ethzero ethash engine.
+// rules of the stock Ethereum ethash engine.
 func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	// If we're running a full engine faking, accept any input as valid
 	if ethash.config.PowMode == ModeFullFake {
@@ -224,7 +218,7 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules of the
-// stock Ethzero ethash engine.
+// stock Ethereum ethash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, uncle bool, seal bool) error {
 	// Ensure that the header's extra-data section is of a reasonable size
@@ -300,8 +294,6 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 		return calcDifficultyByzantium(time, parent)
 	case config.IsHomestead(next):
 		return calcDifficultyHomestead(time, parent)
-	case config.IsEthzero(next):
-		return calcDifficultyEthzero(time, parent)
 	default:
 		return calcDifficultyFrontier(time, parent)
 	}
@@ -318,45 +310,11 @@ var (
 	big2999999    = big.NewInt(2999999)
 )
 
-// calcDifficultyETHZero is the difficulty adjustment algorithm. It returns
-// the difficulty that a new block should have when created at time given the
-// parent block's time and difficulty. The calculation uses the ETHZero rules.
-func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
-	diff := new(big.Int)
-	adjust := new(big.Int).Div(parent.Difficulty, params.DifficultyBoundDivisor)
-	bigTime := new(big.Int)
-	bigParentTime := new(big.Int)
-
-	bigTime.SetUint64(time)
-	bigParentTime.Set(parent.Time)
-
-	if bigTime.Sub(bigTime, bigParentTime).Cmp(params.DurationLimit) < 0 {
-		diff.Add(parent.Difficulty, adjust)
-	} else {
-		diff.Sub(parent.Difficulty, adjust)
-	}
-	if diff.Cmp(params.MinimumDifficulty) < 0 {
-		diff.Set(params.MinimumDifficulty)
-	}
-
-
-	periodCount := new(big.Int).Add((parent.Number.Sub(parent.Number,EthzeroBlock)), big1)
-	periodCount.Div(periodCount, expDiffPeriod)
-	if periodCount.Cmp(big1) > 0 {
-		// diff = diff + 2^(periodCount - 2)
-		expDiff := periodCount.Sub(periodCount, big2)
-		expDiff.Exp(big2, expDiff, nil)
-		diff.Add(diff, expDiff)
-		diff = math.BigMax(diff, params.MinimumDifficulty)
-	}
-	return diff
-}
-
 // calcDifficultyByzantium is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time given the
 // parent block's time and difficulty. The calculation uses the Byzantium rules.
 func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
-	// https://github.com/ethzero/EIPs/issues/100.
+	// https://github.com/ethereum/EIPs/issues/100.
 	// algorithm:
 	// diff = (parent_diff +
 	//         (parent_diff / 2048 * max((2 if len(parent.uncles) else 1) - ((timestamp - parent.timestamp) // 9), -99))
@@ -391,7 +349,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 		x.Set(params.MinimumDifficulty)
 	}
 	// calculate a fake block numer for the ice-age delay:
-	//   https://github.com/ethzero/EIPs/pull/669
+	//   https://github.com/ethereum/EIPs/pull/669
 	//   fake_block_number = min(0, block.number - 3_000_000
 	fakeBlockNumber := new(big.Int)
 	if parent.Number.Cmp(big2999999) >= 0 {
@@ -415,7 +373,7 @@ func calcDifficultyByzantium(time uint64, parent *types.Header) *big.Int {
 // the difficulty that a new block should have when created at time given the
 // parent block's time and difficulty. The calculation uses the Homestead rules.
 func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
-	// https://github.com/ethzero/EIPs/blob/master/EIPS/eip-2.mediawiki
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.mediawiki
 	// algorithm:
 	// diff = (parent_diff +
 	//         (parent_diff / 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
@@ -571,10 +529,10 @@ var (
 // TODO (karalabe): Move the chain maker into this package and make this private!
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
-
-	blockReward := EthzeroBlockReward
-
-
+	blockReward := FrontierBlockReward
+	if config.IsByzantium(header.Number) {
+		blockReward = ByzantiumBlockReward
+	}
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package shhclient
 
@@ -165,10 +165,10 @@ func (sc *Client) Post(ctx context.Context, message whisper.NewMessage) error {
 	return sc.c.CallContext(ctx, &ignored, "shh_post", message)
 }
 
-// SubscribeMessages subscribes to messages that match the given criteria. This Method
+// SubscribeMessages subscribes to messages that match the given criteria. This method
 // is only supported on bi-directional connections such as websockets and IPC.
 // NewMessageFilter uses polling and is supported over HTTP.
-func (ec *Client) SubscribeMessages(ctx context.Context, criteria whisper.Criteria, ch chan<- *whisper.Message) (ethzero.Subscription, error) {
+func (ec *Client) SubscribeMessages(ctx context.Context, criteria whisper.Criteria, ch chan<- *whisper.Message) (ethereum.Subscription, error) {
 	return ec.c.ShhSubscribe(ctx, ch, "messages", criteria)
 }
 

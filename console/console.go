@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package console
 
@@ -52,7 +52,7 @@ const DefaultPrompt = "> "
 type Config struct {
 	DataDir  string       // Data directory to store the console history at
 	DocRoot  string       // Filesystem path from where to load JavaScript files from
-	Client   *rpc.Client  // RPC client to execute Ethzero requests through
+	Client   *rpc.Client  // RPC client to execute Ethereum requests through
 	Prompt   string       // Input prompt prefix string (defaults to DefaultPrompt)
 	Prompter UserPrompter // Input prompter to allow interactive user feedback (defaults to TerminalPrompter)
 	Printer  io.Writer    // Output writer to serialize any display strings to (defaults to os.Stdout)
@@ -63,7 +63,7 @@ type Config struct {
 // JavaScript console attached to a running node via an external or in-process RPC
 // client.
 type Console struct {
-	client   *rpc.Client  // RPC client to execute Ethzero requests through
+	client   *rpc.Client  // RPC client to execute Ethereum requests through
 	jsre     *jsre.JSRE   // JavaScript runtime environment running the interpreter
 	prompt   string       // Input prompt prefix string
 	prompter UserPrompter // Input prompter to allow interactive user feedback
@@ -131,22 +131,23 @@ func (c *Console) init(preload []string) error {
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-	flatten := "var eth = web3.eth; var personal = web3.personal; "
 
+	flatten := "var eth = web3.eth; var personal = web3.personal; "
 	for api := range apis {
 		if api == "web3" {
 			continue // manually mapped or ignore
 		}
-
 		if file, ok := web3ext.Modules[api]; ok {
 			// Load our extension for the module.
 			if err = c.jsre.Compile(fmt.Sprintf("%s.js", api), file); err != nil {
 				return fmt.Errorf("%s.js: %v", api, err)
 			}
 			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
+		//	fmt.Println(" console web3ext Modules is value:" + flatten)
 		} else if obj, err := c.jsre.Run("web3." + api); err == nil && obj.IsObject() {
 			// Enable web3.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
+		//	fmt.Println(" console web3ext api is value:" + flatten)
 		}
 	}
 	if _, err = c.jsre.Run(flatten); err != nil {
@@ -155,16 +156,16 @@ func (c *Console) init(preload []string) error {
 	// Initialize the global name register (disabled for now)
 	//c.jsre.Run(`var GlobalRegistrar = eth.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
 
-	// If the console is in interactive mode, instrument password related Methods to query the user
+	// If the console is in interactive mode, instrument password related methods to query the user
 	if c.prompter != nil {
 		// Retrieve the account management object to instrument
 		personal, err := c.jsre.Get("personal")
 		if err != nil {
 			return err
 		}
-		// Override the openWallet, unlockAccount, newAccount and sign Methods since
-		// these require user interaction. Assign these Method in the Console the
-		// original web3 callbacks. These will be called by the jeth.* Methods after
+		// Override the openWallet, unlockAccount, newAccount and sign methods since
+		// these require user interaction. Assign these method in the Console the
+		// original web3 callbacks. These will be called by the jeth.* methods after
 		// they got the password from the user and send the original web3 request to
 		// the backend.
 		if obj := personal.Object(); obj != nil { // make sure the personal api is enabled over the interface
@@ -218,10 +219,10 @@ func (c *Console) init(preload []string) error {
 	return nil
 }
 
-// consoleOutput is an override for the console.log and console.error Methods to
+// consoleOutput is an override for the console.log and console.error methods to
 // stream the output into the configured output stream instead of stdout.
 func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
-	var output []string
+	output := []string{}
 	for _, argument := range call.ArgumentList {
 		output = append(output, fmt.Sprintf("%v", argument))
 	}
@@ -230,7 +231,7 @@ func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
 }
 
 // AutoCompleteInput is a pre-assembled word completer to be used by the user
-// input prompter to provide hints to the user about the Methods available.
+// input prompter to provide hints to the user about the methods available.
 func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, string) {
 	// No completions can be provided for empty inputs
 	if len(line) == 0 || pos == 0 {
@@ -240,7 +241,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 	// E.g. in case of nested lines eth.getBalance(eth.coinb<tab><tab>
 	start := pos - 1
 	for ; start > 0; start-- {
-		// Skip all Methods and namespaces (i.e. including the dot)
+		// Skip all methods and namespaces (i.e. including the dot)
 		if line[start] == '.' || (line[start] >= 'a' && line[start] <= 'z') || (line[start] >= 'A' && line[start] <= 'Z') {
 			continue
 		}
@@ -256,11 +257,11 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 	return line[:start], c.jsre.CompleteKeywords(line[start:pos]), line[pos:]
 }
 
-// Welcome show summary of current Getz instance and some metadata about the
+// Welcome show summary of current Geth instance and some metadata about the
 // console's available modules.
 func (c *Console) Welcome() {
-	// Print some generic Getz metadata
-	fmt.Fprintf(c.printer, "Welcome to the Getz JavaScript console!\n\n")
+	// Print some generic Geth metadata
+	fmt.Fprintf(c.printer, "Welcome to the Geth JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
 		console.log("coinbase: " + eth.coinbase);

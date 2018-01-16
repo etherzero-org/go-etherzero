@@ -3,6 +3,8 @@ package core
 
 import(
 	"github.com/ethzero/go-ethzero/core/types"
+	//"math/big"
+	"fmt"
 	"math/big"
 )
 
@@ -40,7 +42,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 
 	//确保交易金额能有满足执行交易需要的规则。
-	//fmt.Println("from.Address 's vlaue:%s",from.String())
+	fmt.Println("from.Address 's vlaue:%s",from.String())
 	heightCount:= pool.currentState.HeightTxCount(from)
 	//fmt.Println("heightCount 's value:%s",heightCount)
 

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package tests
 
@@ -32,13 +32,13 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 )
 
 // StateTest checks transaction processing without block context.
-// See https://github.com/ethzero/EIPs/issues/176 for the test format specification.
+// See https://github.com/ethereum/EIPs/issues/176 for the test format specification.
 type StateTest struct {
 	json stJSON
 }
@@ -126,7 +126,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 		return nil, UnsupportedForkError{subtest.Fork}
 	}
 	block, _ := t.genesis(config).ToBlock()
-	db, _ := etzdb.NewMemDatabase()
+	db, _ := ethdb.NewMemDatabase()
 	statedb := makePreState(db, t.json.Pre)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
@@ -158,7 +158,7 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func makePreState(db etzdb.Database, accounts core.GenesisAlloc) *state.StateDB {
+func makePreState(db ethdb.Database, accounts core.GenesisAlloc) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb)
 	for addr, a := range accounts {
@@ -219,7 +219,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	dataHex := tx.Data[ps.Indexes.Data]
 	valueHex := tx.Value[ps.Indexes.Value]
 	gasLimit := tx.GasLimit[ps.Indexes.Gas]
-	// Value, Data hex encoding is messy: https://github.com/ethzero/tests/issues/203
+	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
 	value := new(big.Int)
 	if valueHex != "0x" {
 		v, ok := math.ParseBig256(valueHex)

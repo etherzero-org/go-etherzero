@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package console
 
@@ -27,7 +27,7 @@ import (
 // Only this reader may be used for input because it keeps an internal buffer.
 var Stdin = newTerminalPrompter()
 
-// UserPrompter defines the Methods needed by the console to promt the user for
+// UserPrompter defines the methods needed by the console to promt the user for
 // various types of inputs.
 type UserPrompter interface {
 	// PromptInput displays the given prompt to the user and requests some textual
@@ -36,7 +36,7 @@ type UserPrompter interface {
 
 	// PromptPassword displays the given prompt to the user and requests some textual
 	// data to be entered, but one which must not be echoed out into the terminal.
-	// The Method returns the input provided by the user.
+	// The method returns the input provided by the user.
 	PromptPassword(prompt string) (string, error)
 
 	// PromptConfirm displays the given prompt to the user and requests a boolean
@@ -118,7 +118,7 @@ func (p *terminalPrompter) PromptInput(prompt string) (string, error) {
 
 // PromptPassword displays the given prompt to the user and requests some textual
 // data to be entered, but one which must not be echoed out into the terminal.
-// The Method returns the input provided by the user.
+// The method returns the input provided by the user.
 func (p *terminalPrompter) PromptPassword(prompt string) (passwd string, err error) {
 	if p.supported {
 		p.rawMode.ApplyMode()

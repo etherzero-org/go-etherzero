@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -30,21 +30,21 @@ import (
 
 // walletDockerfile is the Dockerfile required to run a web wallet.
 var walletDockerfile = `
-FROM puppetz/wallet:latest
+FROM puppeth/wallet:latest
 
 ADD genesis.json /genesis.json
 
 RUN \
   echo 'node server.js &'                     > wallet.sh && \
-	echo 'getz --cache 512 init /genesis.json' >> wallet.sh && \
-	echo $'getz --networkid {{.NetworkID}} --port {{.NodePort}} --bootnodes {{.Bootnodes}} --etzstats \'{{.Ethstats}}\' --cache=512 --rpc --rpcaddr=0.0.0.0 --rpccorsdomain "*"' >> wallet.sh
+	echo 'geth --cache 512 init /genesis.json' >> wallet.sh && \
+	echo $'geth --networkid {{.NetworkID}} --port {{.NodePort}} --bootnodes {{.Bootnodes}} --ethstats \'{{.Ethstats}}\' --cache=512 --rpc --rpcaddr=0.0.0.0 --rpccorsdomain "*"' >> wallet.sh
 
 RUN \
-	sed -i 's/PuppetzNetworkID/{{.NetworkID}}/g' dist/js/etzerwallet-master.js && \
-	sed -i 's/PuppetzNetwork/{{.Network}}/g'     dist/js/etzerwallet-master.js && \
-	sed -i 's/PuppetzDenom/{{.Denom}}/g'         dist/js/etzerwallet-master.js && \
-	sed -i 's/PuppetzHost/{{.Host}}/g'           dist/js/etzerwallet-master.js && \
-	sed -i 's/PuppetzRPCPort/{{.RPCPort}}/g'     dist/js/etzerwallet-master.js
+	sed -i 's/PuppethNetworkID/{{.NetworkID}}/g' dist/js/etherwallet-master.js && \
+	sed -i 's/PuppethNetwork/{{.Network}}/g'     dist/js/etherwallet-master.js && \
+	sed -i 's/PuppethDenom/{{.Denom}}/g'         dist/js/etherwallet-master.js && \
+	sed -i 's/PuppethHost/{{.Host}}/g'           dist/js/etherwallet-master.js && \
+	sed -i 's/PuppethRPCPort/{{.RPCPort}}/g'     dist/js/etherwallet-master.js
 
 ENTRYPOINT ["/bin/sh", "wallet.sh"]
 `
@@ -63,7 +63,7 @@ services:
       - "{{.RPCPort}}:9646"{{if not .VHost}}
       - "{{.WebPort}}:80"{{end}}
     volumes:
-      - {{.Datadir}}:/root/.ethzero
+      - {{.Datadir}}:/root/.ethereum
     environment:
       - NODE_PORT={{.NodePort}}/tcp
       - STATS={{.Ethstats}}{{if .VHost}}
@@ -93,7 +93,7 @@ func deployWallet(client *sshClient, network string, bootnodes []string, config 
 		"NodePort":  config.nodePort,
 		"RPCPort":   config.rpcPort,
 		"Bootnodes": strings.Join(bootnodes, ","),
-		"Ethstats":  config.etzstats,
+		"Ethstats":  config.ethstats,
 		"Host":      client.address,
 	})
 	files[filepath.Join(workdir, "Dockerfile")] = dockerfile.Bytes()
@@ -106,7 +106,7 @@ func deployWallet(client *sshClient, network string, bootnodes []string, config 
 		"RPCPort":  config.rpcPort,
 		"VHost":    config.webHost,
 		"WebPort":  config.webPort,
-		"Ethstats": config.etzstats[:strings.Index(config.etzstats, ":")],
+		"Ethstats": config.ethstats[:strings.Index(config.ethstats, ":")],
 	})
 	files[filepath.Join(workdir, "docker-compose.yaml")] = composefile.Bytes()
 
@@ -131,7 +131,7 @@ type walletInfos struct {
 	genesis  []byte
 	network  int64
 	datadir  string
-	etzstats string
+	ethstats string
 	nodePort int
 	rpcPort  int
 	webHost  string
@@ -143,7 +143,7 @@ type walletInfos struct {
 func (info *walletInfos) Report() map[string]string {
 	report := map[string]string{
 		"Data directory":         info.datadir,
-		"Ethstats username":      info.etzstats,
+		"Ethstats username":      info.ethstats,
 		"Node listener port ":    strconv.Itoa(info.nodePort),
 		"RPC listener port ":     strconv.Itoa(info.rpcPort),
 		"Website address ":       info.webHost,
@@ -189,12 +189,12 @@ func checkWallet(client *sshClient, network string) (*walletInfos, error) {
 	}
 	// Assemble and return the useful infos
 	stats := &walletInfos{
-		datadir:  infos.volumes["/root/.ethzero"],
+		datadir:  infos.volumes["/root/.ethereum"],
 		nodePort: nodePort,
 		rpcPort:  rpcPort,
 		webHost:  host,
 		webPort:  webPort,
-		etzstats: infos.envvars["STATS"],
+		ethstats: infos.envvars["STATS"],
 	}
 	return stats, nil
 }

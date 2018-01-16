@@ -1,21 +1,21 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package ethzero defines interfaces for interacting with Ethzero.
-package ethzero
+// Package ethereum defines interfaces for interacting with Ethereum.
+package ethereum
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 )
 
-// NotFound is returned by API Methods if the requested item does not exist.
+// NotFound is returned by API methods if the requested item does not exist.
 var NotFound = errors.New("not found")
 
 // TODO: move subscription to package event
@@ -44,7 +44,7 @@ type Subscription interface {
 	Err() <-chan error
 }
 
-// ChainReader provides access to the blockchain. The Methods in this interface access raw
+// ChainReader provides access to the blockchain. The methods in this interface access raw
 // data from either the canonical chain (when requesting by block number) or any
 // blockchain fork that was previously downloaded and processed by the node. The block
 // number argument can be nil to select the latest canonical block. Reading block headers
@@ -59,7 +59,7 @@ type ChainReader interface {
 	TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error)
 	TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error)
 
-	// This Method subscribes to notifications about changes of the head block of
+	// This method subscribes to notifications about changes of the head block of
 	// the canonical chain.
 	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (Subscription, error)
 }
@@ -96,7 +96,7 @@ type ChainStateReader interface {
 }
 
 // SyncProgress gives progress indications when the node is synchronising with
-// the Ethzero network.
+// the Ethereum network.
 type SyncProgress struct {
 	StartingBlock uint64 // Block number where sync began
 	CurrentBlock  uint64 // Current block number where sync is at
@@ -118,11 +118,11 @@ type CallMsg struct {
 	Gas      *big.Int        // if nil, the call executes with near-infinite gas
 	GasPrice *big.Int        // wei <-> gas exchange ratio
 	Value    *big.Int        // amount of wei sent along with the call
-	Data     []byte          // input data, usually an ABI-encoded contract Method invocation
+	Data     []byte          // input data, usually an ABI-encoded contract method invocation
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by
-// the EVM but not mined into the blockchain. ContractCall is a low-level Method to
+// the EVM but not mined into the blockchain. ContractCall is a low-level method to
 // execute such calls. For applications which are structured around specific contracts,
 // the abigen tool provides a nicer, properly typed way to perform calls.
 type ContractCaller interface {
@@ -159,9 +159,9 @@ type LogFilterer interface {
 	SubscribeFilterLogs(ctx context.Context, q FilterQuery, ch chan<- types.Log) (Subscription, error)
 }
 
-// TransactionSender wraps transaction sending. The SendTransaction Method injects a
+// TransactionSender wraps transaction sending. The SendTransaction method injects a
 // signed transaction into the pending transaction pool for execution. If the transaction
-// was a contract creation, the TransactionReceipt Method can be used to retrieve the
+// was a contract creation, the TransactionReceipt method can be used to retrieve the
 // contract address after the transaction has been mined.
 //
 // The transaction must be signed and have a valid nonce to be included. Consumers of the

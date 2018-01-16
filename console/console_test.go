@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package console
 
@@ -29,7 +29,7 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus/ethash"
 	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/etz"
+	"github.com/ethzero/go-ethzero/eth"
 	"github.com/ethzero/go-ethzero/internal/jsre"
 	"github.com/ethzero/go-ethzero/node"
 )
@@ -74,7 +74,7 @@ func (p *hookedPrompter) SetWordCompleter(completer WordCompleter) {}
 type tester struct {
 	workspace string
 	stack     *node.Node
-	ethzero  *etz.Ethzero
+	ethereum  *eth.Ethereum
 	console   *Console
 	input     *hookedPrompter
 	output    *bytes.Buffer
@@ -82,30 +82,30 @@ type tester struct {
 
 // newTester creates a test environment based on which the console can operate.
 // Please ensure you call Close() on the returned tester to avoid leaks.
-func newTester(t *testing.T, confOverride func(*etz.Config)) *tester {
+func newTester(t *testing.T, confOverride func(*eth.Config)) *tester {
 	// Create a temporary storage for the node keys and initialize it
 	workspace, err := ioutil.TempDir("", "console-tester-")
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
 
-	// Create a networkless protocol stack and start an Ethzero service within
+	// Create a networkless protocol stack and start an Ethereum service within
 	stack, err := node.New(&node.Config{DataDir: workspace, UseLightweightKDF: true, Name: testInstance})
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
-	etzConf := &etz.Config{
+	ethConf := &eth.Config{
 		Genesis:   core.DeveloperGenesisBlock(15, common.Address{}),
-		Etzerbase: common.HexToAddress(testAddress),
+		Etherbase: common.HexToAddress(testAddress),
 		Ethash: ethash.Config{
 			PowMode: ethash.ModeTest,
 		},
 	}
 	if confOverride != nil {
-		confOverride(etzConf)
+		confOverride(ethConf)
 	}
-	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return etz.New(ctx, etzConf) }); err != nil {
-		t.Fatalf("failed to register Ethzero protocol: %v", err)
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return eth.New(ctx, ethConf) }); err != nil {
+		t.Fatalf("failed to register Ethereum protocol: %v", err)
 	}
 	// Start the node and assemble the JavaScript console around it
 	if err = stack.Start(); err != nil {
@@ -130,13 +130,13 @@ func newTester(t *testing.T, confOverride func(*etz.Config)) *tester {
 		t.Fatalf("failed to create JavaScript console: %v", err)
 	}
 	// Create the final tester and return
-	var ethzero *etz.Ethzero
-	stack.Service(&ethzero)
+	var ethereum *eth.Ethereum
+	stack.Service(&ethereum)
 
 	return &tester{
 		workspace: workspace,
 		stack:     stack,
-		ethzero:  ethzero,
+		ethereum:  ethereum,
 		console:   console,
 		input:     prompter,
 		output:    printer,

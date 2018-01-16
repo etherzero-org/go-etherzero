@@ -29,7 +29,7 @@ main() {
   local pid_dir="${base_dir}/pids"
 
   stop_swarm_nodes
-  stop_node "getz"
+  stop_node "geth"
   stop_node "bootnode"
   delete_network
 }
@@ -84,8 +84,8 @@ stop_node() {
     ip netns delete "${name}"
   fi
 
-  if ip link show "vetz${name}0" &>/dev/null; then
-    ip link delete dev "vetz${name}0"
+  if ip link show "veth${name}0" &>/dev/null; then
+    ip link delete dev "veth${name}0"
   fi
 }
 

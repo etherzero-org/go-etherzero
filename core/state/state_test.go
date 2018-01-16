@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -23,12 +23,12 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	checker "gopkg.in/check.v1"
 )
 
 type StateSuite struct {
-	db    *etzdb.MemDatabase
+	db    *ethdb.MemDatabase
 	state *StateDB
 }
 
@@ -87,7 +87,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 }
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
-	s.db, _ = etzdb.NewMemDatabase()
+	s.db, _ = ethdb.NewMemDatabase()
 	s.state, _ = New(common.Hash{}, NewDatabase(s.db))
 }
 
@@ -133,7 +133,7 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // use testing instead of checker because checker does not support
 // printing/logging in tests (-check.vv does not work)
 func TestSnapshot2(t *testing.T) {
-	db, _ := etzdb.NewMemDatabase()
+	db, _ := ethdb.NewMemDatabase()
 	state, _ := New(common.Hash{}, NewDatabase(db))
 
 	stateobjaddr0 := toAddr([]byte("so0"))

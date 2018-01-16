@@ -2,19 +2,19 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: getz android ios getz-cross swarm evm all test clean
-.PHONY: getz-linux getz-linux-386 getz-linux-amd64 getz-linux-mips64 getz-linux-mips64le
-.PHONY: getz-linux-arm getz-linux-arm-5 getz-linux-arm-6 getz-linux-arm-7 getz-linux-arm64
-.PHONY: getz-darwin getz-darwin-386 getz-darwin-amd64
-.PHONY: getz-windows getz-windows-386 getz-windows-amd64
+.PHONY: geth android ios geth-cross swarm evm all test clean
+.PHONY: geth-linux geth-linux-386 geth-linux-amd64 geth-linux-mips64 geth-linux-mips64le
+.PHONY: geth-linux-arm geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
+.PHONY: geth-darwin geth-darwin-386 geth-darwin-amd64
+.PHONY: geth-windows geth-windows-386 geth-windows-amd64
 
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
-getz:
-	build/env.sh go run build/ci.go install ./cmd/getz
+geth:
+	build/env.sh go run build/ci.go install ./cmd/geth
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/getz\" to launch getz."
+	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
 swarm:
 	build/env.sh go run build/ci.go install ./cmd/swarm
@@ -27,12 +27,12 @@ all:
 android:
 	build/env.sh go run build/ci.go aar --local
 	@echo "Done building."
-	@echo "Import \"$(GOBIN)/getz.aar\" to use the library."
+	@echo "Import \"$(GOBIN)/geth.aar\" to use the library."
 
 ios:
 	build/env.sh go run build/ci.go xcode --local
 	@echo "Done building."
-	@echo "Import \"$(GOBIN)/Getz.framework\" to use the library."
+	@echo "Import \"$(GOBIN)/Geth.framework\" to use the library."
 
 test: all
 	build/env.sh go run build/ci.go test
@@ -51,92 +51,92 @@ devtools:
 
 # Cross Compilation Targets (xgo)
 
-getz-cross: getz-linux getz-darwin getz-windows getz-android getz-ios
+geth-cross: geth-linux geth-darwin geth-windows geth-android geth-ios
 	@echo "Full cross compilation done:"
-	@ls -ld $(GOBIN)/getz-*
+	@ls -ld $(GOBIN)/geth-*
 
-getz-linux: getz-linux-386 getz-linux-amd64 getz-linux-arm getz-linux-mips64 getz-linux-mips64le
+geth-linux: geth-linux-386 geth-linux-amd64 geth-linux-arm geth-linux-mips64 geth-linux-mips64le
 	@echo "Linux cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-*
+	@ls -ld $(GOBIN)/geth-linux-*
 
-getz-linux-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/getz
+geth-linux-386:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/geth
 	@echo "Linux 386 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep 386
+	@ls -ld $(GOBIN)/geth-linux-* | grep 386
 
-getz-linux-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/getz
+geth-linux-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/geth
 	@echo "Linux amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep amd64
+	@ls -ld $(GOBIN)/geth-linux-* | grep amd64
 
-getz-linux-arm: getz-linux-arm-5 getz-linux-arm-6 getz-linux-arm-7 getz-linux-arm64
+geth-linux-arm: geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
 	@echo "Linux ARM cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep arm
+	@ls -ld $(GOBIN)/geth-linux-* | grep arm
 
-getz-linux-arm-5:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/getz
+geth-linux-arm-5:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/geth
 	@echo "Linux ARMv5 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep arm-5
+	@ls -ld $(GOBIN)/geth-linux-* | grep arm-5
 
-getz-linux-arm-6:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/getz
+geth-linux-arm-6:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/geth
 	@echo "Linux ARMv6 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep arm-6
+	@ls -ld $(GOBIN)/geth-linux-* | grep arm-6
 
-getz-linux-arm-7:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/getz
+geth-linux-arm-7:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/geth
 	@echo "Linux ARMv7 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep arm-7
+	@ls -ld $(GOBIN)/geth-linux-* | grep arm-7
 
-getz-linux-arm64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/getz
+geth-linux-arm64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/geth
 	@echo "Linux ARM64 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep arm64
+	@ls -ld $(GOBIN)/geth-linux-* | grep arm64
 
-getz-linux-mips:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/getz
+geth-linux-mips:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/geth
 	@echo "Linux MIPS cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep mips
+	@ls -ld $(GOBIN)/geth-linux-* | grep mips
 
-getz-linux-mipsle:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/getz
+geth-linux-mipsle:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/geth
 	@echo "Linux MIPSle cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep mipsle
+	@ls -ld $(GOBIN)/geth-linux-* | grep mipsle
 
-getz-linux-mips64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/getz
+geth-linux-mips64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/geth
 	@echo "Linux MIPS64 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep mips64
+	@ls -ld $(GOBIN)/geth-linux-* | grep mips64
 
-getz-linux-mips64le:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/getz
+geth-linux-mips64le:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/geth
 	@echo "Linux MIPS64le cross compilation done:"
-	@ls -ld $(GOBIN)/getz-linux-* | grep mips64le
+	@ls -ld $(GOBIN)/geth-linux-* | grep mips64le
 
-getz-darwin: getz-darwin-386 getz-darwin-amd64
+geth-darwin: geth-darwin-386 geth-darwin-amd64
 	@echo "Darwin cross compilation done:"
-	@ls -ld $(GOBIN)/getz-darwin-*
+	@ls -ld $(GOBIN)/geth-darwin-*
 
-getz-darwin-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/getz
+geth-darwin-386:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/geth
 	@echo "Darwin 386 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-darwin-* | grep 386
+	@ls -ld $(GOBIN)/geth-darwin-* | grep 386
 
-getz-darwin-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/getz
+geth-darwin-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/geth
 	@echo "Darwin amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-darwin-* | grep amd64
+	@ls -ld $(GOBIN)/geth-darwin-* | grep amd64
 
-getz-windows: getz-windows-386 getz-windows-amd64
+geth-windows: geth-windows-386 geth-windows-amd64
 	@echo "Windows cross compilation done:"
-	@ls -ld $(GOBIN)/getz-windows-*
+	@ls -ld $(GOBIN)/geth-windows-*
 
-getz-windows-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/getz
+geth-windows-386:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/geth
 	@echo "Windows 386 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-windows-* | grep 386
+	@ls -ld $(GOBIN)/geth-windows-* | grep 386
 
-getz-windows-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/getz
+geth-windows-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/geth
 	@echo "Windows amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/getz-windows-* | grep amd64
+	@ls -ld $(GOBIN)/geth-windows-* | grep amd64

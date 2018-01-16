@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -33,7 +33,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// sshClient is a small wrapper around Go's SSH client with a few utility Methods
+// sshClient is a small wrapper around Go's SSH client with a few utility methods
 // implemented on top.
 type sshClient struct {
 	server  string // Server name or IP without port number
@@ -68,7 +68,7 @@ func dial(server string, pubkey []byte) (*sshClient, error) {
 	if login == "" {
 		login = user.Username
 	}
-	// Configure the supported authentication Methods (private key and password)
+	// Configure the supported authentication methods (private key and password)
 	var auths []ssh.AuthMethod
 
 	path := filepath.Join(user.HomeDir, ".ssh", "id_rsa")
@@ -159,7 +159,7 @@ func dial(server string, pubkey []byte) (*sshClient, error) {
 }
 
 // init runs some initialization commands on the remote server to ensure it's
-// capable of acting as puppetz target.
+// capable of acting as puppeth target.
 func (client *sshClient) init() error {
 	client.logger.Debug("Verifying if docker is available")
 	if out, err := client.Run("docker version"); err != nil {

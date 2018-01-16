@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains a batch of utility type declarations used by the tests. As the node
 // operates on unique types, a lot of them are needed to check various features.
@@ -36,7 +36,7 @@ func (s *NoopService) Stop() error               { return nil }
 
 func NewNoopService(*ServiceContext) (Service, error) { return new(NoopService), nil }
 
-// Set of services all wrapping the base NoopService resulting in the same Method
+// Set of services all wrapping the base NoopService resulting in the same method
 // signatures but different outer types.
 type NoopServiceA struct{ NoopService }
 type NoopServiceB struct{ NoopService }
@@ -47,7 +47,7 @@ func NewNoopServiceB(*ServiceContext) (Service, error) { return new(NoopServiceB
 func NewNoopServiceC(*ServiceContext) (Service, error) { return new(NoopServiceC), nil }
 
 // InstrumentedService is an implementation of Service for which all interface
-// Methods can be instrumented both return value as well as event hook wise.
+// methods can be instrumented both return value as well as event hook wise.
 type InstrumentedService struct {
 	protocols []p2p.Protocol
 	apis      []rpc.API
@@ -86,7 +86,7 @@ func (s *InstrumentedService) Stop() error {
 	return s.stop
 }
 
-// InstrumentingWrapper is a Method to specialize a service constructor returning
+// InstrumentingWrapper is a method to specialize a service constructor returning
 // a generic InstrumentedService into one returning a wrapping specific one.
 type InstrumentingWrapper func(base ServiceConstructor) ServiceConstructor
 
@@ -104,7 +104,7 @@ func InstrumentingWrapperMaker(base ServiceConstructor, kind reflect.Type) Servi
 }
 
 // Set of services all wrapping the base InstrumentedService resulting in the
-// same Method signatures but different outer types.
+// same method signatures but different outer types.
 type InstrumentedServiceA struct{ InstrumentedService }
 type InstrumentedServiceB struct{ InstrumentedService }
 type InstrumentedServiceC struct{ InstrumentedService }
@@ -121,7 +121,7 @@ func InstrumentedServiceMakerC(base ServiceConstructor) ServiceConstructor {
 	return InstrumentingWrapperMaker(base, reflect.TypeOf(InstrumentedServiceC{}))
 }
 
-// OneMethodApi is a single-Method API handler to be returned by test services.
+// OneMethodApi is a single-method API handler to be returned by test services.
 type OneMethodApi struct {
 	fun func()
 }

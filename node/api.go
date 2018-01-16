@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package node
 
@@ -30,13 +30,13 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-// PrivateAdminAPI is the collection of administrative API Methods exposed only
+// PrivateAdminAPI is the collection of administrative API methods exposed only
 // over a secure RPC channel.
 type PrivateAdminAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewPrivateAdminAPI creates a new API definition for the private admin Methods
+// NewPrivateAdminAPI creates a new API definition for the private admin methods
 // of the node itself.
 func NewPrivateAdminAPI(node *Node) *PrivateAdminAPI {
 	return &PrivateAdminAPI{node: node}
@@ -221,13 +221,13 @@ func (api *PrivateAdminAPI) StopWS() (bool, error) {
 	return true, nil
 }
 
-// PublicAdminAPI is the collection of administrative API Methods exposed over
+// PublicAdminAPI is the collection of administrative API methods exposed over
 // both secure and unsecure RPC channels.
 type PublicAdminAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewPublicAdminAPI creates a new API definition for the public admin Methods
+// NewPublicAdminAPI creates a new API definition for the public admin methods
 // of the node itself.
 func NewPublicAdminAPI(node *Node) *PublicAdminAPI {
 	return &PublicAdminAPI{node: node}
@@ -258,13 +258,13 @@ func (api *PublicAdminAPI) Datadir() string {
 	return api.node.DataDir()
 }
 
-// PublicDebugAPI is the collection of debugging related API Methods exposed over
+// PublicDebugAPI is the collection of debugging related API methods exposed over
 // both secure and unsecure RPC channels.
 type PublicDebugAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewPublicDebugAPI creates a new API definition for the public debug Methods
+// NewPublicDebugAPI creates a new API definition for the public debug methods
 // of the node itself.
 func NewPublicDebugAPI(node *Node) *PublicDebugAPI {
 	return &PublicDebugAPI{node: node}
@@ -378,7 +378,7 @@ func (s *PublicWeb3API) ClientVersion() string {
 	return s.stack.Server().Name
 }
 
-// Sha3 applies the ethzero sha3 implementation on the input.
+// Sha3 applies the ethereum sha3 implementation on the input.
 // It assumes the input is hex encoded.
 func (s *PublicWeb3API) Sha3(input hexutil.Bytes) hexutil.Bytes {
 	return crypto.Keccak256(input)

@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -30,9 +30,11 @@ import (
 var (
 	etzDefaultGasLimit = big.NewInt( 90000)
 	expMinimumGasLimit = big.NewInt(4712388)
-	Big0 = big.NewInt(0)
+
+	Big0                         = big.NewInt(0)
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	errInsufficientStakeForGas = errors.New("insufficient Stake to pay for gas")
+
 )
 
 /*
@@ -168,7 +170,6 @@ func (st *StateTransition) useGas(amount uint64) error {
 	return nil
 }
 
-
 func (st *StateTransition) buyEtzerGas() error {
 	mgas := etzDefaultGasLimit
 	if mgas.BitLen() > 64 {
@@ -240,11 +241,9 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
-	//if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
-	//	return st.buyEtzerGas()
-	//}
 	//return st.buyGas()
 	return st.buyEtzerGas()
+
 }
 
 // TransitionDb will transition the state by applying the current message and returning the result
@@ -278,12 +277,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		vmerr error
 	)
 	if contractCreation {
-
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
-
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
 	if vmerr != nil {
@@ -297,17 +294,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
-	//if !evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-	//	st.refundGas()
-	//	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
-	//}
+	//st.refundGas()
+	//st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
 
-
 func (st *StateTransition) refundGas() {
-	// Return etz for remaining gas to the sender account,
+	// Return eth for remaining gas to the sender account,
 	// exchanged at the original rate.
 	sender := st.from() // err already checked
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)

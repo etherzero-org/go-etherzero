@@ -1,20 +1,20 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package miner implements Ethzero block creation and mining.
+// Package miner implements Ethereum block creation and mining.
 package miner
 
 import (
@@ -27,19 +27,19 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etz/downloader"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/eth/downloader"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 )
 
-// Backend wraps all Methods required for mining.
+// Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
-	ChainDb() etzdb.Database
+	ChainDb() ethdb.Database
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -50,22 +50,22 @@ type Miner struct {
 
 	coinbase common.Address
 	mining   int32
-	etz      Backend
+	eth      Backend
 	engine   consensus.Engine
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(etz Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
-		etz:      etz,
+		eth:      eth,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, etz, mux),
+		worker:   newWorker(config, engine, common.Address{}, eth, mux),
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(etz.BlockChain(), engine))
+	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
 
 	return miner
@@ -172,7 +172,7 @@ func (self *Miner) Pending() (*types.Block, *state.StateDB) {
 //
 // Note, to access both the pending block and the pending state
 // simultaneously, please use Pending(), as the pending state can
-// change between multiple Method calls
+// change between multiple method calls
 func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -46,7 +46,7 @@ var (
 )
 
 // containerInfos is a heavily reduced version of the huge inspection dataset
-// returned from docker inspect, parsed into a form easily usable by puppetz.
+// returned from docker inspect, parsed into a form easily usable by puppeth.
 type containerInfos struct {
 	running bool              // Flag whether the container is running currently
 	envvars map[string]string // Collection of environmental variables set on the container
@@ -83,7 +83,7 @@ func inspectContainer(client *sshClient, container string) (*containerInfos, err
 	}
 	inspect := inspects[0]
 
-	// Infos retrieved, parse the above into sometzing meaningful
+	// Infos retrieved, parse the above into something meaningful
 	infos := &containerInfos{
 		running: inspect.State.Running,
 		envvars: make(map[string]string),

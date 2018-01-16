@@ -1,3 +1,19 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package core
 
 import (
@@ -63,7 +79,6 @@ var (
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
 
-
 	// ErrHeightTxTooHigh is returned if the Height of a transaction is too much
 	ErrHeightTxTooMuch = errors.New("trade too many times in the current block")
 )
@@ -121,8 +136,6 @@ type TxPoolConfig struct {
 
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
-
-	BalanceLimit uint64 //Minimum acount Balance to enforce for acceptance into the pool
 
 	AccountSlots uint64 // Minimum number of executable transaction slots guaranteed per account
 	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
@@ -270,7 +283,6 @@ func (pool *TxPool) loop() {
 	// Track the previous head headers for transaction reorgs
 	head := pool.chain.CurrentBlock()
 
-
 	// Keep waiting for and reacting to the various events
 	for {
 		select {
@@ -286,11 +298,11 @@ func (pool *TxPool) loop() {
 
 				pool.mu.Unlock()
 			}
-			// Be unsubscribed due to system stopped
+		// Be unsubscribed due to system stopped
 		case <-pool.chainHeadSub.Err():
 			return
 
-			// Handle stats reporting ticks
+		// Handle stats reporting ticks
 		case <-report.C:
 			pool.mu.RLock()
 			pending, queued := pool.stats()
@@ -302,7 +314,7 @@ func (pool *TxPool) loop() {
 				prevPending, prevQueued, prevStales = pending, queued, stales
 			}
 
-			// Handle inactive account transaction eviction
+		// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
 			for addr := range pool.queue {
@@ -319,7 +331,7 @@ func (pool *TxPool) loop() {
 			}
 			pool.mu.Unlock()
 
-			// Handle local transaction journal rotation
+		// Handle local transaction journal rotation
 		case <-journal.C:
 			if pool.journal != nil {
 				pool.mu.Lock()
@@ -333,7 +345,7 @@ func (pool *TxPool) loop() {
 }
 
 // lockedReset is a wrapper around reset to allow calling it in a thread safe
-// manner. This Method is only ever used in the tester!
+// manner. This method is only ever used in the tester!
 func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -567,18 +579,14 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
-
-	//add log by roger 这里需要重新修改，因为已经没有Gas了，所以将这条规则进行修改，或者可以采用将当前账户金额最少的交易抛弃
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
-		//
 		if pool.priced.Underpriced(tx, pool.locals) {
 			log.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
 			return false, ErrUnderpriced
 		}
-
 		// New transaction is better than our worse ones, make room for it
 		drop := pool.priced.Discard(len(pool.all)-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
 		for _, tx := range drop {
@@ -630,7 +638,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 // enqueueTx inserts a new transaction into the non-executable transaction queue.
 //
-// Note, this Method assumes the pool lock is held!
+// Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
 	// Try to insert the transaction into the future queue
 	from, _ := types.Sender(pool.signer, tx) // already validated
@@ -668,7 +676,7 @@ func (pool *TxPool) journalTx(from common.Address, tx *types.Transaction) {
 
 // promoteTx adds a transaction to the pending (processable) list of transactions.
 //
-// Note, this Method assumes the pool lock is held!
+// Note, this method assumes the pool lock is held!
 func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.Transaction) {
 	// Try to insert the transaction into the pending queue
 	if pool.pending[addr] == nil {
@@ -676,7 +684,6 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	}
 	list := pool.pending[addr]
 
-	//add by roger on 2017-12-13
 	inserted, old := list.Add(tx, pool.config.PriceBump)
 	if !inserted {
 		// An older transaction was better, discard this
@@ -775,7 +782,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 			}
 		}
 	}
-	// Only reprocess the internal state if sometzing was actually added
+	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
 		addrs := make([]common.Address, 0, len(dirty))
 		for addr := range dirty {
@@ -928,7 +935,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			}
 		}
 		// Gradually drop transactions from offenders
-		var offenders []common.Address
+		offenders := []common.Address{}
 		for pending > pool.config.GlobalSlots && !spammers.Empty() {
 			// Retrieve the next offender if not local address
 			offender, _ := spammers.Pop()
@@ -1041,22 +1048,19 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-
-		//modify by roger on 2018-01-12
-		//drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
-		//for _, tx := range drops {
-		//	hash := tx.Hash()
-		//	log.Trace("Removed unpayable pending transaction", "hash", hash)
-		//	delete(pool.all, hash)
-		//	pool.priced.Removed()
-		//	pendingNofundsCounter.Inc(1)
-		//}
-		//
-		//for _, tx := range invalids {
-		//	hash := tx.Hash()
-		//	log.Trace("Demoting pending transaction", "hash", hash)
-		//	pool.enqueueTx(hash, tx)
-		//}
+		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		for _, tx := range drops {
+			hash := tx.Hash()
+			log.Trace("Removed unpayable pending transaction", "hash", hash)
+			delete(pool.all, hash)
+			pool.priced.Removed()
+			pendingNofundsCounter.Inc(1)
+		}
+		for _, tx := range invalids {
+			hash := tx.Hash()
+			log.Trace("Demoting pending transaction", "hash", hash)
+			pool.enqueueTx(hash, tx)
+		}
 		// If there's a gap in front, warn (should never happen) and postpone all transactions
 		if list.Len() > 0 && list.txs.Get(nonce) == nil {
 			for _, tx := range list.Cap(0) {
@@ -1108,7 +1112,7 @@ func (as *accountSet) contains(addr common.Address) bool {
 }
 
 // containsTx checks if the sender of a given tx is within the set. If the sender
-// cannot be derived, this Method returns false.
+// cannot be derived, this method returns false.
 func (as *accountSet) containsTx(tx *types.Transaction) bool {
 	if addr, err := types.Sender(as.signer, tx); err == nil {
 		return as.contains(addr)

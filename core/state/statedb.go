@@ -1,20 +1,20 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package state provides a caching layer atop the Ethzero state trie.
+// Package state provides a caching layer atop the Ethereum state trie.
 package state
 
 import (
@@ -36,7 +36,7 @@ type revision struct {
 	journalIndex int
 }
 
-// StateDBs within the ethzero protocol are used to store anything
+// StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
 // * Contracts
@@ -75,11 +75,11 @@ type StateDB struct {
 	lock sync.Mutex
 }
 
-
 func (self *StateDB) GetTrieHash()common.Hash{
 
 	return self.trie.Hash()
 }
+
 // Create a new state from a given trie
 func New(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
@@ -330,7 +330,7 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 }
 
 //
-// Setting, updating & deleting state object Methods
+// Setting, updating & deleting state object methods
 //
 
 // updateStateObject writes the given object to the trie.
@@ -367,12 +367,15 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 		return nil
 	}
 	var data Account
-	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		var ethdata EthAccount
-		if err := rlp.DecodeBytes(enc,&ethdata); err != nil{
+	var ethdata EthAccount
+	if err := rlp.DecodeBytes(enc, &ethdata); err != nil {
+
+		if err := rlp.DecodeBytes(enc,&data); err != nil{
 			log.Error("Failed to decode state object", "addr", addr, "err", err)
 			return nil
 		}
+
+	}else{
 		data.Root = ethdata.Root
 		data.Balance = ethdata.Balance
 		data.CodeHash = ethdata.CodeHash
@@ -433,31 +436,6 @@ func (self *StateDB) CreateAccount(addr common.Address) {
 	if prev != nil {
 		new.setBalance(prev.data.Balance)
 	}
-}
-// add by roger on 2017-12-16
-func (self *StateDB ) SetHeightTxCount(addr common.Address, heighttxcount uint64){
-
-	stateObject := self.GetOrNewStateObject(addr)
-	stateObject.setHeightTxCount(heighttxcount)
-}
-
-func (self *StateDB) HeightTxCount(addr common.Address) uint64 {
-
-	stateObject :=self.GetOrNewStateObject(addr)
-	//stateObject :=self.getStateObject(addr)
-	return stateObject.HeightTxCount()
-}
-
-func (self *StateDB) SetTxBlockHeight( addr common.Address,txblockheight big.Int ){
-	stateObject := self.GetOrNewStateObject(addr)
-	stateObject.setTxBlockHeight(txblockheight)
-}
-
-func (self *StateDB) TxBlockHeight(addr common.Address) big.Int {
-
-	stateObject := self.GetOrNewStateObject(addr)
-
-	return stateObject.TxBlockHeight()
 }
 
 func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
@@ -549,9 +527,10 @@ func (self *StateDB) GetRefund() *big.Int {
 	return self.refund
 }
 
-// Finalise finalises the state by removing the self destructed objects and clears the journal as well as the refunds.
+// Finalise finalises the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
+
 	for addr := range s.stateObjectsDirty {
 		stateObject := s.stateObjects[addr]
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
@@ -587,7 +566,7 @@ func (self *StateDB) Prepare(thash, bhash common.Hash, ti int) {
 // DeleteSuicides should not be used for consensus related updates
 // under any circumstances.
 func (s *StateDB) DeleteSuicides() {
-	// Reset refund so that any used-gas calculations can use this Method.
+	// Reset refund so that any used-gas calculations can use this method.
 	s.clearJournalAndRefund()
 
 	for addr := range s.stateObjectsDirty {
@@ -641,4 +620,30 @@ func (s *StateDB) CommitTo(dbw trie.DatabaseWriter, deleteEmptyObjects bool) (ro
 	root, err = s.trie.CommitTo(dbw)
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
+}
+
+// add by roger on 2017-12-16
+func (self *StateDB ) SetHeightTxCount(addr common.Address, heighttxcount uint64){
+
+	stateObject := self.GetOrNewStateObject(addr)
+	stateObject.setHeightTxCount(heighttxcount)
+}
+
+func (self *StateDB) HeightTxCount(addr common.Address) uint64 {
+
+	stateObject :=self.GetOrNewStateObject(addr)
+	//stateObject :=self.getStateObject(addr)
+	return stateObject.HeightTxCount()
+}
+
+func (self *StateDB) SetTxBlockHeight( addr common.Address,txblockheight big.Int ){
+	stateObject := self.GetOrNewStateObject(addr)
+	stateObject.setTxBlockHeight(txblockheight)
+}
+
+func (self *StateDB) TxBlockHeight(addr common.Address) big.Int {
+
+	stateObject := self.GetOrNewStateObject(addr)
+
+	return stateObject.TxBlockHeight()
 }

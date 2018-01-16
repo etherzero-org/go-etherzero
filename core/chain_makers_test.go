@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -24,7 +24,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/params"
 )
 
@@ -36,7 +36,7 @@ func ExampleGenerateChain() {
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
 		addr3   = crypto.PubkeyToAddress(key3.PublicKey)
-		db, _   = etzdb.NewMemDatabase()
+		db, _   = ethdb.NewMemDatabase()
 	)
 
 	// Ensure that key1 has some funds in the genesis block.
@@ -53,11 +53,11 @@ func ExampleGenerateChain() {
 	chain, _ := GenerateChain(gspec.Config, genesis, db, 5, func(i int, gen *BlockGen) {
 		switch i {
 		case 0:
-			// In block 1, addr1 sends addr2 some etzer.
+			// In block 1, addr1 sends addr2 some ether.
 			tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(addr1), addr2, big.NewInt(10000), bigTxGas, nil, nil), signer, key1)
 			gen.AddTx(tx)
 		case 1:
-			// In block 2, addr1 sends some more etzer to addr2.
+			// In block 2, addr1 sends some more ether to addr2.
 			// addr2 passes it on to addr3.
 			tx1, _ := types.SignTx(types.NewTransaction(gen.TxNonce(addr1), addr2, big.NewInt(1000), bigTxGas, nil, nil), signer, key1)
 			tx2, _ := types.SignTx(types.NewTransaction(gen.TxNonce(addr2), addr3, big.NewInt(1000), bigTxGas, nil, nil), signer, key2)

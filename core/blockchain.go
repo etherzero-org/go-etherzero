@@ -1,20 +1,20 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package core implements the Ethzero consensus protocol.
+// Package core implements the Ethereum consensus protocol.
 package core
 
 import (
@@ -34,7 +34,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/metrics"
@@ -79,7 +79,7 @@ type BlockChain struct {
 	config *params.ChainConfig // chain & network configuration
 
 	hc            *HeaderChain
-	chainDb       etzdb.Database
+	chainDb       ethdb.Database
 	rmLogsFeed    event.Feed
 	chainFeed     event.Feed
 	chainSideFeed event.Feed
@@ -117,9 +117,9 @@ type BlockChain struct {
 }
 
 // NewBlockChain returns a fully initialised block chain using information
-// available in the database. It initialises the default Ethzero Validator and
+// available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(chainDb etzdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -176,7 +176,7 @@ func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
 }
 
-// loadLastState loads the last known chain state from the database. This Method
+// loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
 	// Restore the last known head block
@@ -446,7 +446,7 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 	return nil
 }
 
-// insert injects a new head block into the current block chain. This Method
+// insert injects a new head block into the current block chain. This method
 // assumes that the block is indeed a true head. It will also reset the head
 // header and the head fast sync block to this very same block if they are older
 // or if they are on a different side chain.
@@ -568,7 +568,7 @@ func (bc *BlockChain) GetBlockByNumber(number uint64) *types.Block {
 }
 
 // GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
-// [deprecated by etz/62]
+// [deprecated by eth/62]
 func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*types.Block) {
 	number := bc.hc.GetBlockNumber(hash)
 	for i := 0; i < n; i++ {
@@ -744,7 +744,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		}
 		stats.processed++
 
-		if batch.ValueSize() >= etzdb.IdealBatchSize {
+		if batch.ValueSize() >= ethdb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return 0, err
 			}
@@ -867,7 +867,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 }
 
 // insertChain will execute the actual chain insertion and event aggregation. The
-// only reason this Method exists as a separate one is to make locking cleaner
+// only reason this method exists as a separate one is to make locking cleaner
 // with deferred statements.
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
@@ -1287,7 +1287,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 // already known. If the total difficulty of the newly inserted header becomes
 // greater than the current known TD, the canonical chain is re-routed.
 //
-// Note: This Method is not concurrent-safe with inserting blocks simultaneously
+// Note: This method is not concurrent-safe with inserting blocks simultaneously
 // into the chain, as side effects caused by reorganisations cannot be emulated
 // without the real blocks. Hence, writing headers directly should only be done
 // in two scenarios: pure-header mode of operation (light clients), or properly

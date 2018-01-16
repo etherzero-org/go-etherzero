@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -27,21 +27,21 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
-// API describes the set of Methods offered over the RPC interface
+// API describes the set of methods offered over the RPC interface
 type API struct {
-	Namespace string      // namespace under which the rpc Methods of Service are exposed
+	Namespace string      // namespace under which the rpc methods of Service are exposed
 	Version   string      // api version for DApp's
-	Service   interface{} // receiver instance which holds the Methods
-	Public    bool        // indication if the Methods must be considered safe for public use
+	Service   interface{} // receiver instance which holds the methods
+	Public    bool        // indication if the methods must be considered safe for public use
 }
 
-// callback is a Method callback which was registered in the server
+// callback is a method callback which was registered in the server
 type callback struct {
-	rcvr        reflect.Value  // receiver of Method
-	Method      reflect.Method // callback
+	rcvr        reflect.Value  // receiver of method
+	method      reflect.Method // callback
 	argTypes    []reflect.Type // input argument types
-	hasCtx      bool           // Method's first argument is a context (not included in argTypes)
-	errPos      int            // err return idx, of -1 when Method cannot return error
+	hasCtx      bool           // method's first argument is a context (not included in argTypes)
+	errPos      int            // err return idx, of -1 when method cannot return error
 	isSubscribe bool           // indication if the callback is a subscription
 }
 
@@ -79,7 +79,7 @@ type Server struct {
 // rpcRequest represents a raw incoming RPC request
 type rpcRequest struct {
 	service  string
-	Method   string
+	method   string
 	id       interface{}
 	isPubSub bool
 	params   interface{}

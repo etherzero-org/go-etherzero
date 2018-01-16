@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -173,7 +173,7 @@ func (m *txSortedMap) Remove(nonce uint64) bool {
 // removed from the list.
 //
 // Note, all transactions with nonces lower than start will also be returned to
-// prevent getting into and invalid state. This is not sometzing that should ever
+// prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
 func (m *txSortedMap) Ready(start uint64) types.Transactions {
 	// Short circuit if no transactions are available
@@ -252,16 +252,15 @@ func (l *txList) Overlaps(tx *types.Transaction) bool {
 func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Transaction) {
 	// If there's an older better transaction, abort
 	old := l.txs.Get(tx.Nonce())
-	//modify by roger on 2018-01-12 for o fee
-	//if old != nil {
-	//	threshold := new(big.Int).Div(new(big.Int).Mul(old.GasPrice(), big.NewInt(100+int64(priceBump))), big.NewInt(100))
-	//	// Have to ensure that the new gas price is higher than the old gas
-	//	// price as well as checking the percentage threshold to ensure that
-	//	// this is accurate for low (Wei-level) gas price replacements
-	//	if old.GasPrice().Cmp(tx.GasPrice()) >= 0 || threshold.Cmp(tx.GasPrice()) > 0 {
-	//		return false, nil
-	//	}
-	//}
+	if old != nil {
+		threshold := new(big.Int).Div(new(big.Int).Mul(old.GasPrice(), big.NewInt(100+int64(priceBump))), big.NewInt(100))
+		// Have to ensure that the new gas price is higher than the old gas
+		// price as well as checking the percentage threshold to ensure that
+		// this is accurate for low (Wei-level) gas price replacements
+		if old.GasPrice().Cmp(tx.GasPrice()) >= 0 || threshold.Cmp(tx.GasPrice()) > 0 {
+			return false, nil
+		}
+	}
 	// Otherwise overwrite the old transaction with the current one
 	l.txs.Put(tx)
 	if cost := tx.Cost(); l.costcap.Cmp(cost) < 0 {
@@ -285,16 +284,15 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // post-removal maintenance. Strict-mode invalidated transactions are also
 // returned.
 //
-// This Method uses the cached costcap and gascap to quickly decide if there's even
+// This method uses the cached costcap and gascap to quickly decide if there's even
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costgas cap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
 func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types.Transactions) {
 	// If all transactions are below the threshold, short circuit
-	//modify by roger on 2018-01-12 for 0 fee
-	//if l.costcap.Cmp(costLimit) <= 0 && l.gascap.Cmp(gasLimit) <= 0 {
-	//	return nil, nil
-	//}
+	if l.costcap.Cmp(costLimit) <= 0 && l.gascap.Cmp(gasLimit) <= 0 {
+		return nil, nil
+	}
 	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
 	l.gascap = new(big.Int).Set(gasLimit)
 
@@ -343,7 +341,7 @@ func (l *txList) Remove(tx *types.Transaction) (bool, types.Transactions) {
 // removed from the list.
 //
 // Note, all transactions with nonces lower than start will also be returned to
-// prevent getting into and invalid state. This is not sometzing that should ever
+// prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
 func (l *txList) Ready(start uint64) types.Transactions {
 	return l.txs.Ready(start)
@@ -480,7 +478,6 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 		return false
 	}
 	cheapest := []*types.Transaction(*l.items)[0]
-
 	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
 }
 

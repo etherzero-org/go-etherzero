@@ -1,20 +1,20 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-// Package utils contains internal helper functions for go-ethzero commands.
+// Package utils contains internal helper functions for go-ethereum commands.
 package utils
 
 import (
@@ -39,11 +39,11 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/dashboard"
-	"github.com/ethzero/go-ethzero/etz"
-	"github.com/ethzero/go-ethzero/etz/downloader"
-	"github.com/ethzero/go-ethzero/etz/gasprice"
-	"github.com/ethzero/go-ethzero/etzdb"
-	"github.com/ethzero/go-ethzero/etzstats"
+	"github.com/ethzero/go-ethzero/eth"
+	"github.com/ethzero/go-ethzero/eth/downloader"
+	"github.com/ethzero/go-ethzero/eth/gasprice"
+	"github.com/ethzero/go-ethzero/ethdb"
+	"github.com/ethzero/go-ethzero/ethstats"
 	"github.com/ethzero/go-ethzero/les"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/metrics"
@@ -128,7 +128,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: etz.DefaultConfig.NetworkId,
+		Value: eth.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -163,7 +163,7 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode",
 	}
-	defaultSyncMode = etz.DefaultConfig.SyncMode
+	defaultSyncMode = eth.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -217,27 +217,27 @@ var (
 	EthashCachesInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.cachesinmem",
 		Usage: "Number of recent ethash caches to keep in memory (16MB each)",
-		Value: etz.DefaultConfig.Ethash.CachesInMem,
+		Value: eth.DefaultConfig.Ethash.CachesInMem,
 	}
 	EthashCachesOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.cachesondisk",
 		Usage: "Number of recent ethash caches to keep on disk (16MB each)",
-		Value: etz.DefaultConfig.Ethash.CachesOnDisk,
+		Value: eth.DefaultConfig.Ethash.CachesOnDisk,
 	}
 	EthashDatasetDirFlag = DirectoryFlag{
 		Name:  "ethash.dagdir",
 		Usage: "Directory to store the ethash mining DAGs (default = inside home folder)",
-		Value: DirectoryString{etz.DefaultConfig.Ethash.DatasetDir},
+		Value: DirectoryString{eth.DefaultConfig.Ethash.DatasetDir},
 	}
 	EthashDatasetsInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.dagsinmem",
 		Usage: "Number of recent ethash mining DAGs to keep in memory (1+GB each)",
-		Value: etz.DefaultConfig.Ethash.DatasetsInMem,
+		Value: eth.DefaultConfig.Ethash.DatasetsInMem,
 	}
 	EthashDatasetsOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.dagsondisk",
 		Usage: "Number of recent ethash mining DAGs to keep on disk (1+GB each)",
-		Value: etz.DefaultConfig.Ethash.DatasetsOnDisk,
+		Value: eth.DefaultConfig.Ethash.DatasetsOnDisk,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -257,37 +257,37 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: etz.DefaultConfig.TxPool.PriceLimit,
+		Value: eth.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: etz.DefaultConfig.TxPool.PriceBump,
+		Value: eth.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: etz.DefaultConfig.TxPool.AccountSlots,
+		Value: eth.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: etz.DefaultConfig.TxPool.GlobalSlots,
+		Value: eth.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: etz.DefaultConfig.TxPool.AccountQueue,
+		Value: eth.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: etz.DefaultConfig.TxPool.GlobalQueue,
+		Value: eth.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: etz.DefaultConfig.TxPool.Lifetime,
+		Value: eth.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -315,15 +315,15 @@ var (
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
 		Value: params.GenesisGasLimit.Uint64(),
 	}
-	EtzerbaseFlag = cli.StringFlag{
-		Name:  "etzerbase",
+	EtherbaseFlag = cli.StringFlag{
+		Name:  "etherbase",
 		Usage: "Public address for block mining rewards (default = first account created)",
 		Value: "0",
 	}
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: etz.DefaultConfig.GasPrice,
+		Value: eth.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -346,9 +346,9 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
-	EtzStatsURLFlag = cli.StringFlag{
-		Name:  "etzstats",
-		Usage: "Reporting URL of a etzstats service (nodename:secret@host:port)",
+	EthStatsURLFlag = cli.StringFlag{
+		Name:  "ethstats",
+		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
 	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
@@ -496,12 +496,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: etz.DefaultConfig.GPO.Blocks,
+		Value: eth.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: etz.DefaultConfig.GPO.Percentile,
+		Value: eth.DefaultConfig.GPO.Percentile,
 	}
 	WhisperEnabledFlag = cli.BoolFlag{
 		Name:  "shh",
@@ -538,7 +538,7 @@ func MakeDataDir(ctx *cli.Context) string {
 
 // setNodeKey creates a node key from set command line flags, either loading it
 // from a file or as a specified hex value. If neither flags were provided, this
-// Method returns nil and an emphemeral key is to be generated.
+// method returns nil and an emphemeral key is to be generated.
 func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
 		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
@@ -719,7 +719,7 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 }
 
 // makeDatabaseHandles raises out the number of allowed file handles per process
-// for Getz and returns half of the allowance to assign to the database.
+// for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
 	if err := raiseFdLimit(2048); err != nil {
 		Fatalf("Failed to raise file descriptor allowance: %v", err)
@@ -753,23 +753,23 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	return accs[index], nil
 }
 
-// setEtherbase retrieves the etzerbase either from the directly specified
+// setEtherbase retrieves the etherbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *etz.Config) {
-	if ctx.GlobalIsSet(EtzerbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(EtzerbaseFlag.Name))
+func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
+	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
+		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", EtzerbaseFlag.Name, err)
+			Fatalf("Option %q: %v", EtherbaseFlag.Name, err)
 		}
-		cfg.Etzerbase = account.Address
+		cfg.Etherbase = account.Address
 		return
 	}
 	accounts := ks.Accounts()
-	if (cfg.Etzerbase == common.Address{}) {
+	if (cfg.Etherbase == common.Address{}) {
 		if len(accounts) > 0 {
-			cfg.Etzerbase = accounts[0].Address
+			cfg.Etherbase = accounts[0].Address
 		} else {
-			log.Warn("No etzerbase set and no accounts found as default")
+			log.Warn("No etherbase set and no accounts found as default")
 		}
 	}
 }
@@ -910,7 +910,7 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func setEthash(ctx *cli.Context, cfg *etz.Config) {
+func setEthash(ctx *cli.Context, cfg *eth.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.Ethash.CacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
 	}
@@ -979,8 +979,8 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 	}
 }
 
-// SetEthConfig applies etz-related command line flags to the config.
-func SetEtzConfig(ctx *cli.Context, stack *node.Node, cfg *etz.Config) {
+// SetEthConfig applies eth-related command line flags to the config.
+func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
@@ -1039,7 +1039,6 @@ func SetEtzConfig(ctx *cli.Context, stack *node.Node, cfg *etz.Config) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
-		//modify by roger on 2018-01-13 by testnet
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
@@ -1084,8 +1083,8 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Assets = ctx.GlobalString(DashboardAssetsFlag.Name)
 }
 
-// RegisterEtzService adds an Ethzero client to the stack.
-func RegisterEtzService(stack *node.Node, cfg *etz.Config) {
+// RegisterEthService adds an Ethereum client to the stack.
+func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 	var err error
 	if cfg.SyncMode == downloader.LightSync {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -1093,7 +1092,7 @@ func RegisterEtzService(stack *node.Node, cfg *etz.Config) {
 		})
 	} else {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := etz.New(ctx, cfg)
+			fullNode, err := eth.New(ctx, cfg)
 			if fullNode != nil && cfg.LightServ > 0 {
 				ls, _ := les.NewLesServer(fullNode, cfg)
 				fullNode.AddLesServer(ls)
@@ -1102,7 +1101,7 @@ func RegisterEtzService(stack *node.Node, cfg *etz.Config) {
 		})
 	}
 	if err != nil {
-		Fatalf("Failed to register the Ethzero service: %v", err)
+		Fatalf("Failed to register the Ethereum service: %v", err)
 	}
 }
 
@@ -1122,20 +1121,20 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 	}
 }
 
-// RegisterEthStatsService configures the Ethzero Stats daemon and adds it to
+// RegisterEthStatsService configures the Ethereum Stats daemon and adds it to
 // th egiven node.
 func RegisterEthStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// Retrieve both etz and les services
-		var etzServ *etz.Ethzero
-		ctx.Service(&etzServ)
+		// Retrieve both eth and les services
+		var ethServ *eth.Ethereum
+		ctx.Service(&ethServ)
 
-		var lesServ *les.LightEthzero
+		var lesServ *les.LightEthereum
 		ctx.Service(&lesServ)
 
-		return etzstats.New(url, etzServ, lesServ)
+		return ethstats.New(url, ethServ, lesServ)
 	}); err != nil {
-		Fatalf("Failed to register the Ethzero Stats service: %v", err)
+		Fatalf("Failed to register the Ethereum Stats service: %v", err)
 	}
 }
 
@@ -1146,7 +1145,7 @@ func SetupNetwork(ctx *cli.Context) {
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) etzdb.Database {
+func MakeChainDatabase(ctx *cli.Context, stack *node.Node) ethdb.Database {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name)
 		handles = makeDatabaseHandles()
@@ -1176,7 +1175,7 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb etzdb.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb ethdb.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
@@ -1191,12 +1190,12 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
 			engine = ethash.New(ethash.Config{
-				CacheDir:       stack.ResolvePath(etz.DefaultConfig.Ethash.CacheDir),
-				CachesInMem:    etz.DefaultConfig.Ethash.CachesInMem,
-				CachesOnDisk:   etz.DefaultConfig.Ethash.CachesOnDisk,
-				DatasetDir:     stack.ResolvePath(etz.DefaultConfig.Ethash.DatasetDir),
-				DatasetsInMem:  etz.DefaultConfig.Ethash.DatasetsInMem,
-				DatasetsOnDisk: etz.DefaultConfig.Ethash.DatasetsOnDisk,
+				CacheDir:       stack.ResolvePath(eth.DefaultConfig.Ethash.CacheDir),
+				CachesInMem:    eth.DefaultConfig.Ethash.CachesInMem,
+				CachesOnDisk:   eth.DefaultConfig.Ethash.CachesOnDisk,
+				DatasetDir:     stack.ResolvePath(eth.DefaultConfig.Ethash.DatasetDir),
+				DatasetsInMem:  eth.DefaultConfig.Ethash.DatasetsInMem,
+				DatasetsOnDisk: eth.DefaultConfig.Ethash.DatasetsOnDisk,
 			})
 		}
 	}
@@ -1229,11 +1228,11 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 // This is a temporary function used for migrating old command/flags to the
 // new format.
 //
-// e.g. getz account new --keystore /tmp/mykeystore --lightkdf
+// e.g. geth account new --keystore /tmp/mykeystore --lightkdf
 //
-// is equivalent after calling this Method with:
+// is equivalent after calling this method with:
 //
-// getz --keystore /tmp/mykeystore --lightkdf account new
+// geth --keystore /tmp/mykeystore --lightkdf account new
 //
 // This allows the use of the existing configuration functionality.
 // When all flags are migrated this function can be removed and the existing

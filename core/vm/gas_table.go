@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package vm
 
@@ -31,7 +31,7 @@ func memoryGasCost(mem *Memory, newMemSize uint64) (uint64, error) {
 	if newMemSize == 0 {
 		return 0, nil
 	}
-	// The maximum that will fit in a uint64 is max_word_count - 1 anything above that will result in an overflow.
+	// The maximum that will fit in a uint64 is max_word_count - 1
 	// anything above that will result in an overflow.
 	// Additionally, a newMemSize which results in a
 	// newMemSizeWords larger than 0x7ffffffff will cause the square operation

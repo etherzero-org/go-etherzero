@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -67,7 +67,7 @@ func TestClientBatchRequest(t *testing.T) {
 			Result: new(Result),
 		},
 		{
-			Method: "no_such_Method",
+			Method: "no_such_method",
 			Args:   []interface{}{1, 2, 3},
 			Result: new(int),
 		},
@@ -87,10 +87,10 @@ func TestClientBatchRequest(t *testing.T) {
 			Result: &Result{"hello2", 11, &Args{"world"}},
 		},
 		{
-			Method: "no_such_Method",
+			Method: "no_such_method",
 			Args:   []interface{}{1, 2, 3},
 			Result: new(int),
-			Error:  &jsonError{Code: -32601, Message: "The Method no_such_Method_ does not exist/is not available"},
+			Error:  &jsonError{Code: -32601, Message: "The method no_such_method_ does not exist/is not available"},
 		},
 	}
 	if !reflect.DeepEqual(batch, wantResult) {
@@ -360,7 +360,7 @@ func TestClientNotificationStorm(t *testing.T) {
 				return
 			}
 			var r int
-			err := client.CallContext(ctx, &r, "etz_echo", i)
+			err := client.CallContext(ctx, &r, "eth_echo", i)
 			if err != nil {
 				if !wantError {
 					t.Fatalf("(%d/%d) call error: %v", i, count, err)
@@ -520,7 +520,7 @@ func httpTestClient(srv *Server, transport string, fl *flakeyListener) (*Client,
 
 func ipcTestClient(srv *Server, fl *flakeyListener) (*Client, net.Listener) {
 	// Listen on a random endpoint.
-	endpoint := fmt.Sprintf("go-ethzero-test-ipc-%d-%d", os.Getpid(), rand.Int63())
+	endpoint := fmt.Sprintf("go-ethereum-test-ipc-%d-%d", os.Getpid(), rand.Int63())
 	if runtime.GOOS == "windows" {
 		endpoint = `\\.\pipe\` + endpoint
 	} else {

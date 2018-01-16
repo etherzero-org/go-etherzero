@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package bloombits
 
@@ -220,7 +220,7 @@ func (m *Matcher) Start(ctx context.Context, begin, end uint64, results chan uin
 // ones have all found a potential match in one of the blocks of the section,
 // then binary AND-ing its own matches and forwaring the result to the next one.
 //
-// The Method starts feeding the section indexes into the first sub-matcher on a
+// The method starts feeding the section indexes into the first sub-matcher on a
 // new goroutine and returns a sink channel receiving the results.
 func (m *Matcher) run(begin, end uint64, buffer int, session *MatcherSession) chan *partialMatches {
 	// Create the source channel and feed section indexes into
@@ -256,7 +256,7 @@ func (m *Matcher) run(begin, end uint64, buffer int, session *MatcherSession) ch
 // subMatch creates a sub-matcher that filters for a set of addresses or topics, binary OR-s those matches, then
 // binary AND-s the result to the daisy-chain input (source) and forwards it to the daisy-chain output.
 // The matches of each address/topic are calculated by fetching the given sections of the three bloom bit indexes belonging to
-// that address/topic, and binary AND-ing those vectors togetzer.
+// that address/topic, and binary AND-ing those vectors together.
 func (m *Matcher) subMatch(source chan *partialMatches, dist chan *request, bloom []bloomIndexes, session *MatcherSession) chan *partialMatches {
 	// Start the concurrent schedulers for each bit required by the bloom filter
 	sectionSources := make([][3]chan uint64, len(bloom))
@@ -333,7 +333,7 @@ func (m *Matcher) subMatch(source chan *partialMatches, dist chan *request, bloo
 				if !ok {
 					return
 				}
-				// Gather all the sub-results and merge them togetzer
+				// Gather all the sub-results and merge them together
 				var orVector []byte
 				for _, bloomSinks := range sectionSinks {
 					var andVector []byte
@@ -392,7 +392,7 @@ func (m *Matcher) distributor(dist chan *request, session *MatcherSession) {
 		shutdown = session.quit // Shutdown request channel, will gracefully wait for pending requests
 	)
 
-	// assign is a helper Method fo try to assign a pending bit an an actively
+	// assign is a helper method fo try to assign a pending bit an an actively
 	// listening servicer, or schedule it up for later when one arrives.
 	assign := func(bit uint) {
 		select {
@@ -600,9 +600,9 @@ func (s *MatcherSession) DeliverSections(bit uint, sections []uint64, bitsets []
 }
 
 // Multiplex polls the matcher session for rerieval tasks and multiplexes it into
-// the reuested retrieval queue to be serviced togetzer with other sessions.
+// the reuested retrieval queue to be serviced together with other sessions.
 //
-// This Method will block for the lifetime of the session. Even after termination
+// This method will block for the lifetime of the session. Even after termination
 // of the session, any request in-flight need to be responded to! Empty responses
 // are fine though in that case.
 func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan *Retrieval) {
@@ -636,7 +636,7 @@ func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan 
 			return
 
 		case mux <- request:
-			// Retrieval accepted, sometzing must arrive before we're aborting
+			// Retrieval accepted, something must arrive before we're aborting
 			request <- &Retrieval{Bit: bit, Sections: sections, Context: s.ctx}
 
 			result := <-request

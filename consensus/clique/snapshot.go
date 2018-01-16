@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package clique
 
@@ -22,7 +22,7 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/params"
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -57,7 +57,7 @@ type Snapshot struct {
 }
 
 // newSnapshot creates a new snapshot with the specified startup parameters. This
-// Method does not initialize the set of recent signers, so only ever use if for
+// method does not initialize the set of recent signers, so only ever use if for
 // the genesis block.
 func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signers []common.Address) *Snapshot {
 	snap := &Snapshot{
@@ -76,7 +76,7 @@ func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uin
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db etzdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte("clique-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db etzdb.
 }
 
 // store inserts the snapshot into the database.
-func (s *Snapshot) store(db etzdb.Database) error {
+func (s *Snapshot) store(db ethdb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err

@@ -21,7 +21,7 @@
  * The only means to accomplish that is by strictly obeying a standard, and not
  * accepting anything else.
  *
- * Nonetzeless, sometimes there is a need for compatibility with systems that
+ * Nonetheless, sometimes there is a need for compatibility with systems that
  * use signatures which do not strictly obey DER. The snippet below shows how
  * certain violations are easily supported. You may need to adapt it.
  *

@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package bind
 
@@ -29,7 +29,7 @@ import (
 	"github.com/ethzero/go-ethzero/crypto"
 )
 
-// SignerFn is a signer function callback when a contract requires a Method to
+// SignerFn is a signer function callback when a contract requires a method to
 // sign the transaction before submission.
 type SignerFn func(types.Signer, common.Address, *types.Transaction) (*types.Transaction, error)
 
@@ -42,9 +42,9 @@ type CallOpts struct {
 }
 
 // TransactOpts is the collection of authorization data required to create a
-// valid Ethzero transaction.
+// valid Ethereum transaction.
 type TransactOpts struct {
-	From   common.Address // Ethzero account to send the transaction from
+	From   common.Address // Ethereum account to send the transaction from
 	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 
@@ -53,15 +53,14 @@ type TransactOpts struct {
 	GasLimit *big.Int // Gas limit to set for the transaction execution (nil = estimate + 10%)
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
-
 }
 
 // BoundContract is the base wrapper object that reflects a contract on the
-// Ethzero network. It contains a collection of Methods that are used by the
+// Ethereum network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
 type BoundContract struct {
-	address    common.Address     // Deployment address of the contract on the Ethzero blockchain
-	abi        abi.ABI            // Reflect based ABI to access the correct Ethzero Methods
+	address    common.Address     // Deployment address of the contract on the Ethereum blockchain
+	abi        abi.ABI            // Reflect based ABI to access the correct Ethereum methods
 	caller     ContractCaller     // Read interface to interact with the blockchain
 	transactor ContractTransactor // Write interface to interact with the blockchain
 }
@@ -77,7 +76,7 @@ func NewBoundContract(address common.Address, abi abi.ABI, caller ContractCaller
 	}
 }
 
-// DeployContract deploys a contract onto the Ethzero blockchain and binds the
+// DeployContract deploys a contract onto the Ethereum blockchain and binds the
 // deployment address with a Go wrapper.
 func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend ContractBackend, params ...interface{}) (common.Address, *types.Transaction, *BoundContract, error) {
 	// Otherwise try to deploy the contract
@@ -95,22 +94,22 @@ func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend Co
 	return c.address, tx, c, nil
 }
 
-// Call invokes the (constant) contract Method with params as input values and
+// Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (c *BoundContract) Call(opts *CallOpts, result interface{}, Method string, params ...interface{}) error {
+func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, params ...interface{}) error {
 	// Don't crash on a lazy user
 	if opts == nil {
 		opts = new(CallOpts)
 	}
 	// Pack the input, call and unpack the results
-	input, err := c.abi.Pack(Method, params...)
+	input, err := c.abi.Pack(method, params...)
 	if err != nil {
 		return err
 	}
 	var (
-		msg    = ethzero.CallMsg{From: opts.From, To: &c.address, Data: input}
+		msg    = ethereum.CallMsg{From: opts.From, To: &c.address, Data: input}
 		ctx    = ensureContext(opts.Context)
 		code   []byte
 		output []byte
@@ -143,13 +142,13 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, Method string, 
 	if err != nil {
 		return err
 	}
-	return c.abi.Unpack(result, Method, output)
+	return c.abi.Unpack(result, method, output)
 }
 
-// Transact invokes the (paid) contract Method with params as input values.
-func (c *BoundContract) Transact(opts *TransactOpts, Method string, params ...interface{}) (*types.Transaction, error) {
+// Transact invokes the (paid) contract method with params as input values.
+func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	// Otherwise pack up the parameters and invoke the contract
-	input, err := c.abi.Pack(Method, params...)
+	input, err := c.abi.Pack(method, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +156,7 @@ func (c *BoundContract) Transact(opts *TransactOpts, Method string, params ...in
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
-// its default Method if one is available.
+// its default method if one is available.
 func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error) {
 	return c.transact(opts, &c.address, nil)
 }
@@ -191,7 +190,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	}
 	gasLimit := opts.GasLimit
 	if gasLimit == nil {
-		// Gas estimation cannot succeed without code for Method invocations
+		// Gas estimation cannot succeed without code for method invocations
 		if contract != nil {
 			if code, err := c.transactor.PendingCodeAt(ensureContext(opts.Context), c.address); err != nil {
 				return nil, err
@@ -200,7 +199,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			}
 		}
 		// If the contract surely has code (or code is not needed), estimate the transaction
-		msg := ethzero.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
+		msg := ethereum.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
 		gasLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)

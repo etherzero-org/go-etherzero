@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package trie
 
@@ -114,7 +114,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 		depth:    depth,
 		callback: callback,
 	}
-	// If this sub-trie has a designated parent, link them togetzer
+	// If this sub-trie has a designated parent, link them together
 	if parent != (common.Hash{}) {
 		ancestor := s.requests[parent]
 		if ancestor == nil {
@@ -128,7 +128,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 
 // AddRawEntry schedules the direct retrieval of a state entry that should not be
 // interpreted as a trie node, but rather accepted and stored into the database
-// as is. This Method's goal is to support misc state metadata retrievals (e.g.
+// as is. This method's goal is to support misc state metadata retrievals (e.g.
 // contract code).
 func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) {
 	// Short circuit if the entry is empty or already known
@@ -147,7 +147,7 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 		raw:   true,
 		depth: depth,
 	}
-	// If this sub-trie has a designated parent, link them togetzer
+	// If this sub-trie has a designated parent, link them together
 	if parent != (common.Hash{}) {
 		ancestor := s.requests[parent]
 		if ancestor == nil {
@@ -168,10 +168,11 @@ func (s *TrieSync) Missing(max int) []common.Hash {
 	return requests
 }
 
-// Process injects a batch of retrieved trie nodes data, returning if sometzing
+// Process injects a batch of retrieved trie nodes data, returning if something
 // was committed to the database and also the index of an entry if processing of
 // it failed.
 func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
+
 	committed := false
 
 	for i, item := range results {
@@ -192,6 +193,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 		}
 		// Decode the node data content and update the request
 		node, err := decodeNode(item.Hash[:], item.Data, 0)
+
 		if err != nil {
 			return committed, i, err
 		}

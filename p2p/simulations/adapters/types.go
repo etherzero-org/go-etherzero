@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package adapters
 
@@ -166,7 +166,7 @@ func RandomNodeConfig() *NodeConfig {
 	}
 }
 
-// ServiceContext is a collection of options and Methods which can be utilised
+// ServiceContext is a collection of options and methods which can be utilised
 // when starting services
 type ServiceContext struct {
 	RPCDialer
@@ -178,7 +178,7 @@ type ServiceContext struct {
 
 // RPCDialer is used when initialising services which need to connect to
 // other nodes in the network (for example a simulated Swarm node which needs
-// to connect to a Getz node to resolve ENS names)
+// to connect to a Geth node to resolve ENS names)
 type RPCDialer interface {
 	DialRPC(id discover.NodeID) (*rpc.Client, error)
 }

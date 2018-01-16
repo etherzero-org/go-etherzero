@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -28,22 +28,22 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 )
 
-// etzstatsDockerfile is the Dockerfile required to build an etzstats backend
+// ethstatsDockerfile is the Dockerfile required to build an ethstats backend
 // and associated monitoring site.
-var etzstatsDockerfile = `
-FROM puppetz/etzstats:latest
+var ethstatsDockerfile = `
+FROM puppeth/ethstats:latest
 
 RUN echo 'module.exports = {trusted: [{{.Trusted}}], banned: [{{.Banned}}], reserved: ["yournode"]};' > lib/utils/config.js
 `
 
-// etzstatsComposefile is the docker-compose.yml file required to deploy and
-// maintain an etzstats monitoring site.
-var etzstatsComposefile = `
+// ethstatsComposefile is the docker-compose.yml file required to deploy and
+// maintain an ethstats monitoring site.
+var ethstatsComposefile = `
 version: '2'
 services:
-  etzstats:
+  ethstats:
     build: .
-    image: {{.Network}}/etzstats{{if not .VHost}}
+    image: {{.Network}}/ethstats{{if not .VHost}}
     ports:
       - "{{.Port}}:3000"{{end}}
     environment:
@@ -58,7 +58,7 @@ services:
     restart: always
 `
 
-// deployEthstats deploys a new etzstats container to a remote machine via SSH,
+// deployEthstats deploys a new ethstats container to a remote machine via SSH,
 // docker and docker-compose. If an instance with the specified network name
 // already exists there, it will be overwritten!
 func deployEthstats(client *sshClient, network string, port int, secret string, vhost string, trusted []string, banned []string, nocache bool) ([]byte, error) {
@@ -76,14 +76,14 @@ func deployEthstats(client *sshClient, network string, port int, secret string, 
 	}
 
 	dockerfile := new(bytes.Buffer)
-	template.Must(template.New("").Parse(etzstatsDockerfile)).Execute(dockerfile, map[string]interface{}{
+	template.Must(template.New("").Parse(ethstatsDockerfile)).Execute(dockerfile, map[string]interface{}{
 		"Trusted": strings.Join(trustedLabels, ", "),
 		"Banned":  strings.Join(bannedLabels, ", "),
 	})
 	files[filepath.Join(workdir, "Dockerfile")] = dockerfile.Bytes()
 
 	composefile := new(bytes.Buffer)
-	template.Must(template.New("").Parse(etzstatsComposefile)).Execute(composefile, map[string]interface{}{
+	template.Must(template.New("").Parse(ethstatsComposefile)).Execute(composefile, map[string]interface{}{
 		"Network": network,
 		"Port":    port,
 		"Secret":  secret,
@@ -98,16 +98,16 @@ func deployEthstats(client *sshClient, network string, port int, secret string, 
 	}
 	defer client.Run("rm -rf " + workdir)
 
-	// Build and deploy the etzstats service
+	// Build and deploy the ethstats service
 	if nocache {
 		return nil, client.Stream(fmt.Sprintf("cd %s && docker-compose -p %s build --pull --no-cache && docker-compose -p %s up -d --force-recreate", workdir, network, network))
 	}
 	return nil, client.Stream(fmt.Sprintf("cd %s && docker-compose -p %s up -d --build --force-recreate", workdir, network))
 }
 
-// etzstatsInfos is returned from an etzstats status check to allow reporting
+// ethstatsInfos is returned from an ethstats status check to allow reporting
 // various configuration parameters.
-type etzstatsInfos struct {
+type ethstatsInfos struct {
 	host   string
 	port   int
 	secret string
@@ -117,7 +117,7 @@ type etzstatsInfos struct {
 
 // Report converts the typed struct into a plain string->string map, containing
 // most - but not all - fields for reporting to the user.
-func (info *etzstatsInfos) Report() map[string]string {
+func (info *ethstatsInfos) Report() map[string]string {
 	return map[string]string{
 		"Website address":       info.host,
 		"Website listener port": strconv.Itoa(info.port),
@@ -126,11 +126,11 @@ func (info *etzstatsInfos) Report() map[string]string {
 	}
 }
 
-// checkEthstats does a health-check against an etzstats server to verify whether
+// checkEthstats does a health-check against an ethstats server to verify whether
 // it's running, and if yes, gathering a collection of useful infos about it.
-func checkEthstats(client *sshClient, network string) (*etzstatsInfos, error) {
-	// Inspect a possible etzstats container on the host
-	infos, err := inspectContainer(client, fmt.Sprintf("%s_etzstats_1", network))
+func checkEthstats(client *sshClient, network string) (*ethstatsInfos, error) {
+	// Inspect a possible ethstats container on the host
+	infos, err := inspectContainer(client, fmt.Sprintf("%s_ethstats_1", network))
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func checkEthstats(client *sshClient, network string) (*etzstatsInfos, error) {
 		log.Warn("Ethstats service seems unreachable", "server", host, "port", port, "err", err)
 	}
 	// Container available, assemble and return the useful infos
-	return &etzstatsInfos{
+	return &ethstatsInfos{
 		host:   host,
 		port:   port,
 		secret: secret,

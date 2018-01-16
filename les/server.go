@@ -1,20 +1,20 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package les implements the Light Ethzero Subprotocol.
+// Package les implements the Light Ethereum Subprotocol.
 package les
 
 import (
@@ -27,8 +27,8 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etz"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/eth"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/les/flowcontrol"
 	"github.com/ethzero/go-ethzero/light"
 	"github.com/ethzero/go-ethzero/log"
@@ -49,24 +49,24 @@ type LesServer struct {
 	chtIndexer, bloomTrieIndexer *core.ChainIndexer
 }
 
-func NewLesServer(etz *etz.Ethzero, config *etz.Config) (*LesServer, error) {
+func NewLesServer(eth *eth.Ethereum, config *eth.Config) (*LesServer, error) {
 	quitSync := make(chan struct{})
-	pm, err := NewProtocolManager(etz.BlockChain().Config(), false, ServerProtocolVersions, config.NetworkId, etz.EventMux(), etz.Engine(), newPeerSet(), etz.BlockChain(), etz.TxPool(), etz.ChainDb(), nil, nil, quitSync, new(sync.WaitGroup))
+	pm, err := NewProtocolManager(eth.BlockChain().Config(), false, ServerProtocolVersions, config.NetworkId, eth.EventMux(), eth.Engine(), newPeerSet(), eth.BlockChain(), eth.TxPool(), eth.ChainDb(), nil, nil, quitSync, new(sync.WaitGroup))
 	if err != nil {
 		return nil, err
 	}
 
 	lesTopics := make([]discv5.Topic, len(ServerProtocolVersions))
 	for i, pv := range ServerProtocolVersions {
-		lesTopics[i] = lesTopic(etz.BlockChain().Genesis().Hash(), pv)
+		lesTopics[i] = lesTopic(eth.BlockChain().Genesis().Hash(), pv)
 	}
 
 	srv := &LesServer{
 		protocolManager:  pm,
 		quitSync:         quitSync,
 		lesTopics:        lesTopics,
-		chtIndexer:       light.NewChtIndexer(etz.ChainDb(), false),
-		bloomTrieIndexer: light.NewBloomTrieIndexer(etz.ChainDb(), false),
+		chtIndexer:       light.NewChtIndexer(eth.ChainDb(), false),
+		bloomTrieIndexer: light.NewBloomTrieIndexer(eth.ChainDb(), false),
 	}
 	logger := log.New()
 
@@ -90,7 +90,7 @@ func NewLesServer(etz *etz.Ethzero, config *etz.Config) (*LesServer, error) {
 		logger.Info("BloomTrie", "section", bloomTrieLastSection, "sectionHead", fmt.Sprintf("%064x", bloomTrieSectionHead), "root", fmt.Sprintf("%064x", bloomTrieRoot))
 	}
 
-	srv.chtIndexer.Start(etz.BlockChain())
+	srv.chtIndexer.Start(eth.BlockChain())
 	pm.server = srv
 
 	srv.defParams = &flowcontrol.ServerParams{
@@ -98,7 +98,7 @@ func NewLesServer(etz *etz.Ethzero, config *etz.Config) (*LesServer, error) {
 		MinRecharge: 50000,
 	}
 	srv.fcManager = flowcontrol.NewClientManager(uint64(config.LightServ), 10, 1000000000)
-	srv.fcCostStats = newCostStats(etz.ChainDb())
+	srv.fcCostStats = newCostStats(eth.ChainDb())
 	return srv, nil
 }
 
@@ -222,7 +222,7 @@ func linRegFromBytes(data []byte) *linReg {
 
 type requestCostStats struct {
 	lock  sync.RWMutex
-	db    etzdb.Database
+	db    ethdb.Database
 	stats map[uint64]*linReg
 }
 
@@ -233,7 +233,7 @@ type requestCostStatsRlp []struct {
 
 var rcStatsKey = []byte("_requestCostStats")
 
-func newCostStats(db etzdb.Database) *requestCostStats {
+func newCostStats(db ethdb.Database) *requestCostStats {
 	stats := make(map[uint64]*linReg)
 	for _, code := range reqList {
 		stats[code] = &linReg{cnt: 100}

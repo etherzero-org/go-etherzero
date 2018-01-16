@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package vm
 
@@ -39,11 +39,11 @@ type AccountRef common.Address
 // Address casts AccountRef to a Address
 func (ar AccountRef) Address() common.Address { return (common.Address)(ar) }
 
-// Contract represents an ethzero contract in the state database. It contains
+// Contract represents an ethereum contract in the state database. It contains
 // the the contract code, calling arguments. Contract implements ContractRef
 type Contract struct {
 	// CallerAddress is the result of the caller which initialised this
-	// contract. However when the "call Method" is delegated this value
+	// contract. However when the "call method" is delegated this value
 	// needs to be initialised to that of the caller's caller.
 	CallerAddress common.Address
 	caller        ContractRef
@@ -89,7 +89,7 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 func (c *Contract) AsDelegate() *Contract {
 	c.DelegateCall = true
 	// NOTE: caller must, at all times be a contract. It should never happen
-	// that caller is sometzing other than a Contract.
+	// that caller is something other than a Contract.
 	parent := c.caller.(*Contract)
 	c.CallerAddress = parent.CallerAddress
 	c.value = parent.value
@@ -125,15 +125,6 @@ func (c *Contract) UseGas(gas uint64) (ok bool) {
 		return false
 	}
 	c.Gas -= gas
-	return true
-}
-
-// UseGas attempts the use gas and subtracts it and returns true on success
-func (c *Contract) UseGasByEthzero(gas uint64) (ok bool) {
-	if c.Gas < gas {
-		return false
-	}
-	c.Gas -= 0
 	return true
 }
 

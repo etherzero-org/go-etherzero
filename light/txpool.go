@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package light
 
@@ -26,7 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
@@ -58,7 +58,7 @@ type TxPool struct {
 	mu           sync.RWMutex
 	chain        *LightChain
 	odr          OdrBackend
-	chainDb      etzdb.Database
+	chainDb      ethdb.Database
 	relay        TxRelayBackend
 	head         common.Hash
 	nonce        map[common.Address]uint64            // "pending" nonce
@@ -70,7 +70,7 @@ type TxPool struct {
 }
 
 // TxRelayBackend provides an interface to the mechanism that forwards transacions
-// to the ETZ network. The implementations of the functions should be non-blocking.
+// to the ETH network. The implementations of the functions should be non-blocking.
 //
 // Send instructs backend to forward new transactions
 // NewHead notifies backend about a new head after processed by the tx pool,
@@ -357,12 +357,10 @@ func (pool *TxPool) validateTx(ctx context.Context, tx *types.Transaction) error
 
 	// Check the transaction doesn't exceed the current
 	// block limit gas.
-
-	//modify by roger on 2018-01-16
-	//header := pool.chain.GetHeaderByHash(pool.head)
-	//if header.GasLimit.Cmp(tx.Gas()) < 0 {
-	//	return core.ErrGasLimit
-	//}
+	header := pool.chain.GetHeaderByHash(pool.head)
+	if header.GasLimit.Cmp(tx.Gas()) < 0 {
+		return core.ErrGasLimit
+	}
 
 	// Transactions can't be negative. This may never happen
 	// using RLP decoded transactions but may occur if you create

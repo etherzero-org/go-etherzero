@@ -27,7 +27,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.bitcoin.NativeSecp256k1Util.*;
 
 /**
- * <p>This class holds native Methods to handle ECDSA verification.</p>
+ * <p>This class holds native methods to handle ECDSA verification.</p>
  *
  * <p>You can find an example library that can be used for this at https://github.com/bitcoin/secp256k1</p>
  *

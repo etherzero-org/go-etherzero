@@ -1,35 +1,35 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package accounts implements high level Ethzero account management.
+// Package accounts implements high level Ethereum account management.
 package accounts
 
 import (
 	"math/big"
 
-	ethzero "github.com/ethzero/go-ethzero"
+	ethereum "github.com/ethzero/go-ethzero"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/event"
 )
 
-// Account represents an Ethzero account located at a specific location defined
+// Account represents an Ethereum account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // Ethzero account address derived from the key
+	Address common.Address `json:"address"` // Ethereum account address derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 
@@ -51,7 +51,7 @@ type Wallet interface {
 	// wallets and/or to access derivation seeds.
 	//
 	// The passphrase parameter may or may not be used by the implementation of a
-	// particular wallet instance. The reason there is no passwordless open Method
+	// particular wallet instance. The reason there is no passwordless open method
 	// is to strive towards a uniform wallet handling, oblivious to the different
 	// backend providers.
 	//
@@ -85,7 +85,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain ethzero.ChainStateReader)
+	SelfDerive(base DerivationPath, chain ethereum.ChainStateReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//

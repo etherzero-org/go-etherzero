@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rlp
 
@@ -36,7 +36,7 @@ var (
 // Decoder is implemented by types that require custom RLP
 // decoding rules or need to decode into private fields.
 //
-// The DecodeRLP Method should read one value from the given
+// The DecodeRLP method should read one value from the given
 // Stream. It is not forbidden to read less or more, but it might
 // be confusing.
 type Decoder interface {
@@ -823,7 +823,7 @@ func (s *Stream) Decode(val interface{}) error {
 }
 
 // Reset discards any information about the current decoding context
-// and starts reading from r. This Method is meant to facilitate reuse
+// and starts reading from r. This method is meant to facilitate reuse
 // of a preallocated Stream across many decoding operations.
 //
 // If r does not also implement ByteReader, Stream will do its own

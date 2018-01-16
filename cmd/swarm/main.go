@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of go-ethzero.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-ethzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -38,7 +38,7 @@ import (
 	"github.com/ethzero/go-ethzero/console"
 	"github.com/ethzero/go-ethzero/contracts/ens"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/etzclient"
+	"github.com/ethzero/go-ethzero/ethclient"
 	"github.com/ethzero/go-ethzero/internal/debug"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/node"
@@ -95,7 +95,7 @@ var (
 	}
 	SwarmSwapAPIFlag = cli.StringFlag{
 		Name:  "swap-api",
-		Usage: "URL of the Ethzero API provider to use to settle SWAP payments",
+		Usage: "URL of the Ethereum API provider to use to settle SWAP payments",
 	}
 	SwarmSyncEnabledFlag = cli.BoolTFlag{
 		Name:  "sync",
@@ -103,8 +103,8 @@ var (
 	}
 	EnsAPIFlag = cli.StringFlag{
 		Name:  "ens-api",
-		Usage: "URL of the Ethzero API provider to use for ENS record lookups",
-		Value: node.DefaultIPCEndpoint("getz"),
+		Usage: "URL of the Ethereum API provider to use for ENS record lookups",
+		Value: node.DefaultIPCEndpoint("geth"),
 	}
 	EnsAddrFlag = cli.StringFlag{
 		Name:  "ens-addr",
@@ -141,15 +141,15 @@ var (
 	}
 
 	// the following flags are deprecated and should be removed in the future
-	DeprecatedEtzAPIFlag = cli.StringFlag{
-		Name:  "etzapi",
+	DeprecatedEthAPIFlag = cli.StringFlag{
+		Name:  "ethapi",
 		Usage: "DEPRECATED: please use --ens-api and --swap-api",
 	}
 )
 
 var defaultNodeConfig = node.DefaultConfig
 
-// This init function sets defaults so cmd/swarm can run alongside getz.
+// This init function sets defaults so cmd/swarm can run alongside geth.
 func init() {
 	defaultNodeConfig.Name = clientIdentifier
 	defaultNodeConfig.Version = params.VersionWithCommit(gitCommit)
@@ -159,13 +159,13 @@ func init() {
 	utils.ListenPortFlag.Value = 30399
 }
 
-var app = utils.NewApp(gitCommit, "Ethzero Swarm")
+var app = utils.NewApp(gitCommit, "Ethereum Swarm")
 
 // This init function creates the cli.App.
 func init() {
 	app.Action = bzzd
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2016 The go-ethzero Authors"
+	app.Copyright = "Copyright 2013-2016 The go-ethereum Authors"
 	app.Commands = []cli.Command{
 		{
 			Action:    version,
@@ -256,12 +256,12 @@ Manage the local chunk database.
 					Description: `
 Export a local chunk database as a tar archive (use - to send to stdout).
 
-    swarm db export ~/.ethzero/swarm/bzz-KEY/chunks chunks.tar
+    swarm db export ~/.ethereum/swarm/bzz-KEY/chunks chunks.tar
 
 The export may be quite large, consider piping the output through the Unix
 pv(1) tool to get a progress bar:
 
-    swarm db export ~/.ethzero/swarm/bzz-KEY/chunks - | pv > chunks.tar
+    swarm db export ~/.ethereum/swarm/bzz-KEY/chunks - | pv > chunks.tar
 `,
 				},
 				{
@@ -272,12 +272,12 @@ pv(1) tool to get a progress bar:
 					Description: `
 Import chunks from a tar archive into a local chunk database (use - to read from stdin).
 
-    swarm db import ~/.ethzero/swarm/bzz-KEY/chunks chunks.tar
+    swarm db import ~/.ethereum/swarm/bzz-KEY/chunks chunks.tar
 
 The import may be quite large, consider piping the input through the Unix
 pv(1) tool to get a progress bar:
 
-    pv chunks.tar | swarm db import ~/.ethzero/swarm/bzz-KEY/chunks -
+    pv chunks.tar | swarm db import ~/.ethereum/swarm/bzz-KEY/chunks -
 `,
 				},
 				{
@@ -342,7 +342,7 @@ DEPRECATED: use 'swarm db clean'.
 		SwarmUpFromStdinFlag,
 		SwarmUploadMimeType,
 		//deprecated flags
-		DeprecatedEtzAPIFlag,
+		DeprecatedEthAPIFlag,
 	}
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Before = func(ctx *cli.Context) error {
@@ -377,9 +377,9 @@ func version(ctx *cli.Context) error {
 }
 
 func bzzd(ctx *cli.Context) error {
-	// exit if the deprecated --etzapi flag is set
-	if ctx.GlobalString(DeprecatedEtzAPIFlag.Name) != "" {
-		utils.Fatalf("--etzapi is no longer a valid command line flag, please use --ens-api and/or --swap-api.")
+	// exit if the deprecated --ethapi flag is set
+	if ctx.GlobalString(DeprecatedEthAPIFlag.Name) != "" {
+		utils.Fatalf("--ethapi is no longer a valid command line flag, please use --ens-api and/or --swap-api.")
 	}
 
 	cfg := defaultNodeConfig
@@ -428,7 +428,7 @@ func detectEnsAddr(client *rpc.Client) (common.Address, error) {
 		return common.Address{}, err
 	}
 
-	block, err := etzclient.NewClient(client).BlockByNumber(ctx, big.NewInt(0))
+	block, err := ethclient.NewClient(client).BlockByNumber(ctx, big.NewInt(0))
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -482,23 +482,23 @@ func registerBzzService(ctx *cli.Context, stack *node.Node) {
 	cors := ctx.GlobalString(CorsStringFlag.Name)
 
 	boot := func(ctx *node.ServiceContext) (node.Service, error) {
-		var swapClient *etzclient.Client
+		var swapClient *ethclient.Client
 		if swapapi != "" {
 			log.Info("connecting to SWAP API", "url", swapapi)
-			swapClient, err = etzclient.Dial(swapapi)
+			swapClient, err = ethclient.Dial(swapapi)
 			if err != nil {
 				return nil, fmt.Errorf("error connecting to SWAP API %s: %s", swapapi, err)
 			}
 		}
 
-		var ensClient *etzclient.Client
+		var ensClient *ethclient.Client
 		if ensapi != "" {
 			log.Info("connecting to ENS API", "url", ensapi)
 			client, err := rpc.Dial(ensapi)
 			if err != nil {
 				return nil, fmt.Errorf("error connecting to ENS API %s: %s", ensapi, err)
 			}
-			ensClient = etzclient.NewClient(client)
+			ensClient = ethclient.NewClient(client)
 
 			if ensAddr != "" {
 				bzzconfig.EnsRoot = common.HexToAddress(ensAddr)

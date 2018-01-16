@@ -69,17 +69,17 @@ enum MessageType {
 	MessageType_SignIdentity = 53 [(wire_in) = true];
 	MessageType_SignedIdentity = 54 [(wire_out) = true];
 	MessageType_GetFeatures = 55 [(wire_in) = true];
-	MessageType_EthzeroGetAddress = 56 [(wire_in) = true];
-	MessageType_EthzeroAddress = 57 [(wire_out) = true];
-	MessageType_EthzeroSignTx = 58 [(wire_in) = true];
-	MessageType_EthzeroTxRequest = 59 [(wire_out) = true];
-	MessageType_EthzeroTxAck = 60 [(wire_in) = true];
+	MessageType_EthereumGetAddress = 56 [(wire_in) = true];
+	MessageType_EthereumAddress = 57 [(wire_out) = true];
+	MessageType_EthereumSignTx = 58 [(wire_in) = true];
+	MessageType_EthereumTxRequest = 59 [(wire_out) = true];
+	MessageType_EthereumTxAck = 60 [(wire_in) = true];
 	MessageType_GetECDHSessionKey = 61 [(wire_in) = true];
 	MessageType_ECDHSessionKey = 62 [(wire_out) = true];
 	MessageType_SetU2FCounter = 63 [(wire_in) = true];
-	MessageType_EthzeroSignMessage = 64 [(wire_in) = true];
-	MessageType_EthzeroVerifyMessage = 65 [(wire_in) = true];
-	MessageType_EthzeroMessageSignature = 66 [(wire_out) = true];
+	MessageType_EthereumSignMessage = 64 [(wire_in) = true];
+	MessageType_EthereumVerifyMessage = 65 [(wire_in) = true];
+	MessageType_EthereumMessageSignature = 66 [(wire_out) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true, (wire_tiny) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
@@ -316,12 +316,12 @@ message GetAddress {
 }
 
 /**
- * Request: Ask device for Ethzero address corresponding to address_n path
+ * Request: Ask device for Ethereum address corresponding to address_n path
  * @next PassphraseRequest
- * @next EthzeroAddress
+ * @next EthereumAddress
  * @next Failure
  */
-message EthzeroGetAddress {
+message EthereumGetAddress {
 	repeated uint32 address_n = 1;			// BIP-32 path to derive the key from master node
 	optional bool show_display = 2;			// optionally show on display before sending the result
 }
@@ -335,11 +335,11 @@ message Address {
 }
 
 /**
- * Response: Contains an Ethzero address derived from device private seed
- * @prev EthzeroGetAddress
+ * Response: Contains an Ethereum address derived from device private seed
+ * @prev EthereumGetAddress
  */
-message EthzeroAddress {
-	required bytes address = 1;		// Coin address as an Ethzero 160 bit hash
+message EthereumAddress {
+	required bytes address = 1;		// Coin address as an Ethereum 160 bit hash
 }
 
 /**
@@ -418,7 +418,7 @@ message RecoveryDevice {
 	optional string language = 4 [default='english'];	// device language
 	optional string label = 5;				// device label
 	optional bool enforce_wordlist = 6;			// enforce BIP-39 wordlist during the process
-	// 7 reserved for unused recovery Method
+	// 7 reserved for unused recovery method
 	optional uint32 type = 8;				// supported recovery type (see RecoveryType)
 	optional uint32 u2f_counter = 9;			// U2F counter
 	optional bool dry_run = 10;				// perform dry-run recovery workflow (for safe mnemonic validation)
@@ -595,7 +595,7 @@ message SignTx {
 
 /**
  * Request: Simplified transaction signing
- * This Method doesn't support streaming, so there are hardware limits in number of inputs and outputs.
+ * This method doesn't support streaming, so there are hardware limits in number of inputs and outputs.
  * In case of success, the result is returned using TxRequest message.
  * @next PassphraseRequest
  * @next PinMatrixRequest
@@ -640,10 +640,10 @@ message TxAck {
  * Note: the first at most 1024 bytes of data MUST be transmitted as part of this message.
  * @next PassphraseRequest
  * @next PinMatrixRequest
- * @next EthzeroTxRequest
+ * @next EthereumTxRequest
  * @next Failure
  */
-message EthzeroSignTx {
+message EthereumSignTx {
 	repeated uint32 address_n = 1;			// BIP-32 path to derive the key from master node
 	optional bytes nonce = 2;			// <=256 bit unsigned big endian
 	optional bytes gas_price = 3;			// <=256 bit unsigned big endian (in wei)
@@ -659,10 +659,10 @@ message EthzeroSignTx {
  * Response: Device asks for more data from transaction payload, or returns the signature.
  * If data_length is set, device awaits that many more bytes of payload.
  * Otherwise, the signature_* fields contain the computed transaction signature. All three fields will be present.
- * @prev EthzeroSignTx
- * @next EthzeroTxAck
+ * @prev EthereumSignTx
+ * @next EthereumTxAck
  */
-message EthzeroTxRequest {
+message EthereumTxRequest {
 	optional uint32 data_length = 1;		// Number of bytes being requested (<= 1024)
 	optional uint32 signature_v = 2;		// Computed signature (recovery parameter, limited to 27 or 28)
 	optional bytes signature_r = 3;			// Computed signature R component (256 bit)
@@ -671,23 +671,23 @@ message EthzeroTxRequest {
 
 /**
  * Request: Transaction payload data.
- * @prev EthzeroTxRequest
- * @next EthzeroTxRequest
+ * @prev EthereumTxRequest
+ * @next EthereumTxRequest
  */
-message EthzeroTxAck {
+message EthereumTxAck {
 	optional bytes data_chunk = 1;			// Bytes from transaction payload (<= 1024 bytes)
 }
 
 ////////////////////////////////////////
-// Ethzero: Message signing messages //
+// Ethereum: Message signing messages //
 ////////////////////////////////////////
 
 /**
  * Request: Ask device to sign message
- * @next EthzeroMessageSignature
+ * @next EthereumMessageSignature
  * @next Failure
  */
-message EthzeroSignMessage {
+message EthereumSignMessage {
 	repeated uint32 address_n = 1;				// BIP-32 path to derive the key from master node
 	required bytes message = 2;				// message to be signed
 }
@@ -697,7 +697,7 @@ message EthzeroSignMessage {
  * @next Success
  * @next Failure
  */
-message EthzeroVerifyMessage {
+message EthereumVerifyMessage {
 	optional bytes address = 1;				// address to verify
 	optional bytes signature = 2;				// signature to verify
 	optional bytes message = 3;				// message to verify
@@ -705,9 +705,9 @@ message EthzeroVerifyMessage {
 
 /**
  * Response: Signed message
- * @prev EthzeroSignMessage
+ * @prev EthereumSignMessage
  */
-message EthzeroMessageSignature {
+message EthereumMessageSignature {
 	optional bytes address = 1;				// address used to sign the message
 	optional bytes signature = 2;				// signature of the message
 }

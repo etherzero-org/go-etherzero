@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package runtime
 
@@ -25,7 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/params"
 )
 
@@ -53,15 +53,13 @@ type Config struct {
 func setDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
-			ChainId:        big.NewInt(88),
+			ChainId:        big.NewInt(1),
 			HomesteadBlock: new(big.Int),
 			DAOForkBlock:   new(big.Int),
 			DAOForkSupport: false,
 			EIP150Block:    new(big.Int),
 			EIP155Block:    new(big.Int),
 			EIP158Block:    new(big.Int),
-			EthzeroBlock:   big.NewInt(10),
-			EthzeroForkGenesisBlock: big.NewInt(9),
 		}
 	}
 
@@ -103,7 +101,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := etzdb.NewMemDatabase()
+		db, _ := ethdb.NewMemDatabase()
 		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	var (
@@ -126,7 +124,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	return ret, cfg.State, err
 }
 
-// Create executes the code using the EVM create Method
+// Create executes the code using the EVM create method
 func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	if cfg == nil {
 		cfg = new(Config)
@@ -134,7 +132,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := etzdb.NewMemDatabase()
+		db, _ := ethdb.NewMemDatabase()
 		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	var (

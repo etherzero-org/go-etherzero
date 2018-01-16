@@ -1,9 +1,9 @@
 pragma solidity ^0.4.18;
 
-import "https://github.com/ethzero/solidity/std/mortal.sol";
+import "https://github.com/ethereum/solidity/std/mortal.sol";
 
-/// @title Chequebook for Ethzero micropayments
-/// @author Daniel A. Nagy <daniel@ethzero.org>
+/// @title Chequebook for Ethereum micropayments
+/// @author Daniel A. Nagy <daniel@ethereum.org>
 contract chequebook is mortal {
     // Cumulative paid amount in wei to each beneficiary
     mapping (address => uint256) public sent;

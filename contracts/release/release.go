@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package release contains the node service that tracks client releases.
 package release
@@ -27,8 +27,8 @@ import (
 
 	"github.com/ethzero/go-ethzero/accounts/abi/bind"
 	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/etz"
-	"github.com/ethzero/go-ethzero/internal/etzapi"
+	"github.com/ethzero/go-ethzero/eth"
+	"github.com/ethzero/go-ethzero/internal/ethapi"
 	"github.com/ethzero/go-ethzero/les"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/node"
@@ -41,7 +41,7 @@ const releaseRecheckInterval = time.Hour
 
 // Config contains the configurations of the release service.
 type Config struct {
-	Oracle common.Address // Ethzero address of the release oracle
+	Oracle common.Address // Ethereum address of the release oracle
 	Major  uint32         // Major version component of the release
 	Minor  uint32         // Minor version component of the release
 	Patch  uint32         // Patch version component of the release
@@ -60,21 +60,21 @@ type ReleaseService struct {
 // NewReleaseService creates a new service to periodically check for new client
 // releases and notify the user of such.
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
-	// Retrieve the Ethzero service dependency to access the blockchain
-	var apiBackend etzapi.Backend
-	var ethzero *etz.Ethzero
-	if err := ctx.Service(&ethzero); err == nil {
-		apiBackend = ethzero.ApiBackend
+	// Retrieve the Ethereum service dependency to access the blockchain
+	var apiBackend ethapi.Backend
+	var ethereum *eth.Ethereum
+	if err := ctx.Service(&ethereum); err == nil {
+		apiBackend = ethereum.ApiBackend
 	} else {
-		var ethzero *les.LightEthzero
-		if err := ctx.Service(&ethzero); err == nil {
-			apiBackend = ethzero.ApiBackend
+		var ethereum *les.LightEthereum
+		if err := ctx.Service(&ethereum); err == nil {
+			apiBackend = ethereum.ApiBackend
 		} else {
 			return nil, err
 		}
 	}
 	// Construct the release service
-	contract, err := NewReleaseOracle(config.Oracle, etz.NewContractBackend(apiBackend))
+	contract, err := NewReleaseOracle(config.Oracle, eth.NewContractBackend(apiBackend))
 	if err != nil {
 		return nil, err
 	}

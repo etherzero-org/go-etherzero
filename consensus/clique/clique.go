@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package clique implements the proof-of-authority consensus engine.
 package clique
@@ -34,7 +34,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
@@ -80,7 +80,7 @@ var (
 	// block has a beneficiary set to non-zeroes.
 	errInvalidCheckpointBeneficiary = errors.New("beneficiary in checkpoint block non-zero")
 
-	// errInvalidVote is returned if a nonce value is sometzing else that the two
+	// errInvalidVote is returned if a nonce value is something else that the two
 	// allowed constants of 0x00..0 or 0xff..f.
 	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
 
@@ -140,7 +140,7 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 // signing. It is the hash of the entire header apart from the 65 byte signature
 // contained at the end of the extra data.
 //
-// Note, the Method requires the extra data to be at least 65 bytes, otherwise it
+// Note, the method requires the extra data to be at least 65 bytes, otherwise it
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
 func sigHash(header *types.Header) (hash common.Hash) {
@@ -167,7 +167,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// ecrecover extracts the Ethzero account address from a signed header.
+// ecrecover extracts the Ethereum account address from a signed header.
 func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
 	// If the signature's already cached, return that
 	hash := header.Hash()
@@ -180,7 +180,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	}
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
-	// Recover the public key and the Ethzero address
+	// Recover the public key and the Ethereum address
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
@@ -193,24 +193,24 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 }
 
 // Clique is the proof-of-authority consensus engine proposed to support the
-// Ethzero testnet following the Ropsten attacks.
+// Ethereum testnet following the Ropsten attacks.
 type Clique struct {
 	config *params.CliqueConfig // Consensus engine configuration parameters
-	db     etzdb.Database       // Database to store and retrieve snapshot checkpoints
+	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
-	signer common.Address // Ethzero address of the signing key
+	signer common.Address // Ethereum address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 }
 
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
-func New(config *params.CliqueConfig, db etzdb.Database) *Clique {
+func New(config *params.CliqueConfig, db ethdb.Database) *Clique {
 	// Set any missing consensus parameters to their defaults
 	conf := *config
 	if conf.Epoch == 0 {
@@ -229,7 +229,7 @@ func New(config *params.CliqueConfig, db etzdb.Database) *Clique {
 	}
 }
 
-// Author implements consensus.Engine, returning the Ethzero address recovered
+// Author implements consensus.Engine, returning the Ethereum address recovered
 // from the signature in the header's extra-data section.
 func (c *Clique) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header, c.signatures)
@@ -241,7 +241,7 @@ func (c *Clique) VerifyHeader(chain consensus.ChainReader, header *types.Header,
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers. The
-// Method returns a quit channel to abort the operations and a results channel to
+// method returns a quit channel to abort the operations and a results channel to
 // retrieve the async verifications (the order is that of the input slice).
 func (c *Clique) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
@@ -460,7 +460,7 @@ func (c *Clique) VerifySeal(chain consensus.ChainReader, header *types.Header) e
 }
 
 // verifySeal checks whether the signature contained in the header satisfies the
-// consensus protocol requirements. The Method accepts an optional list of parent
+// consensus protocol requirements. The method accepts an optional list of parent
 // headers that aren't yet part of the local blockchain to generate the snapshots
 // from.
 func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {

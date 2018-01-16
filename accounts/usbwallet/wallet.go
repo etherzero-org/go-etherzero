@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package usbwallet implements support for USB hardware wallets.
 package usbwallet
@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	ethzero "github.com/ethzero/go-ethzero"
+	ethereum "github.com/ethzero/go-ethzero"
 	"github.com/ethzero/go-ethzero/accounts"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
@@ -59,7 +59,7 @@ type driver interface {
 	// is still online and healthy.
 	Heartbeat() error
 
-	// Derive sends a derivation request to the USB device and returns the Ethzero
+	// Derive sends a derivation request to the USB device and returns the Ethereum
 	// address located on that path.
 	Derive(path accounts.DerivationPath) (common.Address, error)
 
@@ -84,7 +84,7 @@ type wallet struct {
 
 	deriveNextPath accounts.DerivationPath   // Next derivation path for account auto-discovery
 	deriveNextAddr common.Address            // Next derived account address for auto-discovery
-	deriveChain    ethzero.ChainStateReader // Blockchain state reader to discover used account with
+	deriveChain    ethereum.ChainStateReader // Blockchain state reader to discover used account with
 	deriveReq      chan chan struct{}        // Channel to request a self-derivation on
 	deriveQuit     chan chan error           // Channel to terminate the self-deriver with
 
@@ -346,7 +346,7 @@ func (w *wallet) selfDerive() {
 			context = context.Background()
 		)
 		for empty := false; !empty; {
-			// Retrieve the next derived Ethzero account
+			// Retrieve the next derived Ethereum account
 			if nextAddr == (common.Address{}) {
 				if nextAddr, err = w.driver.Derive(nextPath); err != nil {
 					w.log.Warn("USB wallet account derivation failed", "err", err)
@@ -368,7 +368,7 @@ func (w *wallet) selfDerive() {
 				w.log.Warn("USB wallet nonce retrieval failed", "err", err)
 				break
 			}
-			// If the next account is empty, stop self-derivation, but add it nonetzeless
+			// If the next account is empty, stop self-derivation, but add it nonetheless
 			if balance.Sign() == 0 && nonce == 0 {
 				empty = true
 			}
@@ -484,7 +484,7 @@ func (w *wallet) Derive(path accounts.DerivationPath, pin bool) (accounts.Accoun
 // user used previously (based on the chain state), but ones that he/she did not
 // explicitly pin to the wallet manually. To avoid chain head monitoring, self
 // derivation only runs during account listing (and even then throttled).
-func (w *wallet) SelfDerive(base accounts.DerivationPath, chain ethzero.ChainStateReader) {
+func (w *wallet) SelfDerive(base accounts.DerivationPath, chain ethereum.ChainStateReader) {
 	w.stateLock.Lock()
 	defer w.stateLock.Unlock()
 
@@ -496,7 +496,7 @@ func (w *wallet) SelfDerive(base accounts.DerivationPath, chain ethzero.ChainSta
 }
 
 // SignHash implements accounts.Wallet, however signing arbitrary data is not
-// supported for hardware wallets, so this Method will always return an error.
+// supported for hardware wallets, so this method will always return an error.
 func (w *wallet) SignHash(account accounts.Account, hash []byte) ([]byte, error) {
 	return nil, accounts.ErrNotSupported
 }
@@ -505,8 +505,8 @@ func (w *wallet) SignHash(account accounts.Account, hash []byte) ([]byte, error)
 // wallet to request a confirmation from the user. It returns either the signed
 // transaction or a failure if the user denied the transaction.
 //
-// Note, if the version of the Ethzero application running on the Ledger wallet is
-// too old to sign EIP-155 transactions, but such is requested nonetzeless, an error
+// Note, if the version of the Ethereum application running on the Ledger wallet is
+// too old to sign EIP-155 transactions, but such is requested nonetheless, an error
 // will be returned opposed to silently signing in Homestead mode.
 func (w *wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	w.stateLock.RLock() // Comms have own mutex, this is for the state fields
@@ -548,7 +548,7 @@ func (w *wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID
 }
 
 // SignHashWithPassphrase implements accounts.Wallet, however signing arbitrary
-// data is not supported for Ledger wallets, so this Method will always return
+// data is not supported for Ledger wallets, so this method will always return
 // an error.
 func (w *wallet) SignHashWithPassphrase(account accounts.Account, passphrase string, hash []byte) ([]byte, error) {
 	return w.SignHash(account, hash)

@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package node
 
@@ -48,7 +48,7 @@ const (
 // all registered services.
 type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of getz is "getz". If no
+	// used in the devp2p node identifier. The instance name of geth is "geth". If no
 	// value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 
@@ -61,7 +61,7 @@ type Config struct {
 
 	// DataDir is the file system folder the node should use for any data storage
 	// requirements. The configured data directory will not be directly shared with
-	// registered services, instead those can use utility Methods to create/access
+	// registered services, instead those can use utility methods to create/access
 	// databases or flat files. This enables ephemeral nodes which can fully reside
 	// in memory.
 	DataDir string
@@ -215,9 +215,9 @@ func DefaultWSEndpoint() string {
 // NodeName returns the devp2p node identifier.
 func (c *Config) NodeName() string {
 	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Getz", keep that.
-	if name == "getz" || name == "getz-testnet" {
-		name = "Getz"
+	// Backwards compatibility: previous versions used title-cased "Geth", keep that.
+	if name == "geth" || name == "geth-testnet" {
+		name = "Geth"
 	}
 	if c.UserIdent != "" {
 		name += "/" + c.UserIdent
@@ -241,8 +241,8 @@ func (c *Config) name() string {
 	return c.Name
 }
 
-// These resources are resolved differently for "getz" instances.
-var isOldGetzResource = map[string]bool{
+// These resources are resolved differently for "geth" instances.
+var isOldGethResource = map[string]bool{
 	"chaindata":          true,
 	"nodes":              true,
 	"nodekey":            true,
@@ -259,10 +259,10 @@ func (c *Config) resolvePath(path string) string {
 		return ""
 	}
 	// Backwards-compatibility: ensure that data directory files created
-	// by getz 1.4 are used if they exist.
-	if c.name() == "getz" && isOldGetzResource[path] {
+	// by geth 1.4 are used if they exist.
+	if c.name() == "geth" && isOldGethResource[path] {
 		oldpath := ""
-		if c.Name == "getz" {
+		if c.Name == "geth" {
 			oldpath = filepath.Join(c.DataDir, path)
 		}
 		if oldpath != "" && common.FileExist(oldpath) {
@@ -393,7 +393,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	var ephemeral string
 	if keydir == "" {
 		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "go-ethzero-keystore")
+		keydir, err = ioutil.TempDir("", "go-ethereum-keystore")
 		ephemeral = keydir
 	}
 

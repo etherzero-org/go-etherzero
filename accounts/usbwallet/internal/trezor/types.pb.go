@@ -42,9 +42,9 @@ It has these top-level messages:
 	GetPublicKey
 	PublicKey
 	GetAddress
-	EthzeroGetAddress
+	EthereumGetAddress
 	Address
-	EthzeroAddress
+	EthereumAddress
 	WipeDevice
 	LoadDevice
 	ResetDevice
@@ -69,12 +69,12 @@ It has these top-level messages:
 	SimpleSignTx
 	TxRequest
 	TxAck
-	EthzeroSignTx
-	EthzeroTxRequest
-	EthzeroTxAck
-	EthzeroSignMessage
-	EthzeroVerifyMessage
-	EthzeroMessageSignature
+	EthereumSignTx
+	EthereumTxRequest
+	EthereumTxAck
+	EthereumSignMessage
+	EthereumVerifyMessage
+	EthereumMessageSignature
 	SignIdentity
 	SignedIdentity
 	GetECDHSessionKey
@@ -427,7 +427,7 @@ func (PinMatrixRequestType) EnumDescriptor() ([]byte, []int) { return fileDescri
 // *
 // Type of recovery procedure. These should be used as bitmask, e.g.,
 // `RecoveryDeviceType_ScrambledWords | RecoveryDeviceType_Matrix`
-// listing every Method supported by the host computer.
+// listing every method supported by the host computer.
 //
 // Note that ScrambledWords must be supported by every implementation
 // for backward compatibility; there is no way to not support it.

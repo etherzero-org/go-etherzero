@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package discv5
 
@@ -279,7 +279,7 @@ func (s *simulation) launchNode(log bool) *Network {
 	s.nodectr++
 	binary.BigEndian.PutUint32(ip, num)
 	ip[0] = 10
-	addr := &net.UDPAddr{IP: ip, Port: 21212}
+	addr := &net.UDPAddr{IP: ip, Port: 30303}
 
 	transport := &simTransport{joinTime: time.Now(), sender: id, senderAddr: addr, sim: s, priv: key}
 	net, err := newNetwork(transport, key.PublicKey, nil, "<no database>", nil)
@@ -349,8 +349,8 @@ func (st *simTransport) sendPing(remote *Node, remoteAddr *net.UDPAddr, topics [
 		ev:         pingPacket,
 		data: &ping{
 			Version:    4,
-			From:       rpcEndpoint{IP: st.senderAddr.IP, UDP: uint16(st.senderAddr.Port), TCP: 21212},
-			To:         rpcEndpoint{IP: remoteAddr.IP, UDP: uint16(remoteAddr.Port), TCP: 21212},
+			From:       rpcEndpoint{IP: st.senderAddr.IP, UDP: uint16(st.senderAddr.Port), TCP: 30303},
+			To:         rpcEndpoint{IP: remoteAddr.IP, UDP: uint16(remoteAddr.Port), TCP: 30303},
 			Expiration: uint64(time.Now().Unix() + int64(expiration)),
 			Topics:     topics,
 		},
@@ -367,7 +367,7 @@ func (st *simTransport) sendPong(remote *Node, pingHash []byte) {
 		hash:       st.nextHash(),
 		ev:         pongPacket,
 		data: &pong{
-			To:         rpcEndpoint{IP: raddr.IP, UDP: uint16(raddr.Port), TCP: 21212},
+			To:         rpcEndpoint{IP: raddr.IP, UDP: uint16(raddr.Port), TCP: 30303},
 			ReplyTok:   pingHash,
 			Expiration: uint64(time.Now().Unix() + int64(expiration)),
 		},

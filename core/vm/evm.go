@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package vm
 
@@ -41,9 +41,6 @@ type (
 func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
 		precompiles := PrecompiledContractsHomestead
-		if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-			precompiles = PrecompiledContractsEthzero
-		}
 		if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
 			precompiles = PrecompiledContractsByzantium
 		}
@@ -57,10 +54,10 @@ func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, erro
 // Context provides the EVM with auxiliary information. Once provided
 // it shouldn't be modified.
 type Context struct {
-	// CanTransfer returns whether the account contains sufficient etzer to transfer the value
-	// sufficient etzer to transfer the value
+	// CanTransfer returns whether the account contains
+	// sufficient ether to transfer the value
 	CanTransfer CanTransferFunc
-	// Transfer transfers etzer from one account to the other
+	// Transfer transfers ether from one account to the other
 	Transfer TransferFunc
 	// GetHash returns the hash corresponding to n
 	GetHash GetHashFunc
@@ -77,7 +74,7 @@ type Context struct {
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
 }
 
-// EVM is the Ethzero Virtual Machine base object and provides
+// EVM is the Ethereum Virtual Machine base object and provides
 // the necessary tools to run a contract on the given state with
 // the provided context. It should be noted that any error
 // generated through any of the calls should be considered a
@@ -101,7 +98,7 @@ type EVM struct {
 	// virtual machine configuration options used to initialise the
 	// evm.
 	vmConfig Config
-	// global (to this context) ethzero virtual machine
+	// global (to this context) ethereum virtual machine
 	// used throughout the execution of the tx.
 	interpreter *Interpreter
 	// abort is used to abort the EVM calling operations
@@ -161,9 +158,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		if evm.ChainConfig().IsByzantium(evm.BlockNumber) {
 			precompiles = PrecompiledContractsByzantium
 		}
-		if evm.ChainConfig().IsEthzero(evm.BlockNumber) {
-			precompiles = PrecompiledContractsEthzero
-		}
 		if precompiles[addr] == nil && evm.ChainConfig().IsEIP158(evm.BlockNumber) && value.Sign() == 0 {
 			return nil, gas, nil
 		}
@@ -184,7 +178,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			contract.UseGas(gas)
+			contract.UseGas(contract.Gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -225,7 +219,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			contract.UseGas(gas)
+			contract.UseGas(contract.Gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -258,7 +252,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			contract.UseGas(gas)
+			contract.UseGas(contract.Gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -301,7 +295,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			contract.UseGas(gas)
+			contract.UseGas(contract.Gas)
 		}
 	}
 	return ret, contract.Gas, err
@@ -352,10 +346,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil && !maxCodeSizeExceeded {
-
-		var createDataGas uint64
-		createDataGas = uint64(len(ret)) * params.CreateDataGas
-
+		createDataGas := uint64(len(ret)) * params.CreateDataGas
 		if contract.UseGas(createDataGas) {
 			evm.StateDB.SetCode(contractAddr, ret)
 		} else {
@@ -369,7 +360,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	if maxCodeSizeExceeded || (err != nil && (evm.ChainConfig().IsHomestead(evm.BlockNumber) || err != ErrCodeStoreOutOfGas)) {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
-			contract.UseGas(gas)
+			contract.UseGas(contract.Gas)
 		}
 	}
 	// Assign err if contract code size exceeds the max while the err is still empty.

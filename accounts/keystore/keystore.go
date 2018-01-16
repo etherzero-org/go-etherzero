@@ -1,23 +1,23 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package keystore implements encrypted storage of secp256k1 private keys.
 //
 // Keys are stored as encrypted JSON files according to the Web3 Secret Storage specification.
-// See https://github.com/ethzero/wiki/wiki/Web3-Secret-Storage-Definition for more information.
+// See https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition for more information.
 package keystore
 
 import (
@@ -277,7 +277,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if !found {
 		return nil, ErrLocked
 	}
-	// Depending on the presence of the chain ID, sign with Ethzero or homestead
+	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
 		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
 	}
@@ -305,7 +305,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	}
 	defer zeroKey(key.PrivateKey)
 
-	// Depending on the presence of the chain ID, sign with Ethzero or homestead
+	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
 		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
 	}
@@ -472,7 +472,7 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
 
-// ImportPreSaleKey decrypts the given Ethzero presale wallet and stores
+// ImportPreSaleKey decrypts the given Ethereum presale wallet and stores
 // a key file in the key directory. The key file is encrypted with the same passphrase.
 func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (accounts.Account, error) {
 	a, _, err := importPreSaleKey(ks.storage, keyJSON, passphrase)

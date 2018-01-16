@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package les
 
@@ -22,42 +22,42 @@ import (
 )
 
 var (
-	/*	propTxnInPacketsMeter     = metrics.NewMeter("etz/prop/txns/in/packets")
-		propTxnInTrafficMeter     = metrics.NewMeter("etz/prop/txns/in/traffic")
-		propTxnOutPacketsMeter    = metrics.NewMeter("etz/prop/txns/out/packets")
-		propTxnOutTrafficMeter    = metrics.NewMeter("etz/prop/txns/out/traffic")
-		propHashInPacketsMeter    = metrics.NewMeter("etz/prop/hashes/in/packets")
-		propHashInTrafficMeter    = metrics.NewMeter("etz/prop/hashes/in/traffic")
-		propHashOutPacketsMeter   = metrics.NewMeter("etz/prop/hashes/out/packets")
-		propHashOutTrafficMeter   = metrics.NewMeter("etz/prop/hashes/out/traffic")
-		propBlockInPacketsMeter   = metrics.NewMeter("etz/prop/blocks/in/packets")
-		propBlockInTrafficMeter   = metrics.NewMeter("etz/prop/blocks/in/traffic")
-		propBlockOutPacketsMeter  = metrics.NewMeter("etz/prop/blocks/out/packets")
-		propBlockOutTrafficMeter  = metrics.NewMeter("etz/prop/blocks/out/traffic")
-		reqHashInPacketsMeter     = metrics.NewMeter("etz/req/hashes/in/packets")
-		reqHashInTrafficMeter     = metrics.NewMeter("etz/req/hashes/in/traffic")
-		reqHashOutPacketsMeter    = metrics.NewMeter("etz/req/hashes/out/packets")
-		reqHashOutTrafficMeter    = metrics.NewMeter("etz/req/hashes/out/traffic")
-		reqBlockInPacketsMeter    = metrics.NewMeter("etz/req/blocks/in/packets")
-		reqBlockInTrafficMeter    = metrics.NewMeter("etz/req/blocks/in/traffic")
-		reqBlockOutPacketsMeter   = metrics.NewMeter("etz/req/blocks/out/packets")
-		reqBlockOutTrafficMeter   = metrics.NewMeter("etz/req/blocks/out/traffic")
-		reqHeaderInPacketsMeter   = metrics.NewMeter("etz/req/headers/in/packets")
-		reqHeaderInTrafficMeter   = metrics.NewMeter("etz/req/headers/in/traffic")
-		reqHeaderOutPacketsMeter  = metrics.NewMeter("etz/req/headers/out/packets")
-		reqHeaderOutTrafficMeter  = metrics.NewMeter("etz/req/headers/out/traffic")
-		reqBodyInPacketsMeter     = metrics.NewMeter("etz/req/bodies/in/packets")
-		reqBodyInTrafficMeter     = metrics.NewMeter("etz/req/bodies/in/traffic")
-		reqBodyOutPacketsMeter    = metrics.NewMeter("etz/req/bodies/out/packets")
-		reqBodyOutTrafficMeter    = metrics.NewMeter("etz/req/bodies/out/traffic")
-		reqStateInPacketsMeter    = metrics.NewMeter("etz/req/states/in/packets")
-		reqStateInTrafficMeter    = metrics.NewMeter("etz/req/states/in/traffic")
-		reqStateOutPacketsMeter   = metrics.NewMeter("etz/req/states/out/packets")
-		reqStateOutTrafficMeter   = metrics.NewMeter("etz/req/states/out/traffic")
-		reqReceiptInPacketsMeter  = metrics.NewMeter("etz/req/receipts/in/packets")
-		reqReceiptInTrafficMeter  = metrics.NewMeter("etz/req/receipts/in/traffic")
-		reqReceiptOutPacketsMeter = metrics.NewMeter("etz/req/receipts/out/packets")
-		reqReceiptOutTrafficMeter = metrics.NewMeter("etz/req/receipts/out/traffic")*/
+	/*	propTxnInPacketsMeter     = metrics.NewMeter("eth/prop/txns/in/packets")
+		propTxnInTrafficMeter     = metrics.NewMeter("eth/prop/txns/in/traffic")
+		propTxnOutPacketsMeter    = metrics.NewMeter("eth/prop/txns/out/packets")
+		propTxnOutTrafficMeter    = metrics.NewMeter("eth/prop/txns/out/traffic")
+		propHashInPacketsMeter    = metrics.NewMeter("eth/prop/hashes/in/packets")
+		propHashInTrafficMeter    = metrics.NewMeter("eth/prop/hashes/in/traffic")
+		propHashOutPacketsMeter   = metrics.NewMeter("eth/prop/hashes/out/packets")
+		propHashOutTrafficMeter   = metrics.NewMeter("eth/prop/hashes/out/traffic")
+		propBlockInPacketsMeter   = metrics.NewMeter("eth/prop/blocks/in/packets")
+		propBlockInTrafficMeter   = metrics.NewMeter("eth/prop/blocks/in/traffic")
+		propBlockOutPacketsMeter  = metrics.NewMeter("eth/prop/blocks/out/packets")
+		propBlockOutTrafficMeter  = metrics.NewMeter("eth/prop/blocks/out/traffic")
+		reqHashInPacketsMeter     = metrics.NewMeter("eth/req/hashes/in/packets")
+		reqHashInTrafficMeter     = metrics.NewMeter("eth/req/hashes/in/traffic")
+		reqHashOutPacketsMeter    = metrics.NewMeter("eth/req/hashes/out/packets")
+		reqHashOutTrafficMeter    = metrics.NewMeter("eth/req/hashes/out/traffic")
+		reqBlockInPacketsMeter    = metrics.NewMeter("eth/req/blocks/in/packets")
+		reqBlockInTrafficMeter    = metrics.NewMeter("eth/req/blocks/in/traffic")
+		reqBlockOutPacketsMeter   = metrics.NewMeter("eth/req/blocks/out/packets")
+		reqBlockOutTrafficMeter   = metrics.NewMeter("eth/req/blocks/out/traffic")
+		reqHeaderInPacketsMeter   = metrics.NewMeter("eth/req/headers/in/packets")
+		reqHeaderInTrafficMeter   = metrics.NewMeter("eth/req/headers/in/traffic")
+		reqHeaderOutPacketsMeter  = metrics.NewMeter("eth/req/headers/out/packets")
+		reqHeaderOutTrafficMeter  = metrics.NewMeter("eth/req/headers/out/traffic")
+		reqBodyInPacketsMeter     = metrics.NewMeter("eth/req/bodies/in/packets")
+		reqBodyInTrafficMeter     = metrics.NewMeter("eth/req/bodies/in/traffic")
+		reqBodyOutPacketsMeter    = metrics.NewMeter("eth/req/bodies/out/packets")
+		reqBodyOutTrafficMeter    = metrics.NewMeter("eth/req/bodies/out/traffic")
+		reqStateInPacketsMeter    = metrics.NewMeter("eth/req/states/in/packets")
+		reqStateInTrafficMeter    = metrics.NewMeter("eth/req/states/in/traffic")
+		reqStateOutPacketsMeter   = metrics.NewMeter("eth/req/states/out/packets")
+		reqStateOutTrafficMeter   = metrics.NewMeter("eth/req/states/out/traffic")
+		reqReceiptInPacketsMeter  = metrics.NewMeter("eth/req/receipts/in/packets")
+		reqReceiptInTrafficMeter  = metrics.NewMeter("eth/req/receipts/in/traffic")
+		reqReceiptOutPacketsMeter = metrics.NewMeter("eth/req/receipts/out/packets")
+		reqReceiptOutTrafficMeter = metrics.NewMeter("eth/req/receipts/out/traffic")*/
 	miscInPacketsMeter  = metrics.NewMeter("les/misc/in/packets")
 	miscInTrafficMeter  = metrics.NewMeter("les/misc/in/traffic")
 	miscOutPacketsMeter = metrics.NewMeter("les/misc/out/packets")

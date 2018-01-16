@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package whisperv5
 
@@ -109,7 +109,7 @@ func TestSimulation(t *testing.T) {
 func initialize(t *testing.T) {
 	var err error
 	ip := net.IPv4(127, 0, 0, 1)
-	port0 := 21212
+	port0 := 30303
 
 	for i := 0; i < NumNodes; i++ {
 		var node TestNode
@@ -129,7 +129,7 @@ func initialize(t *testing.T) {
 			t.Fatalf("failed convert the key: %s.", keys[i])
 		}
 		port := port0 + i
-		addr := fmt.Sprintf(":%d", port) // e.g. ":21212"
+		addr := fmt.Sprintf(":%d", port) // e.g. ":30303"
 		name := common.MakeName("whisper-go", "2.0")
 		var peers []*discover.Node
 		if i > 0 {

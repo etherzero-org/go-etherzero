@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -58,7 +58,7 @@ func (s *NotificationTestService) SomeSubscription(ctx context.Context, n, val i
 
 	// by explicitly creating an subscription we make sure that the subscription id is send back to the client
 	// before the first subscription.Notify is called. Otherwise the events might be send before the response
-	// for the etz_subscribe Method.
+	// for the eth_subscribe method.
 	subscription := notifier.CreateSubscription()
 
 	go func() {
@@ -109,7 +109,7 @@ func TestNotifications(t *testing.T) {
 	server := NewServer()
 	service := &NotificationTestService{}
 
-	if err := server.RegisterName("etz", service); err != nil {
+	if err := server.RegisterName("eth", service); err != nil {
 		t.Fatalf("unable to register test service %v", err)
 	}
 
@@ -124,7 +124,7 @@ func TestNotifications(t *testing.T) {
 	val := 12345
 	request := map[string]interface{}{
 		"id":      1,
-		"Method":  "etz_subscribe",
+		"method":  "eth_subscribe",
 		"version": "2.0",
 		"params":  []interface{}{"someSubscription", n, val},
 	}
@@ -213,7 +213,7 @@ func waitForMessages(t *testing.T, in *json.Decoder, successes chan<- jsonSucces
 				params := msg["params"].(map[string]interface{})
 				notifications <- jsonNotification{
 					Version: msg["jsonrpc"].(string),
-					Method:  msg["Method"].(string),
+					Method:  msg["method"].(string),
 					Params:  jsonSubscription{params["subscription"].(string), params["result"]},
 				}
 				continue
@@ -227,7 +227,7 @@ func waitForMessages(t *testing.T, in *json.Decoder, successes chan<- jsonSucces
 // for multiple different namespaces.
 func TestSubscriptionMultipleNamespaces(t *testing.T) {
 	var (
-		namespaces             = []string{"etz", "shh", "bzz"}
+		namespaces             = []string{"eth", "shh", "bzz"}
 		server                 = NewServer()
 		service                = NotificationTestService{}
 		clientConn, serverConn = net.Pipe()
@@ -259,7 +259,7 @@ func TestSubscriptionMultipleNamespaces(t *testing.T) {
 	for i, namespace := range namespaces {
 		request := map[string]interface{}{
 			"id":      i,
-			"Method":  fmt.Sprintf("%s_subscribe", namespace),
+			"method":  fmt.Sprintf("%s_subscribe", namespace),
 			"version": "2.0",
 			"params":  []interface{}{"someSubscription", n, i},
 		}
@@ -274,7 +274,7 @@ func TestSubscriptionMultipleNamespaces(t *testing.T) {
 	for i, namespace := range namespaces {
 		requests = append(requests, map[string]interface{}{
 			"id":      i,
-			"Method":  fmt.Sprintf("%s_subscribe", namespace),
+			"method":  fmt.Sprintf("%s_subscribe", namespace),
 			"version": "2.0",
 			"params":  []interface{}{"someSubscription", n, i},
 		})

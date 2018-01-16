@@ -1,20 +1,20 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package tests implements execution of Ethzero JSON tests.
+// Package tests implements execution of Ethereum JSON tests.
 package tests
 
 import (
@@ -32,7 +32,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 )
@@ -98,7 +98,7 @@ func (t *BlockTest) Run() error {
 	}
 
 	// import pre accounts & construct test genesis block & state root
-	db, _ := etzdb.NewMemDatabase()
+	db, _ := ethdb.NewMemDatabase()
 	gblock, err := t.genesis(config).Commit(db)
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func (t *BlockTest) genesis(config *params.ChainConfig) *core.Genesis {
 	}
 }
 
-/* See https://github.com/ethzero/tests/wiki/Blockchain-Tests-II
+/* See https://github.com/ethereum/tests/wiki/Blockchain-Tests-II
 
    Whether a block is valid or not is a bit subtle, it's defined by presence of
    blockHeader, transactions and uncleHeaders fields. If they are missing, the block is

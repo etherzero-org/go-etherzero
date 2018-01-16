@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package jsre provides execution environment for JavaScript.
 package jsre
@@ -77,7 +77,6 @@ func New(assetPath string, output io.Writer) *JSRE {
 	}
 	go re.runEventLoop()
 	re.Set("loadScript", re.loadScript)
-
 	re.Set("inspect", re.prettyPrintJS)
 	return re
 }
@@ -259,7 +258,7 @@ func (self *JSRE) Exec(file string) error {
 }
 
 // Bind assigns value v to a variable in the JS environment
-// This Method is deprecated, use Set.
+// This method is deprecated, use Set.
 func (self *JSRE) Bind(name string, v interface{}) error {
 	return self.Set(name, v)
 }
@@ -291,7 +290,6 @@ func (self *JSRE) loadScript(call otto.FunctionCall) otto.Value {
 	}
 	file = common.AbsolutePath(self.assetPath, file)
 	source, err := ioutil.ReadFile(file)
-	fmt.Println(" roger on 20171201 print jsre go   filename:%s , source:",file,source);
 	if err != nil {
 		// TODO: throw exception
 		return otto.FalseValue()

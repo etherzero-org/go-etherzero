@@ -1,20 +1,20 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package les implements the Light Ethzero Subprotocol.
+// Package les implements the Light Ethereum Subprotocol.
 package les
 
 import (
@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/ethzero/go-ethzero/common/mclock"
-	"github.com/ethzero/go-ethzero/etzdb"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
@@ -95,7 +95,7 @@ const (
 // known light server nodes. It received discovered nodes, stores statistics about
 // known nodes and takes care of always having enough good quality servers connected.
 type serverPool struct {
-	db     etzdb.Database
+	db     ethdb.Database
 	dbKey  []byte
 	server *p2p.Server
 	quit   chan struct{}
@@ -120,7 +120,7 @@ type serverPool struct {
 }
 
 // newServerPool creates a new serverPool instance
-func newServerPool(db etzdb.Database, quit chan struct{}, wg *sync.WaitGroup) *serverPool {
+func newServerPool(db ethdb.Database, quit chan struct{}, wg *sync.WaitGroup) *serverPool {
 	pool := &serverPool{
 		db:           db,
 		quit:         quit,

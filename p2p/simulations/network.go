@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulations
 
@@ -40,7 +40,7 @@ type NetworkConfig struct {
 // simulated nodes and the connections which exist between them.
 //
 // The Network has a single NodeAdapter which is responsible for actually
-// starting nodes and connecting them togetzer.
+// starting nodes and connecting them together.
 //
 // The Network emits events when nodes are started and stopped, when they are
 // connected and disconnected, and also when messages are sent between nodes.
@@ -267,8 +267,8 @@ func (self *Network) Stop(id discover.NodeID) error {
 	return nil
 }
 
-// Connect connects two nodes togetzer by calling the "admin_addPeer" RPC
-// Method on the "one" node so that it connects to the "other" node
+// Connect connects two nodes together by calling the "admin_addPeer" RPC
+// method on the "one" node so that it connects to the "other" node
 func (self *Network) Connect(oneID, otherID discover.NodeID) error {
 	log.Debug(fmt.Sprintf("connecting %s to %s", oneID, otherID))
 	conn, err := self.GetOrCreateConn(oneID, otherID)
@@ -290,7 +290,7 @@ func (self *Network) Connect(oneID, otherID discover.NodeID) error {
 }
 
 // Disconnect disconnects two nodes by calling the "admin_removePeer" RPC
-// Method on the "one" node so that it disconnects from the "other" node
+// method on the "one" node so that it disconnects from the "other" node
 func (self *Network) Disconnect(oneID, otherID discover.NodeID) error {
 	conn := self.GetConn(oneID, otherID)
 	if conn == nil {

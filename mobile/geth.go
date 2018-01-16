@@ -1,23 +1,23 @@
-// Copyright 2016 The go-ethzero Authors
-// This file is part of the go-ethzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-ethzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains all the wrappers from the node package to support client side node
 // management on mobile platforms.
 
-package getz
+package geth
 
 import (
 	"encoding/json"
@@ -25,10 +25,10 @@ import (
 	"path/filepath"
 
 	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/etz"
-	"github.com/ethzero/go-ethzero/etz/downloader"
-	"github.com/ethzero/go-ethzero/etzclient"
-	"github.com/ethzero/go-ethzero/etzstats"
+	"github.com/ethzero/go-ethzero/eth"
+	"github.com/ethzero/go-ethzero/eth/downloader"
+	"github.com/ethzero/go-ethzero/ethclient"
+	"github.com/ethzero/go-ethzero/ethstats"
 	"github.com/ethzero/go-ethzero/les"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/p2p"
@@ -37,9 +37,9 @@ import (
 	whisper "github.com/ethzero/go-ethzero/whisper/whisperv5"
 )
 
-// NodeConfig represents the collection of configuration values to fine tune the Getz
+// NodeConfig represents the collection of configuration values to fine tune the Geth
 // node embedded into a mobile process. The available values are a subset of the
-// entire API provided by go-ethzero to reduce the maintenance surface and dev
+// entire API provided by go-ethereum to reduce the maintenance surface and dev
 // complexity.
 type NodeConfig struct {
 	// Bootstrap nodes used to establish connectivity with the rest of the network.
@@ -49,26 +49,26 @@ type NodeConfig struct {
 	// set to zero, then only the configured static and trusted peers can connect.
 	MaxPeers int
 
-	// EthzeroEnabled specifies whether the node should run the Ethzero protocol.
-	EthzeroEnabled bool
+	// EthereumEnabled specifies whether the node should run the Ethereum protocol.
+	EthereumEnabled bool
 
-	// EthzeroNetworkID is the network identifier used by the Ethzero protocol to
+	// EthereumNetworkID is the network identifier used by the Ethereum protocol to
 	// decide if remote peers should be accepted or not.
-	EthzeroNetworkID int64 // uint64 in truth, but Java can't handle that...
+	EthereumNetworkID int64 // uint64 in truth, but Java can't handle that...
 
-	// EthzeroGenesis is the genesis JSON to use to seed the blockchain with. An
+	// EthereumGenesis is the genesis JSON to use to seed the blockchain with. An
 	// empty genesis state is equivalent to using the mainnet's state.
-	EthzeroGenesis string
+	EthereumGenesis string
 
-	// EthzeroDatabaseCache is the system memory in MB to allocate for database caching.
+	// EthereumDatabaseCache is the system memory in MB to allocate for database caching.
 	// A minimum of 16MB is always reserved.
-	EthzeroDatabaseCache int
+	EthereumDatabaseCache int
 
-	// EthzeroNetStats is a netstats connection string to use to report various
+	// EthereumNetStats is a netstats connection string to use to report various
 	// chain, transaction and node stats to a monitoring server.
 	//
 	// It has the form "nodename:secret@host:port"
-	EthzeroNetStats string
+	EthereumNetStats string
 
 	// WhisperEnabled specifies whether the node should run the Whisper protocol.
 	WhisperEnabled bool
@@ -79,9 +79,9 @@ type NodeConfig struct {
 var defaultNodeConfig = &NodeConfig{
 	BootstrapNodes:        FoundationBootnodes(),
 	MaxPeers:              25,
-	EthzeroEnabled:       true,
-	EthzeroNetworkID:     1,
-	EthzeroDatabaseCache: 16,
+	EthereumEnabled:       true,
+	EthereumNetworkID:     1,
+	EthereumDatabaseCache: 16,
 }
 
 // NewNodeConfig creates a new node option set, initialized to the default values.
@@ -90,12 +90,12 @@ func NewNodeConfig() *NodeConfig {
 	return &config
 }
 
-// Node represents a Getz Ethzero node instance.
+// Node represents a Geth Ethereum node instance.
 type Node struct {
 	node *node.Node
 }
 
-// NewNode creates and configures a new Getz node.
+// NewNode creates and configures a new Geth node.
 func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	// If no or partial configurations were specified, use defaults
 	if config == nil {
@@ -129,39 +129,39 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	}
 
 	var genesis *core.Genesis
-	if config.EthzeroGenesis != "" {
+	if config.EthereumGenesis != "" {
 		// Parse the user supplied genesis spec if not mainnet
 		genesis = new(core.Genesis)
-		if err := json.Unmarshal([]byte(config.EthzeroGenesis), genesis); err != nil {
+		if err := json.Unmarshal([]byte(config.EthereumGenesis), genesis); err != nil {
 			return nil, fmt.Errorf("invalid genesis spec: %v", err)
 		}
 		// If we have the testnet, hard code the chain configs too
-		if config.EthzeroGenesis == TestnetGenesis() {
+		if config.EthereumGenesis == TestnetGenesis() {
 			genesis.Config = params.TestnetChainConfig
-			if config.EthzeroNetworkID == 1 {
-				config.EthzeroNetworkID = 3
+			if config.EthereumNetworkID == 1 {
+				config.EthereumNetworkID = 3
 			}
 		}
 	}
-	// Register the Ethzero protocol if requested
-	if config.EthzeroEnabled {
-		etzConf := etz.DefaultConfig
-		etzConf.Genesis = genesis
-		etzConf.SyncMode = downloader.LightSync
-		etzConf.NetworkId = uint64(config.EthzeroNetworkID)
-		etzConf.DatabaseCache = config.EthzeroDatabaseCache
+	// Register the Ethereum protocol if requested
+	if config.EthereumEnabled {
+		ethConf := eth.DefaultConfig
+		ethConf.Genesis = genesis
+		ethConf.SyncMode = downloader.LightSync
+		ethConf.NetworkId = uint64(config.EthereumNetworkID)
+		ethConf.DatabaseCache = config.EthereumDatabaseCache
 		if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return les.New(ctx, &etzConf)
+			return les.New(ctx, &ethConf)
 		}); err != nil {
-			return nil, fmt.Errorf("ethzero init: %v", err)
+			return nil, fmt.Errorf("ethereum init: %v", err)
 		}
 		// If netstats reporting is requested, do it
-		if config.EthzeroNetStats != "" {
+		if config.EthereumNetStats != "" {
 			if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-				var lesServ *les.LightEthzero
+				var lesServ *les.LightEthereum
 				ctx.Service(&lesServ)
 
-				return etzstats.New(config.EthzeroNetStats, nil, lesServ)
+				return ethstats.New(config.EthereumNetStats, nil, lesServ)
 			}); err != nil {
 				return nil, fmt.Errorf("netstats init: %v", err)
 			}
@@ -189,13 +189,13 @@ func (n *Node) Stop() error {
 	return n.node.Stop()
 }
 
-// GetEthzeroClient retrieves a client to access the Ethzero subsystem.
-func (n *Node) GetEthzeroClient() (client *EthzeroClient, _ error) {
+// GetEthereumClient retrieves a client to access the Ethereum subsystem.
+func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
 	rpc, err := n.node.Attach()
 	if err != nil {
 		return nil, err
 	}
-	return &EthzeroClient{etzclient.NewClient(rpc)}, nil
+	return &EthereumClient{ethclient.NewClient(rpc)}, nil
 }
 
 // GetNodeInfo gathers and returns a collection of metadata known about the host.
