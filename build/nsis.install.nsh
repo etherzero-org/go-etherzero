@@ -1,41 +1,41 @@
-Name "getz ${MAJORVERSION}.${MINORVERSION}.${BUILDVERSION}" # VERSION variables set through command line arguments
+Name "geth ${MAJORVERSION}.${MINORVERSION}.${BUILDVERSION}" # VERSION variables set through command line arguments
 InstallDir "$InstDir"
 OutFile "${OUTPUTFILE}" # set through command line arguments
 
 # Links for "Add/Remove Programs"
-!define HELPURL "https://github.com/ethzero/go-ethzero/issues"
-!define UPDATEURL "https://github.com/ethzero/go-ethzero/releases"
-!define ABOUTURL "https://github.com/ethzero/go-ethzero#ethzero-go"
+!define HELPURL "https://github.com/ethereum/go-ethereum/issues"
+!define UPDATEURL "https://github.com/ethereum/go-ethereum/releases"
+!define ABOUTURL "https://github.com/ethereum/go-ethereum#ethereum-go"
 !define /date NOW "%Y%m%d"
 
 PageEx license
   LicenseData {{.License}}
 PageExEnd
 
-# Install getz binary
-Section "Getz" GETZ_IDX
+# Install geth binary
+Section "Geth" GETH_IDX
   SetOutPath $INSTDIR
-  file {{.Getz}}
+  file {{.Geth}}
 
   # Create start menu launcher
   createDirectory "$SMPROGRAMS\${APPNAME}"
-  createShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\getz.exe" "--fast" "--cache=512"
-  createShortCut "$SMPROGRAMS\${APPNAME}\Attach.lnk" "$INSTDIR\getz.exe" "attach" "" ""
+  createShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\geth.exe" "--fast" "--cache=512"
+  createShortCut "$SMPROGRAMS\${APPNAME}\Attach.lnk" "$INSTDIR\geth.exe" "attach" "" ""
   createShortCut "$SMPROGRAMS\${APPNAME}\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "" ""
 
   # Firewall - remove rules (if exists)
-  SimpleFC::AdvRemoveRule "Getz incoming peers (TCP:21212)"
-  SimpleFC::AdvRemoveRule "Getz outgoing peers (TCP:21212)"
-  SimpleFC::AdvRemoveRule "Getz UDP discovery (UDP:21212)"
+  SimpleFC::AdvRemoveRule "Geth incoming peers (TCP:21212)"
+  SimpleFC::AdvRemoveRule "Geth outgoing peers (TCP:21212)"
+  SimpleFC::AdvRemoveRule "Geth UDP discovery (UDP:21212)"
 
   # Firewall - add rules
-  SimpleFC::AdvAddRule "Getz incoming peers (TCP:21212)" ""  6 1 1 2147483647 1 "$INSTDIR\getz.exe" "" "" "Ethzero" 21212 "" "" ""
-  SimpleFC::AdvAddRule "Getz outgoing peers (TCP:21212)" ""  6 2 1 2147483647 1 "$INSTDIR\getz.exe" "" "" "Ethzero" "" 21212 "" ""
-  SimpleFC::AdvAddRule "Getz UDP discovery (UDP:21212)" "" 17 2 1 2147483647 1 "$INSTDIR\getz.exe" "" "" "Ethzero" "" 21212 "" ""
+  SimpleFC::AdvAddRule "Geth incoming peers (TCP:21212)" ""  6 1 1 2147483647 1 "$INSTDIR\geth.exe" "" "" "Ethereum" 21212 "" "" ""
+  SimpleFC::AdvAddRule "Geth outgoing peers (TCP:21212)" ""  6 2 1 2147483647 1 "$INSTDIR\geth.exe" "" "" "Ethereum" "" 21212 "" ""
+  SimpleFC::AdvAddRule "Geth UDP discovery (UDP:21212)" "" 17 2 1 2147483647 1 "$INSTDIR\geth.exe" "" "" "Ethereum" "" 21212 "" ""
 
-  # Set default IPC endpoint (https://github.com/ethzero/EIPs/issues/147)
-  ${EnvVarUpdate} $0 "ETHZERO_SOCKET" "R" "HKLM" "\\.\pipe\getz.ipc"
-  ${EnvVarUpdate} $0 "ETHZERO_SOCKET" "A" "HKLM" "\\.\pipe\getz.ipc"
+  # Set default IPC endpoint (https://github.com/ethereum/EIPs/issues/147)
+  ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "R" "HKLM" "\\.\pipe\geth.ipc"
+  ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "A" "HKLM" "\\.\pipe\geth.ipc"
 
   # Add instdir to PATH
   Push "$INSTDIR"
@@ -54,8 +54,8 @@ Var GetInstalledSize.total
 Function GetInstalledSize
   StrCpy $GetInstalledSize.total 0
 
-  ${if} ${SectionIsSelected} ${GETZ_IDX}
-    SectionGetSize ${GETZ_IDX} $0
+  ${if} ${SectionIsSelected} ${GETH_IDX}
+    SectionGetSize ${GETH_IDX} $0
     IntOp $GetInstalledSize.total $GetInstalledSize.total + $0
   ${endif}
 
