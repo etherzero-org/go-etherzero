@@ -10,7 +10,7 @@ RUN cd /go-ethereum && make geth
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
+COPY --from=builder /go-ethzero/build/bin/geth /usr/local/bin/
 
 EXPOSE 9646 9647 21212 21212/udp 21213/udp
 ENTRYPOINT ["geth"]
