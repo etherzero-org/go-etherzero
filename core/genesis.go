@@ -258,41 +258,41 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 
 
 // ToBlock creates the block and state of a genesis specification.
-func (g *Genesis) ToEthBlock() (*types.Block, *state.StateEthDB) {
-	db, _ := ethdb.NewMemDatabase()
-	statedb, _ := state.NewEthDB(common.Hash{}, state.NewDatabase(db))
-
-	for addr, account := range g.Alloc {
-		statedb.AddBalance(addr, account.Balance)
-		statedb.SetCode(addr, account.Code)
-		statedb.SetNonce(addr, account.Nonce)
-		for key, value := range account.Storage {
-			statedb.SetState(addr, key, value)
-		}
-	}
-
-	root := statedb.IntermediateRoot(false)
-	head := &types.Header{
-		Number:     new(big.Int).SetUint64(g.Number),
-		Nonce:      types.EncodeNonce(g.Nonce),
-		Time:       new(big.Int).SetUint64(g.Timestamp),
-		ParentHash: g.ParentHash,
-		Extra:      g.ExtraData,
-		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
-		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
-		Difficulty: g.Difficulty,
-		MixDigest:  g.Mixhash,
-		Coinbase:   g.Coinbase,
-		Root:       root,
-	}
-	if g.GasLimit == 0 {
-		head.GasLimit = params.GenesisGasLimit
-	}
-	if g.Difficulty == nil {
-		head.Difficulty = params.GenesisDifficulty
-	}
-	return types.NewBlock(head, nil, nil, nil), statedb
-}
+//func (g *Genesis) ToEthBlock() (*types.Block, *state.StateEthDB) {
+//	db, _ := ethdb.NewMemDatabase()
+//	statedb, _ := state.NewEthDB(common.Hash{}, state.NewDatabase(db))
+//
+//	for addr, account := range g.Alloc {
+//		statedb.AddBalance(addr, account.Balance)
+//		statedb.SetCode(addr, account.Code)
+//		statedb.SetNonce(addr, account.Nonce)
+//		for key, value := range account.Storage {
+//			statedb.SetState(addr, key, value)
+//		}
+//	}
+//
+//	root := statedb.IntermediateRoot(false)
+//	head := &types.Header{
+//		Number:     new(big.Int).SetUint64(g.Number),
+//		Nonce:      types.EncodeNonce(g.Nonce),
+//		Time:       new(big.Int).SetUint64(g.Timestamp),
+//		ParentHash: g.ParentHash,
+//		Extra:      g.ExtraData,
+//		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
+//		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
+//		Difficulty: g.Difficulty,
+//		MixDigest:  g.Mixhash,
+//		Coinbase:   g.Coinbase,
+//		Root:       root,
+//	}
+//	if g.GasLimit == 0 {
+//		head.GasLimit = params.GenesisGasLimit
+//	}
+//	if g.Difficulty == nil {
+//		head.Difficulty = params.GenesisDifficulty
+//	}
+//	return types.NewBlock(head, nil, nil, nil), statedb
+//}
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
