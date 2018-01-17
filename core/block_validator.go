@@ -94,9 +94,22 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
+
 	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
-		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
+		return fmt.Errorf("invalid merkle root (remote: %s local: %s)", header.Root.String(), root.String())
 	}
+	//if v.config.IsEthzero(header.Number){
+	//	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+	//		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
+	//	}
+	//}else{
+	//	db, _ := ethdb.NewMemDatabase()
+	//	statedb, _ := state.NewEthDB(common.Hash{}, state.NewDatabase(db))
+	//	if root := statedb.IntermediateRoot(v.config.IsEthzero(header.Number)); header.Root != root {
+	//		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
+	//	}
+	//}
+
 	return nil
 }
 

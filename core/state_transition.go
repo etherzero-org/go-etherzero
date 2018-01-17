@@ -25,10 +25,11 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
+	"fmt"
 )
 
 var (
-	etzDefaultGasLimit = big.NewInt( 90000)
+	etzDefaultGasLimit = big.NewInt( 50000)
 	expMinimumGasLimit = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
@@ -163,6 +164,7 @@ func (st *StateTransition) to() vm.AccountRef {
 
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
+		fmt.Println("state_transition is error:",st.gas,amount)
 		return vm.ErrOutOfGas
 	}
 	st.gas -= amount
@@ -173,6 +175,8 @@ func (st *StateTransition) useGas(amount uint64) error {
 func (st *StateTransition) buyEtzerGas() error {
 	mgas := etzDefaultGasLimit
 	if mgas.BitLen() > 64 {
+		fmt.Println("buyEtzerGas st.msg.Gas()",st.msg.Gas())
+		fmt.Println("buyEtzerGas mags 's value:",mgas)
 		return vm.ErrOutOfGas
 	}
 
@@ -206,6 +210,7 @@ func (st *StateTransition) buyEtzerGas() error {
 func (st *StateTransition) buyGas() error {
 	mgas := st.msg.Gas()
 	if mgas.BitLen() > 64 {
+		fmt.Println("state_transition is error buygas:",mgas,st.msg.Gas())
 		return vm.ErrOutOfGas
 	}
 
@@ -241,9 +246,11 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
-	//return st.buyGas()
-	return st.buyEtzerGas()
-
+	//
+	if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
+		return st.buyEtzerGas()
+	}
+	return st.buyGas()
 }
 
 // TransitionDb will transition the state by applying the current message and returning the result
@@ -263,6 +270,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	// TODO convert to uint64
 	intrinsicGas := IntrinsicGas(st.data, contractCreation, homestead)
 	if intrinsicGas.BitLen() > 64 {
+
+		fmt.Println("TransitionDb ,s out of gas")
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {

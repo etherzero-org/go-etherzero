@@ -103,8 +103,8 @@ type Account struct {
 	Balance  *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
-	TxBlockHeight big.Int
-	HeightTxCount uint64
+	//TxBlockHeight big.Int
+	//HeightTxCount uint64
 
 }
 
@@ -392,32 +392,32 @@ func (self *stateObject) Value() *big.Int {
 
 //add by roger on 2017-12-16
 
-func (self *stateObject) setHeightTxCount(heighttxcount uint64){
-
-	self.data.HeightTxCount=heighttxcount
-}
-
-func (self *stateObject) SetHeightTxCount(heighttxcount uint64){
-	self.setHeightTxCount(heighttxcount)
-}
-
-func (self *stateObject) HeightTxCount() uint64 {
-
-	return self.data.HeightTxCount
-}
-
-func (self *stateObject) SetTxBlockHeight(txblockheight big.Int){
-	self.setTxBlockHeight(txblockheight)
-}
-
-func (self *stateObject) setTxBlockHeight(txblockheight big.Int){
-	self.data.TxBlockHeight=txblockheight
-	if self.onDirty != nil {
-		self.onDirty(self.address)
-		self.onDirty = nil
-	}
-}
-
-func (self *stateObject) TxBlockHeight() big.Int {
-	return self.data.TxBlockHeight
-}
+//func (self *stateObject) setHeightTxCount(heighttxcount uint64){
+//
+//	self.data.HeightTxCount=heighttxcount
+//}
+//
+//func (self *stateObject) SetHeightTxCount(heighttxcount uint64){
+//	self.setHeightTxCount(heighttxcount)
+//}
+//
+//func (self *stateObject) HeightTxCount() uint64 {
+//
+//	return self.data.HeightTxCount
+//}
+//
+//func (self *stateObject) SetTxBlockHeight(txblockheight big.Int){
+//	self.setTxBlockHeight(txblockheight)
+//}
+//
+//func (self *stateObject) setTxBlockHeight(txblockheight big.Int){
+//	self.data.TxBlockHeight=txblockheight
+//	if self.onDirty != nil {
+//		self.onDirty(self.address)
+//		self.onDirty = nil
+//	}
+//}
+//
+//func (self *stateObject) TxBlockHeight() big.Int {
+//	return self.data.TxBlockHeight
+//}
