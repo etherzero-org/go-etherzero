@@ -4,8 +4,8 @@ package core
 import(
 	"github.com/ethzero/go-ethzero/core/types"
 	//"math/big"
-	"fmt"
-	"math/big"
+	//"fmt"
+	//"math/big"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -42,29 +42,29 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 
 	//确保交易金额能有满足执行交易需要的规则。
-	fmt.Println("from.Address 's vlaue:%s",from.String())
-	heightCount:= pool.currentState.HeightTxCount(from)
-	//fmt.Println("heightCount 's value:%s",heightCount)
-
-	blockheight := pool.currentState.TxBlockHeight(from)
-
-	balance := pool.currentState.GetBalance(from)
-
-	//可执行步数等于当前余额*10
-	tradeNumber := new(big.Int).Div(balance,TradeTimesCount)
-
-	currentBlockNumber := pool.chain.CurrentBlock().Number()
-	if blockheight.Cmp(currentBlockNumber) == 0{
-		if int64(heightCount) > tradeNumber.Int64(){
-			return ErrHeightTxTooMuch
-		}
-		heightTxCount:=pool.currentState.HeightTxCount(from)
-	//	fmt.Println("heightTxCount :%s, blockheight:%s,currentBlockNumber:%s",heightTxCount,blockheight,currentBlockNumber)
-		pool.currentState.SetHeightTxCount(from,heightTxCount+1)
-	}else{
-		pool.currentState.SetTxBlockHeight(from,*currentBlockNumber)
-		pool.currentState.SetHeightTxCount(from,1)
-	}
+	//fmt.Println("from.Address 's vlaue:%s",from.String())
+	//heightCount:= pool.currentState.HeightTxCount(from)
+	////fmt.Println("heightCount 's value:%s",heightCount)
+	//
+	//blockheight := pool.currentState.TxBlockHeight(from)
+	//
+	//balance := pool.currentState.GetBalance(from)
+	//
+	////可执行步数等于当前余额*10
+	//tradeNumber := new(big.Int).Div(balance,TradeTimesCount)
+	//
+	//currentBlockNumber := pool.chain.CurrentBlock().Number()
+	//if blockheight.Cmp(currentBlockNumber) == 0{
+	//	if int64(heightCount) > tradeNumber.Int64(){
+	//		return ErrHeightTxTooMuch
+	//	}
+	//	heightTxCount:=pool.currentState.HeightTxCount(from)
+	////	fmt.Println("heightTxCount :%s, blockheight:%s,currentBlockNumber:%s",heightTxCount,blockheight,currentBlockNumber)
+	//	pool.currentState.SetHeightTxCount(from,heightTxCount+1)
+	//}else{
+	//	pool.currentState.SetTxBlockHeight(from,*currentBlockNumber)
+	//	pool.currentState.SetHeightTxCount(from,1)
+	//}
 
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network

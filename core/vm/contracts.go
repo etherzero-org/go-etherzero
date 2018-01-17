@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/crypto/bn256"
 	"github.com/ethzero/go-ethzero/params"
 	"golang.org/x/crypto/ripemd160"
+	"fmt"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -65,6 +66,7 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 	if contract.UseGas(gas) {
 		return p.Run(input)
 	}
+	fmt.Println("RunPrecompiledContract ,s out of gas")
 	return nil, ErrOutOfGas
 }
 

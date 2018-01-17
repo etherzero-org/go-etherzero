@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/params"
+	"fmt"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -90,6 +91,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
+		fmt.Println("ApplyTransaction is err:",err)
 		return nil, nil, err
 	}
 	// Create a new context to be used in the EVM environment
