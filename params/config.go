@@ -57,8 +57,8 @@ var (
 		EIP155Block:    big.NewInt(2675000),
 		EIP158Block:    big.NewInt(2675000),
 		ByzantiumBlock: big.NewInt(4370000),
-		//EthzeroBlock: big.NewInt(3602107),
-		//EthzeroGenesisBlock: big.NewInt(3602106),
+		EthzeroBlock: big.NewInt(3602107),
+		EthzeroGenesisBlock: big.NewInt(3602106),
 
 		Ethash: new(EthashConfig),
 	}
@@ -74,8 +74,8 @@ var (
 		EIP155Block:    big.NewInt(3),
 		EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(1035301),
-		//EthzeroBlock: big.NewInt(3602107),
-		//EthzeroGenesisBlock: big.NewInt(3602106),
+		EthzeroBlock: big.NewInt(3602107),
+		EthzeroGenesisBlock: big.NewInt(3602106),
 
 		Clique: &CliqueConfig{
 			Period: 15,
