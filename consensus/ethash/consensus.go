@@ -293,13 +293,12 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
 	next := new(big.Int).Add(parent.Number, big1)
 	switch {
-
+	case config.IsEthzeroGenesisBlock(next):
+		return calcDifficultyEthzeroGenesis(time, parent)
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
 	case config.IsHomestead(next):
 		return calcDifficultyHomestead(time, parent)
-	case config.IsEthzeroGenesisBlock(next):
-		return calcDifficultyEthzeroGenesis(time, parent)
 	case config.IsEthzero(next):
 		return calcDifficultyEthzero(time, parent)
 	default:

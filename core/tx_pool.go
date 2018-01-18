@@ -224,7 +224,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 	var pool =  &TxPool{}
-	if chainconfig.IsEthzero(chain.CurrentBlock().Header().Number){
+	if chainconfig.IsEthzero(chain.CurrentBlock().Header().Number)|| chainconfig.IsEthzeroGenesisBlock(chain.CurrentBlock().Header().Number){
 		// Create the transaction pool with its initial settings
 		pool = &TxPool{
 			config:      config,
@@ -243,7 +243,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 			config:      config,
 			chainconfig: chainconfig,
 			chain:       chain,
-			signer:      types.NewEIP155Signer(big.NewInt(1)),
+			signer:      types.NewEIP155Signer(big.NewInt(88)),
 			pending:     make(map[common.Address]*txList),
 			queue:       make(map[common.Address]*txList),
 			beats:       make(map[common.Address]time.Time),
@@ -252,8 +252,6 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 			gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
 		}
 	}
-
-
 
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
