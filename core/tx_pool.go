@@ -223,20 +223,38 @@ type TxPool struct {
 func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
-
-	// Create the transaction pool with its initial settings
-	pool := &TxPool{
-		config:      config,
-		chainconfig: chainconfig,
-		chain:       chain,
-		signer:      types.NewEIP155Signer(chainconfig.ChainId),
-		pending:     make(map[common.Address]*txList),
-		queue:       make(map[common.Address]*txList),
-		beats:       make(map[common.Address]time.Time),
-		all:         make(map[common.Hash]*types.Transaction),
-		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
-		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
+	var pool =  &TxPool{}
+	if chainconfig.IsEthzero(chain.CurrentBlock().Header().Number){
+		// Create the transaction pool with its initial settings
+		pool = &TxPool{
+			config:      config,
+			chainconfig: chainconfig,
+			chain:       chain,
+			signer:      types.NewEIP155Signer(chainconfig.ChainId),
+			pending:     make(map[common.Address]*txList),
+			queue:       make(map[common.Address]*txList),
+			beats:       make(map[common.Address]time.Time),
+			all:         make(map[common.Hash]*types.Transaction),
+			chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
+			gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
+		}
+	}else{
+		pool = &TxPool{
+			config:      config,
+			chainconfig: chainconfig,
+			chain:       chain,
+			signer:      types.NewEIP155Signer(big.NewInt(1)),
+			pending:     make(map[common.Address]*txList),
+			queue:       make(map[common.Address]*txList),
+			beats:       make(map[common.Address]time.Time),
+			all:         make(map[common.Hash]*types.Transaction),
+			chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
+			gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
+		}
 	}
+
+
+
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
 	pool.reset(nil, chain.CurrentBlock().Header())
