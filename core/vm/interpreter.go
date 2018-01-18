@@ -24,6 +24,7 @@ import (
 	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/log"
 )
 
 // Config are the configuration options for the Interpreter
@@ -196,7 +197,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 			cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 			if err != nil || !contract.UseGas(cost) {
 
-				fmt.Println("interpreter.go out of gas ")
+				log.Debug("interpreter.go out of gas ")
 				return nil, ErrOutOfGas
 			}
 		}

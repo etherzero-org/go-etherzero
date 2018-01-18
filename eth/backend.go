@@ -151,11 +151,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
-	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
-		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-		eth.blockchain.SetHead(compat.RewindTo)
-		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
-	}
+	//if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
+	//	log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+	//	eth.blockchain.SetHead(compat.RewindTo)
+	//	core.WriteChainConfig(chainDb, genesisHash, chainConfig)
+	//}
 	eth.bloomIndexer.Start(eth.blockchain)
 
 	if config.TxPool.Journal != "" {
