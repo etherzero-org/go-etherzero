@@ -296,8 +296,10 @@ func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types
 	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
 	l.gascap = new(big.Int).Set(gasLimit)
 
+
 	// Filter out all the transactions above the account's funds
-	removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 || tx.Gas().Cmp(gasLimit) > 0 })
+	removed := l.txs.Filter(func(tx *types.Transaction) bool {return tx.Cost().Cmp(costLimit) > 0 && tx.Gas().Cmp(gasLimit) > 0 })
+
 
 	// If the list was strict, filter anything above the lowest nonce
 	var invalids types.Transactions
@@ -458,6 +460,7 @@ func (l *txPricedList) Cap(threshold *big.Int, local *accountSet) types.Transact
 // Underpriced checks whether a transaction is cheaper than (or as cheap as) the
 // lowest priced transaction currently being tracked.
 func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) bool {
+
 	// Local transactions cannot be underpriced
 	if local.containsTx(tx) {
 		return false

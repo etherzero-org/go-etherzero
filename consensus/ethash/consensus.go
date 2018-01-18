@@ -39,9 +39,9 @@ var (
 	FrontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	ByzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
-	EthzeroBlockReward *big.Int = big.NewInt(4e+18) // Block reward in wei for successfully mining a block upward from Ethzero
-	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18),big.NewInt(97000000))// Block reward in wei for successfully mining a block upward from Ethzero
-	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
+	EthzeroBlockReward        *big.Int = big.NewInt(4e+18)                                         // Block reward in wei for successfully mining a block upward from Ethzero
+	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Block reward in wei for successfully mining a block upward from Ethzero
+	maxUncles                          = 2                                                         // Maximum number of uncles allowed in a single block
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -294,6 +294,8 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	next := new(big.Int).Add(parent.Number, big1)
 	switch {
 
+	case config.IsEthzeroGenesisBlock(next):
+		return calcDifficultyEthzeroGenesis(time, parent)
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
 	case config.IsHomestead(next):
@@ -307,16 +309,15 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 
 // Some weird constants to avoid constant memory allocs for them.
 var (
-	expDiffPeriod = big.NewInt(100000)
+	expDiffPeriod          = big.NewInt(100000)
 	expEtherzeroDiffPeriod = big.NewInt(5000000)
-	big1          = big.NewInt(1)
-	big2          = big.NewInt(2)
-	big9          = big.NewInt(9)
-	big10         = big.NewInt(10)
-	bigMinus99    = big.NewInt(-99)
-	big2999999    = big.NewInt(2999999)
+	big1                   = big.NewInt(1)
+	big2                   = big.NewInt(2)
+	big9                   = big.NewInt(9)
+	big10                  = big.NewInt(10)
+	bigMinus99             = big.NewInt(-99)
+	big2999999             = big.NewInt(2999999)
 )
-
 
 // calcDifficultyEthzero is the difficulty adjustment algorithm. It returns the
 // difficulty that a new block should have when created at time given the parent
@@ -355,6 +356,11 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 // difficulty that a new block should have when created at time given the parent
 // block's time and difficulty. The calculation uses the Ethzero rules.
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
+
+	fmt.Println("************ calcDifficultyEthzeroGenesis is beging *********")
+
+	fmt.Println("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
+
 	diff := new(big.Int)
 	adjust := new(big.Int).Div(parent.Difficulty, params.DifficultyBoundDivisor)
 	bigTime := new(big.Int)
@@ -381,9 +387,11 @@ func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 		diff.Add(diff, expDiff)
 		diff = math.BigMax(diff, params.MinimumDifficulty)
 	}
+
+	diff=params.MinimumDifficulty
+	fmt.Println("************ calcDifficultyEthzeroGenesis diff's value:",diff)
 	return diff
 }
-
 
 // calcDifficultyByzantium is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time given the
@@ -492,9 +500,6 @@ func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
 	}
 	return x
 }
-
-
-
 
 // calcDifficultyFrontier is the difficulty adjustment algorithm. It returns the
 // difficulty that a new block should have when created at time given the parent
@@ -612,7 +617,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	if config.IsByzantium(header.Number) {
 		blockReward = ByzantiumBlockReward
 	}
-	if config.IsEthzeroGenesisBlock(header.Number){
+	if config.IsEthzeroGenesisBlock(header.Number) {
 		blockReward = EthzeroGenesisBlockReward
 	}
 
