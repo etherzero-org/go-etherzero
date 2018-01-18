@@ -11,7 +11,7 @@ fi
 workspace="$PWD/build/_workspace"
 root="$PWD"
 ethdir="$workspace/src/github.com/ethzero"
-if [ ! -L "$ethdir/go-ethereum" ]; then
+if [ ! -L "$ethdir/go-ethzero" ]; then
     mkdir -p "$ethdir"
     cd "$ethdir"
     ln -s ../../../../../. go-ethzero
