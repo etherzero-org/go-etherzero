@@ -18,6 +18,7 @@ package params
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/ethzero/go-ethzero/common"
@@ -32,16 +33,16 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainId:        big.NewInt(88),
-		HomesteadBlock: big.NewInt(0),
-		DAOForkBlock:   big.NewInt(0),
+		HomesteadBlock: big.NewInt(1150000),
+		DAOForkBlock:   big.NewInt(1920000),
 		DAOForkSupport: true,
-		EIP150Block:    big.NewInt(0),
+		EIP150Block:    big.NewInt(2463000),
 		EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:    big.NewInt(0),
-		EIP158Block:    big.NewInt(0),
-		ByzantiumBlock: big.NewInt(0),
-		EthzeroBlock: big.NewInt(1538),
-		EthzeroGenesisBlock: big.NewInt(1537),
+		EIP155Block:    big.NewInt(2675000),
+		EIP158Block:    big.NewInt(2675000),
+		ByzantiumBlock: big.NewInt(4370000),
+		EthzeroBlock: big.NewInt(3602107),
+		EthzeroGenesisBlock: big.NewInt(3602106),
 
 		Ethash: new(EthashConfig),
 	}
@@ -49,14 +50,14 @@ var (
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
 		ChainId:        big.NewInt(89),
-		HomesteadBlock: big.NewInt(1),
-		DAOForkBlock:   big.NewInt(1),
+		HomesteadBlock: big.NewInt(1150000),
+		DAOForkBlock:   big.NewInt(1920000),
 		DAOForkSupport: true,
-		EIP150Block:    big.NewInt(1),
+		EIP150Block:    big.NewInt(2463000),
 		EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:    big.NewInt(1),
+		EIP155Block:    big.NewInt(2675000),
 		EIP158Block:    big.NewInt(2675000),
-		ByzantiumBlock: big.NewInt(1),
+		ByzantiumBlock: big.NewInt(math.MaxInt64), // Don't enable yet
 		EthzeroBlock: big.NewInt(28),
 		EthzeroGenesisBlock: big.NewInt(27),
 
@@ -279,7 +280,7 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	return nil
 }
 
-// isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
+// isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to block s2 because head is already past the fork
 // block s2 because head is already past the fork.
 func isForkIncompatible(s1, s2, head *big.Int) bool {
 	return (isForked(s1, head) || isForked(s2, head)) && !configNumEqual(s1, s2)

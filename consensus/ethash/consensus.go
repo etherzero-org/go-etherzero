@@ -294,12 +294,12 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	next := new(big.Int).Add(parent.Number, big1)
 	switch {
 
-	case config.IsEthzeroGenesisBlock(next):
-		return calcDifficultyEthzeroGenesis(time, parent)
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
 	case config.IsHomestead(next):
 		return calcDifficultyHomestead(time, parent)
+	case config.IsEthzeroGenesisBlock(next):
+		return calcDifficultyEthzeroGenesis(time, parent)
 	case config.IsEthzero(next):
 		return calcDifficultyEthzero(time, parent)
 	default:
@@ -360,36 +360,7 @@ func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 	fmt.Println("************ calcDifficultyEthzeroGenesis is beging *********")
 
 	fmt.Println("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
-
-	diff := new(big.Int)
-	adjust := new(big.Int).Div(parent.Difficulty, params.DifficultyBoundDivisor)
-	bigTime := new(big.Int)
-	bigParentTime := new(big.Int)
-
-	bigTime.SetUint64(time)
-	bigParentTime.Set(parent.Time)
-
-	if bigTime.Sub(bigTime, bigParentTime).Cmp(params.DurationEthzeroLimit) < 0 {
-		diff.Add(parent.Difficulty, adjust)
-	} else {
-		diff.Sub(parent.Difficulty, adjust)
-	}
-	if diff.Cmp(params.MinimumDifficulty) < 0 {
-		diff.Set(params.MinimumDifficulty)
-	}
-
-	periodCount := new(big.Int).Add(parent.Number, big1)
-	periodCount.Div(periodCount, expEtherzeroDiffPeriod)
-	if periodCount.Cmp(big1) > 0 {
-		// diff = diff + 2^(periodCount - 2)
-		expDiff := periodCount.Sub(periodCount, big2)
-		expDiff.Exp(big2, expDiff, nil)
-		diff.Add(diff, expDiff)
-		diff = math.BigMax(diff, params.MinimumDifficulty)
-	}
-
-	diff=params.MinimumDifficulty
-	fmt.Println("************ calcDifficultyEthzeroGenesis diff's value:",diff)
+	diff:=params.EthzeroGenesisDifficulty
 	return diff
 }
 

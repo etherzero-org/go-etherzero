@@ -255,7 +255,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		return p2p.DiscTooManyPeers
 	}
 	p.Log().Debug("Ethereum peer connected", "name", p.Name())
-	//fmt.Println("handler.go handle is debug value: Ethzero peer connected","name", p.Name())
+//	fmt.Println("handler.go handle is debug value: Ethzero peer connected","name", p.Name())
 	// Execute the Ethereum handshake
 	td, head, genesis := pm.blockchain.Status()
 	//fmt.Println("handler.go handle is debug value: genesis",genesis.String())
