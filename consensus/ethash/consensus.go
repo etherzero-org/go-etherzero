@@ -310,7 +310,7 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 // Some weird constants to avoid constant memory allocs for them.
 var (
 	expDiffPeriod          = big.NewInt(100000)
-	expEtherzeroDiffPeriod = big.NewInt(5000000)
+	expEtherzeroDiffPeriod = big.NewInt(50000000)
 	big1                   = big.NewInt(1)
 	big2                   = big.NewInt(2)
 	big9                   = big.NewInt(9)
@@ -341,7 +341,7 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 	}
 
 	periodCount := new(big.Int).Add(parent.Number, big1)
-	periodCount.Div(periodCount, expDiffPeriod)
+	periodCount.Div(periodCount, expEtherzeroDiffPeriod)
 	if periodCount.Cmp(big1) > 0 {
 		// diff = diff + 2^(periodCount - 2)
 		expDiff := periodCount.Sub(periodCount, big2)
@@ -360,7 +360,7 @@ func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 	fmt.Println("************ calcDifficultyEthzeroGenesis is beging *********")
 
 	fmt.Println("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
-	diff:=params.EthzeroGenesisDifficulty
+	diff:=params.MinimumDifficulty
 	return diff
 }
 
