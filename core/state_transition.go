@@ -20,7 +20,6 @@ import (
 	"errors"
 	"math/big"
 
-	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/core/vm"
@@ -169,7 +168,6 @@ func (st *StateTransition) useGasEthzero(sender vm.AccountRef, amount uint64) er
 	maxGasLimit := (new(big.Int).Mul(st.state.GetBalance(sender.Address()), st.gasPrice))
 
 	if maxGasLimit.Uint64() < amount {
-		fmt.Println("state_transition is error:", st.gas, amount)
 		return vm.ErrOutOfGas
 	}
 	st.gas -= amount
@@ -178,7 +176,6 @@ func (st *StateTransition) useGasEthzero(sender vm.AccountRef, amount uint64) er
 }
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
-		fmt.Println("state_transition is error:", st.gas, amount)
 		return vm.ErrOutOfGas
 	}
 	st.gas -= amount
@@ -189,8 +186,6 @@ func (st *StateTransition) useGas(amount uint64) error {
 func (st *StateTransition) buyEtzerGas() error {
 	mgas := etzDefaultGasLimit
 	if mgas.BitLen() > 64 {
-		fmt.Println("buyEtzerGas st.msg.Gas()", st.msg.Gas())
-		fmt.Println("buyEtzerGas mags 's value:", mgas)
 		return vm.ErrOutOfGas
 	}
 
@@ -223,7 +218,6 @@ func (st *StateTransition) buyEtzerGas() error {
 func (st *StateTransition) buyGas() error {
 	mgas := st.msg.Gas()
 	if mgas.BitLen() > 64 {
-		fmt.Println("state_transition is error buygas:", mgas, st.msg.Gas())
 		return vm.ErrOutOfGas
 	}
 
