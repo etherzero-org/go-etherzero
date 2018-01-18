@@ -27,7 +27,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/params"
-	"fmt"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -89,10 +88,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, *big.Int, error) {
-	fmt.Println("ApplyTransaction is beging:")
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
-		fmt.Println("ApplyTransaction is err:",err)
 		return nil, nil, err
 	}
 	// Create a new context to be used in the EVM environment
@@ -114,7 +111,6 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
 	}
 	usedGas.Add(usedGas, gas)
-	fmt.Println("ApplyTransaction is usedGas.Add:")
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
@@ -124,7 +120,6 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	if msg.To() == nil {
 		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
 	}
-	fmt.Println("ApplyTransaction is end:")
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})

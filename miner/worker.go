@@ -588,17 +588,14 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 
-	fmt.Println("worker.go is commitTransaction 's begin ")
 	snap := env.state.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed, vm.Config{})
 	if err != nil {
-		fmt.Println("worker.go is commitTransaction 's error's value ",err)
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
 
-	fmt.Println("worker.go is commitTransaction 's append ")
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
