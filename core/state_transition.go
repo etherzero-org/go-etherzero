@@ -20,22 +20,21 @@ import (
 	"errors"
 	"math/big"
 
+	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
-	"fmt"
 )
 
 var (
-	etzDefaultGasLimit = big.NewInt( 50000)
+	etzDefaultGasLimit = big.NewInt(50000)
 	expMinimumGasLimit = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
-	errInsufficientStakeForGas = errors.New("insufficient Stake to pay for gas")
-
+	errInsufficientStakeForGas   = errors.New("insufficient Stake to pay for gas")
 )
 
 /*
@@ -162,9 +161,24 @@ func (st *StateTransition) to() vm.AccountRef {
 	return reference
 }
 
+func (st *StateTransition) useGasEthzero(sender vm.AccountRef, amount uint64) error {
+
+	//balance := st.state.GetBalance(sender.Address())
+	//mgval := new(big.Int).Mul(etzDefaultGasLimit, st.gasPrice)
+
+	maxGasLimit := (new(big.Int).Mul(st.state.GetBalance(sender.Address()), st.gasPrice))
+
+	if maxGasLimit.Uint64() < amount {
+		fmt.Println("state_transition is error:", st.gas, amount)
+		return vm.ErrOutOfGas
+	}
+	st.gas -= amount
+
+	return nil
+}
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
-		fmt.Println("state_transition is error:",st.gas,amount)
+		fmt.Println("state_transition is error:", st.gas, amount)
 		return vm.ErrOutOfGas
 	}
 	st.gas -= amount
@@ -175,8 +189,8 @@ func (st *StateTransition) useGas(amount uint64) error {
 func (st *StateTransition) buyEtzerGas() error {
 	mgas := etzDefaultGasLimit
 	if mgas.BitLen() > 64 {
-		fmt.Println("buyEtzerGas st.msg.Gas()",st.msg.Gas())
-		fmt.Println("buyEtzerGas mags 's value:",mgas)
+		fmt.Println("buyEtzerGas st.msg.Gas()", st.msg.Gas())
+		fmt.Println("buyEtzerGas mags 's value:", mgas)
 		return vm.ErrOutOfGas
 	}
 
@@ -195,9 +209,9 @@ func (st *StateTransition) buyEtzerGas() error {
 	st.gas += mgas.Uint64()
 
 	st.initialGas.Set(mgas)
-	maxGasLimit := (new(big.Int).Mul(state.GetBalance(sender.Address()),st.gasPrice))
+	maxGasLimit := (new(big.Int).Mul(state.GetBalance(sender.Address()), st.gasPrice))
 
-	maxGasLimit.Add(expMinimumGasLimit,maxGasLimit)
+	maxGasLimit.Add(expMinimumGasLimit, maxGasLimit)
 
 	if st.initialGas.Cmp(maxGasLimit) > 0 {
 		return errInsufficientStakeForGas
@@ -206,11 +220,10 @@ func (st *StateTransition) buyEtzerGas() error {
 	return nil
 }
 
-
 func (st *StateTransition) buyGas() error {
 	mgas := st.msg.Gas()
 	if mgas.BitLen() > 64 {
-		fmt.Println("state_transition is error buygas:",mgas,st.msg.Gas())
+		fmt.Println("state_transition is error buygas:", mgas, st.msg.Gas())
 		return vm.ErrOutOfGas
 	}
 
@@ -247,7 +260,7 @@ func (st *StateTransition) preCheck() error {
 		}
 	}
 	//
-	if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
+	if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
 		return st.buyEtzerGas()
 	}
 	return st.buyGas()
@@ -265,19 +278,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
 	contractCreation := msg.To() == nil
-
-	// Pay intrinsic gas
-	// TODO convert to uint64
-	intrinsicGas := IntrinsicGas(st.data, contractCreation, homestead)
-	if intrinsicGas.BitLen() > 64 {
-
-		fmt.Println("TransitionDb ,s out of gas")
-		return nil, nil, nil, false, vm.ErrOutOfGas
-	}
-	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, nil, false, err
-	}
-
 	var (
 		evm = st.evm
 		// vm errors do not effect consensus and are therefor
@@ -285,6 +285,24 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		// error.
 		vmerr error
 	)
+	// Pay intrinsic gas
+	// TODO convert to uint64
+	intrinsicGas := IntrinsicGas(st.data, contractCreation, homestead)
+	if intrinsicGas.BitLen() > 64 {
+
+		return nil, nil, nil, false, vm.ErrOutOfGas
+	}
+
+	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+		if err = st.useGasEthzero(sender, intrinsicGas.Uint64()); err != nil {
+			return nil, nil, nil, false, err
+		}
+	} else {
+		if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+			return nil, nil, nil, false, err
+		}
+	}
+
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
@@ -303,9 +321,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
-	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
-
+	if !evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+		st.refundGas()
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	}
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
 
