@@ -33,6 +33,7 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	set "gopkg.in/fatih/set.v0"
 
+	"github.com/ethzero/go-ethzero/log"
 )
 
 // Ethash proof-of-work protocol constants.
@@ -246,7 +247,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	expected := CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
 	if expected.Cmp(header.Difficulty) != 0 {
 		next := new(big.Int).Add(parent.Number, big1)
-		fmt.Println(" consensus.go next value:",next,chain.Config().IsEthzeroGenesisBlock(next))
+		//fmt.Println(" consensus.go next value:",next,chain.Config().IsEthzeroGenesisBlock(next))
 		if !chain.Config().IsEthzeroGenesisBlock(next){
 			return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
 		}
@@ -361,9 +362,9 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 // block's time and difficulty. The calculation uses the Ethzero rules.
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 
-	fmt.Println("************ calcDifficultyEthzeroGenesis is beging *********")
+	log.Debug("************ calcDifficultyEthzeroGenesis is beging *********")
 
-	fmt.Println("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
+	log.Debug("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
 
 	diff:=params.EthzeroGenesisDifficulty
 	return diff
