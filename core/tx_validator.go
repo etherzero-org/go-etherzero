@@ -6,6 +6,7 @@ import(
 	//"math/big"
 	//"fmt"
 	//"math/big"
+	"fmt"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -28,6 +29,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	//	return ErrGasLimit
 	//}
 	// Make sure the transaction is signed properly
+
+
+	fmt.Println("tx_pool chainid value :")
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender

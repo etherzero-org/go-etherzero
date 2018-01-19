@@ -129,7 +129,7 @@ var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 
-	//fmt.Println("transaction_signing.go sender tx.ChainId() ",tx.ChainId(),s.chainId)
+	fmt.Println("transaction_signing.go sender tx.ChainId()  and sender's chainid",tx.ChainId(),s.chainId)
 	if !tx.Protected() {
 		return HomesteadSigner{}.Sender(tx)
 	}
