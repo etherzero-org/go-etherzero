@@ -455,10 +455,8 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
-	//fmt.Println("worker.go commitnewwork self.current.signer")
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 
-	fmt.Println("worker.go commitnewwork got txs count :",txs.Size())
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
