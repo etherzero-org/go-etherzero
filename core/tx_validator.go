@@ -6,7 +6,6 @@ import(
 	//"math/big"
 	//"fmt"
 	//"math/big"
-	"fmt"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
