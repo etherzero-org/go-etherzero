@@ -32,6 +32,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/params"
 	set "gopkg.in/fatih/set.v0"
+	"github.com/ethzero/go-ethzero/log"
 )
 
 // Ethash proof-of-work protocol constants.
@@ -356,9 +357,10 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 // block's time and difficulty. The calculation uses the Ethzero rules.
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 
-	fmt.Println("************ calcDifficultyEthzeroGenesis is beging *********")
+	log.Debug("************ calcDifficultyEthzeroGenesis is beging *********")
 
-	fmt.Println("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
+	log.Debug("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
+
 	diff:=params.MinimumDifficulty
 	return diff
 }

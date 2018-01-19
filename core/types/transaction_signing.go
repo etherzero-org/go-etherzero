@@ -131,6 +131,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 		return HomesteadSigner{}.Sender(tx)
 	}
 	if tx.ChainId().Cmp(s.chainId) != 0 {
+		fmt.Println("transaction_signing 's chainId:",tx.ChainId(),s.chainId)
 		return common.Address{}, ErrInvalidChainId
 	}
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
