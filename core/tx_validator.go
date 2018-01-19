@@ -30,8 +30,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	//}
 	// Make sure the transaction is signed properly
 
-
-	fmt.Println("tx_pool chainid value :")
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
