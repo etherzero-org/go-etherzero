@@ -262,10 +262,10 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		pool.journal = newTxJournal(config.Journal)
 
 		if err := pool.journal.load(pool.AddLocal); err != nil {
-			log.Warn("Failed to load transaction journal", "err", err)
+			log.Info("Failed to load transaction journal", "err", err)
 		}
 		if err := pool.journal.rotate(pool.local()); err != nil {
-			log.Warn("Failed to rotate transaction journal", "err", err)
+			log.Info("Failed to rotate transaction journal", "err", err)
 		}
 	}
 	// Subscribe events from blockchain

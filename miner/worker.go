@@ -449,12 +449,16 @@ func (self *worker) commitNewWork() {
 	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(work.state)
 	}
+
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+	//fmt.Println("worker.go commitnewwork self.current.signer")
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+
+	fmt.Println("worker.go commitnewwork got txs count :",txs.Size())
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
@@ -526,8 +530,10 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		from, _ := types.Sender(env.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+
+		//fmt.Println("worker.go env.config.IsEthzero(env.header.Number)",env.config.IsEthzero(env.header.Number),env.header.Number)
+		if tx.Protected() && !env.config.IsEthzero(env.header.Number) {
+			//fmt.Println("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
 
 			txs.Pop()
 			continue
