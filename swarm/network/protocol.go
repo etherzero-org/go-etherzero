@@ -104,7 +104,7 @@ func Bzz(cloud StorageHandler, backend chequebook.Backend, hive *Hive, dbaccess 
 	if err != nil {
 		return p2p.Protocol{}, fmt.Errorf("error setting up request db: %v", err)
 	}
-	if networkId == 0 {
+	if networkId == 1 {
 		networkId = NetworkId
 	}
 	return p2p.Protocol{
