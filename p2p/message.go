@@ -92,7 +92,6 @@ type MsgReadWriter interface {
 // Send writes an RLP-encoded message with the given code.
 // data should encode as an RLP list.
 func Send(w MsgWriter, msgcode uint64, data interface{}) error {
-	fmt.Println("%%%%%%%%%%%%%%%%%%%  message.go send  is begin %%%%%%%%%%%%%%%%%%%")
 	size, r, err := rlp.EncodeToReader(data)
 	if err != nil {
 		return err
