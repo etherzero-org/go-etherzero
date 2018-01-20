@@ -203,6 +203,8 @@ func (pm *ProtocolManager) removePeer(id string) {
 }
 
 func (pm *ProtocolManager) Start(maxPeers int) {
+
+	fmt.Println(" &&&&&&&&&&&& pm start begin &&&&&&&&&&&&")
 	pm.maxPeers = maxPeers
 
 	// broadcast transactions
@@ -711,10 +713,13 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 // BroadcastTx will propagate a transaction to all peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
+
+	fmt.Println("*********** broadcastTx is begin **************")
 	// Broadcast transaction to a batch of peers not knowing about it
 	peers := pm.peers.PeersWithoutTx(hash)
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
+		fmt.Println("************** broadcastTx pre_sendTransaction ***************")
 		peer.SendTransactions(types.Transactions{tx})
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
@@ -733,6 +738,8 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 }
 
 func (self *ProtocolManager) txBroadcastLoop() {
+
+	fmt.Println("************pm txBroadcastLoop is begin *************")
 	for {
 		select {
 		case event := <-self.txCh:
