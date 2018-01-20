@@ -529,9 +529,9 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 
-		//fmt.Println("worker.go env.config.IsEthzero(env.header.Number)",env.config.IsEthzero(env.header.Number),env.header.Number)
+		fmt.Println("worker.go env.config.IsEthzero(env.header.Number)",env.config.IsEthzero(env.header.Number),env.header.Number)
 		if tx.Protected() && !env.config.IsEthzero(env.header.Number) {
-			//fmt.Println("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+			fmt.Println("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
 
 			txs.Pop()
 			continue
@@ -543,17 +543,17 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
-			log.Trace("Gas limit exceeded for current block", "sender", from)
+			log.Info("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
 		case core.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
-			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			log.Info("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
 
 		case core.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			log.Info("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
 		case nil:
