@@ -653,15 +653,19 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
+		fmt.Println("************* handler.go Transactions arrived ****************")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
 		}
 		// Transactions can be processed, parse all of them and deliver to the pool
 		var txs []*types.Transaction
+		fmt.Println("************* handler.go msg decode begin   ****************")
 		if err := msg.Decode(&txs); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+
+		fmt.Println("************* handler.go msg decode end len(txs)",len(txs))
 		for i, tx := range txs {
 			// Validate and mark the remote transaction
 			if tx == nil {
@@ -669,6 +673,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
+		fmt.Println("************* handler.go pm.txpool.addRemotes begin")
 		pm.txpool.AddRemotes(txs)
 
 	default:

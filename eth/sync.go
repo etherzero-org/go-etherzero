@@ -69,6 +69,8 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 // transactions. In order to minimise egress bandwidth usage, we send
 // the transactions in small packs to one peer at a time.
 func (pm *ProtocolManager) txsyncLoop() {
+
+	fmt.Println(" &&&&&&&&&&&&&&&  sync.go &&&&&&&&&&&&&& get begin ")
 	var (
 		pending = make(map[discover.NodeID]*txsync)
 		sending = false               // whether a send is active
@@ -117,16 +119,20 @@ func (pm *ProtocolManager) txsyncLoop() {
 		case s := <-pm.txsyncCh:
 			fmt.Println("************ sync.go get tx is txsyncCh **************")
 			pending[s.p.ID()] = s
+			fmt.Println("************ sync.go get tx is txsyncCh sending is value:",sending)
 			if !sending {
 				send(s)
 			}
 		case err := <-done:
 			sending = false
+			fmt.Println("************ sync.go get tx is txsyncCh 发送完成:",sending)
 			// Stop tracking peers that cause send failures.
 			if err != nil {
+				fmt.Println("Transaction send failed", "err", err)
 				pack.p.Log().Debug("Transaction send failed", "err", err)
 				delete(pending, pack.p.ID())
 			}
+			fmt.Println("Schedule the next send")
 			// Schedule the next send.
 			if s := pick(); s != nil {
 				send(s)

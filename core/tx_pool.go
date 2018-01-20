@@ -744,6 +744,8 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 // sender is not among the locally tracked ones, full pricing constraints will
 // apply.
 func (pool *TxPool) AddRemote(tx *types.Transaction) error {
+
+	fmt.Println("tx_pool.go add Remote ix begin ")
 	return pool.addTx(tx, false)
 }
 
@@ -763,12 +765,15 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
+
+	fmt.Println("************* tx_pool.go addtx is begin *************")
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
 	// Try to inject the transaction and update any state
 	replace, err := pool.add(tx, local)
 	if err != nil {
+		fmt.Println("************* tx_pool.go addtx err:",err)
 		return err
 	}
 	// If we added a new transaction, run promotion checks and return
