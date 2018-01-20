@@ -653,7 +653,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		fmt.Println("************* handler.go Transactions arrived ****************")
+		fmt.Println("************* handler.go Transactions arrived &pm.acceptTxs ****************",atomic.LoadUint32(&pm.acceptTxs))
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break

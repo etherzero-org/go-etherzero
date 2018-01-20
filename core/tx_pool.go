@@ -664,17 +664,23 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 //
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
+
+	fmt.Print("&&&&&&&&&&&&& tx_pool.go enqueueTx &&&&&&&&&&&&&&&&&&&&&&&")
 	// Try to insert the transaction into the future queue
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
 	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump)
+
+	fmt.Print("&&&&&&&&&&&&& tx_pool.go inserted value:",inserted)
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)
 		return false, ErrReplaceUnderpriced
 	}
+
+	fmt.Print("&&&&&&&&&&&&& tx_pool.go old value:",old)
 	// Discard any previous transaction and mark this
 	if old != nil {
 		delete(pool.all, old.Hash())
