@@ -25,10 +25,11 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
+
 )
 
 var (
-	etzDefaultGasLimit = big.NewInt(50000)
+	etzDefaultGas = big.NewInt(90000)
 	expMinimumGasLimit = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
@@ -185,12 +186,10 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyEtzerGas() error {
-	mgas := etzDefaultGasLimit
-	if mgas.BitLen() > 64 {
-		return vm.ErrOutOfGas
-	}
 
-	mgval := new(big.Int).Mul(etzDefaultGasLimit, st.gasPrice)
+	mgas := etzDefaultGas
+
+	mgval := new(big.Int).Mul(etzDefaultGas, st.gasPrice)
 
 	var (
 		state  = st.state
@@ -199,9 +198,12 @@ func (st *StateTransition) buyEtzerGas() error {
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
-	//if err := st.gp.SubGas(mgas); err != nil {
-	//	return err
-	//}
+	//fmt.Println("*************** buyEtzerGas 's etzDefaultGas:",mgas,mgval)
+	//fmt.Println("*************** buyEtzerGas 's st.gp gas size :",(*big.Int)(st.gp))
+
+	if err := st.gp.SubGas(mgas); err != nil {
+		return err
+	}
 	st.gas += mgas.Uint64()
 
 	st.initialGas.Set(mgas)
