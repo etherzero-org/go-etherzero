@@ -198,8 +198,6 @@ func (st *StateTransition) buyEtzerGas() error {
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
-	//fmt.Println("*************** buyEtzerGas 's etzDefaultGas:",mgas,mgval)
-	//fmt.Println("*************** buyEtzerGas 's st.gp gas size :",(*big.Int)(st.gp))
 
 	if err := st.gp.SubGas(mgas); err != nil {
 		return err

@@ -26,7 +26,6 @@ import (
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
-	"fmt"
 )
 
 const (
@@ -46,15 +45,11 @@ type txsync struct {
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pm *ProtocolManager) syncTransactions(p *peer) {
 
-	fmt.Println("&&&&&&&&&&&&&& sync.go &&&&&&&&&&&&&&&&")
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
-	fmt.Println("&&&&&&&&&&&&&& syncTransactions pending 's size ",pending)
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
-	fmt.Println("&&&&&&&&&&&&&&& pm.txpool.Pending 's txs size:",len(txs))
-
 	if len(txs) == 0 {
 		return
 	}
@@ -70,7 +65,6 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 // the transactions in small packs to one peer at a time.
 func (pm *ProtocolManager) txsyncLoop() {
 
-	fmt.Println(" &&&&&&&&&&&&&&&  sync.go &&&&&&&&&&&&&& get begin ")
 	var (
 		pending = make(map[discover.NodeID]*txsync)
 		sending = false               // whether a send is active
@@ -94,7 +88,6 @@ func (pm *ProtocolManager) txsyncLoop() {
 			delete(pending, s.p.ID())
 		}
 		// Send the pack in the background.
-		fmt.Println("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
 		go func() { done <- pack.p.SendTransactions(pack.txs) }()
@@ -117,22 +110,17 @@ func (pm *ProtocolManager) txsyncLoop() {
 	for {
 		select {
 		case s := <-pm.txsyncCh:
-			fmt.Println("************ sync.go get tx is txsyncCh **************")
 			pending[s.p.ID()] = s
-			fmt.Println("************ sync.go get tx is txsyncCh sending is value:",sending)
 			if !sending {
 				send(s)
 			}
 		case err := <-done:
 			sending = false
-			fmt.Println("************ sync.go get tx is txsyncCh 发送完成:",sending)
 			// Stop tracking peers that cause send failures.
 			if err != nil {
-				fmt.Println("Transaction send failed", "err", err)
 				pack.p.Log().Debug("Transaction send failed", "err", err)
 				delete(pending, pack.p.ID())
 			}
-			fmt.Println("Schedule the next send")
 			// Schedule the next send.
 			if s := pick(); s != nil {
 				send(s)

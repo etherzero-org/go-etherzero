@@ -529,10 +529,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 
-		fmt.Println("worker.go env.config.IsEthzero(env.header.Number)",env.config.IsEthzero(env.header.Number),env.header.Number)
 		if tx.Protected() && !env.config.IsEthzero(env.header.Number) {
-			fmt.Println("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
-
 			txs.Pop()
 			continue
 		}

@@ -247,7 +247,6 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	expected := CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
 	if expected.Cmp(header.Difficulty) != 0 {
 		next := new(big.Int).Add(parent.Number, big1)
-		//fmt.Println(" consensus.go next value:",next,chain.Config().IsEthzeroGenesisBlock(next))
 		if !chain.Config().IsEthzeroGenesisBlock(next){
 			return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
 		}
