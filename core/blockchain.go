@@ -963,7 +963,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		} else {
 			parent = chain[i-1]
 		}
-		//fmt.Println("&&&&&&&&&&&&&&&&&& blockchain.go  parent.Root()&&&&&&&&&&&&",parent.Root().String())
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -976,8 +975,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		//root := state.IntermediateRoot(bc.config.IsEIP158(block.Header().Number))
-		//fmt.Println("blockchain root 's value 's ",root.String())
 
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
@@ -985,13 +982,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
-		//fmt.Println("&&&&&&&&&&&&&&&&&& blockchain.go  writeBlockAndstate is begin:&&&&&&&&&&&&")
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockAndState(block, receipts, state)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
-	//	fmt.Println("blockchain.go  writeBlockAndstate is end status's value:",status)
 
 		switch status {
 		case CanonStatTy:
@@ -1002,9 +997,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainEvent{block, block.Hash(), logs})
 			lastCanon = block
-		//	fmt.Println("Inserted new block end ",block.String())
 		case SideStatTy:
-			log.Info("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.Difficulty(), "elapsed",
+			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.Difficulty(), "elapsed",
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()))
 
 			blockInsertTimer.UpdateSince(bstart)
@@ -1018,7 +1012,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
 		events = append(events, ChainHeadEvent{lastCanon})
 	}
-//	fmt.Println("&&&&&&&&&&&&&&&&&& blockchain.go  writeBlockAndstate is end:&&&&&&&&&&&&")
 	return 0, events, coalescedLogs, nil
 }
 
@@ -1038,7 +1031,6 @@ const statsReportLimit = 8 * time.Second
 // or more than a few seconds have passed since the last message.
 func (st *insertStats) report(chain []*types.Block, index int) {
 
-	//fmt.Println("*************** blockchain.go report is begin **************")
 	// Fetch the timings for the batch
 	var (
 		now     = mclock.Now()
@@ -1065,7 +1057,6 @@ func (st *insertStats) report(chain []*types.Block, index int) {
 
 		*st = insertStats{startTime: now, lastIndex: index + 1}
 	}
-//	fmt.Println("*************** blockchain.go report is end **************")
 }
 
 func countTransactions(chain []*types.Block) (c int) {

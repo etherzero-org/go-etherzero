@@ -204,7 +204,6 @@ func (pm *ProtocolManager) removePeer(id string) {
 
 func (pm *ProtocolManager) Start(maxPeers int) {
 
-	fmt.Println(" &&&&&&&&&&&& pm start begin &&&&&&&&&&&&")
 	pm.maxPeers = maxPeers
 
 	// broadcast transactions
@@ -257,10 +256,8 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		return p2p.DiscTooManyPeers
 	}
 	p.Log().Debug("Ethereum peer connected", "name", p.Name())
-//	fmt.Println("handler.go handle is debug value: Ethzero peer connected","name", p.Name())
 	// Execute the Ethereum handshake
 	td, head, genesis := pm.blockchain.Status()
-	//fmt.Println("handler.go handle is debug value: genesis",genesis.String())
 	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
 		p.Log().Debug("Ethereum handshake failed", "err", err)
 		return err
@@ -653,19 +650,16 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		fmt.Println("************* handler.go Transactions arrived &pm.acceptTxs ****************",atomic.LoadUint32(&pm.acceptTxs))
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
 		}
 		// Transactions can be processed, parse all of them and deliver to the pool
 		var txs []*types.Transaction
-		fmt.Println("************* handler.go msg decode begin   ****************")
 		if err := msg.Decode(&txs); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		fmt.Println("************* handler.go msg decode end len(txs)",len(txs))
 		for i, tx := range txs {
 			// Validate and mark the remote transaction
 			if tx == nil {
@@ -673,7 +667,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
-		fmt.Println("************* handler.go pm.txpool.addRemotes begin")
 		pm.txpool.AddRemotes(txs)
 
 	default:
@@ -719,12 +712,10 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
 
-	fmt.Println("*********** broadcastTx is begin **************")
 	// Broadcast transaction to a batch of peers not knowing about it
 	peers := pm.peers.PeersWithoutTx(hash)
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
-		fmt.Println("************** broadcastTx pre_sendTransaction ***************")
 		peer.SendTransactions(types.Transactions{tx})
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
@@ -744,7 +735,6 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 
 func (self *ProtocolManager) txBroadcastLoop() {
 
-	fmt.Println("************pm txBroadcastLoop is begin *************")
 	for {
 		select {
 		case event := <-self.txCh:
