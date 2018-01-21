@@ -152,8 +152,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	Rejournal: time.Hour,
 
 	PriceLimit: 1,
-	PriceBump:  10,
-
+	PriceBump:  0,
+	//PriceBump: 10,
 	AccountSlots: 16,
 	GlobalSlots:  4096,
 	AccountQueue: 64,
@@ -590,15 +590,17 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
-		log.Trace("Discarding already known transaction", "hash", hash)
+		log.Info("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx, local); err != nil {
-		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+		log.Info("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
+
+	fmt.Println("tx_pool.go remote is add validateTx end &&&&&&&&&&&&&&&&")
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		fmt.Println("Discarding uint64(len(pool.all)),pool.config.GlobalSlots+pool.config.GlobalQueue",uint64(len(pool.all)),pool.config.GlobalSlots+pool.config.GlobalQueue)
@@ -618,7 +620,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			pool.removeTx(tx.Hash())
 		}
 	}
-
+	fmt.Println("tx_pool.go remote is pool.config.GlobalSlots+pool.config.GlobalQueue end &&&&&&&&&&&&&&&&")
 	// If the transaction is replacing an already pending one, do directly
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
@@ -634,19 +636,25 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			pool.priced.Removed()
 			pendingReplaceCounter.Inc(1)
 		}
+
+		fmt.Println("^^^^^^^^^^^^^^^ tx_pool.go remote is add tx",tx)
 		pool.all[tx.Hash()] = tx
 		pool.priced.Put(tx)
 		pool.journalTx(from, tx)
 
 		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
-
+		log.Info("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 		// We've directly injected a replacement transaction, notify subsystems
 		go pool.txFeed.Send(TxPreEvent{tx})
 
 		return old != nil, nil
 	}
+
+	fmt.Println("tx_pool.go remote is enqueueTx begin &&&&&&&&&&&&&&&&")
 	// New transaction isn't replacing a pending one, push into queue
 	replace, err := pool.enqueueTx(hash, tx)
+
+	fmt.Println("tx_pool.go remote is enqueueTx end replace:",replace)
 	if err != nil {
 		return false, err
 	}
@@ -656,7 +664,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	}
 	pool.journalTx(from, tx)
 
-	log.Trace("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
+	log.Info("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
 	return replace, nil
 }
 
@@ -665,7 +673,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
 
-	fmt.Print("&&&&&&&&&&&&& tx_pool.go enqueueTx &&&&&&&&&&&&&&&&&&&&&&&")
+	fmt.Println("&&&&&&&&&&&&& tx_pool.go enqueueTx &&&&&&&&&&&&&&&&&&&&&&&")
 	// Try to insert the transaction into the future queue
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
@@ -673,14 +681,14 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	}
 	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump)
 
-	fmt.Print("&&&&&&&&&&&&& tx_pool.go inserted value:",inserted)
+	fmt.Println("&&&&&&&&&&&&& tx_pool.go inserted value:",inserted)
 	if !inserted {
 		// An older transaction was better, discard this
 		queuedDiscardCounter.Inc(1)
 		return false, ErrReplaceUnderpriced
 	}
 
-	fmt.Print("&&&&&&&&&&&&& tx_pool.go old value:",old)
+	fmt.Println("&&&&&&&&&&&&& tx_pool.go old value:",old)
 	// Discard any previous transaction and mark this
 	if old != nil {
 		delete(pool.all, old.Hash())
@@ -804,6 +812,8 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
+
+	fmt.Println("tx_pool.go addTxsLocked is begin,len(txs): ",len(txs))
 	// Add the batch of transaction, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))
@@ -817,6 +827,8 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 			}
 		}
 	}
+
+	fmt.Println("tx_pool.go addTxsLocked dirty: ",dirty)
 	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
 		addrs := make([]common.Address, 0, len(dirty))
@@ -920,12 +932,17 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Drop all transactions that are deemed too old (low nonce)
 		for _, tx := range list.Forward(pool.currentState.GetNonce(addr)) {
 			hash := tx.Hash()
-			log.Trace("Removed old queued transaction", "hash", hash)
+			fmt.Println("Removed old queued transaction", "hash", hash)
+			//log.Trace("Removed old queued transaction", "hash", hash)
 			delete(pool.all, hash)
 			pool.priced.Removed()
 		}
+
+		//add by roger on 2018-01-21
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+
+		fmt.Println("txpool.go promoterExecute list.filter drops values:",drops)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -933,9 +950,12 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 			queuedNofundsCounter.Inc(1)
 		}
+
+
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
+			fmt.Println("Promoting queued transaction", "hash", hash)
 			log.Trace("Promoting queued transaction", "hash", hash)
 			pool.promoteTx(addr, hash, tx)
 		}
@@ -1030,6 +1050,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	for _, list := range pool.queue {
 		queued += uint64(list.Len())
 	}
+	fmt.Println("((((((((((((((( txpool.go promoterExecute )))))))))))))))",queued)
 	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
 		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
