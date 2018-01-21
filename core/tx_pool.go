@@ -945,13 +945,14 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		fmt.Println("txpool.go promoterExecute list.filter drops values:",drops)
 		for _, tx := range drops {
 			hash := tx.Hash()
+			fmt.Println("txpool.go promoterExecute Removed unpayable queued transaction", "hash", hash)
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
 			delete(pool.all, hash)
 			pool.priced.Removed()
 			queuedNofundsCounter.Inc(1)
 		}
 
-
+		fmt.Println("txpool.go list.Ready",list )
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
@@ -959,16 +960,18 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			log.Trace("Promoting queued transaction", "hash", hash)
 			pool.promoteTx(addr, hash, tx)
 		}
+
+		//modify by roger on 2018-01-21
 		// Drop all transactions over the allowed limit
-		if !pool.locals.contains(addr) {
-			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
-				hash := tx.Hash()
-				delete(pool.all, hash)
-				pool.priced.Removed()
-				queuedRateLimitCounter.Inc(1)
-				log.Trace("Removed cap-exceeding queued transaction", "hash", hash)
-			}
-		}
+		//if !pool.locals.contains(addr) {
+		//	for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
+		//		hash := tx.Hash()
+		//		delete(pool.all, hash)
+		//		pool.priced.Removed()
+		//		queuedRateLimitCounter.Inc(1)
+		//		log.Trace("Removed cap-exceeding queued transaction", "hash", hash)
+		//	}
+		//}
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.queue, addr)
