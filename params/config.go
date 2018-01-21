@@ -40,9 +40,9 @@ var (
 		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(2675000),
 		EIP158Block:         big.NewInt(2675000),
-		ByzantiumBlock:      big.NewInt(138359),
-		EthzeroBlock:        big.NewInt(138360),
-		EthzeroGenesisBlock: big.NewInt(138359),
+		ByzantiumBlock:      big.NewInt(4936271),
+		EthzeroBlock:        big.NewInt(4936272),
+		EthzeroGenesisBlock: big.NewInt(4936271),
 
 		Ethash: new(EthashConfig),
 	}
