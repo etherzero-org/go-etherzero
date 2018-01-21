@@ -82,6 +82,6 @@ var (
 	//EthzeroGenesisDifficulty      = big.NewInt(1717986)                // Difficulty of the Etherzero Genesis block.
 	EthzeroGenesisDifficulty      = big.NewInt(17179869184)                // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-	DurationEthzeroLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	DurationEthzeroLimit          = big.NewInt(8)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 
 	)
