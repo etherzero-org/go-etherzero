@@ -26,7 +26,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 
-	"fmt"
 )
 
 var (
@@ -133,7 +132,6 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // state and would never be accepted within a block.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, *big.Int, bool, error) {
 
-	fmt.Println("state_transition .go applyMessage 's gasPool",gp.String())
 	st := NewStateTransition(evm, msg, gp)
 
 	ret, _, gasUsed, failed, err := st.TransitionDb()
@@ -201,7 +199,6 @@ func (st *StateTransition) buyEtzerGas() error {
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
-	fmt.Println("state_transition.gobuyEtzerGas st.gp.gaspool ",st.gp.String(),mgas.String())
 	//if err := st.gp.SubGas(mgas); err != nil {
 	//	return err
 	//}

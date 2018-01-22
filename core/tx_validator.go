@@ -6,7 +6,6 @@ import(
 	//"math/big"
 	//"fmt"
 	//"math/big"
-	"fmt"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -26,7 +25,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	//modify by roger on 2018-01-16
 	// Ensure the transaction doesn't exceed the current block limit gas.
 
-	fmt.Println("tx_validator.go pool.currentMaxGas value:",pool.currentMaxGas.String(),tx.Gas())
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
 		return ErrGasLimit
 	}
