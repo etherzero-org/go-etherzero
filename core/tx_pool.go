@@ -88,6 +88,9 @@ var (
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
 	TradeTimesCount = big.NewInt(1e+17) // one etz Trade times count in current high number
+
+	DefaultCurrentMasGas = big.NewInt(200000)
+
 )
 
 var (
@@ -152,8 +155,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	Rejournal: time.Hour,
 
 	PriceLimit: 1,
-	PriceBump:  0,
-	//PriceBump: 10,
+	//PriceBump:  0,
+	PriceBump: 10,
 	AccountSlots: 16,
 	GlobalSlots:  4096,
 	AccountQueue: 64,
@@ -432,7 +435,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	}
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
-	pool.currentMaxGas = newHead.GasLimit
+	pool.currentMaxGas = DefaultCurrentMasGas
 
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -940,15 +943,15 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 		//modify by roger on 2018-01-21
 		// Drop all transactions over the allowed limit
-		//if !pool.locals.contains(addr) {
-		//	for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
-		//		hash := tx.Hash()
-		//		delete(pool.all, hash)
-		//		pool.priced.Removed()
-		//		queuedRateLimitCounter.Inc(1)
-		//		log.Trace("Removed cap-exceeding queued transaction", "hash", hash)
-		//	}
-		//}
+		if !pool.locals.contains(addr) {
+			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
+				hash := tx.Hash()
+				delete(pool.all, hash)
+				pool.priced.Removed()
+				queuedRateLimitCounter.Inc(1)
+				log.Trace("Removed cap-exceeding queued transaction", "hash", hash)
+			}
+		}
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.queue, addr)
