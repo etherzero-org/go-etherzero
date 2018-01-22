@@ -199,9 +199,9 @@ func (st *StateTransition) buyEtzerGas() error {
 		return errInsufficientBalanceForGas
 	}
 
-	if err := st.gp.SubGas(mgas); err != nil {
-		return err
-	}
+	//if err := st.gp.SubGas(mgas); err != nil {
+	//	return err
+	//}
 	st.gas += mgas.Uint64()
 
 	st.initialGas.Set(mgas)

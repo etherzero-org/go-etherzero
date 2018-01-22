@@ -28,6 +28,7 @@ import (
 	"github.com/ethzero/go-ethzero/common/hexutil"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/ethzero/go-ethzero/params"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -36,6 +37,12 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 	errNoSigner   = errors.New("missing signing methods")
 )
+
+const (
+	defaultGas      = 90000
+	defaultGasPrice = 18 * params.Shannon
+)
+
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
@@ -109,10 +116,10 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		d.Amount.Set(amount)
 	}
 	if gasLimit != nil {
-		d.GasLimit.Set(gasLimit)
+		d.GasLimit.Set(big.NewInt(defaultGas))
 	}
 	if gasPrice != nil {
-		d.Price.Set(gasPrice)
+		d.Price.Set(big.NewInt(defaultGasPrice))
 	}
 
 	return &Transaction{data: d}

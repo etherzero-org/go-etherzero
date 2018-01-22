@@ -41,7 +41,7 @@ var (
 	FrontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	ByzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
-	EthzeroBlockReward        *big.Int = big.NewInt(4e+18)                                         // Block reward in wei for successfully mining a block upward from Ethzero
+	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                         // Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Block reward in wei for successfully mining a block upward from Ethzero
 	maxUncles                          = 2                                                         // Maximum number of uncles allowed in a single block
 )
@@ -256,9 +256,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, math.MaxBig63)
 	}
 	// Verify that the gasUsed is <= gasLimit
-	if header.GasUsed.Cmp(header.GasLimit) > 0 {
-		return fmt.Errorf("invalid gasUsed: have %v, gasLimit %v", header.GasUsed, header.GasLimit)
-	}
+	//if header.GasUsed.Cmp(header.GasLimit) > 0 {
+	//	return fmt.Errorf("invalid gasUsed: have %v, gasLimit %v", header.GasUsed, header.GasLimit)
+	//}
 
 	// Verify that the gas limit remains within allowed bounds
 	diff := new(big.Int).Set(parent.GasLimit)

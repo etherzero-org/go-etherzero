@@ -511,6 +511,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 
+
 	gp := new(core.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
