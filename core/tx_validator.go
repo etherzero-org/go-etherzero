@@ -6,7 +6,6 @@ import(
 	//"math/big"
 	//"fmt"
 	//"math/big"
-	"fmt"
 	"github.com/ethzero/go-ethzero/log"
 )
 
