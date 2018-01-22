@@ -117,7 +117,6 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	}
 	d.GasLimit.Set(big.NewInt(defaultGas))
 
-
 	d.Price.Set(big.NewInt(defaultGasPrice))
 
 
