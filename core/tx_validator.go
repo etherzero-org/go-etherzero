@@ -6,6 +6,8 @@ import(
 	//"math/big"
 	//"fmt"
 	//"math/big"
+	"fmt"
+	"github.com/ethzero/go-ethzero/log"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -81,6 +83,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	//modify by roger on 2017-01-12
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	log.Info("tx_validator.go is intrGas ,tx.Data()",intrGas.String(),tx.Gas().String())
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
