@@ -27,9 +27,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Ensure the transaction doesn't exceed the current block limit gas.
 
 	fmt.Println("tx_validator.go pool.currentMaxGas value:",pool.currentMaxGas.String(),tx.Gas())
-	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
-		return ErrGasLimit
-	}
+	//if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
+	//	return ErrGasLimit
+	//}
 	// Make sure the transaction is signed properly
 
 	from, err := types.Sender(pool.signer, tx)
