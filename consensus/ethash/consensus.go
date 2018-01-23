@@ -38,8 +38,8 @@ import (
 
 // Ethash proof-of-work protocol constants.
 var (
-	FrontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
+	FrontierBlockReward  *big.Int = big.NewInt(1.8e+18) // Block reward in wei for successfully mining a block
+	ByzantiumBlockReward *big.Int = big.NewInt(1.8e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
 	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                         // Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Block reward in wei for successfully mining a block upward from Ethzero
@@ -268,9 +268,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	limit := new(big.Int).Set(parent.GasLimit)
 	limit = limit.Div(limit, params.GasLimitBoundDivisor)
 
-	if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
-		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
-	}
+	//if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
+	//	return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
+	//}
 	// Verify that the block number is parent's +1
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
 		return consensus.ErrInvalidNumber
