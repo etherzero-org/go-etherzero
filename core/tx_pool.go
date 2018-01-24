@@ -81,6 +81,9 @@ var (
 
 	// ErrHeightTxTooHigh is returned if the Height of a transaction is too much
 	ErrHeightTxTooMuch = errors.New("trade too many times in the current block")
+
+
+	ErrNonceTooLowInBlockNumber = errors.New("nonce too low in the current blook")
 )
 
 var (
@@ -89,8 +92,9 @@ var (
 
 	TradeTimesCount = big.NewInt(1e+17) // one etz Trade times count in current high number
 
-	DefaultCurrentMasGas = big.NewInt(200000)
+	DefaultCurrentMaxGas = big.NewInt(5000000)
 
+	DefaultCurrentMaxNonce =big.NewInt(500)
 )
 
 var (
@@ -435,7 +439,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	}
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
-	pool.currentMaxGas = DefaultCurrentMasGas
+	pool.currentMaxGas = DefaultCurrentMaxGas
 
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -545,6 +549,18 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 		queued[addr] = list.Flatten()
 	}
 	return pending, queued
+}
+
+func (pool *TxPool) GetTransactionNonceByFrom(address common.Address) int {
+
+	var nonce int
+	if list := pool.pending[address]; list != nil {
+		nonce += list.Len()
+	}
+	if list := pool.queue[address]; list != nil{
+		nonce +=list.Len()
+	}
+	return nonce
 }
 
 // Pending retrieves all currently processable transactions, groupped by origin

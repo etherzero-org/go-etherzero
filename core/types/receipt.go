@@ -196,6 +196,7 @@ func (r Receipts) Len() int { return len(r) }
 
 // GetRlp returns the RLP encoding of one receipt from the list.
 func (r Receipts) GetRlp(i int) []byte {
+
 	bytes, err := rlp.EncodeToBytes(r[i])
 	if err != nil {
 		panic(err)

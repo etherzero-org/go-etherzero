@@ -125,7 +125,6 @@ func CalcGasLimit(parent *types.Block) *big.Int {
 	// decay = parentGasLimit / 1024 -1
 	decay := new(big.Int).Div(parent.GasLimit(), params.GasLimitBoundDivisor)
 	decay.Sub(decay, big.NewInt(1))
-
 	/*
 		strategy: gasLimit of block-to-mine is set based on parent's
 		gasUsed value.  if parentGasUsed > parentGasLimit * (2/3) then we
@@ -136,7 +135,6 @@ func CalcGasLimit(parent *types.Block) *big.Int {
 	gl := new(big.Int).Sub(parent.GasLimit(), decay)
 	gl = gl.Add(gl, contrib)
 	gl.Set(math.BigMax(gl, params.MinGasLimit))
-
 	// however, if we're now below the target (TargetGasLimit) we increase the
 	// limit as much as we can (parentGasLimit / 1024 -1)
 	if gl.Cmp(params.TargetGasLimit) < 0 {

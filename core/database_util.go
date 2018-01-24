@@ -376,6 +376,7 @@ func WriteHeadFastBlockHash(db ethdb.Putter, hash common.Hash) error {
 
 // WriteHeader serializes a block header into the database.
 func WriteHeader(db ethdb.Putter, header *types.Header) error {
+
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
 		return err
@@ -427,6 +428,7 @@ func WriteTd(db ethdb.Putter, hash common.Hash, number uint64, td *big.Int) erro
 
 // WriteBlock serializes a block into the database, header and body separately.
 func WriteBlock(db ethdb.Putter, block *types.Block) error {
+
 	// Store the body first to retain database consistency
 	if err := WriteBody(db, block.Hash(), block.NumberU64(), block.Body()); err != nil {
 		return err

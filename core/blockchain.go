@@ -799,6 +799,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
+
 	// Irrelevant of the canonical status, write the block itself to the database
 	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
 		return NonStatTy, err
@@ -814,7 +815,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
 		return NonStatTy, err
 	}
-
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
@@ -823,6 +823,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		// Split same-difficulty blocks by number, then at random
 		reorg = block.NumberU64() < bc.currentBlock.NumberU64() || (block.NumberU64() == bc.currentBlock.NumberU64() && mrand.Float64() < 0.5)
 	}
+
 	if reorg {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
@@ -842,10 +843,10 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	} else {
 		status = SideStatTy
 	}
+
 	if err := batch.Write(); err != nil {
 		return NonStatTy, err
 	}
-
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)

@@ -115,9 +115,16 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	if amount != nil {
 		d.Amount.Set(amount)
 	}
-	d.GasLimit.Set(big.NewInt(defaultGas))
-
-	d.Price.Set(big.NewInt(defaultGasPrice))
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
+	}else{
+		gasLimit.Set(big.NewInt(defaultGas))
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}else{
+		d.Price.Set(big.NewInt(defaultGasPrice))
+	}
 
 
 	return &Transaction{data: d}

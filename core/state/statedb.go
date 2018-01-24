@@ -372,20 +372,6 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 		log.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
-	//var ethdata EthAccount
-	//if err := rlp.DecodeBytes(enc, &ethdata); err != nil {
-	//
-	//	if err := rlp.DecodeBytes(enc,&data); err != nil{
-	//		log.Error("Failed to decode state object", "addr", addr, "err", err)
-	//		return nil
-	//	}
-	//
-	//}else{
-	//	data.Root = ethdata.Root
-	//	data.Balance = ethdata.Balance
-	//	data.CodeHash = ethdata.CodeHash
-	//	data.Nonce = ethdata.Nonce
-	//}
 	// Insert into the live set.
 	obj := newObject(self, addr, data, self.MarkStateObjectDirty)
 	self.setStateObject(obj)

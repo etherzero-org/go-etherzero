@@ -16,7 +16,9 @@
 
 package core
 
-import "math/big"
+import (
+	"math/big"
+)
 
 // GasPool tracks the amount of gas available during
 // execution of the transactions in a block.
@@ -33,6 +35,7 @@ func (gp *GasPool) AddGas(amount *big.Int) *GasPool {
 // SubGas deducts the given amount from the pool if enough gas is
 // available and returns an error otherwise.
 func (gp *GasPool) SubGas(amount *big.Int) error {
+
 	i := (*big.Int)(gp)
 	if i.Cmp(amount) < 0 {
 		return ErrGasLimitReached
