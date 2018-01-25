@@ -1,7 +1,6 @@
-
 package core
 
-import(
+import (
 	"github.com/ethzero/go-ethzero/core/types"
 	//"math/big"
 	//"fmt"
@@ -32,10 +31,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Make sure the transaction is signed properly
 
-	if pool.chainconfig.IsEthzero(pool.chain.CurrentBlock().Number()) || pool.chainconfig.IsEthzeroGenesisBlock(pool.chain.CurrentBlock().Number()){
-		//fmt.Println("tx_validator.go is pool.chainconfig.ChainID",pool.chainconfig.ChainId)
-		pool.signer=types.NewEIP155Signer(pool.chainconfig.ChainId)
+	//modify by roger on 2018-01-25
+	//Ensure the Transaction used the normal ChainID
+	if pool.chainconfig.IsEthzero(pool.chain.CurrentBlock().Number()) || pool.chainconfig.IsEthzeroGenesisBlock(pool.chain.CurrentBlock().Number()) {
+		pool.signer = types.NewEIP155Signer(pool.chainconfig.ChainId)
 	}
+
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
@@ -57,17 +58,17 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 
-	nonce:=pool.GetTransactionNonceByFrom(from)
-	balance:=new(big.Int).Div(pool.currentState.GetBalance(from),big.NewInt(1e+18))
+	nonce := pool.GetTransactionNonceByFrom(from)
+	balance := new(big.Int).Div(pool.currentState.GetBalance(from), big.NewInt(1e+18))
 
-	if balance.Cmp(big.NewInt(1))<0 {
-		balance=big.NewInt(1)
+	if balance.Cmp(big.NewInt(1)) < 0 {
+		balance = big.NewInt(1)
 	}
 
-	maxNonce:=new(big.Int).Mul(balance,big.NewInt(10))
+	maxNonce := new(big.Int).Mul(balance, big.NewInt(10))
 
-	if maxNonce.Cmp(DefaultCurrentMaxNonce) > 0{
-		maxNonce=big.NewInt(500)
+	if maxNonce.Cmp(DefaultCurrentMaxNonce) > 0 {
+		maxNonce = big.NewInt(500)
 	}
 
 	if big.NewInt(int64(nonce)).Cmp(maxNonce) > 0 {
@@ -76,7 +77,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	//modify by roger on 2017-01-12
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, false)
-	log.Info("tx validator intrGas ,tx.Data()",intrGas.String(),tx.Gas().String())
+	log.Info("tx validator intrGas ,tx.Data()", intrGas.String(), tx.Gas().String())
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
