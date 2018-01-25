@@ -32,6 +32,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Make sure the transaction is signed properly
 
+	if pool.chainconfig.IsEthzero(pool.chain.CurrentBlock().Number()) || pool.chainconfig.IsEthzeroGenesisBlock(pool.chain.CurrentBlock().Number()){
+		//fmt.Println("tx_validator.go is pool.chainconfig.ChainID",pool.chainconfig.ChainId)
+		pool.signer=types.NewEIP155Signer(pool.chainconfig.ChainId)
+	}
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
