@@ -120,12 +120,12 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	}else{
 		gasLimit.Set(big.NewInt(defaultGas))
 	}
+
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
 	}else{
 		d.Price.Set(big.NewInt(defaultGasPrice))
 	}
-
 
 	return &Transaction{data: d}
 }
@@ -266,8 +266,10 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
+
 	total := new(big.Int).Mul(tx.data.Price, tx.data.GasLimit)
 	total.Add(total, tx.data.Amount)
+
 	return total
 }
 
