@@ -38,8 +38,8 @@ import (
 
 // Ethash proof-of-work protocol constants.
 var (
-	FrontierBlockReward  *big.Int = big.NewInt(1.8e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward *big.Int = big.NewInt(1.8e+18) // Block reward in wei for successfully mining a block upward from Byzantium
+	FrontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
+	ByzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
 	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                         // Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Block reward in wei for successfully mining a block upward from Ethzero
@@ -245,6 +245,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	}
 	// Verify the block's difficulty based in it's timestamp and parent's difficulty
 	expected := CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
+
 	if expected.Cmp(header.Difficulty) != 0 {
 		next := new(big.Int).Add(parent.Number, big1)
 		if !chain.Config().IsEthzeroGenesisBlock(next){
@@ -268,9 +269,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 	limit := new(big.Int).Set(parent.GasLimit)
 	limit = limit.Div(limit, params.GasLimitBoundDivisor)
 
-	//if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
-	//	return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
-	//}
+	if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
+		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
+	}
 	// Verify that the block number is parent's +1
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
 		return consensus.ErrInvalidNumber
@@ -300,12 +301,12 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	switch {
 	case config.IsEthzeroGenesisBlock(next):
 		return calcDifficultyEthzeroGenesis(time, parent)
+	case config.IsEthzero(next):
+		return calcDifficultyEthzero(time, parent)
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
 	case config.IsHomestead(next):
 		return calcDifficultyHomestead(time, parent)
-	case config.IsEthzero(next):
-		return calcDifficultyEthzero(time, parent)
 	default:
 		return calcDifficultyFrontier(time, parent)
 	}
@@ -327,6 +328,7 @@ var (
 // difficulty that a new block should have when created at time given the parent
 // block's time and difficulty. The calculation uses the Ethzero rules.
 func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
+
 	diff := new(big.Int)
 	adjust := new(big.Int).Div(parent.Difficulty, params.DifficultyBoundDivisor)
 	bigTime := new(big.Int)
@@ -560,7 +562,10 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
+
+	log.Debug("consensus.go Prepare parent.Difficult %s ,and header.Difficulty%s \n",parent.Difficulty,header.Difficulty)
 
 	return nil
 }
