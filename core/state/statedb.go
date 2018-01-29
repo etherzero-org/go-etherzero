@@ -75,7 +75,7 @@ type StateDB struct {
 	lock sync.Mutex
 }
 
-func (self *StateDB) GetTrieHash()common.Hash{
+func (self *StateDB) GetTrieHash() common.Hash {
 
 	return self.trie.Hash()
 }
@@ -368,7 +368,7 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 	}
 	var data Account
 
-	if err := rlp.DecodeBytes(enc,&data); err != nil{
+	if err := rlp.DecodeBytes(enc, &data); err != nil {
 		log.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}

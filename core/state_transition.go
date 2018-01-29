@@ -25,7 +25,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
-
 )
 
 var (

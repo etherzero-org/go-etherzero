@@ -27,8 +27,8 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/hexutil"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/rlp"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -42,7 +42,6 @@ const (
 	defaultGas      = 90000
 	defaultGasPrice = 18 * params.Shannon
 )
-
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
@@ -117,13 +116,13 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	}
 	if gasLimit != nil {
 		d.GasLimit.Set(gasLimit)
-	}else{
+	} else {
 		gasLimit.Set(big.NewInt(defaultGas))
 	}
 
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
-	}else{
+	} else {
 		d.Price.Set(big.NewInt(defaultGasPrice))
 	}
 
@@ -426,7 +425,7 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 	}
 }
 
-func (t *TransactionsByPriceAndNonce) Size() int{
+func (t *TransactionsByPriceAndNonce) Size() int {
 	return len(t.txs)
 }
 

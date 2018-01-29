@@ -799,7 +799,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
-
 	// Irrelevant of the canonical status, write the block itself to the database
 	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
 		return NonStatTy, err
@@ -968,14 +967,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
-	//	rootstate := state.IntermediateRoot(bc.config.IsEIP158(block.Header().Number))
-//		// Process block using the parent state as reference point.
+		//	rootstate := state.IntermediateRoot(bc.config.IsEIP158(block.Header().Number))
+		//		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
-
 
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)

@@ -256,7 +256,6 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	return types.NewBlock(head, nil, nil, nil), statedb
 }
 
-
 // ToBlock creates the block and state of a genesis specification.
 //func (g *Genesis) ToEthBlock() (*types.Block, *state.StateEthDB) {
 //	db, _ := ethdb.NewMemDatabase()

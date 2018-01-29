@@ -23,8 +23,8 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/params"
 )
 
 // Config are the configuration options for the Interpreter

@@ -37,6 +37,7 @@ import (
 	"github.com/ethzero/go-ethzero/metrics"
 	"github.com/ethzero/go-ethzero/node"
 	"gopkg.in/urfave/cli.v1"
+	"math/big"
 )
 
 const (
@@ -44,6 +45,7 @@ const (
 )
 
 var (
+	defaultBalanceTxProcess = big.NewInt(1e+17)
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
 	// Ethereum address of the Geth release oracle.
@@ -291,6 +293,9 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				th.SetThreads(threads)
 			}
 		}
+
+		ethereum.TxPool().SetBalance(defaultBalanceTxProcess)
+
 		// Set the gas price to the limits from the CLI and start mining
 		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		if err := ethereum.StartMining(true); err != nil {

@@ -143,11 +143,11 @@ func (c *Console) init(preload []string) error {
 				return fmt.Errorf("%s.js: %v", api, err)
 			}
 			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-		//	fmt.Println(" console web3ext Modules is value:" + flatten)
+			//	fmt.Println(" console web3ext Modules is value:" + flatten)
 		} else if obj, err := c.jsre.Run("web3." + api); err == nil && obj.IsObject() {
 			// Enable web3.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-		//	fmt.Println(" console web3ext api is value:" + flatten)
+			//	fmt.Println(" console web3ext api is value:" + flatten)
 		}
 	}
 	if _, err = c.jsre.Run(flatten); err != nil {

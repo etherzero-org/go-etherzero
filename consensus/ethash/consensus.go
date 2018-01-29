@@ -41,7 +41,7 @@ var (
 	FrontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	ByzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
-	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                         // Block reward in wei for successfully mining a block upward from Ethzero
+	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                       // Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Block reward in wei for successfully mining a block upward from Ethzero
 	maxUncles                          = 2                                                         // Maximum number of uncles allowed in a single block
 )
@@ -248,7 +248,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 
 	if expected.Cmp(header.Difficulty) != 0 {
 		next := new(big.Int).Add(parent.Number, big1)
-		if !chain.Config().IsEthzeroGenesisBlock(next){
+		if !chain.Config().IsEthzeroGenesisBlock(next) {
 			return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
 		}
 	}
@@ -390,9 +390,9 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 
 	log.Debug("************ calcDifficultyEthzeroGenesis is beging *********")
-	log.Debug("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
+	log.Debug("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:", parent.Difficulty)
 
-	diff:=params.EthzeroGenesisDifficulty
+	diff := params.EthzeroGenesisDifficulty
 	return diff
 }
 
@@ -590,7 +590,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
 
-	log.Debug("consensus.go Prepare parent.Difficult %s ,and header.Difficulty%s \n",parent.Difficulty,header.Difficulty)
+	log.Debug("consensus.go Prepare parent.Difficult %s ,and header.Difficulty%s \n", parent.Difficulty, header.Difficulty)
 
 	return nil
 }

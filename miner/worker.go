@@ -362,7 +362,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	var work *Work
 
-	if self.config.IsEthzeroGenesisBlock(parent.Number())|| self.config.IsEthzero(parent.Number()){
+	if self.config.IsEthzeroGenesisBlock(parent.Number()) || self.config.IsEthzero(parent.Number()) {
 		work = &Work{
 			config:    self.config,
 			signer:    types.NewEIP155Signer(self.config.ChainId),
@@ -373,7 +373,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 			header:    header,
 			createdAt: time.Now(),
 		}
-	}else{
+	} else {
 		work = &Work{
 			config:    self.config,
 			signer:    types.NewEIP155Signer(big.NewInt(1)),
@@ -385,7 +385,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 			createdAt: time.Now(),
 		}
 	}
-
 
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -456,7 +455,6 @@ func (self *worker) commitNewWork() {
 			}
 		}
 	}
-
 
 	// Could potentially happen if starting to mine in an odd state.
 	err := self.makeCurrent(parent, header)
@@ -530,7 +528,6 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
-
 
 	//var gp *core.GasPool
 	//maxGasLimit := (new(big.Int).Mul(st.state.GetBalance(sender.Address()), st.gasPrice))

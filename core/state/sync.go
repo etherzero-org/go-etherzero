@@ -29,7 +29,7 @@ func NewStateSync(root common.Hash, database trie.DatabaseReader) *trie.TrieSync
 	var syncer *trie.TrieSync
 	callback := func(leaf []byte, parent common.Hash) error {
 		var obj Account
-		if err := rlp.Decode(bytes.NewReader(leaf),&obj); err != nil{
+		if err := rlp.Decode(bytes.NewReader(leaf), &obj); err != nil {
 			return err
 		}
 

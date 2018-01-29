@@ -21,13 +21,13 @@ import (
 	"errors"
 	"math/big"
 
+	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/crypto/bn256"
 	"github.com/ethzero/go-ethzero/params"
 	"golang.org/x/crypto/ripemd160"
-	"fmt"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation

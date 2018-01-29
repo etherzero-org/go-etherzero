@@ -45,6 +45,8 @@ import (
 
 const defaultTraceTimeout = 5 * time.Second
 
+var defaultBalanceTxProcess = big.NewInt(1e+17)
+
 // PublicEthereumAPI provides an API to access Ethereum full node-related
 // information.
 type PublicEthereumAPI struct {
@@ -158,7 +160,10 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		price := api.e.gasPrice
 		api.e.lock.RUnlock()
 
+		balance := defaultBalanceTxProcess
 		api.e.txPool.SetGasPrice(price)
+
+		api.e.txPool.SetBalance(balance)
 		return api.e.StartMining(true)
 	}
 	return nil
@@ -191,6 +196,15 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.e.lock.Unlock()
 
 	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
+	return true
+}
+
+func (api *PrivateMinerAPI) SetBalance(balance hexutil.Big) bool {
+	//api.e.lock.Lock()
+	//api.e.gasPrice = (*big.Int)(&balance)
+	//api.e.lock.Unlock()
+
+	api.e.txPool.SetBalance((*big.Int)(&balance))
 	return true
 }
 
@@ -571,7 +585,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (co
 
 		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
 		gp := new(core.GasPool).AddGas(tx.Gas())
-		fmt.Println("computeTxEnv 's gp 's value:",gp.String())
+		fmt.Println("computeTxEnv 's gp 's value:", gp.String())
 		_, _, _, err := core.ApplyMessage(vmenv, msg, gp)
 		if err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
