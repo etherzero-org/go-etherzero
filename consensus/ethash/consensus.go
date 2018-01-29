@@ -364,7 +364,6 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 
 	log.Debug("************ calcDifficultyEthzeroGenesis is beging *********")
-
 	log.Debug("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:",parent.Difficulty)
 
 	diff:=params.EthzeroGenesisDifficulty
