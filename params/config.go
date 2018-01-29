@@ -345,6 +345,7 @@ type Rules struct {
 	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
 	IsByzantium                               bool
 	IsEthzero                                 bool
+
 }
 
 func (c *ChainConfig) Rules(num *big.Int) Rules {
