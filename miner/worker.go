@@ -461,20 +461,11 @@ func (self *worker) commitNewWork() {
 	}
 
 	pending, err := self.eth.TxPool().Pending()
-
-	if pending != nil{
-		fmt.Println("worker.go got txpool 's pending:",len(pending))
-		//fmt.Println("worker.go got txpool 's pending:",pending)
-	}
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	if txs != nil{
-		fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs.Size())
-	//	fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs)
-	}
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.

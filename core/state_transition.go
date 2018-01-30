@@ -29,6 +29,7 @@ import (
 
 var (
 	etzDefaultGas      = big.NewInt(90000)
+	etzDefaultGasLimit      = big.NewInt(21000)
 	expMinimumGasLimit = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
@@ -163,10 +164,14 @@ func (st *StateTransition) to() vm.AccountRef {
 
 func (st *StateTransition) useGasEthzero(sender vm.AccountRef, amount uint64) error {
 
-	balance := new(big.Int).Div(st.state.GetBalance(sender.Address()), big.NewInt(1e+18))
-	maxGasLimit := (new(big.Int).Mul(balance, st.gasPrice))
+	balance := st.state.GetBalance(sender.Address())
+	if balance.Cmp(big.NewInt(1e+16)) <= 0{
+		return vm.ErrOutOfGas
+	}
 
-	if maxGasLimit.Uint64() < amount {
+	balance = new(big.Int).Div(st.state.GetBalance(sender.Address()), big.NewInt(1e+16))
+	maxGasCount := (new(big.Int).Mul(balance, etzDefaultGasLimit))
+	if maxGasCount.Uint64() < amount {
 		return vm.ErrOutOfGas
 	}
 	st.gas -= amount
@@ -290,7 +295,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	// TODO convert to uint64
 	intrinsicGas := IntrinsicGas(st.data, contractCreation, homestead)
 	if intrinsicGas.BitLen() > 64 {
-
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 

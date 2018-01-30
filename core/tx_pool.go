@@ -485,9 +485,9 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 	defer pool.mu.Unlock()
 
 	pool.gasPrice = price
-	for _, tx := range pool.priced.Cap(price, pool.locals) {
-		pool.removeTx(tx.Hash())
-	}
+	//for _, tx := range pool.priced.Cap(price, pool.locals) {
+	//	pool.removeTx(tx.Hash())
+	//}
 	log.Info("Transaction pool price threshold updated", "price", price)
 }
 
@@ -572,8 +572,6 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-
-	fmt.Println("txpool is Pending size:",len(pool.pending))
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()

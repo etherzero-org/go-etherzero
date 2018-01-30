@@ -590,7 +590,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
 
-	log.Debug("consensus.go Prepare parent.Difficult %s ,and header.Difficulty%s \n", parent.Difficulty, header.Difficulty)
+	log.Debug(" Prepare  ","parent.Difficult", parent.Difficulty, "header.Difficulty",header.Difficulty)
 
 	return nil
 }

@@ -196,8 +196,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 			// cost is explicitly set so that the capture state defer method cas get the proper cost
 			cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 			if err != nil || !contract.UseGas(cost) {
-
-				log.Debug("interpreter.go out of gas ")
+				log.Debug("interpreter.go out of gas ","cost",cost)
 				return nil, ErrOutOfGas
 			}
 		}
