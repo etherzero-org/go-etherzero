@@ -233,17 +233,15 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
-	tempChianId := big.NewInt(1)
-
-	if chainconfig.IsEthzero(chain.CurrentBlock().Header().Number) || chainconfig.IsEthzeroGenesisBlock(chain.CurrentBlock().Header().Number) {
-		tempChianId = chainconfig.ChainId
+	if !chainconfig.IsEthzero(chain.CurrentBlock().Header().Number) && !chainconfig.IsEthzeroGenesisBlock(chain.CurrentBlock().Header().Number) {
+		chainconfig.ChainId = big.NewInt(1)
 	}
 
 	var pool = &TxPool{
 		config:      config,
 		chainconfig: chainconfig,
 		chain:       chain,
-		signer:      types.NewEIP155Signer(tempChianId),
+		signer:      types.NewEIP155Signer(chainconfig.ChainId),
 		pending:     make(map[common.Address]*txList),
 		queue:       make(map[common.Address]*txList),
 		beats:       make(map[common.Address]time.Time),
@@ -574,6 +572,8 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
+
+	fmt.Println("txpool is Pending size:",len(pool.pending))
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()

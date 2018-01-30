@@ -651,6 +651,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == TxMsg:
 
+		log.Info("handler.go tx receive begin")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
@@ -658,9 +659,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Transactions can be processed, parse all of them and deliver to the pool
 		var txs []*types.Transaction
 		if err := msg.Decode(&txs); err != nil {
+
+			fmt.Printf("msg %v: %v", msg, err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
+		log.Info("handler.go tx receive end txs",txs,"")
 		for i, tx := range txs {
 			// Validate and mark the remote transaction
 			if tx == nil {

@@ -362,15 +362,14 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	var work *Work
 
-	tempChainId:=big.NewInt(1)
 
-	if self.config.IsEthzeroGenesisBlock(parent.Number()) || self.config.IsEthzero(parent.Number()) {
-		tempChainId=self.config.ChainId
+	if !self.config.IsEthzeroGenesisBlock(parent.Number()) && !self.config.IsEthzero(parent.Number()) {
+		self.config.ChainId=big.NewInt(1)
 	}
 
 	work = &Work{
 		config:    self.config,
-		signer:    types.NewEIP155Signer(tempChainId),
+		signer:    types.NewEIP155Signer(self.config.ChainId),
 		state:     state,
 		ancestors: set.New(),
 		family:    set.New(),
@@ -465,7 +464,7 @@ func (self *worker) commitNewWork() {
 
 	if pending != nil{
 		fmt.Println("worker.go got txpool 's pending:",len(pending))
-		fmt.Println("worker.go got txpool 's pending:",pending)
+		//fmt.Println("worker.go got txpool 's pending:",pending)
 	}
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
@@ -474,7 +473,7 @@ func (self *worker) commitNewWork() {
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	if txs != nil{
 		fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs.Size())
-		fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs)
+	//	fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs)
 	}
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
