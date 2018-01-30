@@ -159,8 +159,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
-	PriceLimit: 1,
-	PriceBump: 10,
+	PriceLimit:   1,
+	PriceBump:    10,
 	AccountSlots: 16,
 	GlobalSlots:  4096,
 	AccountQueue: 64,
@@ -232,36 +232,25 @@ type TxPool struct {
 func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
-	var pool = &TxPool{}
+
+	tempChianId := big.NewInt(1)
+
 	if chainconfig.IsEthzero(chain.CurrentBlock().Header().Number) || chainconfig.IsEthzeroGenesisBlock(chain.CurrentBlock().Header().Number) {
-		// Create the transaction pool with its initial settings
-		pool = &TxPool{
-			config:      config,
-			chainconfig: chainconfig,
-			chain:       chain,
-			signer:      types.NewEIP155Signer(chainconfig.ChainId),
-			pending:     make(map[common.Address]*txList),
-			queue:       make(map[common.Address]*txList),
-			beats:       make(map[common.Address]time.Time),
-			all:         make(map[common.Hash]*types.Transaction),
-			chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
-			gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
-		}
-	} else {
-		pool = &TxPool{
-			config:      config,
-			chainconfig: chainconfig,
-			chain:       chain,
-			signer:      types.NewEIP155Signer(big.NewInt(1)),
-			pending:     make(map[common.Address]*txList),
-			queue:       make(map[common.Address]*txList),
-			beats:       make(map[common.Address]time.Time),
-			all:         make(map[common.Hash]*types.Transaction),
-			chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
-			gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
-		}
+		tempChianId = chainconfig.ChainId
 	}
 
+	var pool = &TxPool{
+		config:      config,
+		chainconfig: chainconfig,
+		chain:       chain,
+		signer:      types.NewEIP155Signer(tempChianId),
+		pending:     make(map[common.Address]*txList),
+		queue:       make(map[common.Address]*txList),
+		beats:       make(map[common.Address]time.Time),
+		all:         make(map[common.Hash]*types.Transaction),
+		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
+		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
+	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
 	pool.balance = newTxBalanceList(&pool.all, pool.currentState)
@@ -589,6 +578,7 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
 	}
+
 	return pending, nil
 }
 

@@ -75,9 +75,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLowInBlockNumber
 	}
 
-	//modify by roger on 2017-01-12
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, false)
-	log.Info("tx validator intrGas ,tx.Data()", intrGas.String(), tx.Gas().String())
+	log.Debug("tx validator intrGas ,tx.Data()", intrGas.String(), tx.Gas().String())
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}

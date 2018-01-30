@@ -518,7 +518,7 @@ func (self *StateDB) GetRefund() *big.Int {
 	return self.refund
 }
 
-// Finalise finalises the state by removing the self destructed objects
+// Finalise finalises the state by removing the self destructed objects and clears the journal as well as the refunds.
 // and clears the journal as well as the refunds.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 
@@ -612,29 +612,3 @@ func (s *StateDB) CommitTo(dbw trie.DatabaseWriter, deleteEmptyObjects bool) (ro
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
 }
-
-// add by roger on 2017-12-16
-//func (self *StateDB ) SetHeightTxCount(addr common.Address, heighttxcount uint64){
-//
-//	stateObject := self.GetOrNewStateObject(addr)
-//	stateObject.setHeightTxCount(heighttxcount)
-//}
-//
-//func (self *StateDB) HeightTxCount(addr common.Address) uint64 {
-//
-//	stateObject :=self.GetOrNewStateObject(addr)
-//	//stateObject :=self.getStateObject(addr)
-//	return stateObject.HeightTxCount()
-//}
-//
-//func (self *StateDB) SetTxBlockHeight( addr common.Address,txblockheight big.Int ){
-//	stateObject := self.GetOrNewStateObject(addr)
-//	stateObject.setTxBlockHeight(txblockheight)
-//}
-//
-//func (self *StateDB) TxBlockHeight(addr common.Address) big.Int {
-//
-//	stateObject := self.GetOrNewStateObject(addr)
-//
-//	return stateObject.TxBlockHeight()
-//}

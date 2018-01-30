@@ -362,28 +362,21 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	var work *Work
 
+	tempChainId:=big.NewInt(1)
+
 	if self.config.IsEthzeroGenesisBlock(parent.Number()) || self.config.IsEthzero(parent.Number()) {
-		work = &Work{
-			config:    self.config,
-			signer:    types.NewEIP155Signer(self.config.ChainId),
-			state:     state,
-			ancestors: set.New(),
-			family:    set.New(),
-			uncles:    set.New(),
-			header:    header,
-			createdAt: time.Now(),
-		}
-	} else {
-		work = &Work{
-			config:    self.config,
-			signer:    types.NewEIP155Signer(big.NewInt(1)),
-			state:     state,
-			ancestors: set.New(),
-			family:    set.New(),
-			uncles:    set.New(),
-			header:    header,
-			createdAt: time.Now(),
-		}
+		tempChainId=self.config.ChainId
+	}
+
+	work = &Work{
+		config:    self.config,
+		signer:    types.NewEIP155Signer(tempChainId),
+		state:     state,
+		ancestors: set.New(),
+		family:    set.New(),
+		uncles:    set.New(),
+		header:    header,
+		createdAt: time.Now(),
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -469,12 +462,20 @@ func (self *worker) commitNewWork() {
 	}
 
 	pending, err := self.eth.TxPool().Pending()
+
+	if pending != nil{
+		fmt.Println("worker.go got txpool 's pending:",len(pending))
+		fmt.Println("worker.go got txpool 's pending:",pending)
+	}
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-
+	if txs != nil{
+		fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs.Size())
+		fmt.Println("worker.go got txpool 's NewTransactionsByPriceAndNonce :",txs)
+	}
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
