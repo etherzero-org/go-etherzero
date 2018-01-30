@@ -154,33 +154,20 @@ type TxPoolConfig struct {
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
 // pool.
+
 var DefaultTxPoolConfig = TxPoolConfig{
 	Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
-	PriceLimit:   1,
-	PriceBump:    10,
+	PriceLimit: 1,
+	PriceBump: 10,
 	AccountSlots: 16,
-	GlobalSlots:  350,
+	GlobalSlots:  4096,
 	AccountQueue: 64,
-	GlobalQueue:  100,
+	GlobalQueue:  1024,
 
 	Lifetime: 3 * time.Hour,
 }
-
-//var DefaultTxPoolConfig = TxPoolConfig{
-//	Journal:   "transactions.rlp",
-//	Rejournal: time.Hour,
-//
-//	PriceLimit: 1,
-//	PriceBump: 10,
-//	AccountSlots: 16,
-//	GlobalSlots:  4096,
-//	AccountQueue: 64,
-//	GlobalQueue:  1024,
-//
-//	Lifetime: 3 * time.Hour,
-//}
 
 // sanitize checks the provided user configurations and changes anything that's
 // unreasonable or unworkable.
