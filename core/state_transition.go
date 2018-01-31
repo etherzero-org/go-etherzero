@@ -28,6 +28,8 @@ import (
 )
 
 var (
+
+	defaultGasPrice = big.NewInt(18e+9)
 	etzDefaultGas      = big.NewInt(90000)
 	etzDefaultGasLimit      = big.NewInt(21000)
 	expMinimumGasLimit = big.NewInt(4712388)
@@ -162,23 +164,6 @@ func (st *StateTransition) to() vm.AccountRef {
 	return reference
 }
 
-func (st *StateTransition) useGasEthzero(sender vm.AccountRef, amount uint64) error {
-
-	balance := st.state.GetBalance(sender.Address())
-	if balance.Cmp(big.NewInt(1e+16)) <= 0{
-		return vm.ErrOutOfGas
-	}
-
-	balance = new(big.Int).Div(st.state.GetBalance(sender.Address()), big.NewInt(1e+16))
-	maxGasCount := (new(big.Int).Mul(balance, etzDefaultGasLimit))
-	if maxGasCount.Uint64() < amount {
-		return vm.ErrOutOfGas
-	}
-	st.gas -= amount
-
-	return nil
-}
-
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
 		return vm.ErrOutOfGas
@@ -195,28 +180,26 @@ func (st *StateTransition) buyEtzerGas() error {
 		return vm.ErrOutOfGas
 	}
 
-	mgval := new(big.Int).Mul(mgas, st.gasPrice)
+	mgval := new(big.Int).Mul(mgas, defaultGasPrice)
 	var (
 		state  = st.state
 		sender = st.from()
 	)
-	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
+
+	balance := state.GetBalance(sender.Address())
+	if balance.Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
 
-	balance := new(big.Int).Div(state.GetBalance(sender.Address()), big.NewInt(1e+18))
-	maxGasLimit := (new(big.Int).Mul(balance, st.gasPrice))
+	balance = new(big.Int).Div(balance, big.NewInt(1e+16))
+	maxGasLimit := (new(big.Int).Mul(balance, defaultGasPrice))
 	maxGasLimit.Add(expMinimumGasLimit, maxGasLimit)
-	if maxGasLimit.Cmp(expMinimumGasLimit) < 0 {
-		st.gp.AddGas(expMinimumGasLimit)
-	} else {
-		st.gp.AddGas(maxGasLimit)
-	}
 
+	st.gp.AddGas(maxGasLimit)
 	if err := st.gp.SubGas(mgas); err != nil {
 		return err
 	}
-	st.gas += mgas.Uint64()
+	st.gas  += mgas.Uint64()
 	st.initialGas.Set(mgas)
 
 	if st.initialGas.Cmp(maxGasLimit) > 0 {
@@ -298,15 +281,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 
-	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
-		if err = st.useGasEthzero(sender, intrinsicGas.Uint64()); err != nil {
-			return nil, nil, nil, false, err
-		}
-	} else {
-		if err = st.useGas(intrinsicGas.Uint64()); err != nil {
-			return nil, nil, nil, false, err
-		}
+	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+		return nil, nil, nil, false, err
 	}
+
 
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)

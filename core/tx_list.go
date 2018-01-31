@@ -22,7 +22,6 @@ import (
 	"math/big"
 	"sort"
 
-	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
@@ -599,8 +598,6 @@ func (l *txBalanceList) Cap(threshold *big.Int, local *accountSet) types.Transac
 		}
 
 		from, _ := senderTxFrom(tx)
-
-		fmt.Println("tx_list.go from value:", from.String(), tx.ChainId().String())
 		balance := l.currentState.GetBalance(from)
 
 		// Stop the discards if we've reached the threshold
