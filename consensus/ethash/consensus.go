@@ -268,10 +268,10 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainReader, header, parent *
 
 	limit := new(big.Int).Set(parent.GasLimit)
 	limit = limit.Div(limit, params.GasLimitBoundDivisor)
-
-	if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
-		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
-	}
+	//
+	//if diff.Cmp(limit) >= 0 || header.GasLimit.Cmp(params.MinGasLimit) < 0 {
+	//	return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, limit)
+	//}
 	// Verify that the block number is parent's +1
 	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
 		return consensus.ErrInvalidNumber
@@ -390,7 +390,7 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 
 	log.Debug("************ calcDifficultyEthzeroGenesis is beging *********")
-	log.Debug("************ calcDifficultyEthzeroGenesis parent.Difficulty's value:", parent.Difficulty)
+	log.Debug("************ calcDifficultyEthzeroGenesis ","parent.Difficulty's value", parent.Difficulty)
 
 	diff := params.EthzeroGenesisDifficulty
 	return diff

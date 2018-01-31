@@ -47,10 +47,12 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
+	log.Debug("sync syncTransactions pending size","",len(pending))
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
 	if len(txs) == 0 {
+		log.Debug("sync syncTransactions txs len==0")
 		return
 	}
 	select {

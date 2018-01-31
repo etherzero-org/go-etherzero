@@ -651,7 +651,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == TxMsg:
 
-		log.Info("handler.go tx receive begin")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
@@ -663,7 +662,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			fmt.Printf("msg %v: %v", msg, err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		log.Info("handler.go tx receive end txs",txs,"")
 		for i, tx := range txs {
 			// Validate and mark the remote transaction
 			if tx == nil {
@@ -720,6 +718,7 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	peers := pm.peers.PeersWithoutTx(hash)
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
+		log.Debug("BroadcastTx SendTransactions ","peerId",peer.id,"transaction",tx.Hash().String())
 		peer.SendTransactions(types.Transactions{tx})
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
@@ -742,6 +741,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.txCh:
+			log.Debug("handler txBroadcastLoop received tx","event.tx",event.Tx)
 			self.BroadcastTx(event.Tx.Hash(), event.Tx)
 
 		// Err() channel will be closed when unsubscribing.
