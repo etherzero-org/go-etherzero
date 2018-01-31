@@ -28,10 +28,10 @@ import (
 )
 
 var (
-
-	defaultGasPrice = big.NewInt(18e+9)
+	defaultGasPrice    = big.NewInt(18e+9)
 	etzDefaultGas      = big.NewInt(90000)
-	etzDefaultGasLimit      = big.NewInt(21000)
+	etzBalanceGasPrice = big.NewInt(900)
+	etzDefaultGasLimit = big.NewInt(21000)
 	expMinimumGasLimit = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
@@ -192,14 +192,15 @@ func (st *StateTransition) buyEtzerGas() error {
 	}
 
 	balance = new(big.Int).Div(balance, big.NewInt(1e+16))
-	maxGasLimit := (new(big.Int).Mul(balance, defaultGasPrice))
+	maxGasLimit := (new(big.Int).Mul(balance, etzBalanceGasPrice))
+
 	maxGasLimit.Add(expMinimumGasLimit, maxGasLimit)
 
 	st.gp.AddGas(maxGasLimit)
 	if err := st.gp.SubGas(mgas); err != nil {
 		return err
 	}
-	st.gas  += mgas.Uint64()
+	st.gas += mgas.Uint64()
 	st.initialGas.Set(mgas)
 
 	if st.initialGas.Cmp(maxGasLimit) > 0 {
@@ -284,7 +285,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
 	}
-
 
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
