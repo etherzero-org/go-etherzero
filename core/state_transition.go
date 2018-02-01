@@ -135,7 +135,6 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, *big.Int, bool, error) {
 
 	st := NewStateTransition(evm, msg, gp)
-
 	ret, _, gasUsed, failed, err := st.TransitionDb()
 	return ret, gasUsed, failed, err
 }
@@ -165,6 +164,7 @@ func (st *StateTransition) to() vm.AccountRef {
 }
 
 func (st *StateTransition) useGas(amount uint64) error {
+
 	if st.gas < amount {
 		return vm.ErrOutOfGas
 	}
@@ -196,7 +196,6 @@ func (st *StateTransition) buyEtzerGas() error {
 
 	maxGasLimit.Add(expMinimumGasLimit, maxGasLimit)
 
-	st.gp.AddGas(maxGasLimit)
 	if err := st.gp.SubGas(mgas); err != nil {
 		return err
 	}
@@ -275,6 +274,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		// error.
 		vmerr error
 	)
+	if contractCreation {
+		st.gas = contractTxMaxGasSize.Uint64()
+	} else {
+		st.gas = txMaxGasSize.Uint64()
+	}
 	// Pay intrinsic gas
 	// TODO convert to uint64
 	intrinsicGas := IntrinsicGas(st.data, contractCreation, homestead)
@@ -289,10 +293,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
+
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
+
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't

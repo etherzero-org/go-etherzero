@@ -62,9 +62,12 @@ var (
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
 
-	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
+	// ErrIntrinsicGas is returned if the transaction is specified to use less gas than required to start the invocation.
 	// than required to start the invocation.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
+
+	ErrContractTxIntrinsicGas = errors.New("contractTx intrinsic gas too low")
+
 
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
 	// maximum allowance of the current block.
@@ -82,7 +85,7 @@ var (
 	// ErrHeightTxTooHigh is returned if the Height of a transaction is too much
 	ErrHeightTxTooMuch = errors.New("trade too many times in the current block")
 
-	ErrNonceTooLowInBlockNumber = errors.New("nonce too low in the current blook")
+	ErrTooTradeTimesInCurrentBlock = errors.New("trade too many times in the current block")
 )
 
 var (
@@ -91,7 +94,12 @@ var (
 
 	TradeTimesCount = big.NewInt(1e+17) // one etz Trade times count in current high number
 
-	DefaultCurrentMaxGas = big.NewInt(5000000)
+	DefaultCurrentMaxGas = big.NewInt(45000000)
+
+	contractTxMaxGasSize = big.NewInt(500000)
+
+	txMaxGasSize = big.NewInt(210000)
+
 
 	DefaultCurrentMaxNonce = big.NewInt(500)
 )
@@ -553,16 +561,16 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	return pending, queued
 }
 
-func (pool *TxPool) GetTransactionNonceByFrom(address common.Address) int {
+func (pool *TxPool) GetTransactionCountByFrom(address common.Address) int {
 
-	var nonce int
+	var count int
 	if list := pool.pending[address]; list != nil {
-		nonce += list.Len()
+		count += list.Len()
 	}
 	if list := pool.queue[address]; list != nil {
-		nonce += list.Len()
+		count += list.Len()
 	}
-	return nonce
+	return count
 }
 
 // Pending retrieves all currently processable transactions, groupped by origin

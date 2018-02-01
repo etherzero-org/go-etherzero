@@ -49,6 +49,8 @@ const (
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+
+	gaspoolvalue = 90000000
 )
 
 // Agent can register themself with the worker
@@ -461,6 +463,7 @@ func (self *worker) commitNewWork() {
 	}
 
 	pending, err := self.eth.TxPool().Pending()
+
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
@@ -528,8 +531,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	//	gp = new(core.GasPool).AddGas(env.header.GasLimit)
 	//}
 
-	gp := new(core.GasPool).AddGas(env.header.GasLimit)
-
+	gp := new(core.GasPool).AddGas(big.NewInt(gaspoolvalue))
 	var coalescedLogs []*types.Log
 
 	for {

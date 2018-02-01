@@ -4,8 +4,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	//"math/big"
 	//"fmt"
-	//"math/big"
-	"github.com/ethzero/go-ethzero/log"
 	"math/big"
 )
 
@@ -49,7 +47,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// Drop non-local transactions under our own minimal accepted gas price
-	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
+	//local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	//if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
 	//	return ErrUnderpriced
 	//}
@@ -58,27 +56,27 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 
-	nonce := pool.GetTransactionNonceByFrom(from)
+	count := pool.GetTransactionCountByFrom(from)
 	balance := new(big.Int).Div(pool.currentState.GetBalance(from), big.NewInt(1e+18))
-
 	if balance.Cmp(big.NewInt(1)) < 0 {
 		balance = big.NewInt(1)
 	}
+	maxcount := new(big.Int).Mul(balance, big.NewInt(10))
 
-	maxNonce := new(big.Int).Mul(balance, big.NewInt(10))
-
-	if maxNonce.Cmp(DefaultCurrentMaxNonce) > 0 {
-		maxNonce = big.NewInt(500)
+	if maxcount.Cmp(DefaultCurrentMaxNonce) > 0 {
+		maxcount = big.NewInt(500)
 	}
 
-	if big.NewInt(int64(nonce)).Cmp(maxNonce) > 0 {
-		return ErrNonceTooLowInBlockNumber
+	if big.NewInt(int64(count)).Cmp(maxcount) > 0 {
+		return ErrTooTradeTimesInCurrentBlock
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, false)
-	log.Info("tx validator intrGas ,tx.Data()", intrGas.String(), tx.Gas().String())
-	//if tx.Gas().Cmp(intrGas) < 0 {
-	//	return ErrIntrinsicGas
-	//}
+	if tx.To() == nil && contractTxMaxGasSize.Cmp(intrGas) < 0 {
+		return ErrContractTxIntrinsicGas
+	}
+	if tx.To() != nil && txMaxGasSize.Cmp(intrGas) < 0 {
+		return ErrIntrinsicGas
+	}
 	return nil
 }
