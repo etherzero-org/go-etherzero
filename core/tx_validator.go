@@ -4,6 +4,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	//"math/big"
 	//"fmt"
+	"fmt"
 	"math/big"
 )
 
@@ -72,10 +73,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, false)
+
 	if tx.To() == nil && contractTxMaxGasSize.Cmp(intrGas) < 0 {
+		fmt.Printf(" txvalidator.go intrGas %v and contractTxMaxGassize: %v", intrGas, contractTxMaxGasSize)
 		return ErrContractTxIntrinsicGas
 	}
 	if tx.To() != nil && txMaxGasSize.Cmp(intrGas) < 0 {
+		fmt.Printf(" txvalidator.go intrGas %v and contractTxMaxGassize: %v", intrGas, txMaxGasSize)
 		return ErrIntrinsicGas
 	}
 	return nil

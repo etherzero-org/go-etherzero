@@ -390,7 +390,7 @@ func calcDifficultyEthzero(time uint64, parent *types.Header) *big.Int {
 func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 
 	log.Debug("************ calcDifficultyEthzeroGenesis is beging *********")
-	log.Debug("************ calcDifficultyEthzeroGenesis ","parent.Difficulty's value", parent.Difficulty)
+	log.Debug("************ calcDifficultyEthzeroGenesis ", "parent.Difficulty's value", parent.Difficulty)
 
 	diff := params.EthzeroGenesisDifficulty
 	return diff
@@ -590,7 +590,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 
 	header.Difficulty = CalcDifficulty(chain.Config(), header.Time.Uint64(), parent)
 
-	log.Debug(" Prepare  ","parent.Difficult", parent.Difficulty, "header.Difficulty",header.Difficulty)
+	log.Debug(" Prepare  ", "parent.Difficult", parent.Difficulty, "header.Difficulty", header.Difficulty)
 
 	return nil
 }

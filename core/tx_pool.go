@@ -68,7 +68,6 @@ var (
 
 	ErrContractTxIntrinsicGas = errors.New("contractTx intrinsic gas too low")
 
-
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
 	// maximum allowance of the current block.
 	ErrGasLimit = errors.New("exceeds block gas limit")
@@ -98,8 +97,7 @@ var (
 
 	contractTxMaxGasSize = big.NewInt(500000)
 
-	txMaxGasSize = big.NewInt(210000)
-
+	txMaxGasSize = big.NewInt(90000)
 
 	DefaultCurrentMaxNonce = big.NewInt(500)
 )

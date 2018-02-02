@@ -364,9 +364,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	var work *Work
 
-
 	if !self.config.IsEthzeroGenesisBlock(parent.Number()) && !self.config.IsEthzero(parent.Number()) {
-		self.config.ChainId=big.NewInt(1)
+		self.config.ChainId = big.NewInt(1)
 	}
 
 	work = &Work{
