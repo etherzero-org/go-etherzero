@@ -30,8 +30,8 @@ import (
 var (
 	defaultGasPrice    = big.NewInt(18e+9)
 	etzDefaultGas      = big.NewInt(90000)
+	miniDefaultGasPrice =big.NewInt(21000)
 	etzBalanceGasPrice = big.NewInt(900)
-	etzDefaultGasLimit = big.NewInt(21000)
 	expMinimumGasLimit = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
@@ -279,7 +279,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 
-	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
+	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) && st.gas < miniDefaultGasPrice.Uint64(){
 		st.gas = intrinsicGas.Uint64()
 	}
 
