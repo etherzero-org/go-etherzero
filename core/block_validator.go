@@ -78,8 +78,11 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // otherwise nil and an error is returned.
 func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
 	header := block.Header()
+
 	if block.GasUsed().Cmp(usedGas) != 0 {
-		return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
+		if !v.config.IsEthzero(block.Number()){
+			return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
+		}
 	}
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
@@ -98,18 +101,6 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %s local: %s)", header.Root.String(), root.String())
 	}
-	//if v.config.IsEthzero(header.Number){
-	//	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
-	//		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
-	//	}
-	//}else{
-	//	db, _ := ethdb.NewMemDatabase()
-	//	statedb, _ := state.NewEthDB(common.Hash{}, state.NewDatabase(db))
-	//	if root := statedb.IntermediateRoot(v.config.IsEthzero(header.Number)); header.Root != root {
-	//		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
-	//	}
-	//}
-
 	return nil
 }
 
