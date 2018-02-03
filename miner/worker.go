@@ -364,7 +364,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	var work *Work
 
-	if !self.config.IsEthzeroGenesisBlock(parent.Number()) && !self.config.IsEthzero(parent.Number()) {
+	if !self.config.IsEthzeroGenesisBlock(parent.Number()) && !self.config.IsEthzeroTOSBlock(parent.Number()) {
 		self.config.ChainId = big.NewInt(1)
 	}
 
@@ -547,7 +547,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 
-		if tx.Protected() && !env.config.IsEthzero(env.header.Number) {
+		if tx.Protected() && !env.config.IsEthzeroTOSBlock(env.header.Number) {
 			txs.Pop()
 			continue
 		}

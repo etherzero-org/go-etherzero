@@ -32,7 +32,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	//modify by roger on 2018-01-25
 	//Ensure the Transaction used the normal ChainID
-	if pool.chainconfig.IsEthzero(pool.chain.CurrentBlock().Number()) || pool.chainconfig.IsEthzeroGenesisBlock(pool.chain.CurrentBlock().Number()) {
+	if pool.chainconfig.IsEthzeroTOSBlock(pool.chain.CurrentBlock().Number()) || pool.chainconfig.IsEthzeroGenesisBlock(pool.chain.CurrentBlock().Number()) {
 		pool.signer = types.NewEIP155Signer(pool.chainconfig.ChainId)
 	}
 

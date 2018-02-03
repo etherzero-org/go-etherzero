@@ -301,7 +301,7 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	switch {
 	case config.IsEthzeroGenesisBlock(next):
 		return calcDifficultyEthzeroGenesis(time, parent)
-	case config.IsEthzero(next):
+	case config.IsEthzeroTOSBlock(next):
 		return calcDifficultyEthzero(time, parent)
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
@@ -627,7 +627,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		blockReward = EthzeroGenesisBlockReward
 	}
 
-	if config.IsEthzero(header.Number) {
+	if config.IsEthzeroTOSBlock(header.Number) {
 		blockReward = EthzeroBlockReward
 	}
 

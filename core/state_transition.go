@@ -245,7 +245,7 @@ func (st *StateTransition) preCheck() error {
 		}
 	}
 	//
-	if st.evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+	if st.evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) {
 		return st.buyEtzerGas()
 	}
 	return st.buyGas()
@@ -304,15 +304,19 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 			return nil, nil, nil, false, vmerr
 		}
 	}
-	requiredGas = new(big.Int).Set(st.gasUsed())
+	gasUsed := st.gasUsed();
+	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
+		gasUsed = Big0;
+	}
 
-	if !evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+	requiredGas = new(big.Int).Set(gasUsed)
+	if !evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) {
 		st.refundGas()
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(gasUsed, st.gasPrice))
 	} else {
 		st.refundEtzGas()
 	}
-	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
+	return ret, requiredGas, gasUsed, vmerr != nil, err
 }
 
 func (st *StateTransition) refundGas() {

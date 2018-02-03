@@ -239,7 +239,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
-	if !chainconfig.IsEthzero(chain.CurrentBlock().Header().Number) && !chainconfig.IsEthzeroGenesisBlock(chain.CurrentBlock().Header().Number) {
+	if !chainconfig.IsEthzeroTOSBlock(chain.CurrentBlock().Header().Number) && !chainconfig.IsEthzeroGenesisBlock(chain.CurrentBlock().Header().Number) {
 		chainconfig.ChainId = big.NewInt(1)
 	}
 
