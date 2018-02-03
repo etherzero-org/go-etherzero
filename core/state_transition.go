@@ -264,13 +264,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
 	contractCreation := msg.To() == nil
-	var (
-		evm = st.evm
-		// vm errors do not effect consensus and are therefor
-		// not assigned to err, except for insufficient balance
-		// error.
-		vmerr error
-	)
 
 	// Pay intrinsic gas
 	// TODO convert to uint64
@@ -278,6 +271,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
+
+	var (
+		evm = st.evm
+		// vm errors do not effect consensus and are therefor
+		// not assigned to err, except for insufficient balance
+		// error.
+		vmerr error
+	)
 
 	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) && st.gas < intrinsicGas.Uint64(){
 		st.gas = intrinsicGas.Uint64()
@@ -304,19 +305,19 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 			return nil, nil, nil, false, vmerr
 		}
 	}
-	gasUsed := st.gasUsed();
-	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
-		gasUsed = Big0;
-	}
 
-	requiredGas = new(big.Int).Set(gasUsed)
+
+	requiredGas = new(big.Int).Set(st.gasUsed())
 	if !evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) {
 		st.refundGas()
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(gasUsed, st.gasPrice))
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 	} else {
 		st.refundEtzGas()
 	}
-	return ret, requiredGas, gasUsed, vmerr != nil, err
+	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
+		return ret, Big0,Big0, vmerr != nil, err
+	}
+	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
 
 func (st *StateTransition) refundGas() {

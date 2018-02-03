@@ -40,10 +40,14 @@ var (
 		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(2675000),
 		EIP158Block:         big.NewInt(2675000),
-		ByzantiumBlock:      big.NewInt(4370000),
-		EthzeroTOSBlock:     big.NewInt(4936272),
-		EthzeroBlock:        big.NewInt(5025000),
-		EthzeroGenesisBlock: big.NewInt(4936271),
+		ByzantiumBlock:      big.NewInt(5000),
+		EthzeroBlock:        big.NewInt(5100),
+		EthzeroTOSBlock:        big.NewInt(5002),
+		EthzeroGenesisBlock: big.NewInt(5001),
+		//ByzantiumBlock:      big.NewInt(4370000),
+		//EthzeroTOSBlock:        big.NewInt(4936272),
+		//EthzeroBlock:        big.NewInt(5025000),
+		//EthzeroGenesisBlock: big.NewInt(4936271),
 
 		Ethash: new(EthashConfig),
 	}
@@ -60,6 +64,7 @@ var (
 		EIP158Block:         big.NewInt(2675000),
 		ByzantiumBlock:      big.NewInt(math.MaxInt64), // Don't enable yet
 		EthzeroBlock:        big.NewInt(28),
+		EthzeroTOSBlock:        big.NewInt(4936272),
 		EthzeroGenesisBlock: big.NewInt(27),
 
 		Ethash: new(EthashConfig),
@@ -91,7 +96,6 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
@@ -102,7 +106,7 @@ var (
 	//AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300),big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300),big.NewInt(0), new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(89), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300), big.NewInt(5024300),new(EthashConfig), nil}
 	//TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 	TestRules = TestChainConfig.Rules(new(big.Int))
 )
@@ -286,6 +290,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.EthzeroBlock, newcfg.EthzeroBlock, head) {
 		return newCompatError("EthzeroBlock fork block", c.EthzeroBlock, newcfg.EthzeroBlock)
 	}
+	if isForkIncompatible(c.EthzeroTOSBlock, newcfg.EthzeroTOSBlock, head) {
+		return newCompatError("EthzeroTOSBlock fork block", c.EthzeroTOSBlock, newcfg.EthzeroTOSBlock)
+	}
 	return nil
 }
 
@@ -354,6 +361,7 @@ type Rules struct {
 	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
 	IsByzantium                               bool
 	IsEthzero                                 bool
+	IsEthzeroTOSBlock                         bool
 }
 
 func (c *ChainConfig) Rules(num *big.Int) Rules {
@@ -361,5 +369,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainId == nil {
 		chainId = new(big.Int)
 	}
-	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num), IsEthzero: c.IsEthzero(num)}
+	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num), IsEthzeroTOSBlock: c.IsEthzeroTOSBlock(num),IsEthzero: c.IsEthzero(num)}
 }

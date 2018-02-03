@@ -522,14 +522,6 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 
-	//var gp *core.GasPool
-	//maxGasLimit := (new(big.Int).Mul(st.state.GetBalance(sender.Address()), st.gasPrice))
-	//if env.config.IsEthzero(env.header.Number){
-	//	gp = new(core.GasPool).AddGas(env.header.GasLimit)
-	//}else{
-	//	gp = new(core.GasPool).AddGas(env.header.GasLimit)
-	//}
-
 	gp := new(core.GasPool).AddGas(big.NewInt(gaspoolvalue))
 	var coalescedLogs []*types.Log
 
