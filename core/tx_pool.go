@@ -85,7 +85,7 @@ var (
 	ErrHeightTxTooMuch = errors.New("trade too many times in the current block")
 
 	ErrTooTradeTimesInCurrentBlock = errors.New("trade too many times in the current block")
-
+	//Refused to accept the original Ethereum transaction into the pool
 	ErrInvalidChainId = errors.New("invalid chain id for tx")
 )
 
