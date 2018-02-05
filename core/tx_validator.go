@@ -16,6 +16,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrOversizedData
 	}
 
+	if tx.ChainId().Cmp(big.NewInt(1)) == 0{
+		return ErrInvalidChainId
+	}
+
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Value().Sign() < 0 {

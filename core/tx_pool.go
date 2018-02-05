@@ -85,6 +85,9 @@ var (
 	ErrHeightTxTooMuch = errors.New("trade too many times in the current block")
 
 	ErrTooTradeTimesInCurrentBlock = errors.New("trade too many times in the current block")
+
+	ErrInvalidChainId = errors.New("invalid chain id for tx")
+
 )
 
 var (
