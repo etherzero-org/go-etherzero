@@ -87,7 +87,6 @@ var (
 	ErrTooTradeTimesInCurrentBlock = errors.New("trade too many times in the current block")
 
 	ErrInvalidChainId = errors.New("invalid chain id for tx")
-
 )
 
 var (
@@ -95,14 +94,10 @@ var (
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
 	TradeTimesCount = big.NewInt(1e+17) // one etz Trade times count in current high number
-
-	DefaultCurrentMaxGas = big.NewInt(45000000)
-
-	contractTxMaxGasSize = big.NewInt(500000)
-
-	txMaxGasSize = big.NewInt(90000)
-
-	DefaultCurrentMaxNonce = big.NewInt(500)
+	DefaultCurrentMaxGas = big.NewInt(45000000) //A single block consumes the maximum amount of gas, which is equivalent to about 428 trades
+	contractTxMaxGasSize = big.NewInt(500000)//The maximum amount of gas consumed per contract transaction
+	txMaxGasSize = big.NewInt(90000) //The maximum amount of gas consumed per transaction
+	DefaultCurrentMaxNonce = big.NewInt(500) //Prevent ddos attacks, limit a single account at the current block height can only initiate up to 500 transactions
 )
 
 var (
