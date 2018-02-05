@@ -28,11 +28,11 @@ import (
 )
 
 var (
-	defaultGasPrice    = big.NewInt(18e+9)
-	etzDefaultGas      = big.NewInt(90000)
-	miniDefaultGasPrice =big.NewInt(21000)
-	etzBalanceGasPrice = big.NewInt(900)
-	expMinimumGasLimit = big.NewInt(4712388)
+	defaultGasPrice     = big.NewInt(18e+9)
+	etzDefaultGas       = big.NewInt(90000)
+	miniDefaultGasPrice = big.NewInt(21000)
+	etzBalanceGasPrice  = big.NewInt(900)
+	expMinimumGasLimit  = big.NewInt(4712388)
 
 	Big0                         = big.NewInt(0)
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
@@ -280,7 +280,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		vmerr error
 	)
 
-	if evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) && st.gas < intrinsicGas.Uint64(){
+	if evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) && st.gas < intrinsicGas.Uint64() {
 		st.gas = intrinsicGas.Uint64()
 	}
 
@@ -306,7 +306,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		}
 	}
 
-
 	requiredGas = new(big.Int).Set(st.gasUsed())
 	if !evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) {
 		st.refundGas()
@@ -314,8 +313,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	} else {
 		st.refundEtzGas()
 	}
-	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber){
-		return ret, Big0,Big0, vmerr != nil, err
+	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
+		return ret, Big0, Big0, vmerr != nil, err
 	}
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }

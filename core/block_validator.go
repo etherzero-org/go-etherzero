@@ -87,7 +87,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
 	}
 
-	if v.config.IsEthzero(header.Number){
+	if v.config.IsEthzero(header.Number) {
 		if block.GasUsed().Cmp(usedGas) != 0 {
 			return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
 		}

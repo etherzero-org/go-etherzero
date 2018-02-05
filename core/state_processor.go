@@ -29,8 +29,7 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 )
 
-
-const  gaspoolvalue = 90000000
+const gaspoolvalue = 90000000
 
 // StateProcessor is a basic Processor, which takes care of transitioning
 // state from one point to another.
@@ -66,8 +65,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
-	if p.config.IsEthzeroTOSBlock(block.Number()){
-		gp=new(GasPool).AddGas(big.NewInt(gaspoolvalue))
+	if p.config.IsEthzeroTOSBlock(block.Number()) {
+		gp = new(GasPool).AddGas(big.NewInt(gaspoolvalue))
 	}
 	// Mutate the the block and state according to any hard-fork specs
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {

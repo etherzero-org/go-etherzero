@@ -32,20 +32,16 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId:             big.NewInt(88),
-		HomesteadBlock:      big.NewInt(1150000),
-		DAOForkBlock:        big.NewInt(1920000),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(2463000),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(2675000),
-		EIP158Block:         big.NewInt(2675000),
-		//ByzantiumBlock:      big.NewInt(5000),
-		//EthzeroBlock:        big.NewInt(5100),
-		//EthzeroTOSBlock:        big.NewInt(5002),
-		//EthzeroGenesisBlock: big.NewInt(5001),
+		ChainId:        big.NewInt(88),
+		HomesteadBlock: big.NewInt(1150000),
+		DAOForkBlock:   big.NewInt(1920000),
+		DAOForkSupport: true,
+		EIP150Block:    big.NewInt(2463000),
+		EIP150Hash:     common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		EIP155Block:    big.NewInt(2675000),
+		EIP158Block:    big.NewInt(2675000),
 		ByzantiumBlock:      big.NewInt(4370000),
-		EthzeroTOSBlock:        big.NewInt(4936272),
+		EthzeroTOSBlock:     big.NewInt(4936272),
 		EthzeroBlock:        big.NewInt(5025000),
 		EthzeroGenesisBlock: big.NewInt(4936271),
 
@@ -64,7 +60,7 @@ var (
 		EIP158Block:         big.NewInt(2675000),
 		ByzantiumBlock:      big.NewInt(math.MaxInt64), // Don't enable yet
 		EthzeroBlock:        big.NewInt(28),
-		EthzeroTOSBlock:        big.NewInt(4936272),
+		EthzeroTOSBlock:     big.NewInt(4936272),
 		EthzeroGenesisBlock: big.NewInt(27),
 
 		Ethash: new(EthashConfig),
@@ -81,7 +77,7 @@ var (
 		EIP155Block:         big.NewInt(3),
 		EIP158Block:         big.NewInt(3),
 		ByzantiumBlock:      big.NewInt(1035301),
-		EthzeroTOSBlock:        big.NewInt(3602107),
+		EthzeroTOSBlock:     big.NewInt(3602107),
 		EthzeroBlock:        big.NewInt(3602108),
 		EthzeroGenesisBlock: big.NewInt(3602106),
 
@@ -96,7 +92,7 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0), new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
@@ -104,9 +100,9 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	//AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300),big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(89), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300), big.NewInt(5024300),new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(89), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(5024300), big.NewInt(5024300), new(EthashConfig), nil}
 	//TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 	TestRules = TestChainConfig.Rules(new(big.Int))
 )
@@ -221,7 +217,6 @@ func (c *ChainConfig) IsEthzero(num *big.Int) bool {
 func (c *ChainConfig) IsEthzeroTOSBlock(num *big.Int) bool {
 	return isForked(c.EthzeroTOSBlock, num)
 }
-
 
 func (c *ChainConfig) IsEthzeroGenesisBlock(num *big.Int) bool {
 	return configNumEqual(c.EthzeroGenesisBlock, num)
@@ -369,5 +364,5 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainId == nil {
 		chainId = new(big.Int)
 	}
-	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num), IsEthzeroTOSBlock: c.IsEthzeroTOSBlock(num),IsEthzero: c.IsEthzero(num)}
+	return Rules{ChainId: new(big.Int).Set(chainId), IsHomestead: c.IsHomestead(num), IsEIP150: c.IsEIP150(num), IsEIP155: c.IsEIP155(num), IsEIP158: c.IsEIP158(num), IsByzantium: c.IsByzantium(num), IsEthzeroTOSBlock: c.IsEthzeroTOSBlock(num), IsEthzero: c.IsEthzero(num)}
 }
