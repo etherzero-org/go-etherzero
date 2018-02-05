@@ -280,7 +280,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		vmerr error
 	)
 
-	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) && st.gas < intrinsicGas.Uint64(){
+	if evm.ChainConfig().IsEthzeroTOSBlock(st.evm.BlockNumber) && st.gas < intrinsicGas.Uint64(){
 		st.gas = intrinsicGas.Uint64()
 	}
 
