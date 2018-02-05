@@ -343,14 +343,11 @@ func (st *StateTransition) refundEtzGas() {
 	// exchanged at the original rate.
 	//sender := st.from() // err already checked
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	//st.state.AddBalance(sender.Address(), remaining)
 
 	// Apply refund counter, capped to half of the used gas.
 	uhalf := remaining.Div(st.gasUsed(), common.Big2)
 	refund := math.BigMin(uhalf, st.state.GetRefund())
 	st.gas += refund.Uint64()
-
-	//st.state.AddBalance(sender.Address(), refund.Mul(refund, st.gasPrice))
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

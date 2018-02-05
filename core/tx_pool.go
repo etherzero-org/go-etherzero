@@ -66,6 +66,8 @@ var (
 	// than required to start the invocation.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
 
+	// ErrContractTxIntrinsicGas is returned if the contract transaction is specified to use less gas than required to start the invocation.
+	// than required to start the invocation.
 	ErrContractTxIntrinsicGas = errors.New("contractTx intrinsic gas too low")
 
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
@@ -82,9 +84,8 @@ var (
 	ErrOversizedData = errors.New("oversized data")
 
 	// ErrHeightTxTooHigh is returned if the Height of a transaction is too much
-	ErrHeightTxTooMuch = errors.New("trade too many times in the current block")
-
 	ErrTooTradeTimesInCurrentBlock = errors.New("trade too many times in the current block")
+
 	//Refused to accept the original Ethereum transaction into the pool
 	ErrInvalidChainId = errors.New("invalid chain id for tx")
 )
