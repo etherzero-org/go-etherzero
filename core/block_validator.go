@@ -82,12 +82,12 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
 
-	rbloom := types.CreateBloom(receipts)
-	if rbloom != header.Bloom {
-		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
-	}
-
 	if v.config.IsEthzero(header.Number) {
+
+		rbloom := types.CreateBloom(receipts)
+		if rbloom != header.Bloom {
+			return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
+		}
 		if block.GasUsed().Cmp(usedGas) != 0 {
 			return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
 		}
