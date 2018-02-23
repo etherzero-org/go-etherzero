@@ -55,14 +55,13 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if v.bc.HasBlockAndState(block.Hash()) {
 		return ErrKnownBlock
 	}
-	// Header validity is known at this point, check the uncles and transactions
-	header := block.Header()
-	if v.config.IsEthzero(header.Number) {
-		if !v.bc.HasBlockAndState(block.ParentHash()) {
-			return consensus.ErrUnknownAncestor
-		}
+
+	if !v.bc.HasBlockAndState(block.ParentHash()) {
+		return consensus.ErrUnknownAncestor
 	}
 
+	// Header validity is known at this point, check the uncles and transactions
+	header := block.Header()
 	if err := v.engine.VerifyUncles(v.bc, block); err != nil {
 		return err
 	}
