@@ -193,6 +193,10 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// however it's safe to reenable fast sync.
 		atomic.StoreUint32(&pm.fastSync, 1)
 		mode = downloader.FastSync
+	} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() == 0 && pm.networkId == 88 {
+		println("Force fast sync until EthzeroGenesisBlock")
+		atomic.StoreUint32(&pm.fastSync, 1)
+		mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
 	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode)

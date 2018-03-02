@@ -385,6 +385,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	defer d.Cancel() // No matter what, we can't leave the cancel channel open
 
 	// Set the requested sync mode, unless it's forbidden
+	originMode := d.mode
 	d.mode = mode
 	if d.mode == FastSync && atomic.LoadUint32(&d.fsPivotFails) >= fsCriticalTrials {
 		d.mode = FullSync
@@ -394,12 +395,12 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if p == nil {
 		return errUnknownPeer
 	}
-	return d.syncWithPeer(p, hash, td)
+	return d.syncWithPeer(p, hash, td, originMode)
 }
 
 // syncWithPeer starts a block synchronization based on the hash chain from the
 // specified peer and head hash.
-func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.Int) (err error) {
+func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.Int, mode SyncMode) (err error) {
 	d.mux.Post(StartEvent{})
 	defer func() {
 		// reset on error
@@ -451,6 +452,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			if height > uint64(fsMinFullBlocks)+pivotOffset.Uint64() {
 				pivot = height - uint64(fsMinFullBlocks) - pivotOffset.Uint64()
 			}
+			if mode == FullSync && pivot > params.MainnetChainConfig.EthzeroGenesisBlock.Uint64() {
+				pivot = params.MainnetChainConfig.EthzeroGenesisBlock.Uint64()
+			}
 		} else {
 			// Pivot point locked in, use this and do not pick a new one!
 			pivot = d.fsPivotLock.Number.Uint64()
@@ -465,6 +469,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		}
 		log.Debug("Fast syncing until pivot block", "pivot", pivot)
 	}
+	log.Info("syncWithPeer", "d.mode", d.mode, "mode", mode, "pivot", pivot, "origin", origin, "height", height)
 	d.queue.Prepare(origin+1, d.mode, pivot, latest)
 	if d.syncInitHook != nil {
 		d.syncInitHook(origin, height)
