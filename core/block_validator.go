@@ -25,7 +25,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/params"
-	"debug/dwarf"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
