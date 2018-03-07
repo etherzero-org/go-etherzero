@@ -25,6 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/params"
+	"debug/dwarf"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -84,9 +85,11 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
 
-	rbloom := types.CreateBloom(receipts)
-	if rbloom != header.Bloom {
-		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
+	if v.config.IsEthzeroTOSBlock(header.Number) {
+		rbloom := types.CreateBloom(receipts)
+		if rbloom != header.Bloom {
+			return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
+		}
 	}
 
 	if v.config.IsEthzero(header.Number) {
