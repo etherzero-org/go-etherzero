@@ -194,7 +194,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		atomic.StoreUint32(&pm.fastSync, 1)
 		mode = downloader.FastSync
 	} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() == 0 && pm.networkId == 88 {
-		println("Force fast sync until EthzeroGenesisBlock")
+		log.Info("Force fast sync until EthzeroBlock")
 		atomic.StoreUint32(&pm.fastSync, 1)
 		mode = downloader.FastSync
 	}
