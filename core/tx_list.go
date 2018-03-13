@@ -23,9 +23,9 @@ import (
 	"sort"
 
 	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/core/state"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -225,7 +225,7 @@ type txList struct {
 	txs    *txSortedMap // Heap indexed sorted hash map of the transactions
 
 	costcap *big.Int // Price of the highest costing transaction (reset only if exceeds balance)
-	gascap  *big.Int // Gas limit of the highest spending transaction (reset only if exceeds block limit)
+	gascap  uint64   // Gas limit of the highest spending transaction (reset only if exceeds block limit)
 }
 
 // newTxList create a new transaction list for maintaining nonce-indexable fast,
@@ -235,7 +235,6 @@ func newTxList(strict bool) *txList {
 		strict:  strict,
 		txs:     newTxSortedMap(),
 		costcap: new(big.Int),
-		gascap:  new(big.Int),
 	}
 }
 
@@ -267,7 +266,7 @@ func (l *txList) Add(tx *types.Transaction, priceBump uint64) (bool, *types.Tran
 	if cost := tx.Cost(); l.costcap.Cmp(cost) < 0 {
 		l.costcap = cost
 	}
-	if gas := tx.Gas(); l.gascap.Cmp(gas) < 0 {
+	if gas := tx.Gas(); l.gascap < gas {
 		l.gascap = gas
 	}
 	return true, old
@@ -289,17 +288,18 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costgas cap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
-func (l *txList) Filter(costLimit, gasLimit *big.Int) (types.Transactions, types.Transactions) {
+func (l *txList) Filter(costLimit *big.Int, gasLimit uint64) (types.Transactions, types.Transactions) {
 	// If all transactions are below the threshold, short circuit
-	if l.costcap.Cmp(costLimit) <= 0 && l.gascap.Cmp(gasLimit) <= 0 {
+	if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
 		return nil, nil
 	}
 	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
-	l.gascap = new(big.Int).Set(gasLimit)
+	l.gascap = gasLimit
 
 	// Filter out all the transactions above the account's funds
-	//removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 && tx.Gas().Cmp(gasLimit) > 0 })
-	removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 && tx.Gas().Cmp(gasLimit) > 0 })
+	// removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 || tx.Gas() > gasLimit })
+	removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 && tx.Gas() > gasLimit })
+
 	// If the list was strict, filter anything above the lowest nonce
 	var invalids types.Transactions
 
@@ -426,7 +426,7 @@ func (l *txPricedList) Removed() {
 }
 
 // Cap finds all the transactions below the given price threshold, drops them
-// drops them from the priced list and returs them for further removal from the entire pool.
+// from the priced list and returs them for further removal from the entire pool.
 func (l *txPricedList) Cap(threshold *big.Int, local *accountSet) types.Transactions {
 	drop := make(types.Transactions, 0, 128) // Remote underpriced transactions to drop
 	save := make(types.Transactions, 0, 64)  // Local underpriced transactions to keep
@@ -456,59 +456,6 @@ func (l *txPricedList) Cap(threshold *big.Int, local *accountSet) types.Transact
 	return drop
 }
 
-// Underpriced checks whether a transaction is cheaper than (or as cheap as) the
-// lowest priced transaction currently being tracked.
-func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) bool {
-
-	// Local transactions cannot be underpriced
-	if local.containsTx(tx) {
-		return false
-	}
-	// Discard stale price points if found at the heap start
-	for len(*l.items) > 0 {
-		head := []*types.Transaction(*l.items)[0]
-		if _, ok := (*l.all)[head.Hash()]; !ok {
-			l.stales--
-			heap.Pop(l.items)
-			continue
-		}
-		break
-	}
-	// Check if the transaction is underpriced or not
-	if len(*l.items) == 0 {
-		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
-		return false
-	}
-	cheapest := []*types.Transaction(*l.items)[0]
-	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
-}
-
-// Discard finds a number of most underpriced transactions, removes them from the
-// priced list and returns them for further removal from the entire pool.
-func (l *txPricedList) Discard(count int, local *accountSet) types.Transactions {
-	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
-	save := make(types.Transactions, 0, 64)    // Local underpriced transactions to keep
-
-	for len(*l.items) > 0 && count > 0 {
-		// Discard stale transactions if found during cleanup
-		tx := heap.Pop(l.items).(*types.Transaction)
-		if _, ok := (*l.all)[tx.Hash()]; !ok {
-			l.stales--
-			continue
-		}
-		// Non stale transaction found, discard unless local
-		if local.containsTx(tx) {
-			save = append(save, tx)
-		} else {
-			drop = append(drop, tx)
-			count--
-		}
-	}
-	for _, tx := range save {
-		heap.Push(l.items, tx)
-	}
-	return drop
-}
 
 // priceHeap is a heap.Interface implementation over transactions for retrieving
 // price-sorted transactions to discard when the pool fills up.
@@ -549,7 +496,6 @@ func senderTxFrom(tx *types.Transaction) (common.Address, error) {
 	}
 	return addr, nil
 }
-
 // newTxPricedList creates a new price-sorted transaction heap.
 func newTxBalanceList(all *map[common.Hash]*types.Transaction, currentState *state.StateDB) *txBalanceList {
 	return &txBalanceList{
@@ -563,7 +509,6 @@ func newTxBalanceList(all *map[common.Hash]*types.Transaction, currentState *sta
 func (l *txBalanceList) Put(tx *types.Transaction) {
 	heap.Push(l.items, tx)
 }
-
 // Removed notifies the prices transaction list that an old transaction dropped
 // from the pool. The list will just keep a counter of stale objects and update
 // the heap if a large enough ratio of transactions go stale.
@@ -582,7 +527,6 @@ func (l *txBalanceList) Removed() {
 	}
 	heap.Init(l.items)
 }
-
 // Cap finds all the transactions below the given price threshold, drops them
 // drops them from the priced list and returs them for further removal from the entire pool.
 func (l *txBalanceList) Cap(threshold *big.Int, local *accountSet) types.Transactions {
@@ -617,7 +561,6 @@ func (l *txBalanceList) Cap(threshold *big.Int, local *accountSet) types.Transac
 	}
 	return drop
 }
-
 // Underbalance checks whether a transaction is cheaper than (or as cheap as) the
 // lowest balance transaction currently being tracked.
 func (l *txBalanceList) Underbalance(tx *types.Transaction, local *accountSet) bool {
@@ -651,10 +594,62 @@ func (l *txBalanceList) Underbalance(tx *types.Transaction, local *accountSet) b
 
 	return cheapestBalance.Cmp(txBalance) >= 0
 }
-
 // Discard finds a number of most underpriced transactions, removes them from the
 // priced list and returns them for further removal from the entire pool.
 func (l *txBalanceList) Discard(count int, local *accountSet) types.Transactions {
+	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
+	save := make(types.Transactions, 0, 64)    // Local underpriced transactions to keep
+
+	for len(*l.items) > 0 && count > 0 {
+		// Discard stale transactions if found during cleanup
+		tx := heap.Pop(l.items).(*types.Transaction)
+		if _, ok := (*l.all)[tx.Hash()]; !ok {
+			l.stales--
+			continue
+		}
+		// Non stale transaction found, discard unless local
+		if local.containsTx(tx) {
+			save = append(save, tx)
+		} else {
+			drop = append(drop, tx)
+			count--
+		}
+	}
+	for _, tx := range save {
+		heap.Push(l.items, tx)
+	}
+	return drop
+}
+
+// Underpriced checks whether a transaction is cheaper than (or as cheap as) the
+// lowest priced transaction currently being tracked.
+func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) bool {
+	// Local transactions cannot be underpriced
+	if local.containsTx(tx) {
+		return false
+	}
+	// Discard stale price points if found at the heap start
+	for len(*l.items) > 0 {
+		head := []*types.Transaction(*l.items)[0]
+		if _, ok := (*l.all)[head.Hash()]; !ok {
+			l.stales--
+			heap.Pop(l.items)
+			continue
+		}
+		break
+	}
+	// Check if the transaction is underpriced or not
+	if len(*l.items) == 0 {
+		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
+		return false
+	}
+	cheapest := []*types.Transaction(*l.items)[0]
+	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
+}
+
+// Discard finds a number of most underpriced transactions, removes them from the
+// priced list and returns them for further removal from the entire pool.
+func (l *txPricedList) Discard(count int, local *accountSet) types.Transactions {
 	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
 	save := make(types.Transactions, 0, 64)    // Local underpriced transactions to keep
 

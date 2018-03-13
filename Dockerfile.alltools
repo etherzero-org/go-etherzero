@@ -10,6 +10,6 @@ RUN cd /go-ethereum && make all
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /go-ethzero/build/bin/* /usr/local/bin/
+COPY --from=builder /go-ethereum/build/bin/* /usr/local/bin/
 
-EXPOSE 9646 9647 21212 21212/udp 21213/udp
+EXPOSE 9646 8546 21212 21212/udp 21213/udp

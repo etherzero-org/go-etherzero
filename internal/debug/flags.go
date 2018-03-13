@@ -26,6 +26,8 @@ import (
 
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/log/term"
+	"github.com/ethzero/go-ethzero/metrics"
+	"github.com/ethzero/go-ethzero/metrics/exp"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -127,6 +129,10 @@ func Setup(ctx *cli.Context) error {
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
+		// Hook go-metrics into expvar on any /debug/metrics request, load all vars
+		// from the registry into expvar, and execute regular expvar handler.
+		exp.Exp(metrics.DefaultRegistry)
+
 		address := fmt.Sprintf("%s:%d", ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
 		go func() {
 			log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))

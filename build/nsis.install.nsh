@@ -5,7 +5,7 @@ OutFile "${OUTPUTFILE}" # set through command line arguments
 # Links for "Add/Remove Programs"
 !define HELPURL "https://github.com/ethzero/go-ethzero/issues"
 !define UPDATEURL "https://github.com/ethzero/go-ethzero/releases"
-!define ABOUTURL "https://github.com/ethzero/go-ethzero#ethzero-go"
+!define ABOUTURL "https://github.com/ethzero/go-ethzero#ethereum-go"
 !define /date NOW "%Y%m%d"
 
 PageEx license

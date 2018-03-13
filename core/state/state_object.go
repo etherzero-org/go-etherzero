@@ -25,7 +25,6 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/trie"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -103,9 +102,6 @@ type Account struct {
 	Balance  *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
-	//TxBlockHeight big.Int
-	//HeightTxCount uint64
-
 }
 
 // newObject creates a state object.
@@ -241,12 +237,12 @@ func (self *stateObject) updateRoot(db Database) {
 
 // CommitTrie the storage trie of the object to dwb.
 // This updates the trie root.
-func (self *stateObject) CommitTrie(db Database, dbw trie.DatabaseWriter) error {
+func (self *stateObject) CommitTrie(db Database) error {
 	self.updateTrie(db)
 	if self.dbErr != nil {
 		return self.dbErr
 	}
-	root, err := self.trie.CommitTo(dbw)
+	root, err := self.trie.Commit(nil)
 	if err == nil {
 		self.data.Root = root
 	}
@@ -389,35 +385,3 @@ func (self *stateObject) Nonce() uint64 {
 func (self *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
 }
-
-//add by roger on 2017-12-16
-
-//func (self *stateObject) setHeightTxCount(heighttxcount uint64){
-//
-//	self.data.HeightTxCount=heighttxcount
-//}
-//
-//func (self *stateObject) SetHeightTxCount(heighttxcount uint64){
-//	self.setHeightTxCount(heighttxcount)
-//}
-//
-//func (self *stateObject) HeightTxCount() uint64 {
-//
-//	return self.data.HeightTxCount
-//}
-//
-//func (self *stateObject) SetTxBlockHeight(txblockheight big.Int){
-//	self.setTxBlockHeight(txblockheight)
-//}
-//
-//func (self *stateObject) setTxBlockHeight(txblockheight big.Int){
-//	self.data.TxBlockHeight=txblockheight
-//	if self.onDirty != nil {
-//		self.onDirty(self.address)
-//		self.onDirty = nil
-//	}
-//}
-//
-//func (self *stateObject) TxBlockHeight() big.Int {
-//	return self.data.TxBlockHeight
-//}

@@ -44,15 +44,12 @@ type txsync struct {
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pm *ProtocolManager) syncTransactions(p *peer) {
-
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
-	log.Debug("sync syncTransactions pending size", "", len(pending))
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
 	if len(txs) == 0 {
-		log.Debug("sync syncTransactions txs len==0")
 		return
 	}
 	select {
@@ -66,7 +63,6 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 // transactions. In order to minimise egress bandwidth usage, we send
 // the transactions in small packs to one peer at a time.
 func (pm *ProtocolManager) txsyncLoop() {
-
 	var (
 		pending = make(map[discover.NodeID]*txsync)
 		sending = false               // whether a send is active
@@ -84,7 +80,6 @@ func (pm *ProtocolManager) txsyncLoop() {
 			pack.txs = append(pack.txs, s.txs[i])
 			size += s.txs[i].Size()
 		}
-
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
@@ -113,7 +108,6 @@ func (pm *ProtocolManager) txsyncLoop() {
 	for {
 		select {
 		case s := <-pm.txsyncCh:
-
 			pending[s.p.ID()] = s
 			if !sending {
 				send(s)
@@ -199,17 +193,12 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
-	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode)
-
-	if atomic.LoadUint32(&pm.fastSync) == 1 {
-		// Disable fast sync if we indeed have something in our chain
-		if pm.blockchain.CurrentBlock().NumberU64() > 0 {
-			log.Info("Fast sync complete, auto disabling")
-			atomic.StoreUint32(&pm.fastSync, 0)
-		}
-	}
-	if err != nil {
+	if err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode); err != nil {
 		return
+	}
+	if atomic.LoadUint32(&pm.fastSync) == 1 {
+		log.Info("Fast sync complete, auto disabling")
+		atomic.StoreUint32(&pm.fastSync, 0)
 	}
 	atomic.StoreUint32(&pm.acceptTxs, 1) // Mark initial sync done
 	if head := pm.blockchain.CurrentBlock(); head.NumberU64() > 0 {

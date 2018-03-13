@@ -40,13 +40,12 @@ type sigCache struct {
 
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
-
 	var signer Signer
 	switch {
 	case config.IsEthzeroTOSBlock(blockNumber) || config.IsEthzeroGenesisBlock(blockNumber):
 		signer = NewEIP155Signer(config.ChainId)
 	case config.IsEIP155(blockNumber):
-		signer = NewEIP155Signer(big.NewInt(1))
+		signer = NewEIP155Signer(config.ChainId)
 	case config.IsHomestead(blockNumber):
 		signer = HomesteadSigner{}
 	default:
@@ -128,8 +127,6 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-
-	//fmt.Println("transaction_signing.go sender tx.ChainId()  and sender's chainid", tx.ChainId(), s.chainId)
 	if !tx.Protected() {
 		return HomesteadSigner{}.Sender(tx)
 	}
@@ -137,7 +134,6 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 		s.chainId = big.NewInt(88)
 	}
 	if tx.ChainId().Cmp(s.chainId) != 0 {
-		//fmt.Println("transaction_signing 's chainId:", tx.ChainId(), s.chainId)
 		return common.Address{}, ErrInvalidChainId
 	}
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)

@@ -29,7 +29,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	//modify by roger on 2018-01-16
 	// Ensure the transaction doesn't exceed the current block limit gas.
 
-	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
+	if pool.currentMaxGas < tx.Gas() {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
@@ -48,7 +48,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return ErrInsufficientFunds
+		return ErrInsufficientFundsMin
 	}
 
 	// Drop non-local transactions under our own minimal accepted gas price
@@ -76,13 +76,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrTooTradeTimesInCurrentBlock
 	}
 
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, false)
+	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, false)
+	if err != nil {
+		return err
+	}
 
-	if tx.To() == nil && contractTxMaxGasSize.Cmp(intrGas) < 0 {
+	if tx.To() == nil && contractTxMaxGasSize < intrGas {
 		fmt.Printf(" txvalidator.go intrGas %v and contractTxMaxGassize: %v", intrGas, contractTxMaxGasSize)
 		return ErrContractTxIntrinsicGas
 	}
-	if tx.To() != nil && txMaxGasSize.Cmp(intrGas) < 0 {
+	if tx.To() != nil && txMaxGasSize.Cmp(new(big.Int).SetUint64(intrGas)) < 0 {
 		fmt.Printf(" txvalidator.go intrGas %v and contractTxMaxGassize: %v", intrGas, txMaxGasSize)
 		return ErrIntrinsicGas
 	}

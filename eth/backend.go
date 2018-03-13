@@ -144,9 +144,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		}
 		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
 	}
-
-	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
+	var (
+		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+	)
+	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, eth.chainConfig, eth.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -310,10 +312,17 @@ func (s *Ethereum) Etherbase() (eb common.Address, err error) {
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			return accounts[0].Address, nil
+			etherbase := accounts[0].Address
+
+			s.lock.Lock()
+			s.etherbase = etherbase
+			s.lock.Unlock()
+
+			log.Info("Etherbase automatically configured", "address", etherbase)
+			return etherbase, nil
 		}
 	}
-	return common.Address{}, fmt.Errorf("etherbase address must be explicitly specified")
+	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
 }
 
 // set in js console via admin interface or wrapper from cli flags
@@ -386,10 +395,10 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers
 	if s.config.LightServ > 0 {
-		maxPeers -= s.config.LightPeers
-		if maxPeers < srvr.MaxPeers/2 {
-			maxPeers = srvr.MaxPeers / 2
+		if s.config.LightPeers >= srvr.MaxPeers {
+			return fmt.Errorf("invalid peer config: light peer count (%d) >= total peer count (%d)", s.config.LightPeers, srvr.MaxPeers)
 		}
+		maxPeers -= s.config.LightPeers
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)

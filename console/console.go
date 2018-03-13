@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/ethzero/go-ethzero/internal/jsre"
 	"github.com/ethzero/go-ethzero/internal/web3ext"
@@ -92,6 +93,9 @@ func New(config Config) (*Console, error) {
 		printer:  config.Printer,
 		histPath: filepath.Join(config.DataDir, HistoryFile),
 	}
+	if err := os.MkdirAll(config.DataDir, 0700); err != nil {
+		return nil, err
+	}
 	if err := console.init(config.Preload); err != nil {
 		return nil, err
 	}
@@ -131,7 +135,6 @@ func (c *Console) init(preload []string) error {
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-
 	flatten := "var eth = web3.eth; var personal = web3.personal; "
 	for api := range apis {
 		if api == "web3" {
@@ -143,11 +146,9 @@ func (c *Console) init(preload []string) error {
 				return fmt.Errorf("%s.js: %v", api, err)
 			}
 			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-			//	fmt.Println(" console web3ext Modules is value:" + flatten)
 		} else if obj, err := c.jsre.Run("web3." + api); err == nil && obj.IsObject() {
 			// Enable web3.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-			//	fmt.Println(" console web3ext api is value:" + flatten)
 		}
 	}
 	if _, err = c.jsre.Run(flatten); err != nil {
@@ -195,6 +196,7 @@ func (c *Console) init(preload []string) error {
 	if obj := admin.Object(); obj != nil { // make sure the admin api is enabled over the interface
 		obj.Set("sleepBlocks", bridge.SleepBlocks)
 		obj.Set("sleep", bridge.Sleep)
+		obj.Set("clearHistory", c.clearHistory)
 	}
 	// Preload any JavaScript files before starting the console
 	for _, path := range preload {
@@ -217,6 +219,16 @@ func (c *Console) init(preload []string) error {
 		c.prompter.SetWordCompleter(c.AutoCompleteInput)
 	}
 	return nil
+}
+
+func (c *Console) clearHistory() {
+	c.history = nil
+	c.prompter.ClearHistory()
+	if err := os.Remove(c.histPath); err != nil {
+		fmt.Fprintln(c.printer, "can't delete history file:", err)
+	} else {
+		fmt.Fprintln(c.printer, "history file deleted")
+	}
 }
 
 // consoleOutput is an override for the console.log and console.error methods to
@@ -321,7 +333,7 @@ func (c *Console) Interactive() {
 	}()
 	// Monitor Ctrl-C too in case the input is empty and we need to bail
 	abort := make(chan os.Signal, 1)
-	signal.Notify(abort, os.Interrupt)
+	signal.Notify(abort, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start sending prompts to the user and reading back inputs
 	for {
@@ -415,7 +427,7 @@ func (c *Console) Execute(path string) error {
 	return c.jsre.Exec(path)
 }
 
-// Stop cleans up the console and terminates the runtime envorinment.
+// Stop cleans up the console and terminates the runtime environment.
 func (c *Console) Stop(graceful bool) error {
 	if err := ioutil.WriteFile(c.histPath, []byte(strings.Join(c.history, "\n")), 0600); err != nil {
 		return err

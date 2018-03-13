@@ -105,8 +105,8 @@ func TestNodeDBFetchStore(t *testing.T) {
 	node := NewNode(
 		MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 		net.IP{192, 168, 0, 1},
-		30303,
-		30303,
+		21212,
+		21212,
 	)
 	inst := time.Now()
 	num := 314
@@ -125,13 +125,13 @@ func TestNodeDBFetchStore(t *testing.T) {
 		t.Errorf("ping: value mismatch: have %v, want %v", stored, inst)
 	}
 	// Check fetch/store operations on a node pong object
-	if stored := db.lastPong(node.ID); stored.Unix() != 0 {
+	if stored := db.bondTime(node.ID); stored.Unix() != 0 {
 		t.Errorf("pong: non-existing object: %v", stored)
 	}
-	if err := db.updateLastPong(node.ID, inst); err != nil {
+	if err := db.updateBondTime(node.ID, inst); err != nil {
 		t.Errorf("pong: failed to update: %v", err)
 	}
-	if stored := db.lastPong(node.ID); stored.Unix() != inst.Unix() {
+	if stored := db.bondTime(node.ID); stored.Unix() != inst.Unix() {
 		t.Errorf("pong: value mismatch: have %v, want %v", stored, inst)
 	}
 	// Check fetch/store operations on a node findnode-failure object
@@ -168,8 +168,8 @@ var nodeDBSeedQueryNodes = []struct {
 		node: NewNode(
 			MustHexID("0x84d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 3},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-3 * time.Hour),
 	},
@@ -179,8 +179,8 @@ var nodeDBSeedQueryNodes = []struct {
 		node: NewNode(
 			MustHexID("0x57d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 3},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-4 * time.Second),
 	},
@@ -190,8 +190,8 @@ var nodeDBSeedQueryNodes = []struct {
 		node: NewNode(
 			MustHexID("0x22d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 1},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-2 * time.Second),
 	},
@@ -199,8 +199,8 @@ var nodeDBSeedQueryNodes = []struct {
 		node: NewNode(
 			MustHexID("0x44d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 2},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-3 * time.Second),
 	},
@@ -208,8 +208,8 @@ var nodeDBSeedQueryNodes = []struct {
 		node: NewNode(
 			MustHexID("0xe2d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 3},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-1 * time.Second),
 	},
@@ -224,8 +224,8 @@ func TestNodeDBSeedQuery(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateLastPong(seed.node.ID, seed.pong); err != nil {
-			t.Fatalf("node %d: failed to insert lastPong: %v", i, err)
+		if err := db.updateBondTime(seed.node.ID, seed.pong); err != nil {
+			t.Fatalf("node %d: failed to insert bondTime: %v", i, err)
 		}
 	}
 
@@ -306,8 +306,8 @@ var nodeDBExpirationNodes = []struct {
 		node: NewNode(
 			MustHexID("0x01d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 1},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-nodeDBNodeExpiration + time.Minute),
 		exp:  false,
@@ -315,8 +315,8 @@ var nodeDBExpirationNodes = []struct {
 		node: NewNode(
 			MustHexID("0x02d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
 			net.IP{127, 0, 0, 2},
-			30303,
-			30303,
+			21212,
+			21212,
 		),
 		pong: time.Now().Add(-nodeDBNodeExpiration - time.Minute),
 		exp:  true,
@@ -332,8 +332,8 @@ func TestNodeDBExpiration(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateLastPong(seed.node.ID, seed.pong); err != nil {
-			t.Fatalf("node %d: failed to update pong: %v", i, err)
+		if err := db.updateBondTime(seed.node.ID, seed.pong); err != nil {
+			t.Fatalf("node %d: failed to update bondTime: %v", i, err)
 		}
 	}
 	// Expire some of them, and check the rest
@@ -365,8 +365,8 @@ func TestNodeDBSelfExpiration(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateLastPong(seed.node.ID, seed.pong); err != nil {
-			t.Fatalf("node %d: failed to update pong: %v", i, err)
+		if err := db.updateBondTime(seed.node.ID, seed.pong); err != nil {
+			t.Fatalf("node %d: failed to update bondTime: %v", i, err)
 		}
 	}
 	// Expire the nodes and make sure self has been evacuated too

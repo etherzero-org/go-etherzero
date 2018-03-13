@@ -18,9 +18,7 @@ package core
 
 import (
 	"fmt"
-	"math/big"
 
-	"github.com/ethzero/go-ethzero/common/math"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
@@ -52,14 +50,15 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	// Check whether the block's known, and if not, that it's linkable
-	if v.bc.HasBlockAndState(block.Hash()) {
+	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
 	}
-
-	if !v.bc.HasBlockAndState(block.ParentHash()) {
-		return consensus.ErrUnknownAncestor
+	if !v.bc.HasBlockAndState(block.ParentHash(), block.NumberU64()-1) {
+		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
+			return consensus.ErrUnknownAncestor
+		}
+		return consensus.ErrPrunedAncestor
 	}
-
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header()
 	if err := v.engine.VerifyUncles(v.bc, block); err != nil {
@@ -78,23 +77,18 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // transition, such as amount of used gas, the receipt roots and the state root
 // itself. ValidateState returns a database batch if the validation was a success
 // otherwise nil and an error is returned.
-func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
+func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	header := block.Header()
-
-	// Validate the received block's bloom with the one derived from the generated receipts.
-	// For valid blocks this should always validate to true.
-
-	rbloom := types.CreateBloom(receipts)
-	if rbloom != header.Bloom {
-		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
-	}
-
 	if v.config.IsEthzero(header.Number) {
-
-		if block.GasUsed().Cmp(usedGas) != 0 {
-			return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
+		if block.GasUsed() != usedGas {
+			return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 		}
-
+		// Validate the received block's bloom with the one derived from the generated receipts.
+		// For valid blocks this should always validate to true.
+		rbloom := types.CreateBloom(receipts)
+		if rbloom != header.Bloom {
+			return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
+		}
 		// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, R1]]))
 		receiptSha := types.DeriveSha(receipts)
 		if receiptSha != header.ReceiptHash {
@@ -102,27 +96,22 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 		}
 		// Validate the state root against the received state root and throw
 		// an error if they don't match.
-
 		if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
-			return fmt.Errorf("invalid merkle root (remote: %s local: %s)", header.Root.String(), root.String())
+			return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 		}
 	}
-
 	return nil
 }
 
 // CalcGasLimit computes the gas limit of the next block after parent.
-// The result may be modified by the caller.
 // This is miner strategy, not consensus protocol.
-func CalcGasLimit(parent *types.Block) *big.Int {
+func CalcGasLimit(parent *types.Block) uint64 {
 	// contrib = (parentGasUsed * 3 / 2) / 1024
-	contrib := new(big.Int).Mul(parent.GasUsed(), big.NewInt(3))
-	contrib = contrib.Div(contrib, big.NewInt(2))
-	contrib = contrib.Div(contrib, params.GasLimitBoundDivisor)
+	contrib := (parent.GasUsed() + parent.GasUsed()/2) / params.GasLimitBoundDivisor
 
 	// decay = parentGasLimit / 1024 -1
-	decay := new(big.Int).Div(parent.GasLimit(), params.GasLimitBoundDivisor)
-	decay.Sub(decay, big.NewInt(1))
+	decay := parent.GasLimit()/params.GasLimitBoundDivisor - 1
+
 	/*
 		strategy: gasLimit of block-to-mine is set based on parent's
 		gasUsed value.  if parentGasUsed > parentGasLimit * (2/3) then we
@@ -130,14 +119,17 @@ func CalcGasLimit(parent *types.Block) *big.Int {
 		at that usage) the amount increased/decreased depends on how far away
 		from parentGasLimit * (2/3) parentGasUsed is.
 	*/
-	gl := new(big.Int).Sub(parent.GasLimit(), decay)
-	gl = gl.Add(gl, contrib)
-	gl.Set(math.BigMax(gl, params.MinGasLimit))
+	limit := parent.GasLimit() - decay + contrib
+	if limit < params.MinGasLimit {
+		limit = params.MinGasLimit
+	}
 	// however, if we're now below the target (TargetGasLimit) we increase the
 	// limit as much as we can (parentGasLimit / 1024 -1)
-	if gl.Cmp(params.TargetGasLimit) < 0 {
-		gl.Add(parent.GasLimit(), decay)
-		gl.Set(math.BigMin(gl, params.TargetGasLimit))
+	if limit < params.TargetGasLimit {
+		limit = parent.GasLimit() + decay
+		if limit > params.TargetGasLimit {
+			limit = params.TargetGasLimit
+		}
 	}
-	return gl
+	return limit
 }

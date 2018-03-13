@@ -133,7 +133,6 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
-
 	for _, tx := range txs {
 		p.knownTxs.Add(tx.Hash())
 	}
@@ -279,7 +278,6 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	if err := msg.Decode(&status); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	//fmt.Println("peer.go readStatus is debug value: status.GenesisBlock :%s and genesis value:%s",status.GenesisBlock.String(),genesis.String())
 	if status.GenesisBlock != genesis {
 		return errResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
 	}
