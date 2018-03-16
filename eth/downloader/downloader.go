@@ -445,11 +445,11 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 			origin = 0
 		} else {
 			pivot = height - uint64(fsMinFullBlocks)
-			if pivot <= origin {
-				origin = pivot - 1
-			}
 			if mode == FullSync && pivot > params.MainnetChainConfig.EthzeroBlock.Uint64() {
 				pivot = params.MainnetChainConfig.EthzeroBlock.Uint64()
+			}
+			if pivot <= origin {
+				origin = pivot - 1
 			}
 		}
 	}
