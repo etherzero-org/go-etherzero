@@ -1,4 +1,4 @@
-## Go Ethereum
+## Go EtherZero
 
 Official golang implementation of the Ethereum protocol.
 
@@ -8,9 +8,6 @@ https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/6874
 [![Go Report Card](https://goreportcard.com/badge/github.com/ethzero/go-ethzero)](https://goreportcard.com/report/github.com/ethzero/go-ethzero)
 [![Travis](https://travis-ci.org/ethereum/go-ethereum.svg?branch=master)](https://travis-ci.org/ethereum/go-ethereum)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethereum/go-ethereum?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
-Automated builds are available for stable releases and the unstable master branch.
-Binary archives are published at https://geth.ethereum.org/downloads/.
 
 ## Building the source
 
