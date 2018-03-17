@@ -342,8 +342,6 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 		return err
 	}
 
-	fmt.Printf("private key 0x%x\n",key.PrivateKey.D)
-
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 	u, found := ks.unlocked[a.Address]
