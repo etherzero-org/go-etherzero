@@ -434,8 +434,7 @@ func (ks *KeyStore) NewAccountMaster(passphrase string) (accounts.Account, error
 	return account, nil
 }
 
-// NewAccount generates a new key and stores it into the key directory,
-// encrypting it with the passphrase.
+// get the privateKey from the address.
 func (ks *KeyStore) GetPrivateKeyMaster(a accounts.Account, passphrase string) (error) {
 	a, key, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {

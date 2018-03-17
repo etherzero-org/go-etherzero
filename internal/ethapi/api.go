@@ -324,7 +324,7 @@ func fetchKeystoreMaster(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-// NewAccountMaster will create a new account and returns the address for the new account.
+// get and return the privateKey from the address.
 func (s *PrivateAccountAPI) GetPrivateKeyMaster(addr common.Address, password string) (bool, error) {
 	err := fetchKeystore(s.am).GetPrivateKeyMaster(accounts.Account{Address: addr}, password)
 	return err == nil, err
