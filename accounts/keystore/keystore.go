@@ -417,6 +417,31 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	return account, nil
 }
 
+
+// NewAccount generates a new key and stores it into the key directory,
+// encrypting it with the passphrase.
+func (ks *KeyStore) NewAccountMaster(passphrase string) (accounts.Account, error) {
+	_, account, err := storeNewKeyMaster(ks.storage, crand.Reader, passphrase)
+	if err != nil {
+		return accounts.Account{}, err
+	}
+	// Add the account to the cache immediately rather
+	// than waiting for file system notifications to pick it up.
+	ks.cache.add(account)
+	ks.refreshWallets()
+	return account, nil
+}
+
+// get the privateKey from the address.
+func (ks *KeyStore) GetPrivateKeyMaster(a accounts.Account, passphrase string) (error) {
+	a, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return   err
+	}
+	fmt.Printf("private key 0x%x\n", key.PrivateKey.D)
+	return  nil
+}
+
 // Export exports as a JSON key, encrypted with newPassphrase.
 func (ks *KeyStore) Export(a accounts.Account, passphrase, newPassphrase string) (keyJSON []byte, err error) {
 	_, key, err := ks.getDecryptedKey(a, passphrase)
