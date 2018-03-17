@@ -114,5 +114,11 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
 		},
+		{
+			Namespace: "masternode",
+			Version:   "1.0",
+			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
+			Public:    false,
+		},
 	}
 }
