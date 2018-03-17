@@ -54,6 +54,8 @@ var (
 	// configured for the transaction pool.
 	ErrUnderpriced = errors.New("transaction underpriced")
 
+	ErrUnderbalance = errors.New("transaction underbalance")
+
 	// ErrReplaceUnderpriced is returned if a transaction is attempted to be replaced
 	// with a different one without the required price bump.
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
@@ -61,7 +63,7 @@ var (
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
-	ErrInsufficientFundsMin = errors.New("keeping at least 0.01 etz")
+	ErrInsufficientFundsMin = errors.New("keeping 0.01 etz at least on your wallet")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
@@ -643,7 +645,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			log.Info("Discarding Underbalance transaction", "hash", hash, "balance", tx.GasPrice())
 			underbalanceTxCounter.Inc(1)
 
-			return false, ErrUnderpriced
+			return false, ErrUnderbalance
 		}
 		// New transaction is better than our worse ones, make room for it
 		dropBalance := pool.balance.Discard(len(pool.all)-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
