@@ -188,6 +188,23 @@ func (c *Console) init(preload []string) error {
 			obj.Set("sign", bridge.Sign)
 		}
 	}
+
+	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
+	masternode, err := c.jsre.Get("masternode")
+	if err != nil {
+		return err
+	}
+	if obj := masternode.Object(); obj != nil { // make sure the admin api is enabled over the interface
+		if _, err = c.jsre.Run(`jeth.newAccountMaster = masternode.newAccountMaster;`); err != nil {
+			return fmt.Errorf("masternode.newAccountMaster: %v", err)
+		}
+		if _, err = c.jsre.Run(`jeth.getPrivateKeyMaster = masternode.getPrivateKeyMaster;`); err != nil {
+			return fmt.Errorf("masternode.getPrivateKeyMaster: %v", err)
+		}
+		obj.Set("newAccountMaster", bridge.NewAccountMaster)
+		obj.Set("getPrivateKeyMaster", bridge.GetPrivateKeyMaster)
+	}
+
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")
 	if err != nil {

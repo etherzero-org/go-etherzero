@@ -179,6 +179,20 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	return key, a, err
 }
 
+func storeNewKeyMaster(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
+	key, err := newKey(rand)
+	if err != nil {
+		return nil, accounts.Account{}, err
+	}
+	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileNameMaster(key.Address))}}
+	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
+		zeroKey(key.PrivateKey)
+		return nil, a, err
+	}
+	return key, a, err
+}
+
+
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
@@ -205,7 +219,16 @@ func writeKeyFile(file string, content []byte) error {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
+	//return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
 	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
+}
+
+// keyFileName implements the naming convention for keyfiles:
+// UTC--<created_at UTC ISO8601>-<address hex>
+func keyFileNameMaster(keyAddr common.Address) string {
+	ts := time.Now().UTC()
+	//return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
+	return fmt.Sprintf("MSD--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
 }
 
 func toISO8601(t time.Time) string {

@@ -225,6 +225,16 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 	return addresses
 }
 
+// ListAccounts will return a list of addresses for accounts this node manages.
+func (s *PrivateAccountAPI) ListAccountsMaster() []common.Address {
+	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+	for _, wallet := range s.am.Wallets() {
+		for _, account := range wallet.Accounts() {
+			addresses = append(addresses, account.Address)
+		}
+	}
+	return addresses
+}
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
 type rawWallet struct {
@@ -298,6 +308,26 @@ func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) 
 // fetchKeystore retrives the encrypted keystore from the account manager.
 func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+}
+
+// NewAccountMaster will create a new account and returns the address for the new account.
+func (s *PrivateAccountAPI) NewAccountMaster(password string) (common.Address, error) {
+	acc, err := fetchKeystoreMaster(s.am).NewAccountMaster(password)
+	if err == nil {
+		return acc.Address, nil
+	}
+	return common.Address{}, err
+}
+
+// fetchKeystore retrives the encrypted keystore from the account manager.
+func fetchKeystoreMaster(am *accounts.Manager) *keystore.KeyStore {
+	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+}
+
+// get and return the privateKey from the address.
+func (s *PrivateAccountAPI) GetPrivateKeyMaster(addr common.Address, password string) (bool, error) {
+	err := fetchKeystore(s.am).GetPrivateKeyMaster(accounts.Account{Address: addr}, password)
+	return err == nil, err
 }
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
