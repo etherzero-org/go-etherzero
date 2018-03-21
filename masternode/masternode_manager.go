@@ -1,6 +1,7 @@
 package masternode
 
 import (
+	"crypto/ecdsa"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/core"
@@ -133,7 +134,8 @@ func (mm *MasternodeManager) Stop() {
 // MasternodeInfo represents a short summary of the Etherzero Masternode-protocol metadata
 // known about the host Masternode.
 type MasternodeInfo struct {
-	Alias   string      `json:"alias"`
-	Url     string      `json:"url"`
-	Account common.Hash `json:"account"`
+	Alias      string           `json:"alias"`
+	Url        string           `json:"url"`
+	Privatekey ecdsa.PrivateKey `json:"privatekey"`
+	Txid       common.Hash      `json:"txid"`
 }

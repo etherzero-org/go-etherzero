@@ -19,6 +19,15 @@
 
 package masternode
 
+
+const(
+	ACTIVE_MASTERNODE_INITIAL          = 0; // initial state
+	ACTIVE_MASTERNODE_SYNC_IN_PROCESS  = 1;
+	ACTIVE_MASTERNODE_INPUT_TOO_NEW    = 2;
+	ACTIVE_MASTERNODE_NOT_CAPABLE      = 3;
+	ACTIVE_MASTERNODE_STARTED          = 4;
+
+)
 //Responsible for activating the Masternode and pinging the network
 type ActiveMasternode struct{
 
