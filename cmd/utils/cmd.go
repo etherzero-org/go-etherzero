@@ -33,6 +33,10 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/rlp"
+	"path/filepath"
+	"io/ioutil"
+	"encoding/json"
+	"github.com/ethzero/go-ethzero/p2p/discover"
 )
 
 const (
@@ -79,6 +83,30 @@ func StartNode(stack *node.Node) {
 		debug.Exit() // ensure trace and CPU profile data is flushed.
 		debug.LoudPanic("boom")
 	}()
+}
+
+
+
+func StartMasterNode(stack *node.Node) {
+
+	keydir := stack.DataDir()
+	filename := filepath.Join(keydir, "/keystore/masternode.conf")
+
+	keyjson, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	m := make(map[string]interface{})
+
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return
+	}
+
+	url := "enode://"
+	url =url + m["PrivateKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
+	node, _ := discover.ParseNode(url)
+	node  = node
+
 }
 
 func ImportChain(chain *core.BlockChain, fn string) error {

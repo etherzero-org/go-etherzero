@@ -307,4 +307,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
+
+	utils.StartMasterNode(stack)
+
 }
