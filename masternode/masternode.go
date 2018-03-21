@@ -19,7 +19,6 @@
 package masternode
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"math/big"
 	"sync"
@@ -27,6 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/p2p"
 )
 
 var (
@@ -60,7 +60,7 @@ type Masternode struct {
 	//the enode URL of the P2P masternode running onMasternodes are the enode URL of the P2P nodes running on
 	// the Masternode Etherzero network.
 	url 			string 		   `json:"url"`
-
+	*p2p.Peer
 	name            string         `json:"name"`            // Name of the Masternode, just as a alise
 	Address         common.Address `json:"address"`         // Ethereum Masternode account address derived from the key
 	activeState     int            `json:"activestate"`     //Masternode active state
@@ -72,13 +72,9 @@ type Masternode struct {
 	infoValid       bool           `json:"infovalid"`       //
 
 	head common.Hash `json:"head"`
-
 	log log.Logger
-
 	lock sync.RWMutex
-
 	td *big.Int
-
 	knownTxs map[common.Hash]*types.Transaction // All currently processable transactions
 
 }
@@ -131,11 +127,11 @@ func (m *Masternode) LastDsq() int {
 	return m.lastDsq
 }
 
-func (m *Masternode) setID(id common.Hash) {
+func (m *Masternode) SetID(id common.Hash) {
 	m.id = id
 }
 
-func (m *Masternode) setURL(url string) {
+func (m *Masternode) SetURL(url string) {
 	m.url = url
 }
 
@@ -260,4 +256,17 @@ func (ms *masternodeSet) BestMasternode() *Masternode {
 		}
 	}
 	return bestMasternode
+}
+
+
+// Close disconnects all peers.
+// No new peers can be registered after Close has returned.
+func (mn *masternodeSet) Close() {
+	mn.lock.Lock()
+	defer mn.lock.Unlock()
+
+	for _, m := range mn.masternodes {
+		m.Disconnect(p2p.DiscQuitting)
+	}
+	mn.closed = true
 }

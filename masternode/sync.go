@@ -37,11 +37,25 @@ const (
 	txsyncPackSize = 100 * 1024
 )
 
+const (
+	masternodeSyncFailed         = -1
+	masternodeSyncInitial        = 0 // sync just started, was reset recently or still in IDB
+	masternodeSyncWaiting        = 1 //waiting after initial to see if we can get more headers/blocks
+	masternodeSyncList           = 2
+	masternodeSyncMnw            = 3
+	masternodeSyncGovernance     = 4
+	masternodeSyncGovobj         = 10
+	masternodeSyncGovobjVote     = 11
+	masternodeSyncFinished       = 999
+	masternodeSyncTickSeconds    = 6
+	masternodeSyncTimeoutSeconds = 30
+	masternodeSyncEnoughPeers    = 6
+)
+
 type txsync struct {
 	p   *Masternode
 	txs []*types.Transaction
 }
-
 
 /*
 // syncTransactions starts sending all currently pending transactions to the given peer.
@@ -206,14 +220,14 @@ func (mn *MasternodeManager) synchronise(m *Masternode) {
 	}
 	atomic.StoreUint32(&mn.acceptTxs, 1) // Mark initial sync done
 	/*
-	if head := mn.blockchain.CurrentBlock(); head.NumberU64() > 0 {
-		// We've completed a sync cycle, notify all peers of new state. This path is
-		// essential in star-topology networks where a gateway node needs to notify
-		// all its out-of-date peers of the availability of a new block. This failure
-		// scenario will most often crop up in private and hackathon networks with
-		// degenerate connectivity, but it should be healthy for the mainnet too to
-		// more reliably update peers or the local TD state.
-		//go mn.BroadcastBlock(head, false)
-	}
+		if head := mn.blockchain.CurrentBlock(); head.NumberU64() > 0 {
+			// We've completed a sync cycle, notify all peers of new state. This path is
+			// essential in star-topology networks where a gateway node needs to notify
+			// all its out-of-date peers of the availability of a new block. This failure
+			// scenario will most often crop up in private and hackathon networks with
+			// degenerate connectivity, but it should be healthy for the mainnet too to
+			// more reliably update peers or the local TD state.
+			//go mn.BroadcastBlock(head, false)
+		}
 	*/
 }
