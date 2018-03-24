@@ -79,4 +79,9 @@ func (am *ActiveMasternode) UpdateSentinelPing()(bool,error){
 	return true,nil
 }
 
+func (am *ActiveMasternode)SendMasternodePing()(bool,error){
+
+	return true,nil
+}
+
 
