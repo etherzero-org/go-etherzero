@@ -32,13 +32,20 @@ import (
 const (
 	eth62 = 62
 	eth63 = 63
+	etz64=64
 )
 
 // Official short name of the protocol used during capability negotiation.
 var ProtocolName = "etz"
 
+// Official short name of the masternode protocol used during capability negotiation.
+var MasternodeProtocolName = "etzmasternode"
+
 // Supported versions of the eth protocol (first is primary).
 var ProtocolVersions = []uint{eth63, eth62}
+
+// Supported versions of the etz masternode protocol (first is primary).
+var MasternodeProtocolVersions = []uint{etz64}
 
 // Number of implemented message corresponding to different protocol versions.
 var ProtocolLengths = []uint64{17, 8}
