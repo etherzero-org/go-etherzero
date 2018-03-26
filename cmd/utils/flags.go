@@ -47,6 +47,7 @@ import (
 	"github.com/ethzero/go-ethzero/ethstats"
 	"github.com/ethzero/go-ethzero/les"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/metrics"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/p2p"
@@ -57,7 +58,6 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	whisper "github.com/ethzero/go-ethzero/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/ethzero/go-ethzero/masternode"
 )
 
 var (
