@@ -81,6 +81,11 @@ func localConsole(ctx *cli.Context) error {
 	startNode(ctx, node)
 	defer node.Stop()
 
+	masternode := makeConfigMasterNode(ctx)
+
+	utils.StartMasterNode( masternode )
+
+
 	// Attach to the newly started node and start the JavaScript console
 	client, err := node.Attach()
 	if err != nil {

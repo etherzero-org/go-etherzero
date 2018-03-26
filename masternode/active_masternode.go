@@ -45,7 +45,7 @@ type ActiveMasternode struct{
 	activeState	int
 	// Keys for the active Masternode
 	MasternodeKey string
-	MasternodeID       NodeID // the Masternode's public key
+	//MasternodeID       NodeID // the Masternode's public key
 	// Initialized while registering Masternode
 	IP       net.IP // len 4 for IPv4 or 16 for IPv6
 	UDP, TCP uint16 // port numbers

@@ -33,10 +33,8 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/rlp"
-	"path/filepath"
-	"io/ioutil"
-	"encoding/json"
-	"github.com/ethzero/go-ethzero/p2p/discover"
+	"github.com/ethzero/go-ethzero/masternode"
+
 )
 
 const (
@@ -87,25 +85,14 @@ func StartNode(stack *node.Node) {
 
 
 
-func StartMasterNode(stack *node.Node) {
+func StartMasterNode(stack *masternode.Masternode) {
 
-	keydir := stack.DataDir()
-	filename := filepath.Join(keydir, "/keystore/masternode.conf")
-
-	keyjson, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return
+	//var am *masternode.ActiveMasternode
+	//stack = stack
+	//am.ManageStateInitial()
+	if err := stack.Start(); err != nil {
+		Fatalf("Error starting protocol stack: %v", err)
 	}
-	m := make(map[string]interface{})
-
-	if err := json.Unmarshal(keyjson, &m); err != nil {
-		return
-	}
-
-	url := "enode://"
-	url =url + m["PrivateKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
-	node, _ := discover.ParseNode(url)
-	node  = node
 
 }
 

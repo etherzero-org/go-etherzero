@@ -38,15 +38,15 @@ type MasternodeManager struct {
 	downloader  *downloader.Downloader
 	fetcher     *fetcher.Fetcher
 	// map to hold all Masternodes
-	masternodes *masternodeSet
+	//masternodes *masternodeSet
 	/// Set when masternodes are added, cleared when CGovernanceManager is notified
 	masternodesAdded bool `json:"masternodes_added"`
 	/// Set when masternodes are removed, cleared when CGovernanceManager is notified
 	masternodesRemoved bool `json:"masternodes_removed"`
 	// who's asked for the Masternode list and the last time
-	mAskedUsForMasternodes *masternodeSet
+	//mAskedUsForMasternodes *masternodeSet
 	// who we asked for the Masternode list and the last time
-	mWeAskedForMasternode *masternodeSet
+	//mWeAskedForMasternode *masternodeSet
 
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
@@ -68,9 +68,9 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		blockchain:             blockchain,
 		masternodesAdded:       added,
 		masternodesRemoved:     removed,
-		masternodes:            newMasternodeSet(),
-		mAskedUsForMasternodes: newMasternodeSet(),
-		mWeAskedForMasternode:  newMasternodeSet(),
+		//masternodes:            newMasternodeSet(),
+		//mAskedUsForMasternodes: newMasternodeSet(),
+		//mWeAskedForMasternode:  newMasternodeSet(),
 	}
 
 	return manager, nil
@@ -78,16 +78,16 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 
 func (mm *MasternodeManager) Add(m *Masternode) bool {
 
-	m.log.Info("masternode", "CMasternodeMan::Add -- Adding new Masternode: addr=%s, %i now\n", m.URL(), mm.Size()+1)
-	mm.masternodes.Register(m)
+	//m.log.Info("masternode", "CMasternodeMan::Add -- Adding new Masternode: addr=%s, %i now\n", m.URL(), mm.Size()+1)
+	//mm.masternodes.Register(m)
 	mm.masternodesAdded = true
 	return true
 }
 
 /// Return the number of (unique) Masternodes
-func (mm *MasternodeManager) Size() int {
-	return mm.masternodes.Len()
-}
+//func (mm *MasternodeManager) Size() int {
+	//return mm.masternodes.Len()
+//}
 
 func (mm *MasternodeManager) Start() {
 

@@ -308,6 +308,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 
-	utils.StartMasterNode(stack)
+	//utils.StartMasterNode(stack)
 
 }

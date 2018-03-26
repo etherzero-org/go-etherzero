@@ -57,6 +57,7 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	whisper "github.com/ethzero/go-ethzero/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
 var (
@@ -878,6 +879,30 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setWS(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
+	switch {
+	case ctx.GlobalIsSet(DataDirFlag.Name):
+		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
+	case ctx.GlobalBool(DeveloperFlag.Name):
+		cfg.DataDir = "" // unless explicitly requested, use memory databases
+	case ctx.GlobalBool(TestnetFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+	case ctx.GlobalBool(RinkebyFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
+	}
+
+	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
+		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
+	}
+	if ctx.GlobalIsSet(LightKDFFlag.Name) {
+		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
+	}
+	if ctx.GlobalIsSet(NoUSBFlag.Name) {
+		cfg.NoUSB = ctx.GlobalBool(NoUSBFlag.Name)
+	}
+}
+
+// SetNodeConfig applies node-related command line flags to the config.
+func SetMasterNodeConfig(ctx *cli.Context, cfg *masternode.Config) {
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
