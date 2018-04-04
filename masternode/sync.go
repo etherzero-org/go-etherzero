@@ -175,7 +175,3 @@ func (mn *MasternodeManager) syncer() {
 
 */
 
-// synchronise tries to sync up our local block chain with a remote peer.
-func (mn *MasternodeManager) synchronise(m *Masternode) {
-
-}
