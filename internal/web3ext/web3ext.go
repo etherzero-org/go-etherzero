@@ -119,6 +119,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'masterNodelist',
+			call: 'admin_masterNodelist',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'removePeer',
 			call: 'admin_removePeer',
 			params: 1

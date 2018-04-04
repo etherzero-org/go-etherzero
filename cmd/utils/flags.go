@@ -465,6 +465,11 @@ var (
 		Usage: "Network listening port",
 		Value: 21212,
 	}
+	ListenMasterPortFlag = cli.IntFlag{
+		Name:  "masterport",
+		Usage: "Network listening port",
+		Value: 31212,
+	}
 	BootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
 		Usage: "Comma separated enode URLs for P2P discovery bootstrap (set v4+v5 instead for light servers)",
@@ -656,6 +661,14 @@ func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
+// setListenAddress creates a TCP listening address string from set command
+// line flags.
+func setListenMasterAddress(ctx *cli.Context, cfg *p2p.Config) {
+	if ctx.GlobalIsSet(ListenMasterPortFlag.Name) {
+		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenMasterPortFlag.Name))
+	}
+}
+
 // setNAT creates a port mapper from command line flags.
 func setNAT(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NATFlag.Name) {
@@ -725,6 +738,18 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
 func setIPC(ctx *cli.Context, cfg *node.Config) {
+	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
+	switch {
+	case ctx.GlobalBool(IPCDisabledFlag.Name):
+		cfg.IPCPath = ""
+	case ctx.GlobalIsSet(IPCPathFlag.Name):
+		cfg.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
+	}
+}
+
+// setIPC creates an IPC path configuration from the set command line flags,
+// returning an empty string if IPC was explicitly disabled, or the set path.
+func setMasterIPC(ctx *cli.Context, cfg *masternode.Config) {
 	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
@@ -871,6 +896,71 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
+
+func SetP2PMasterConfig(ctx *cli.Context, cfg *p2p.Config) {
+	setNodeKey(ctx, cfg)
+	setNAT(ctx, cfg)
+	setListenMasterAddress(ctx, cfg)
+	setBootstrapNodes(ctx, cfg)
+	setBootstrapNodesV5(ctx, cfg)
+
+	lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
+	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
+	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
+
+	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
+		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
+	} else {
+		if lightServer {
+			cfg.MaxPeers += lightPeers
+		}
+		if lightClient && ctx.GlobalIsSet(LightPeersFlag.Name) && cfg.MaxPeers < lightPeers {
+			cfg.MaxPeers = lightPeers
+		}
+	}
+	if !(lightClient || lightServer) {
+		lightPeers = 0
+	}
+	ethPeers := cfg.MaxPeers - lightPeers
+	if lightClient {
+		ethPeers = 0
+	}
+	log.Info("Maximum peer count", "ETZ", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+
+	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
+		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
+	}
+	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || lightClient {
+		cfg.NoDiscovery = true
+	}
+
+	// if we're running a light client or server, force enable the v5 peer discovery
+	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
+	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
+	forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
+	if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
+		cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
+	} else if forceV5Discovery {
+		cfg.DiscoveryV5 = true
+	}
+
+	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
+		list, err := netutil.ParseNetlist(netrestrict)
+		if err != nil {
+			Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
+		}
+		cfg.NetRestrict = list
+	}
+
+	if ctx.GlobalBool(DeveloperFlag.Name) {
+		// --dev mode can't use p2p networking.
+		cfg.MaxPeers = 0
+		cfg.ListenAddr = ":0"
+		cfg.NoDiscovery = true
+		cfg.DiscoveryV5 = false
+	}
+}
+
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
@@ -903,15 +993,17 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 
 // SetNodeConfig applies node-related command line flags to the config.
 func SetMasterNodeConfig(ctx *cli.Context, cfg *masternode.Config) {
+	SetP2PMasterConfig(ctx, &cfg.P2P)
+	setMasterIPC(ctx, cfg)
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		cfg.DataDir = "" // unless explicitly requested, use memory databases
 	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+		cfg.DataDir = filepath.Join(masternode.DefaultDataDir(), "testnet")
 	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
+		cfg.DataDir = filepath.Join(masternode.DefaultDataDir(), "rinkeby")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {

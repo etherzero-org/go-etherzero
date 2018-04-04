@@ -81,13 +81,13 @@ func localConsole(ctx *cli.Context) error {
 	startNode(ctx, node)
 	defer node.Stop()
 
-	masternode := makeConfigMasterNode(ctx)
-
+	masternode := makeFullMasterNode(ctx)
 	utils.StartMasterNode( masternode )
 
-
 	// Attach to the newly started node and start the JavaScript console
-	client, err := node.Attach()
+	//client, err := node.Attach()
+	client, err := masternode.Attach()
+
 	if err != nil {
 		utils.Fatalf("Failed to attach to the inproc geth: %v", err)
 	}

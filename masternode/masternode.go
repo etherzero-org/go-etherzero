@@ -127,17 +127,17 @@ func New(conf *Config) (*Masternode, error) {
 	filename := filepath.Join(keydir, "/geth/masternode.conf")
 
 	keyjson, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil,err
-	}
-	m := make(map[string]interface{})
+	if err == nil {
+		m := make(map[string]interface{})
 
-	if err := json.Unmarshal(keyjson, &m); err != nil {
-		return nil,err
-	}
+		if err := json.Unmarshal(keyjson, &m); err != nil {
+			return nil,err
+		}
 
-	url := "enode://"
-	url =url + m["PublicKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
+		url := "enode://"
+		url =url + m["PublicKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
+
+	}
 
 	//configure the masternode when the parameter is ready, including Publickey,IP,Port etc
 
@@ -196,6 +196,67 @@ func (n *Masternode) Start() error {
 	}
 
 	n.log.Info("Starting peer-to-peer master node", "instance", n.serverConfig.Name)
+	running := &p2p.Server{Config: n.serverConfig}
+
+	// Otherwise copy and specialize the P2P configuration
+	services := make(map[reflect.Type]Service)
+	for _, constructor := range n.serviceFuncs {
+		// Create a new context for the particular service
+		ctx := &ServiceContext{
+			config:         n.config,
+			services:       make(map[reflect.Type]Service),
+			EventMux:       n.eventmux,
+			AccountManager: n.accman,
+		}
+		for kind, s := range services { // copy needed for threaded access
+			ctx.services[kind] = s
+		}
+		// Construct and save the service
+		service, err := constructor(ctx)
+		if err != nil {
+			return err
+		}
+		kind := reflect.TypeOf(service)
+		if _, exists := services[kind]; exists {
+			return &DuplicateServiceError{Kind: kind}
+		}
+		services[kind] = service
+	}
+	// Gather the protocols and start the freshly assembled P2P server
+	for _, service := range services {
+		running.Protocols = append(running.Protocols, service.Protocols()...)
+	}
+	if err := running.Start(); err != nil {
+		return convertFileLockError(err)
+	}
+	// Start each of the services
+	started := []reflect.Type{}
+	for kind, service := range services {
+		// Start the next service, stopping all previous upon failure
+		if err := service.Start(running); err != nil {
+			for _, kind := range started {
+				services[kind].Stop()
+			}
+			running.Stop()
+
+			return err
+		}
+		// Mark the service started for potential cleanup
+		started = append(started, kind)
+	}
+	// Lastly start the configured RPC interfaces
+	if err := n.startRPC(services); err != nil {
+		for _, service := range services {
+			service.Stop()
+		}
+		running.Stop()
+		return err
+	}
+	// Finish initializing the startup
+	n.services = services
+	n.server = running
+	n.stop = make(chan struct{})
+
 	return nil
 }
 

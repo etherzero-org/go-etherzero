@@ -29,6 +29,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rpc"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // PrivateAdminAPI is the collection of administrative API methods exposed only
@@ -58,6 +59,19 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	}
 	server.AddPeer(node)
 	return true, nil
+}
+
+
+// masternode list
+func (api *PrivateAdminAPI) MasterNodelist(ctx *cli.Context) {
+	// Make sure the server is running, fail otherwise
+	server := api.node.Server()
+	masternode := server.PeersInfo()
+
+	fmt.Println("Master Node list :")
+	for _,ma:=range masternode{
+		fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress)
+	}
 }
 
 // RemovePeer disconnects from a a remote node if the connection exists

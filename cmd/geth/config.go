@@ -213,6 +213,12 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	return stack
 }
 
+func makeFullMasterNode(ctx *cli.Context) *masternode.Masternode {
+	stack := makeConfigMasterNode(ctx)
+
+	return stack
+}
+
 // dumpConfig is the dumpconfig command.
 func dumpConfig(ctx *cli.Context) error {
 	_, cfg := makeConfigNode(ctx)
