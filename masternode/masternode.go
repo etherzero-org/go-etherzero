@@ -37,8 +37,16 @@ import (
 	"github.com/prometheus/prometheus/util/flock"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/ethzero/go-ethzero/p2p/discover"
+	"github.com/ethzero/go-ethzero/common"
+	"math/big"
 )
 
+var (
+	errClosed            = errors.New("masternode set is closed")
+	errAlreadyRegistered = errors.New("masternode is already registered")
+	errNotRegistered     = errors.New("masternode is not registered")
+)
 // Node is a container on which services can be registered.
 type Masternode struct {
 	eventmux *event.TypeMux // Event multiplexer used between the services of a stack
@@ -53,6 +61,10 @@ type Masternode struct {
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
+
+	paid		 int 	//last paid height
+	CollateralMinConfBlockHash common.Hash //remember the hash of the block where masternode collateral had minimum required confirmations
+	ID         discover.NodeID
 
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
@@ -170,6 +182,7 @@ func (n *Masternode) Start() error {
 	// discovery databases.
 	n.serverConfig = n.config.P2P
 	n.serverConfig.PrivateKey = n.config.NodeKey()
+	//n.serverConfig.MaxPeers=8888
 	n.serverConfig.Name = n.config.NodeName()
 	n.serverConfig.Logger = n.log
 	if n.serverConfig.StaticNodes == nil {
@@ -181,9 +194,8 @@ func (n *Masternode) Start() error {
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
+
 	n.log.Info("Starting peer-to-peer master node", "instance", n.serverConfig.Name)
-
-
 	return nil
 }
 
@@ -613,6 +625,11 @@ func (n *Masternode) ResolvePath(x string) string {
 	return n.config.resolvePath(x)
 }
 
+// Paid returns the masternode last paid height
+func (n *Masternode) Paid() int{
+	return n.paid
+}
+
 // apis returns the collection of RPC descriptors this node offers.
 func (n *Masternode) apis() []rpc.API {
 	return []rpc.API{
@@ -642,3 +659,73 @@ func (n *Masternode) apis() []rpc.API {
 		},
 	}
 }
+
+//TODO:TBA
+// Deterministically calculate a given "score" for a Masternode depending on how close it's hash is to
+// the proof of work for that block. The further away they are the better, the furthest will win the election
+// and get paid this block
+func (m *Masternode) CalculateScore(hash common.Hash)*big.Int{
+
+	return hash.Big()
+}
+
+// MasternodeSet represents the collection of active peers currently participating in
+// the Ethereum sub-protocol.
+type MasternodeSet struct {
+	masternodes  map[string]*Masternode
+	lock   sync.RWMutex
+	closed bool
+}
+
+// newPeerSet creates a new peer set to track the active participants.
+func newMasternodeSet() *MasternodeSet {
+	return &MasternodeSet{
+		masternodes: make(map[string]*Masternode),
+	}
+}
+
+// Register injects a new peer into the working set, or returns an error if the
+// peer is already known.
+func (ms *MasternodeSet) Register(p *Masternode) error {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+
+	if ms.closed {
+		return errClosed
+	}
+	if _, ok := ms.masternodes[p.ID.String()]; ok {
+		return errAlreadyRegistered
+	}
+	ms.masternodes[p.ID.String()] = p
+	return nil
+}
+
+// Unregister removes a remote peer from the active set, disabling any further
+// actions to/from that particular entity.
+func (ms *MasternodeSet) Unregister(id string) error {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+
+	if _, ok := ms.masternodes[id]; !ok {
+		return errNotRegistered
+	}
+	delete(ms.masternodes, id)
+	return nil
+}
+
+// Peer retrieves the registered peer with the given id.
+func (ms *MasternodeSet) Masternode(id string) *Masternode {
+	ms.lock.RLock()
+	defer ms.lock.RUnlock()
+
+	return ms.masternodes[id]
+}
+
+// Len returns if the current number of peers in the set.
+func (ms *MasternodeSet) Len() int {
+	ms.lock.RLock()
+	defer ms.lock.RUnlock()
+
+	return len(ms.masternodes)
+}
+
