@@ -78,6 +78,8 @@ type MasternodeManager struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+
+	log log.Logger
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -328,6 +330,19 @@ func (mm *MasternodeManager) getNextMasternodeInQueueForPayment(hash common.Hash
 		}
 	}
 	return winnerMasternode
+}
+
+func (mm *MasternodeManager) GetMasternodeRank(blockHeight uint64,tx *types.Transaction,minProtocol int) (int,bool){
+
+	var rank int =1
+	mm.syncer()
+	block:=mm.blockchain.GetBlockByNumber(blockHeight)
+
+	if  block == nil{
+		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ",blockHeight)
+	}
+
+	return rank,true
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote

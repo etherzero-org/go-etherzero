@@ -40,6 +40,8 @@ import (
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/common"
 	"math/big"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
+	"github.com/ethzero/go-ethzero/rlp"
 )
 
 var (
@@ -65,7 +67,7 @@ type Masternode struct {
 	paid		 int 	//last paid height
 	CollateralMinConfBlockHash common.Hash //remember the hash of the block where masternode collateral had minimum required confirmations
 	ID         discover.NodeID
-
+	txid 	common.Hash
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
@@ -87,6 +89,14 @@ type Masternode struct {
 
 	log log.Logger
 }
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
+
 
 // New creates a new P2P node, ready for protocol registration.
 func New(conf *Config) (*Masternode, error) {
@@ -727,7 +737,13 @@ func (n *Masternode) apis() []rpc.API {
 // and get paid this block
 func (m *Masternode) CalculateScore(hash common.Hash)*big.Int{
 
-	return hash.Big()
+	blockHash:= rlpHash([]interface{}{
+		hash,
+		m.txid,
+		m.CollateralMinConfBlockHash,
+	})
+
+	return blockHash.Big()
 }
 
 // MasternodeSet represents the collection of active peers currently participating in
