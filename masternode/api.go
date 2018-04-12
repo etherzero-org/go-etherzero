@@ -70,8 +70,9 @@ func (api *PrivateAdminAPI) MasterNodelist(ctx *cli.Context) {
 
 	fmt.Println("Master Node list :")
 	for _,ma:=range masternode{
-		fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress)
+		fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress,ma.MasterState)
 	}
+
 }
 
 // RemovePeer disconnects from a a remote node if the connection exists

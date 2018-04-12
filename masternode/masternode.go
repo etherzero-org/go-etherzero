@@ -35,8 +35,6 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/rpc"
 	"github.com/prometheus/prometheus/util/flock"
-	"io/ioutil"
-	"encoding/json"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/common"
 	"math/big"
@@ -130,23 +128,6 @@ func New(conf *Config) (*Masternode, error) {
 	}
 	if conf.Logger == nil {
 		conf.Logger = log.New()
-	}
-
-	//Load the masternode configuration
-	keydir :=conf.DataDir
-	filename := filepath.Join(keydir, "/geth/masternode.conf")
-
-	keyjson, err := ioutil.ReadFile(filename)
-	if err == nil {
-		m := make(map[string]interface{})
-
-		if err := json.Unmarshal(keyjson, &m); err != nil {
-			return nil,err
-		}
-
-		url := "enode://"
-		url =url + m["PublicKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
-
 	}
 
 	//configure the masternode when the parameter is ready, including Publickey,IP,Port etc

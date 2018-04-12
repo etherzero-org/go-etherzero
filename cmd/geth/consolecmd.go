@@ -29,6 +29,9 @@ import (
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/rpc"
 	"gopkg.in/urfave/cli.v1"
+	//"github.com/ethzero/go-ethzero/masternode"
+	"io/ioutil"
+	"encoding/json"
 )
 
 var (
@@ -80,17 +83,37 @@ func localConsole(ctx *cli.Context) error {
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	defer node.Stop()
+	//Load the masternode configuration
+	keydir :=node.DataDir()
+	filename := filepath.Join(keydir, "/geth/masternode.conf")
 
-	masternode := makeFullMasterNode(ctx)
-	utils.StartMasterNode( masternode )
+	var client *rpc.Client
+	keyjson, err := ioutil.ReadFile(filename)
+	if err == nil {
+		m := make(map[string]interface{})
+
+		if err := json.Unmarshal(keyjson, &m); err != nil {
+			return err
+		}
+
+		url := "enode://"
+		url =url + m["PublicKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
+
+		masternode := makeFullMasterNode(ctx)
+		utils.StartMasterNode( masternode )
+		client, err = masternode.Attach()
+		if err != nil {
+			utils.Fatalf("Failed to attach to the inproc geth: %v", err)
+		}
+
+	} else {
+		client, err = node.Attach()
+		if err != nil {
+			utils.Fatalf("Failed to attach to the inproc geth: %v", err)
+		}
+	}
 
 	// Attach to the newly started node and start the JavaScript console
-	//client, err := node.Attach()
-	client, err := masternode.Attach()
-
-	if err != nil {
-		utils.Fatalf("Failed to attach to the inproc geth: %v", err)
-	}
 	config := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
 		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),

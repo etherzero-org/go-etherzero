@@ -109,6 +109,7 @@ type Peer struct {
 
 	// events receives message send / receive events if set
 	events *event.Feed
+	masterState string
 }
 
 // NewPeer returns a peer for testing purposes.
@@ -176,9 +177,17 @@ func newPeer(conn *conn, protocols []Protocol) *Peer {
 		closed:   make(chan struct{}),
 		log:      log.New("id", conn.id, "conn", conn.flags),
 	}
+	p.masterState = "Preable"
 	return p
 }
 
+func (p *Peer) check()  {
+	// to be determine
+	if true {
+		p.masterState = "Enable"
+	}
+
+}
 func (p *Peer) Log() log.Logger {
 	return p.log
 }
@@ -424,6 +433,7 @@ type PeerInfo struct {
 		Static        bool   `json:"static"`
 	} `json:"network"`
 	Protocols map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
+	MasterState       string `json:"masterState"`
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -458,5 +468,6 @@ func (p *Peer) Info() *PeerInfo {
 		}
 		info.Protocols[proto.Name] = protoInfo
 	}
+	info.MasterState = p.masterState//"State:Enable"
 	return info
 }
