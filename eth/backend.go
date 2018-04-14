@@ -42,6 +42,7 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/internal/ethapi"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/miner"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/p2p"
@@ -78,6 +79,10 @@ type Ethereum struct {
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
 	accountManager *accounts.Manager
+
+	masternodeManager *MasternodeManager
+
+	activeMasternode *masternode.Masternode // Responsible for activating the Masternode and pinging the network
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
@@ -133,7 +138,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		etherbase:      config.Etherbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
-}
+	}
 
 	log.Info("Initialising Ethzero protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
@@ -362,6 +367,9 @@ func (s *Ethereum) StartMining(local bool) error {
 func (s *Ethereum) StopMining()         { s.miner.Stop() }
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
+
+func (s *Ethereum) MasternodeManager() *MasternodeManager    { return s.masternodeManager }
+func (s *Ethereum) ActiveMasternode() *masternode.Masternode { return s.activeMasternode }
 
 func (s *Ethereum) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Ethereum) BlockChain() *core.BlockChain       { return s.blockchain }

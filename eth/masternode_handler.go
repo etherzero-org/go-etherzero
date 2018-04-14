@@ -25,7 +25,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/consensus/misc"
@@ -35,14 +34,14 @@ import (
 	"github.com/ethzero/go-ethzero/eth/fetcher"
 	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
+	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/log"
 	"sort"
 )
-
 
 type MasternodeManager struct {
 	networkId uint64
@@ -59,8 +58,7 @@ type MasternodeManager struct {
 	fetcher    *fetcher.Fetcher
 	peers      *peerSet
 
-
-	masternodes map[string]*masternode.Masternode
+	masternodes map[string]*masternode.Masternode //id -> masternode
 
 	SubProtocols []p2p.Protocol
 
@@ -300,49 +298,68 @@ func (mm *MasternodeManager) handle(p *peer) error {
 }
 
 // Deterministically select the oldest/best masternode to pay on the network
-func (mm *MasternodeManager) getNextMasternodeInQueueForPayment(hash common.Hash)*masternode.Masternode{
+func (mm *MasternodeManager) getNextMasternodeInQueueForPayment(hash common.Hash) *masternode.Masternode {
 
 	var paidMasternodes map[int]*masternode.Masternode
 
 	for _, masternode := range mm.masternodes {
-		paidMasternodes[masternode.Paid()]=masternode
+		paidMasternodes[masternode.Paid()] = masternode
 	}
 
 	var paids []int
 	sort.Ints(paids)
 
-	var tenthNetWork=len(mm.masternodes)/10
-	var countTenth =0
+	var tenthNetWork = len(mm.masternodes) / 10
+	var countTenth = 0
 	var highest *big.Int
 
 	var winnerMasternode *masternode.Masternode
 
-	for _,paid:=range paids{
-		fmt.Printf("%s\t%d\n",paid,paidMasternodes[paid].CalculateScore(hash))
+	for _, paid := range paids {
+		fmt.Printf("%s\t%d\n", paid, paidMasternodes[paid].CalculateScore(hash))
 		score := paidMasternodes[paid].CalculateScore(hash)
-		if(score.Cmp(highest)>0){
-			highest=score
-			winnerMasternode= paidMasternodes[paid]
+		if score.Cmp(highest) > 0 {
+			highest = score
+			winnerMasternode = paidMasternodes[paid]
 		}
 		countTenth++
-		if(countTenth>=tenthNetWork){
+		if countTenth >= tenthNetWork {
 			break
 		}
 	}
 	return winnerMasternode
 }
 
-func (mm *MasternodeManager) GetMasternodeRank(blockHeight uint64,tx *types.Transaction,minProtocol int) (int,bool){
+func (mm *MasternodeManager) GetMasternodeRank(	id discover.NodeID,blockHeight uint64, minProtocol uint64) (int, bool) {
 
-	var rank int =1
+	var rank int = 0
 	mm.syncer()
-	block:=mm.blockchain.GetBlockByNumber(blockHeight)
+	block := mm.blockchain.GetBlockByNumber(blockHeight)
 
-	if  block == nil{
-		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ",blockHeight)
+	if block == nil {
+		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ", blockHeight)
 	}
+	masternodeScores:=mm.GetMasternodeScores(block.Hash(),1)
 
-	return rank,true
+	tRank:=0
+	for _,masternode := range masternodeScores{
+		tRank++
+		if id == masternode.ID{
+			rank=tRank
+			break
+		}
+	}
+	return rank, true
+}
+
+func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[*big.Int]*masternode.Masternode {
+
+	masternodeScores := make(map[*big.Int]*masternode.Masternode)
+
+	for _, m := range mm.masternodes {
+		masternodeScores[m.CalculateScore(blockHash)] = m
+	}
+	return masternodeScores
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote
@@ -710,8 +727,6 @@ func (mm *MasternodeManager) handleMsg(p *peer) error {
 	}
 	return nil
 }
-
-
 
 // MasternodeInfo represents a short summary of the Ethereum Masternode-protocol metadata known about the host peer.
 // known about the host peer.
