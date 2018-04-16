@@ -330,14 +330,14 @@ func (mm *MasternodeManager) getNextMasternodeInQueueForPayment(hash common.Hash
 	return winnerMasternode
 }
 
-func (mm *MasternodeManager) GetMasternodeRank(	id discover.NodeID,blockHeight uint64, minProtocol uint64) (int, bool) {
+func (mm *MasternodeManager) GetMasternodeRank(	id discover.NodeID) (int, bool) {
 
 	var rank int = 0
 	mm.syncer()
-	block := mm.blockchain.GetBlockByNumber(blockHeight)
+	block := mm.blockchain.CurrentBlock()
 
 	if block == nil {
-		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ", blockHeight)
+		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ", block.Number())
 	}
 	masternodeScores:=mm.GetMasternodeScores(block.Hash(),1)
 

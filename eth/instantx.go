@@ -1,14 +1,20 @@
-package masternode
+package eth
 
 import (
 	"fmt"
+	"time"
+	"errors"
+	"math/big"
+	"crypto/rand"
+	"crypto/ecdsa"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/eth"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
-	"time"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
+	"github.com/ethzero/go-ethzero/rlp"
 )
 
 const (
@@ -16,6 +22,11 @@ const (
 	SIGNATURES_TOTAL    = 10
 )
 
+var(
+	ErrInvalidKeyType  = errors.New("key is of invalid type")
+	// Sadly this is missing from crypto/ecdsa compared to crypto/rsa
+	ErrECDSAVerification = errors.New("crypto/ecdsa: verification error")
+)
 type InstantSend struct {
 
 	// maps for AlreadyHave
@@ -37,7 +48,17 @@ type InstantSend struct {
 	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
 	log log.Logger
 
-	eth *eth.Ethereum
+	active *masternode.Masternode
+
+	mm *MasternodeManager
+
+}
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
 }
 
 //received a consensus TxLockRequest
@@ -69,7 +90,7 @@ func (is *InstantSend) ProcessTxLockRequest(request *TxLockRequest) bool {
 	return true
 }
 
-func (is *InstantSend) vote(condidate *TxLockCondidate) {
+func (is *InstantSend) vote(mm *MasternodeManager ,condidate *TxLockCondidate) {
 
 	txHash := condidate.Hash()
 	if is.lockRequestAccepted[txHash] == nil {
@@ -82,12 +103,12 @@ func (is *InstantSend) vote(condidate *TxLockCondidate) {
 		return
 	}
 
-	activeMasternode := is.eth.ActiveMasternode()
 
-	rank, ok := is.eth.MasternodeManager().GetMasternodeRank(activeMasternode.ID, is.eth.BlockChain().CurrentBlock().Number().Uint64(), is.eth.NetVersion())
+
+	rank, ok := mm.GetMasternodeRank(is.active.ID)
 
 	if !ok {
-		is.log.Info("InstantSend::Vote -- Can't calculate rank for masternode %s rank %d", activeMasternode.ID, rank)
+		is.log.Info("InstantSend::Vote -- Can't calculate rank for masternode %s rank %d", is.active.ID, rank)
 		return
 	} else if rank > SIGNATURES_TOTAL {
 		is.log.Info("InstantSend::Vote -- Masternode not in the top %d (%d)", SIGNATURES_TOTAL, rank)
@@ -99,22 +120,26 @@ func (is *InstantSend) vote(condidate *TxLockCondidate) {
 
 	if is.voteds[txHash] == 0 {
 		txLockCondidate := is.txLockCandidates[txHash] //找到当前交易的侯选人
-		if txLockCondidate.HasMasternodeVoted(txHash, activeMasternode.ID) {
+		if txLockCondidate.HasMasternodeVoted(txHash, is.active.ID) {
 			alreadyVoted = true
-			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=%s, masternodeid=%s", txHash, activeMasternode.ID)
+			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=%s, masternodeid=%s", txHash, is.active.ID)
 			return
 		}
 	}
 
-	t := NewTxLockVote(txHash, activeMasternode.ID) //构建一个投票对象
+	t := NewTxLockVote(txHash, is.active.ID) //构建一个投票对象
 
 	if alreadyVoted {
 		return
 	}
-	if !t.Sign(activeMasternode) {
+	signByte,err:=t.Sign(t.Hash(),is.active.Config().PrivateKey)
+
+	if err!=nil {
 		return
 	}
-	if !t.CheckSignature() {
+	sigErr:=t.Verify(t.Hash().Bytes(),signByte,is.active.Config().PrivateKey.Public())
+
+	if sigErr!=nil {
 		return
 	}
 	tvHash := t.Hash()
@@ -133,7 +158,7 @@ func (is *InstantSend) Vote(hash common.Hash) {
 	if txLockCondidate == nil {
 		return
 	}
-	is.vote(txLockCondidate)
+	is.vote(is.mm,txLockCondidate)
 	is.TryToFinalizeLockCandidate(txLockCondidate)
 }
 
@@ -220,6 +245,7 @@ type TxLockVote struct {
 	confirmedHeight int
 	createdTime     time.Time
 	txLocks         map[common.Hash]*TxLock
+	KeySize   int
 }
 
 func (tlv *TxLockVote) MasternodeId() discover.NodeID {
@@ -233,6 +259,7 @@ func NewTxLockVote(hash common.Hash, id discover.NodeID) *TxLockVote {
 		masternodeId:    id,
 		createdTime:     time.Now(),
 		confirmedHeight: -1,
+		KeySize:256,
 	}
 	return tv
 }
@@ -246,15 +273,74 @@ func (tlv *TxLockVote) Hash() common.Hash {
 	return tlvHash
 }
 
-func (tlv *TxLockVote) Sign(masternode *Masternode) ([]byte,error) {
 
-	s:=tlv.Hash()
-	return crypto.Sign(s[:],masternode.serverConfig.PrivateKey)
+func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
+	return crypto.VerifySignature(pubkey, tlv.Hash().Bytes(), signature)
 }
 
-func (tlv *TxLockVote) CheckSignature(pubkey, msg, signature []byte) bool {
-	return crypto.VerifySignature(pubkey, msg, signature)
+// Implements the Verify method from SigningMethod
+// For this verify method, key must be an ecdsa.PublicKey struct
+func (m *TxLockVote) Verify(sighash []byte, signature string, key interface{}) error {
+
+	// Get the key
+	var ecdsaKey *ecdsa.PublicKey
+	switch k := key.(type) {
+	case *ecdsa.PublicKey:
+		ecdsaKey = k
+	default:
+		return ErrInvalidKeyType
+	}
+
+
+	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
+	s := big.NewInt(0).SetBytes(sighash[m.KeySize:])
+
+	// Verify the signature
+	if verifystatus := ecdsa.Verify(ecdsaKey, sighash, r, s); verifystatus == true {
+		return nil
+	} else {
+		return ErrECDSAVerification
+	}
 }
+
+// Implements the Sign method from SigningMethod
+// For this signing method, key must be an ecdsa.PrivateKey struct
+func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, error) {
+	// Get the key
+	var ecdsaKey *ecdsa.PrivateKey
+	switch k := key.(type) {
+	case *ecdsa.PrivateKey:
+		ecdsaKey = k
+	default:
+		return "", ErrInvalidKeyType
+	}
+	// Sign the string and return r, s
+	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey,signingString[:]); err == nil {
+		curveBits := ecdsaKey.Curve.Params().BitSize
+		keyBytes := curveBits / 8
+		if curveBits%8 > 0 {
+			keyBytes += 1
+		}
+
+		// We serialize the outpus (r and s) into big-endian byte arrays and pad
+		// them with zeros on the left to make sure the sizes work out. Both arrays
+		// must be keyBytes long, and the output must be 2*keyBytes long.
+		rBytes := r.Bytes()
+		rBytesPadded := make([]byte, keyBytes)
+		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
+
+		sBytes := s.Bytes()
+		sBytesPadded := make([]byte, keyBytes)
+		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+
+		out := append(rBytesPadded, sBytesPadded...)
+
+		return string(out[:]),nil
+	} else {
+		return "", err
+	}
+}
+
 
 //这个类是投票的辅助类，投票和创建侯选对象都需要用到
 type TxLock struct {

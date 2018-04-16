@@ -251,6 +251,10 @@ func (n *Masternode) Start() error {
 	return nil
 }
 
+func (n *Masternode) Config() p2p.Config{
+
+	return n.serverConfig
+}
 func (n *Masternode) openDataDir() error {
 	if n.config.DataDir == "" {
 		return nil // ephemeral
