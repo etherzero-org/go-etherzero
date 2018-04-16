@@ -80,9 +80,6 @@ type Ethereum struct {
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
 	accountManager *accounts.Manager
-
-	masternodeManager *MasternodeManager
-
 	activeMasternode *masternode.Masternode // Responsible for activating the Masternode and pinging the network
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
