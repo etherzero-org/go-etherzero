@@ -1261,6 +1261,21 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 		Fatalf("Failed to register the Ethereum service: %v", err)
 	}
 }
+// RegisterEthService adds an Ethereum client to the stack.
+func RegisterEthServiceMaster(stack *masternode.Masternode, cfg *eth.Config) {
+	var err error
+	err = stack.Register(func(ctx *masternode.ServiceContext) (masternode.Service, error) {
+		fullNode, err := eth.NewMaster(ctx, cfg)
+		if fullNode != nil && cfg.LightServ > 0 {
+			ls, _ := les.NewLesServer(fullNode, cfg)
+			fullNode.AddLesServer(ls)
+			}
+		return fullNode, err
+		})
+	if err != nil {
+		Fatalf("Failed to register the Ethereum service: %v", err)
+	}
+}
 
 // RegisterDashboardService adds a dashboard to the stack.
 func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config, commit string) {

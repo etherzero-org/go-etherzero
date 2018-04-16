@@ -86,12 +86,22 @@ type Service interface {
 	// Protocols retrieves the P2P protocols the service wishes to start.
 	Protocols() []p2p.Protocol
 
+	// Protocols retrieves the P2P protocols the service wishes to start.
+	MasterProtocols() []p2p.Protocol
+
 	// APIs retrieves the list of RPC descriptors the service provides
 	APIs() []rpc.API
+
+	// APIs retrieves the list of RPC descriptors the service provides
+	MasterAPIs() []rpc.API
 
 	// Start is called after all services have been constructed and the networking
 	// layer was also initialized to spawn any goroutines required by the service.
 	Start(server *p2p.Server) error
+
+	// Start is called after all services have been constructed and the networking
+	// layer was also initialized to spawn any goroutines required by the service.
+	StartMaster(server *p2p.Server) error
 
 	// Stop terminates all goroutines belonging to the service, blocking until they
 	// are all terminated.

@@ -105,7 +105,20 @@ func loadConfig(file string, cfg *gethConfig) error {
 	}
 	return err
 }
+func loadMasterConfig(file string, cfg *gethMasterNodeConfig) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
+	err = tomlSettings.NewDecoder(bufio.NewReader(f)).Decode(cfg)
+	// Add file name to errors that have a line number.
+	if _, ok := err.(*toml.LineError); ok {
+		err = errors.New(file + ", " + err.Error())
+	}
+	return err
+}
 func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
@@ -159,7 +172,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 }
 
 
-func makeConfigMasterNode(ctx *cli.Context) (*masternode.Masternode) {
+func makeConfigMasterNode(ctx *cli.Context) (*masternode.Masternode, gethMasterNodeConfig) {
 	// Load defaults.
 	cfg := gethMasterNodeConfig{
 		Eth:       eth.DefaultConfig,
@@ -167,10 +180,19 @@ func makeConfigMasterNode(ctx *cli.Context) (*masternode.Masternode) {
 		MasterNode: defaultMasterNodeConfig(),
 		Dashboard:  dashboard.DefaultConfig,
 	}
+	// Load config file.
+	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
+		if err := loadMasterConfig(file, &cfg); err != nil {
+			utils.Fatalf("%v", err)
+		}
+	}
 	// Apply flags.
 	utils.SetMasterNodeConfig(ctx, &cfg.MasterNode)
-	stack, _ := masternode.New(&cfg.MasterNode)
-	return stack
+	stack, err := masternode.New(&cfg.MasterNode)
+	if err != nil {
+		utils.Fatalf("Failed to create the protocol stack: %v", err)
+	}
+	return stack, cfg
 }
 
 
@@ -214,7 +236,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 }
 
 func makeFullMasterNode(ctx *cli.Context) *masternode.Masternode {
-	stack := makeConfigMasterNode(ctx)
+	stack, cfg := makeConfigMasterNode(ctx)
+	utils.RegisterEthServiceMaster(stack, &cfg.Eth)
+	//utils.RegisterEthService(stack, &cfg.Eth)
 
 	return stack
 }

@@ -215,7 +215,7 @@ func (n *Masternode) Start() error {
 	}
 	// Gather the protocols and start the freshly assembled P2P server
 	for _, service := range services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
+		running.Protocols = append(running.Protocols, service.MasterProtocols()...)
 	}
 	if err := running.Start(); err != nil {
 		return convertFileLockError(err)
@@ -224,7 +224,7 @@ func (n *Masternode) Start() error {
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
-		if err := service.Start(running); err != nil {
+		if err := service.StartMaster(running); err != nil {
 			for _, kind := range started {
 				services[kind].Stop()
 			}
@@ -277,7 +277,7 @@ func (n *Masternode) startRPC(services map[reflect.Type]Service) error {
 	// Gather all the possible APIs to surface
 	apis := n.apis()
 	for _, service := range services {
-		apis = append(apis, service.APIs()...)
+		apis = append(apis, service.MasterAPIs()...)
 	}
 	// Start the various API endpoints, terminating all in case of errors
 	if err := n.startInProc(apis); err != nil {
