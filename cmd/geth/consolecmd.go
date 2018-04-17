@@ -29,9 +29,10 @@ import (
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/rpc"
 	"gopkg.in/urfave/cli.v1"
-	//"github.com/ethzero/go-ethzero/masternode"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/ethzero/go-ethzero/core"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
 var (
@@ -81,26 +82,31 @@ JavaScript API. See https://github.com/ethzero/go-ethzero/wiki/JavaScript-Consol
 func localConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
 	node := makeFullNode(ctx)
-	startNode(ctx, node)
-	defer node.Stop()
 	//Load the masternode configuration
 	keydir :=node.DataDir()
 	filename := filepath.Join(keydir, "/geth/masternode.conf")
 
 	var client *rpc.Client
 	keyjson, err := ioutil.ReadFile(filename)
-	if err == nil {
-		m := make(map[string]interface{})
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return err
+	}
+	url := "enode://"
+	url =url + m["Addr"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
+	core.MasterNodeAddr = m["Addr"].(string)
 
-		if err := json.Unmarshal(keyjson, &m); err != nil {
-			return err
-		}
+	startNode(ctx, node)
+	defer node.Stop()
 
-		url := "enode://"
-		url =url + m["PublicKey"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
-
+	var am *masternode.ActiveMasternode
+	// read the MasterNodeCheck, if the balance bigger than 2000, then start master node
+	if core.MasterNodeCheck == true{
 		masternode := makeFullMasterNode(ctx)
 		utils.StartMasterNode( masternode )
+
+		am.ManageStateInitial()
+
 		client, err = masternode.Attach()
 		if err != nil {
 			utils.Fatalf("Failed to attach to the inproc geth: %v", err)

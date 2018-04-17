@@ -102,6 +102,8 @@ var (
 	contractTxMaxGasSize  = uint64(500000)  //The maximum amount of gas consumed per contract transaction
 	txMaxGasSize = big.NewInt(90000) //The maximum amount of gas consumed per transaction
 	DefaultCurrentMaxNonce = big.NewInt(500) //Prevent ddos att
+	MasterNodeCheck = bool(false)
+	MasterNodeAddr =string("")
 )
 
 var (
@@ -279,6 +281,17 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.wg.Add(1)
 	go pool.loop()
 
+	addr:= common.HexToAddress(MasterNodeAddr)
+	accountvalue:= pool.currentState.GetBalance(addr)
+	accountvalue.Div(accountvalue,big.NewInt(1000000000000000000))
+	//fmt.Printf("Big Int: %v\n", accountvalue)
+
+	// change to 20000 for released;
+	if accountvalue.Int64() >20{
+		MasterNodeCheck = true
+	}
+	println(MasterNodeCheck)
+
 	return pool
 }
 
@@ -435,7 +448,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
 	pool.currentMaxGas = DefaultCurrentMaxGas
-
 
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))

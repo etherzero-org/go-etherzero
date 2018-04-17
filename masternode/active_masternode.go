@@ -67,7 +67,7 @@ func (am *ActiveMasternode)State()(int){
 	return am.activeState
 }
 
-func (am *ActiveMasternode) manageStateInitial(){
+func (am *ActiveMasternode) ManageStateInitial(){
 
 }
 
