@@ -105,13 +105,13 @@ func (is *InstantSend) vote(mm *MasternodeManager, condidate *TxLockCondidate) {
 	}
 	rank, ok := mm.GetMasternodeRank(is.active.ID)
 	if !ok {
-		is.log.Info("InstantSend::Vote -- Can't calculate rank for masternode %s rank %d", is.active.ID, rank)
+		is.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", is.active.ID.String()," rank: ", rank)
 		return
 	} else if rank > SIGNATURES_TOTAL {
-		is.log.Info("InstantSend::Vote -- Masternode not in the top %d (%d)", SIGNATURES_TOTAL, rank)
+		is.log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (",rank,")")
 		return
 	}
-	is.log.Info("InstantSend::Vote -- In the top %d (%d)\n", SIGNATURES_TOTAL, rank)
+	is.log.Info("InstantSend::Vote -- In the top ",SIGNATURES_TOTAL," (",rank,")")
 
 	var alreadyVoted bool = false
 
@@ -119,7 +119,7 @@ func (is *InstantSend) vote(mm *MasternodeManager, condidate *TxLockCondidate) {
 		txLockCondidate := is.txLockCandidates[txHash] //找到当前交易的侯选人
 		if txLockCondidate.HasMasternodeVoted(txHash, is.active.ID) {
 			alreadyVoted = true
-			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=%s, masternodeid=%s", txHash, is.active.ID)
+			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=",txHash,", masternodeid=",is.active.ID.String())
 			return
 		}
 	}
@@ -143,7 +143,7 @@ func (is *InstantSend) vote(mm *MasternodeManager, condidate *TxLockCondidate) {
 
 	is.txLockedVotes[tvHash] = t
 	if is.txLockCandidates[txHash].txLock.AddVote(t) {
-		is.log.Info("Vote created successfully, relaying: txHash=%s, vote=%s", txHash.String(), tvHash)
+		is.log.Info("Vote created successfully, relaying: txHash=",txHash.String(),", vote=",tvHash.String())
 		is.voteds[txHash] = 1
 	}
 
@@ -151,8 +151,8 @@ func (is *InstantSend) vote(mm *MasternodeManager, condidate *TxLockCondidate) {
 
 func (is *InstantSend) Vote(hash common.Hash) {
 
-	txLockCondidate := is.txLockCandidates[hash]
-	if txLockCondidate == nil {
+	txLockCondidate, ok := is.txLockCandidates[hash]
+	if !ok {
 		return
 	}
 	is.vote(is.mm, txLockCondidate)
@@ -202,9 +202,9 @@ func (is *InstantSend) ProcessTxLockVote(vote *TxLockVote) bool {
 
 func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 
-	txLockCondidate := is.txLockCandidates[hash]
+	txLockCondidate, ok := is.txLockCandidates[hash]
 
-	if txLockCondidate == nil {
+	if !ok {
 		return false
 	}
 	if txLockCondidate.txLock == nil || txLockCondidate.txLock.txhash != hash {
@@ -230,7 +230,7 @@ func (is *InstantSend) Have(hash common.Hash) bool {
 
 func (is *InstantSend) String() string {
 
-	str := fmt.Sprintf("InstantSend Lock Candidates :%v , Votes %v:", len(is.txLockCandidates), len(is.voteds))
+	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.txLockCandidates),", Votes :",len(is.voteds))
 
 	return str
 }
