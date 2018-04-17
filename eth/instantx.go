@@ -1,20 +1,20 @@
 package eth
 
 import (
-	"fmt"
-	"time"
-	"errors"
-	"math/big"
-	"crypto/rand"
 	"crypto/ecdsa"
+	"crypto/rand"
+	"errors"
+	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
+	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rlp"
+	"math/big"
+	"time"
 )
 
 const (
@@ -22,11 +22,12 @@ const (
 	SIGNATURES_TOTAL    = 10
 )
 
-var(
-	ErrInvalidKeyType  = errors.New("key is of invalid type")
+var (
+	ErrInvalidKeyType = errors.New("key is of invalid type")
 	// Sadly this is missing from crypto/ecdsa compared to crypto/rsa
 	ErrECDSAVerification = errors.New("crypto/ecdsa: verification error")
 )
+
 type InstantSend struct {
 
 	// maps for AlreadyHave
@@ -51,7 +52,6 @@ type InstantSend struct {
 	active *masternode.Masternode
 
 	mm *MasternodeManager
-
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -67,14 +67,15 @@ func (is *InstantSend) ProcessTxLockRequest(request *TxLockRequest) bool {
 	txHash := request.Hash()
 
 	//check to see if we conflict with existing completed lock
-	if is.lockedTxs != nil || is.lockedTxs[txHash] >= 0 {
+
+	if _, ok := is.lockedTxs[txHash]; !ok {
 		// Conflicting with complete lock, proceed to see if we should cancel them both
 		is.log.Info("WARNING: Found conflicting completed Transaction Lock", "InstantSend  txid=", txHash, "completed lock txid=", is.lockedTxs[txHash])
 	}
 
 	// Check to see if there are votes for conflicting request,
 	// if so - do not fail, just warn user
-	if is.voteds[txHash] > 0 {
+	if _, ok := is.voteds[txHash]; !ok {
 		is.log.Info("WARNING:Double spend attempt!", "InstantSend txid=", txHash, "Voted txid count :", is.voteds[txHash])
 	}
 
@@ -90,10 +91,10 @@ func (is *InstantSend) ProcessTxLockRequest(request *TxLockRequest) bool {
 	return true
 }
 
-func (is *InstantSend) vote(mm *MasternodeManager ,condidate *TxLockCondidate) {
+func (is *InstantSend) vote(mm *MasternodeManager, condidate *TxLockCondidate) {
 
 	txHash := condidate.Hash()
-	if is.lockRequestAccepted[txHash] == nil {
+	if _, ok := is.lockRequestAccepted[txHash]; !ok {
 		return
 	}
 
@@ -102,11 +103,7 @@ func (is *InstantSend) vote(mm *MasternodeManager ,condidate *TxLockCondidate) {
 		is.log.Info("nonce error")
 		return
 	}
-
-
-
 	rank, ok := mm.GetMasternodeRank(is.active.ID)
-
 	if !ok {
 		is.log.Info("InstantSend::Vote -- Can't calculate rank for masternode %s rank %d", is.active.ID, rank)
 		return
@@ -118,7 +115,7 @@ func (is *InstantSend) vote(mm *MasternodeManager ,condidate *TxLockCondidate) {
 
 	var alreadyVoted bool = false
 
-	if is.voteds[txHash] == 0 {
+	if _, ok := is.voteds[txHash]; !ok {
 		txLockCondidate := is.txLockCandidates[txHash] //找到当前交易的侯选人
 		if txLockCondidate.HasMasternodeVoted(txHash, is.active.ID) {
 			alreadyVoted = true
@@ -132,14 +129,14 @@ func (is *InstantSend) vote(mm *MasternodeManager ,condidate *TxLockCondidate) {
 	if alreadyVoted {
 		return
 	}
-	signByte,err:=t.Sign(t.Hash(),is.active.Config().PrivateKey)
+	signByte, err := t.Sign(t.Hash(), is.active.Config().PrivateKey)
 
-	if err!=nil {
+	if err != nil {
 		return
 	}
-	sigErr:=t.Verify(t.Hash().Bytes(),signByte,is.active.Config().PrivateKey.Public())
+	sigErr := t.Verify(t.Hash().Bytes(), signByte, is.active.Config().PrivateKey.Public())
 
-	if sigErr!=nil {
+	if sigErr != nil {
 		return
 	}
 	tvHash := t.Hash()
@@ -158,7 +155,7 @@ func (is *InstantSend) Vote(hash common.Hash) {
 	if txLockCondidate == nil {
 		return
 	}
-	is.vote(is.mm,txLockCondidate)
+	is.vote(is.mm, txLockCondidate)
 	is.TryToFinalizeLockCandidate(txLockCondidate)
 }
 
@@ -187,7 +184,7 @@ func (is *InstantSend) ProcessTxLockVote(vote *TxLockVote) bool {
 	txLockCondidate := is.txLockCandidates[txhash]
 
 	is.log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txhash.String())
-	if is.voteds[txhash] == 0 {
+	if _, ok := is.voteds[txhash]; !ok {
 		is.voteds[txhash]++
 	}
 	if txLockCondidate.AddVote(vote) {
@@ -245,7 +242,7 @@ type TxLockVote struct {
 	confirmedHeight int
 	createdTime     time.Time
 	txLocks         map[common.Hash]*TxLock
-	KeySize   int
+	KeySize         int
 }
 
 func (tlv *TxLockVote) MasternodeId() discover.NodeID {
@@ -259,7 +256,7 @@ func NewTxLockVote(hash common.Hash, id discover.NodeID) *TxLockVote {
 		masternodeId:    id,
 		createdTime:     time.Now(),
 		confirmedHeight: -1,
-		KeySize:256,
+		KeySize:         256,
 	}
 	return tv
 }
@@ -272,7 +269,6 @@ func (tlv *TxLockVote) Hash() common.Hash {
 	})
 	return tlvHash
 }
-
 
 func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
 	return crypto.VerifySignature(pubkey, tlv.Hash().Bytes(), signature)
@@ -290,7 +286,6 @@ func (m *TxLockVote) Verify(sighash []byte, signature string, key interface{}) e
 	default:
 		return ErrInvalidKeyType
 	}
-
 
 	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
 	s := big.NewInt(0).SetBytes(sighash[m.KeySize:])
@@ -315,7 +310,7 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 		return "", ErrInvalidKeyType
 	}
 	// Sign the string and return r, s
-	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey,signingString[:]); err == nil {
+	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey, signingString[:]); err == nil {
 		curveBits := ecdsaKey.Curve.Params().BitSize
 		keyBytes := curveBits / 8
 		if curveBits%8 > 0 {
@@ -335,12 +330,11 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 
 		out := append(rBytesPadded, sBytesPadded...)
 
-		return string(out[:]),nil
+		return string(out[:]), nil
 	} else {
 		return "", err
 	}
 }
-
 
 //这个类是投票的辅助类，投票和创建侯选对象都需要用到
 type TxLock struct {
@@ -385,7 +379,7 @@ func (tl *TxLock) AddVote(vote *TxLockVote) bool {
 	return false
 }
 
-//主要目的是为了获取投票对象对应的交易需要相关的内容以及投票的相应规则参数
+//主要目的是为了获取投票对象对应的交易，需要相关的内容以及投票的相应规则参数
 type TxLockRequest struct {
 	tx *types.Transaction
 }
