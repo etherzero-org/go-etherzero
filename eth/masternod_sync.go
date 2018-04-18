@@ -77,7 +77,6 @@ func (self *MasternodeManager) txBroadcastLoop() {
 		select {
 		case event := <-self.txCh:
 			self.BroadcastTx(event.Tx.Hash(), event.Tx)
-
 			// Err() channel will be closed when unsubscribing.
 		case <-self.txSub.Err():
 			return
