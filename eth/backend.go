@@ -649,3 +649,25 @@ func (s *Ethereum) Stop() error {
 
 	return nil
 }
+
+// Stop implements node.Service, terminating all internal goroutines used by the
+// Ethereum protocol.
+func (s *Ethereum) StopMaster() error {
+	if s.stopDbUpgrade != nil {
+		s.stopDbUpgrade()
+	}
+	s.bloomIndexer.Close()
+	s.blockchain.Stop()
+	s.masternodeManager.Stop()
+	if s.lesServer != nil {
+		s.lesServer.Stop()
+	}
+	s.txPool.Stop()
+	s.miner.Stop()
+	s.eventMux.Stop()
+
+	s.chainDb.Close()
+	close(s.shutdownChan)
+
+	return nil
+}

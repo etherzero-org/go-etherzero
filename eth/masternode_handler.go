@@ -69,6 +69,7 @@ type MasternodeManager struct {
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
+
 	txsyncCh    chan *txsync
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
@@ -78,6 +79,95 @@ type MasternodeManager struct {
 	wg sync.WaitGroup
 
 	log log.Logger
+}
+
+type MasterNodelist struct {
+	url string
+	// caches
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
+}
+
+// local MasterNodelists.
+type MasterNodelists []*MasterNodelist
+
+
+type ltrInfo struct {
+	tx     *types.Transaction
+	sentTo map[*peer]struct{}
+}
+type LesTxRelay struct {
+	txSent       map[common.Hash]*ltrInfo
+	txPending    map[common.Hash]struct{}
+	ps           *peerSet
+	peerList     []*peer
+	peerStartPos int
+	lock         sync.RWMutex
+}
+
+
+func MasterNodelistManager(ma *masternode.Masternode) {
+	//Managme the masterNodelist
+	srv := ma.Server()
+	masterpeers := srv.PeersInfo()
+	fmt.Println("Master Node list :")
+	for _,ma:=range masterpeers{
+		fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress,ma.MasterState)
+	}
+
+}
+
+func MasterNodeAdd(ma *masternode.Masternode) {
+	srv := ma.Server()
+	node, _ := discover.ParseNode("enode://d79eee6402b5e61d846cdbd068a4db9d4a392c2c1929a205bb91abfea1723b63c02595156b11f340585e7fdf1918f1143067287e0efb45e8029b82e9a9abe6c0@127.0.0.1:31211")
+	srv.AddPeer(node)
+
+}
+
+// send sends a list of transactions to at most a given number of peers at
+// once, never resending any particular transaction to the same peer twice
+func (self *LesTxRelay)sendMasterNodelist(txs types.Transactions, mlist *MasterNodelists, count int) {
+	sendTo := make(map[*peer]types.Transactions)
+	self.peerStartPos++ // rotate the starting position of the peer list
+	if self.peerStartPos >= len(self.peerList) {
+		self.peerStartPos = 0
+	}
+
+	for _, tx := range txs {
+		hash := tx.Hash()
+		ltr, ok := self.txSent[hash]
+		if !ok {
+			ltr = &ltrInfo{
+				sentTo: make(map[*peer]struct{}),
+			}
+			self.txSent[hash] = ltr
+			self.txPending[hash] = struct{}{}
+		}
+
+		if len(self.peerList) > 0 {
+			cnt := count
+			pos := self.peerStartPos
+			for {
+				peer := self.peerList[pos]
+				if _, ok := ltr.sentTo[peer]; !ok {
+					sendTo[peer] = append(sendTo[peer], tx)
+					ltr.sentTo[peer] = struct{}{}
+					cnt--
+				}
+				if cnt == 0 {
+					break // sent it to the desired number of peers
+				}
+				pos++
+				if pos == len(self.peerList) {
+					pos = 0
+				}
+				if pos == self.peerStartPos {
+					break // tried all available peers
+				}
+			}
+		}
+	}
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -198,6 +288,7 @@ func (mm *MasternodeManager) Start(maxPeers int) {
 
 	// start sync handlers
 	go mm.syncer()
+
 	go mm.txsyncLoop()
 }
 

@@ -106,4 +106,8 @@ type Service interface {
 	// Stop terminates all goroutines belonging to the service, blocking until they
 	// are all terminated.
 	Stop() error
+
+	// Stop terminates all goroutines belonging to the service, blocking until they
+	// are all terminated.
+	StopMaster() error
 }

@@ -32,7 +32,6 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/masternode"
 )
 
 var (
@@ -99,13 +98,14 @@ func localConsole(ctx *cli.Context) error {
 	startNode(ctx, node)
 	defer node.Stop()
 
-	var am *masternode.ActiveMasternode
+	//var am *masternode.ActiveMasternode
 	// read the MasterNodeCheck, if the balance bigger than 2000, then start master node
 	if core.MasterNodeCheck == true{
 		masternode := makeFullMasterNode(ctx)
-		utils.StartMasterNode( masternode )
+		utils.StartMasterNode(masternode )
+		defer masternode.Stop()
 
-		am.ManageStateInitial()
+		//am.ManageStateInitial(masternode)
 
 		client, err = masternode.Attach()
 		if err != nil {

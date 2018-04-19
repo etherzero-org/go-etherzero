@@ -66,10 +66,10 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 func (api *PrivateAdminAPI) MasterNodelist(ctx *cli.Context) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
-	masternode := server.PeersInfo()
+	masterpeers := server.PeersInfo()
 
 	fmt.Println("Master Node list :")
-	for _,ma:=range masternode{
+	for _,ma:=range masterpeers{
 		fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress,ma.MasterState)
 	}
 

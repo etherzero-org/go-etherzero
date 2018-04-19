@@ -519,7 +519,7 @@ func (n *Masternode) Stop() error {
 		Services: make(map[reflect.Type]error),
 	}
 	for kind, service := range n.services {
-		if err := service.Stop(); err != nil {
+		if err := service.StopMaster(); err != nil {
 			failure.Services[kind] = err
 		}
 	}
