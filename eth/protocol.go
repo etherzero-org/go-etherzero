@@ -32,7 +32,7 @@ import (
 const (
 	eth62 = 62
 	eth63 = 63
-	etz64=64
+	etz64 = 64
 )
 
 // Official short name of the protocol used during capability negotiation.
@@ -69,6 +69,10 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	// Masternode Protocol messages
+	NewVoteMsg    = 0x20
+	NewTxLockVote = 0x21
 )
 
 type errCode int
@@ -83,6 +87,8 @@ const (
 	ErrNoStatusMsg
 	ErrExtraStatusMsg
 	ErrSuspendedPeer
+	ErrCalculateRankForMasternode
+	ErrMasternodeNotInTheTop
 )
 
 func (e errCode) String() string {
@@ -91,15 +97,17 @@ func (e errCode) String() string {
 
 // XXX change once legacy code is out
 var errorToString = map[int]string{
-	ErrMsgTooLarge:             "Message too long",
-	ErrDecode:                  "Invalid message",
-	ErrInvalidMsgCode:          "Invalid message code",
-	ErrProtocolVersionMismatch: "Protocol version mismatch",
-	ErrNetworkIdMismatch:       "NetworkId mismatch",
-	ErrGenesisBlockMismatch:    "Genesis block mismatch",
-	ErrNoStatusMsg:             "No status message",
-	ErrExtraStatusMsg:          "Extra status message",
-	ErrSuspendedPeer:           "Suspended peer",
+	ErrMsgTooLarge:                "Message too long",
+	ErrDecode:                     "Invalid message",
+	ErrInvalidMsgCode:             "Invalid message code",
+	ErrProtocolVersionMismatch:    "Protocol version mismatch",
+	ErrNetworkIdMismatch:          "NetworkId mismatch",
+	ErrGenesisBlockMismatch:       "Genesis block mismatch",
+	ErrNoStatusMsg:                "No status message",
+	ErrExtraStatusMsg:             "Extra status message",
+	ErrSuspendedPeer:              "Suspended peer",
+	ErrCalculateRankForMasternode: "Can't calculate rank for masternode",
+	ErrMasternodeNotInTheTop:      "Masternode not in the top",
 }
 
 type txPool interface {

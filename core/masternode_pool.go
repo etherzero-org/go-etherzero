@@ -277,9 +277,7 @@ func (self *MasternodePool) add(ctx context.Context, tx *types.Transaction) erro
 
 	if _, ok := self.pending[hash]; !ok {
 		self.pending[hash] = tx
-
 		nonce := tx.Nonce() + 1
-
 		addr, _ := types.Sender(self.signer, tx)
 		if nonce > self.nonce[addr] {
 			self.nonce[addr] = nonce

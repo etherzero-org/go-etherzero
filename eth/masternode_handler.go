@@ -60,6 +60,10 @@ type MasternodeManager struct {
 
 	masternodes map[string]*masternode.Masternode //id -> masternode
 
+	is *InstantSend
+
+	active *masternode.Masternode
+
 	SubProtocols []p2p.Protocol
 
 	eventMux      *event.TypeMux
@@ -69,7 +73,6 @@ type MasternodeManager struct {
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
-
 	txsyncCh    chan *txsync
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
@@ -241,6 +244,7 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 	heighter := func() uint64 {
 		return blockchain.CurrentBlock().NumberU64()
 	}
+
 	inserter := func(blocks types.Blocks) (int, error) {
 		// If fast sync is running, deny importing weird blocks
 		if atomic.LoadUint32(&manager.fastSync) == 1 {
@@ -288,7 +292,6 @@ func (mm *MasternodeManager) Start(maxPeers int) {
 
 	// start sync handlers
 	go mm.syncer()
-
 	go mm.txsyncLoop()
 }
 
@@ -389,7 +392,7 @@ func (mm *MasternodeManager) handle(p *peer) error {
 }
 
 // Deterministically select the oldest/best masternode to pay on the network
-func (mm *MasternodeManager) getNextMasternodeInQueueForPayment(hash common.Hash) *masternode.Masternode {
+func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash) *masternode.Masternode {
 
 	var paidMasternodes map[int]*masternode.Masternode
 
@@ -741,6 +744,22 @@ func (mm *MasternodeManager) handleMsg(p *peer) error {
 		if err := mm.downloader.DeliverReceipts(p.id, receipts); err != nil {
 			log.Debug("Failed to deliver receipts", "err", err)
 		}
+	case p.version >= etz64 && msg.Code == NewVoteMsg:
+		// A batch of vote arrived to one of our previous requests
+		var votes []*types.TxLockVote
+		if err := msg.Decode(&votes); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		rank, ok := mm.GetMasternodeRank(mm.active.ID)
+		if !ok {
+			mm.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.active.ID.String(), " rank: ", rank)
+			return errResp(ErrCalculateRankForMasternode,"msg %v: %v", msg, ok)
+		} else if rank > SIGNATURES_TOTAL {
+			mm.log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
+			return errResp(ErrMasternodeNotInTheTop,"msg %v: %v", msg, ok)
+		}
+		mm.log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
+		mm.is.ProcessTxLockVote(votes[0])
 
 	case msg.Code == NewBlockHashesMsg:
 		var announces newBlockHashesData

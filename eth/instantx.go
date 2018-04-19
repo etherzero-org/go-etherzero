@@ -37,15 +37,8 @@ type InstantSend struct {
 
 	active *masternode.Masternode
 
-	mm *MasternodeManager
 }
 
-func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
-}
 
 //received a consensus TxLockRequest
 func (is *InstantSend) ProcessTxLockRequest(request *types.TxLockRequest) bool {
@@ -77,7 +70,7 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.TxLockRequest) bool {
 	return true
 }
 
-func (is *InstantSend) vote(mm *MasternodeManager, condidate *types.TxLockCondidate) {
+func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 
 	txHash := condidate.Hash()
 	if _, ok := is.lockRequestAccepted[txHash]; !ok {
@@ -90,15 +83,6 @@ func (is *InstantSend) vote(mm *MasternodeManager, condidate *types.TxLockCondid
 		is.log.Info("nonce error")
 		return
 	}
-	rank, ok := mm.GetMasternodeRank(is.active.ID)
-	if !ok {
-		is.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", is.active.ID.String(), " rank: ", rank)
-		return
-	} else if rank > SIGNATURES_TOTAL {
-		is.log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
-		return
-	}
-	is.log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
 
 	var alreadyVoted bool = false
 
@@ -144,7 +128,7 @@ func (is *InstantSend) Vote(hash common.Hash) {
 	if !ok {
 		return
 	}
-	is.vote(is.mm, txLockCondidate)
+	is.vote(txLockCondidate)
 	is.TryToFinalizeLockCandidate(txLockCondidate)
 }
 
@@ -215,7 +199,6 @@ func (is *InstantSend) TryToFinalizeLockCandidate(condidate *types.TxLockCondida
 	if condidate.IsAllTxReady() {
 		txlock.Txhash = txHash
 	}
-
 }
 
 func (is *InstantSend) Have(hash common.Hash) bool {
@@ -228,4 +211,12 @@ func (is *InstantSend) String() string {
 	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.txLockCandidates), ", Votes :", len(is.voteds))
 
 	return str
+}
+
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
 }
