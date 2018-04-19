@@ -759,7 +759,7 @@ func (mm *MasternodeManager) handleMsg(p *peer) error {
 			return errResp(ErrMasternodeNotInTheTop,"msg %v: %v", msg, ok)
 		}
 		mm.log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
-		mm.is.ProcessTxLockVote(votes[0])
+		mm.is.ProcessTxLockVotes(votes)
 
 	case msg.Code == NewBlockHashesMsg:
 		var announces newBlockHashesData

@@ -174,6 +174,16 @@ func (is *InstantSend) ProcessTxLockVote(vote *types.TxLockVote) bool {
 	return true
 }
 
+func (is *InstantSend) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
+
+	for i:=range votes{
+		if !is.ProcessTxLockVote(votes[i]){
+			is.log.Info("processTxLockVotes vote failed vote Hash:",votes[i].Hash())
+		}
+	}
+	return true
+}
+
 func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 
 	txLockCondidate, ok := is.txLockCandidates[hash]
