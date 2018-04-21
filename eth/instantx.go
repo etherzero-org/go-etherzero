@@ -22,12 +22,12 @@ type InstantSend struct {
 	txLockedVotes       map[common.Hash]*types.TxLockVote    // vote hash - vote
 	txLockVotesOrphan   map[common.Hash]*types.TxLockVote    // vote hash - vote
 
-	txLockCandidates map[common.Hash]*types.TxLockCondidate // tx hash - lock candidate
+	Candidates map[common.Hash]*types.TxLockCondidate // tx hash - lock candidate
 
 	//std::map<COutPoint, std::set<uint256> > mapVotedOutpoints; // utxo - tx hash set
 	//std::map<COutPoint, uint256> mapLockedOutpoints; // utxo - tx hash
-	voteds    map[common.Hash]int //用于缓存本地的投票对象，实际只有一笔
-	lockedTxs map[common.Hash]int //
+	voteds    map[common.Hash]int                  //用于缓存本地的投票对象，实际只有一笔
+	lockedTxs map[common.Hash]*types.TxLockRequest //
 
 	//track masternodes who voted with no txreq (for DOS protection)
 	//追踪没有txreq投票的masternodes（用于DOS保护）
@@ -36,9 +36,7 @@ type InstantSend struct {
 	log log.Logger
 
 	active *masternode.Masternode
-
 }
-
 
 //received a consensus TxLockRequest
 func (is *InstantSend) ProcessTxLockRequest(request *types.TxLockRequest) bool {
@@ -65,7 +63,7 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.TxLockRequest) bool {
 	// Masternodes will sometimes propagate votes before the transaction is known to the client.
 	// If this just happened - lock inputs, resolve conflicting locks, update transaction status
 	// forcing external script notification.
-	is.TryToFinalizeLockCandidate(is.txLockCandidates[txHash])
+	is.TryToFinalizeLockCandidate(is.Candidates[txHash])
 
 	return true
 }
@@ -87,8 +85,8 @@ func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 	var alreadyVoted bool = false
 
 	if _, ok := is.voteds[txHash]; !ok {
-		txLockCondidate := is.txLockCandidates[txHash] //找到当前交易的侯选人
-		if txLockCondidate.HasMasternodeVoted(txHash, is.active.ID) {
+		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
+		if txLockCondidate.HasMasternodeVoted(is.active.ID) {
 			alreadyVoted = true
 			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.active.ID.String())
 			return
@@ -113,7 +111,7 @@ func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 	tvHash := t.Hash()
 
 	is.txLockedVotes[tvHash] = t
-	txLock := is.txLockCandidates[txHash]
+	txLock := is.Candidates[txHash]
 
 	if txLock.AddVote(t) {
 		is.log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
@@ -124,7 +122,7 @@ func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 
 func (is *InstantSend) Vote(hash common.Hash) {
 
-	txLockCondidate, ok := is.txLockCandidates[hash]
+	txLockCondidate, ok := is.Candidates[hash]
 	if !ok {
 		return
 	}
@@ -139,11 +137,10 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.TxLockRequest) bool 
 	}
 	txhash := request.Hash()
 
-	if is.txLockCandidates == nil {
+	if is.Candidates == nil {
 		is.log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
 		txlockcondidate := types.NewTxLockCondidata(request)
-		txlockcondidate.AddTxLock(txhash)
-		is.txLockCandidates[txhash] = &txlockcondidate
+		is.Candidates[txhash] = &txlockcondidate
 	} else {
 		is.log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
 	}
@@ -154,7 +151,7 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.TxLockRequest) bool 
 func (is *InstantSend) ProcessTxLockVote(vote *types.TxLockVote) bool {
 
 	txhash := vote.Hash()
-	txLockCondidate := is.txLockCandidates[txhash]
+	txLockCondidate := is.Candidates[txhash]
 
 	is.log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txhash.String())
 	if _, ok := is.voteds[txhash]; !ok {
@@ -176,9 +173,9 @@ func (is *InstantSend) ProcessTxLockVote(vote *types.TxLockVote) bool {
 
 func (is *InstantSend) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
 
-	for i:=range votes{
-		if !is.ProcessTxLockVote(votes[i]){
-			is.log.Info("processTxLockVotes vote failed vote Hash:",votes[i].Hash())
+	for i := range votes {
+		if !is.ProcessTxLockVote(votes[i]) {
+			is.log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
 		}
 	}
 	return true
@@ -186,18 +183,11 @@ func (is *InstantSend) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
 
 func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 
-	txLockCondidate, ok := is.txLockCandidates[hash]
-
+	_, ok := is.Candidates[hash]
 	if !ok {
 		return false
 	}
-
-	txLock := txLockCondidate.TxLock()
-
-	if txLock == nil || txLock.Txhash != hash {
-		return false
-	}
-	return true
+	return is.lockedTxs[hash] != nil
 
 }
 
@@ -205,24 +195,21 @@ func (is *InstantSend) TryToFinalizeLockCandidate(condidate *types.TxLockCondida
 	txLockRequest := condidate.TxLockRequest()
 
 	txHash := txLockRequest.Hash()
-	txlock := condidate.TxLock()
-	if condidate.IsAllTxReady() {
-		txlock.Txhash = txHash
+	if condidate.IsReady() {
+		is.lockedTxs[txHash] = txLockRequest
 	}
 }
 
 func (is *InstantSend) Have(hash common.Hash) bool {
-
-	return is.lockedTxs[hash] > 0
+	return is.lockedTxs[hash] != nil
 }
 
 func (is *InstantSend) String() string {
 
-	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.txLockCandidates), ", Votes :", len(is.voteds))
+	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.voteds))
 
 	return str
 }
-
 
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()

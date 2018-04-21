@@ -22,56 +22,12 @@ var (
 	ErrECDSAVerification = errors.New("crypto/ecdsa: verification error")
 )
 
-//这个类是投票的辅助类，投票和创建侯选对象都需要用到
-type TxLock struct {
-	Txhash          common.Hash
-	masternodeVotes map[discover.NodeID]*TxLockVote
-	attacked        bool
-}
-
-func NewTxLock(txid common.Hash) *TxLock {
-
-	txlock := &TxLock{
-		Txhash:          txid,
-		masternodeVotes: make(map[discover.NodeID]*TxLockVote),
-		attacked:        false}
-	return txlock
-}
-
-func (tl *TxLock) CountVotes() int {
-	if tl.attacked {
-		return 0
-	} else {
-		return len(tl.masternodeVotes)
-	}
-}
-
-func (tl *TxLock) HasMasternodeVoted(id discover.NodeID) bool {
-
-	return tl.masternodeVotes[id] != nil
-}
-
-func (tl *TxLock) IsReady() bool {
-
-	return !tl.attacked && tl.CountVotes() >= SIGNATURES_REQUIRED
-}
-
-func (tl *TxLock) AddVote(vote *TxLockVote) bool {
-
-	if tl.masternodeVotes[vote.MasternodeId()] == nil {
-		tl.masternodeVotes[vote.MasternodeId()] = vote
-		return true
-	}
-	return false
-}
-
 type TxLockVote struct {
 	txHash          common.Hash
 	masternodeId    discover.NodeID
 	sig             []byte
 	confirmedHeight int
 	createdTime     time.Time
-	txLocks         map[common.Hash]*TxLock
 	KeySize         int
 }
 
@@ -166,7 +122,6 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 	}
 }
 
-//主要目的是为了获取投票对象对应的交易，需要相关的内容以及投票的相应规则参数
 type TxLockRequest struct {
 	tx *Transaction
 }
@@ -192,12 +147,8 @@ type TxLockCondidate struct {
 	confirmedHeight int
 	createdTime     time.Time
 	txLockRequest   *TxLockRequest
-	txLock          *TxLock // TxLockRequests by tx hash
-
-}
-
-func (tc *TxLockCondidate) TxLock() *TxLock {
-	return tc.txLock
+	masternodeVotes map[discover.NodeID]*TxLockVote
+	attacked        bool
 }
 
 func (tc *TxLockCondidate) TxLockRequest() *TxLockRequest {
@@ -206,14 +157,15 @@ func (tc *TxLockCondidate) TxLockRequest() *TxLockRequest {
 
 func NewTxLockCondidata(request *TxLockRequest) TxLockCondidate {
 
-	txlockcondidata := TxLockCondidate{confirmedHeight: -1, createdTime: time.Now(), txLockRequest: request}
+	txlockcondidata := TxLockCondidate{
+		confirmedHeight: -1,
+		createdTime:     time.Now(),
+		txLockRequest:   request,
+		masternodeVotes: make(map[discover.NodeID]*TxLockVote),
+		attacked:        false,
+	}
+
 	return txlockcondidata
-
-}
-
-func (tc *TxLockCondidate) HasMasternodeVoted(hash common.Hash, id discover.NodeID) bool {
-
-	return tc.txLock.HasMasternodeVoted(id)
 }
 
 func (tc *TxLockCondidate) Hash() common.Hash {
@@ -221,23 +173,28 @@ func (tc *TxLockCondidate) Hash() common.Hash {
 	return tc.txLockRequest.Hash()
 }
 
-func (tc *TxLockCondidate) AddTxLock(txid common.Hash) {
-	txlock := NewTxLock(txid)
-	tc.txLock = txlock
-}
-
 func (tc *TxLockCondidate) AddVote(vote *TxLockVote) bool {
-	txlock := tc.txLock
-	return txlock.AddVote(vote)
+
+	if tc.masternodeVotes[vote.MasternodeId()] == nil {
+		tc.masternodeVotes[vote.MasternodeId()] = vote
+		return true
+	}
+	return false
 }
 
-func (tc *TxLockCondidate) IsAllTxReady() bool {
-	if tc.txLock == nil {
-		return false
-	}
-	return true
+func (tc *TxLockCondidate) IsReady() bool {
+	return !tc.attacked && tc.CountVotes() >= SIGNATURES_REQUIRED
 }
 
 func (tc *TxLockCondidate) CountVotes() int {
-	return tc.txLock.CountVotes()
+	if tc.attacked {
+		return 0
+	} else {
+		return len(tc.masternodeVotes)
+	}
+}
+
+func (tc *TxLockCondidate) HasMasternodeVoted(id discover.NodeID) bool {
+
+	return tc.masternodeVotes[id] != nil
 }
