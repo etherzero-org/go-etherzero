@@ -87,36 +87,31 @@ func localConsole(ctx *cli.Context) error {
 
 	var client *rpc.Client
 	keyjson, err := ioutil.ReadFile(filename)
-	m := make(map[string]interface{})
-	if err := json.Unmarshal(keyjson, &m); err != nil {
-		return err
-	}
-	url := "enode://"
-	url =url + m["Addr"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
-	core.MasterNodeAddr = m["Addr"].(string)
 
-	startNode(ctx, node)
-	defer node.Stop()
-
-	//var am *masternode.ActiveMasternode
 	// read the MasterNodeCheck, if the balance bigger than 2000, then start master node
-	if core.MasterNodeCheck == true{
+	//else start node
+	if (err == nil)&&(core.MasterNodeCheck == true){
+		m := make(map[string]interface{})
+		json.Unmarshal(keyjson, &m)
+		url := "enode://"
+		url =url + m["Addr"].(string)+"@"+m["IP"].(string)+":"+m["Port"].(string)
+		core.MasterNodeAddr = m["Addr"].(string)
 		masternode := makeFullMasterNode(ctx)
 		utils.StartMasterNode(masternode )
 		defer masternode.Stop()
-
 		//am.ManageStateInitial(masternode)
-
 		client, err = masternode.Attach()
 		if err != nil {
 			utils.Fatalf("Failed to attach to the inproc geth: %v", err)
 		}
-
-	} else {
+	}else {
+		startNode(ctx, node)
+		defer node.Stop()
 		client, err = node.Attach()
 		if err != nil {
 			utils.Fatalf("Failed to attach to the inproc geth: %v", err)
 		}
+
 	}
 
 	// Attach to the newly started node and start the JavaScript console

@@ -193,7 +193,7 @@ func NewMaster(ctx *masternode.ServiceContext, config *Config) (*Ethereum, error
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-	chainDb, err := CreateDBMaster(ctx, config, "masterchaindata")
+	chainDb, err := CreateDBMaster(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
 	}
