@@ -103,6 +103,7 @@ type pastDial struct {
 
 type task interface {
 	Do(*Server)
+	DoMasternode(*MasternodeServer)
 }
 
 // A dialTask is generated for each node that is dialed. Its
@@ -306,6 +307,25 @@ func (t *dialTask) Do(srv *Server) {
 	}
 }
 
+func (t *dialTask) DoMasternode(srv *MasternodeServer) {
+	if t.dest.Incomplete() {
+		if !t.resolveMasternode(srv) {
+			return
+		}
+	}
+	err := t.dialMasternode(srv, t.dest)
+	if err != nil {
+		log.Trace("Dial error", "task", t, "err", err)
+		// Try resolving the ID of static nodes if dialing failed.
+		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
+			if t.resolveMasternode(srv) {
+				t.dialMasternode(srv, t.dest)
+			}
+		}
+	}
+}
+
+
 // resolve attempts to find the current endpoint for the destination
 // using discovery.
 //
@@ -340,12 +360,57 @@ func (t *dialTask) resolve(srv *Server) bool {
 	return true
 }
 
+// resolve attempts to find the current endpoint for the destination
+// using discovery.
+//
+// Resolve operations are throttled with backoff to avoid flooding the
+// discovery network with useless queries for nodes that don't exist.
+// The backoff delay resets when the node is found.
+func (t *dialTask) resolveMasternode(srv *MasternodeServer) bool {
+	if srv.ntab == nil {
+		log.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
+		return false
+	}
+	if t.resolveDelay == 0 {
+		t.resolveDelay = initialResolveDelay
+	}
+	if time.Since(t.lastResolved) < t.resolveDelay {
+		return false
+	}
+	resolved := srv.ntab.Resolve(t.dest.ID)
+	t.lastResolved = time.Now()
+	if resolved == nil {
+		t.resolveDelay *= 2
+		if t.resolveDelay > maxResolveDelay {
+			t.resolveDelay = maxResolveDelay
+		}
+		log.Debug("Resolving node failed", "id", t.dest.ID, "newdelay", t.resolveDelay)
+		return false
+	}
+	// The node was found.
+	t.resolveDelay = initialResolveDelay
+	t.dest = resolved
+	log.Debug("Resolved node", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
+	return true
+}
+
+
 type dialError struct {
 	error
 }
 
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *discover.Node) error {
+	fd, err := srv.Dialer.Dial(dest)
+	if err != nil {
+		return &dialError{err}
+	}
+	mfd := newMeteredConn(fd, false)
+	return srv.SetupConn(mfd, t.flags, dest)
+}
+
+// dial performs the actual connection attempt.
+func (t *dialTask) dialMasternode(srv *MasternodeServer, dest *discover.Node) error {
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
 		return &dialError{err}

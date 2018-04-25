@@ -1,14 +1,14 @@
 package types
 
 import (
+	"time"
+	"errors"
+	"math/big"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"errors"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/p2p/discover"
-	"math/big"
-	"time"
 )
 
 const (

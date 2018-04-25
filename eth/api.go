@@ -41,8 +41,8 @@ import (
 var defaultBalanceTxProcess = big.NewInt(1e+17)
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related
-// information.
 type PublicEthereumAPI struct {
+// information.
 	e *Ethereum
 }
 

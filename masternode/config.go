@@ -48,7 +48,7 @@ const (
 // P2P network layer of a protocol stack. These values can be further extended by
 // all registered services.
 type Config struct {
-	// Name sets the instance name of the node. It must not contain the / character and is
+	// Name sets the instance name of the Masternode. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name of geth is "geth". If no
 	// value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
@@ -145,6 +145,12 @@ type Config struct {
 	// *WARNING* Only set this if the node is running in a trusted network, exposing
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
+
+	// Masternode conifg
+	account common.Hash
+
+	txHash common.Hash
+
 
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`

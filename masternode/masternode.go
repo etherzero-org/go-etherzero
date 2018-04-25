@@ -62,10 +62,6 @@ type Masternode struct {
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
 
-	paid		 int 	//last paid height
-	CollateralMinConfBlockHash common.Hash //remember the hash of the block where masternode collateral had minimum required confirmations
-	ID         discover.NodeID
-	txid 	common.Hash
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
@@ -84,6 +80,12 @@ type Masternode struct {
 
 	stop chan struct{} // Channel to wait for termination notifications
 	lock sync.RWMutex
+
+	//etherzero masternode
+	paid		 int 	//last paid height
+	txid 	common.Hash
+	CollateralMinConfBlockHash common.Hash //remember the hash of the block where masternode collateral had minimum required confirmations
+	ID         discover.NodeID
 
 	log log.Logger
 }
@@ -215,7 +217,7 @@ func (n *Masternode) Start() error {
 	}
 	// Gather the protocols and start the freshly assembled P2P server
 	for _, service := range services {
-		running.Protocols = append(running.Protocols, service.MasterProtocols()...)
+		running.Protocols = append(running.Protocols, service.MasternodeProtocols()...)
 	}
 	if err := running.Start(); err != nil {
 		return convertFileLockError(err)
@@ -224,7 +226,7 @@ func (n *Masternode) Start() error {
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
-		if err := service.StartMaster(running); err != nil {
+		if err := service.StartMasternode(running); err != nil {
 			for _, kind := range started {
 				services[kind].Stop()
 			}
@@ -255,6 +257,7 @@ func (n *Masternode) Config() p2p.Config{
 
 	return n.serverConfig
 }
+
 func (n *Masternode) openDataDir() error {
 	if n.config.DataDir == "" {
 		return nil // ephemeral
@@ -281,7 +284,7 @@ func (n *Masternode) startRPC(services map[reflect.Type]Service) error {
 	// Gather all the possible APIs to surface
 	apis := n.apis()
 	for _, service := range services {
-		apis = append(apis, service.MasterAPIs()...)
+		apis = append(apis, service.MasternodeAPIs()...)
 	}
 	// Start the various API endpoints, terminating all in case of errors
 	if err := n.startInProc(apis); err != nil {
@@ -519,7 +522,7 @@ func (n *Masternode) Stop() error {
 		Services: make(map[reflect.Type]error),
 	}
 	for kind, service := range n.services {
-		if err := service.StopMaster(); err != nil {
+		if err := service.StopMasternode(); err != nil {
 			failure.Services[kind] = err
 		}
 	}
@@ -731,63 +734,18 @@ func (m *Masternode) CalculateScore(hash common.Hash)*big.Int{
 	return blockHash.Big()
 }
 
-// MasternodeSet represents the collection of active peers currently participating in
-// the Ethereum sub-protocol.
-type MasternodeSet struct {
-	masternodes  map[string]*Masternode
-	lock   sync.RWMutex
-	closed bool
+
+// MasternodeInfo represents a short summary of the information known about the host.
+type MasternodeInfo struct {
+	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
+	Name  string `json:"name"`  // Name of the Masternode
+	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
+	account common.Hash `json:"account"`
+	IP    string `json:"ip"`    // IP address of the node
+	Ports struct {
+		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
+		Listener  int `json:"listener"`  // TCP listening port for RLPx
+	} `json:"ports"`
+	ListenAddr string                 `json:"listenAddr"`
+	Protocols  map[string]interface{} `json:"protocols"`
 }
-
-// newPeerSet creates a new peer set to track the active participants.
-func newMasternodeSet() *MasternodeSet {
-	return &MasternodeSet{
-		masternodes: make(map[string]*Masternode),
-	}
-}
-
-// Register injects a new peer into the working set, or returns an error if the
-// peer is already known.
-func (ms *MasternodeSet) Register(p *Masternode) error {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-
-	if ms.closed {
-		return errClosed
-	}
-	if _, ok := ms.masternodes[p.ID.String()]; ok {
-		return errAlreadyRegistered
-	}
-	ms.masternodes[p.ID.String()] = p
-	return nil
-}
-
-// Unregister removes a remote peer from the active set, disabling any further
-// actions to/from that particular entity.
-func (ms *MasternodeSet) Unregister(id string) error {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-
-	if _, ok := ms.masternodes[id]; !ok {
-		return errNotRegistered
-	}
-	delete(ms.masternodes, id)
-	return nil
-}
-
-// Peer retrieves the registered peer with the given id.
-func (ms *MasternodeSet) Masternode(id string) *Masternode {
-	ms.lock.RLock()
-	defer ms.lock.RUnlock()
-
-	return ms.masternodes[id]
-}
-
-// Len returns if the current number of peers in the set.
-func (ms *MasternodeSet) Len() int {
-	ms.lock.RLock()
-	defer ms.lock.RUnlock()
-
-	return len(ms.masternodes)
-}
-
