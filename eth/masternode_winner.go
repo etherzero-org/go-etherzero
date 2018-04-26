@@ -18,17 +18,17 @@
 package eth
 
 import (
-	"errors"
-	"math/big"
-	"crypto/rand"
 	"crypto/ecdsa"
+	"crypto/rand"
+	"errors"
 	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/masternode"
+	"math/big"
 )
 
-const(
+const (
 	MNPAYMENTS_SIGNATURES_REQUIRED         = 6
 	MNPAYMENTS_SIGNATURES_TOTAL            = 10
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206
@@ -42,24 +42,93 @@ var (
 )
 
 type MasternodePayee struct {
+	account common.Hash
+	votes   []*MasternodePaymentVote
+}
+
+func NewMasternodePayee(hash common.Hash, vote *MasternodePaymentVote) *MasternodePayee {
+
+	mp := &MasternodePayee{
+		account: hash,
+	}
+	mp.votes = append(mp.votes, vote)
+	return mp
+}
+
+func (mp *MasternodePayee) Add(vote *MasternodePaymentVote) {
+
+	mp.votes = append(mp.votes, vote)
+}
+
+func (mp *MasternodePayee) Count() int {
+	return len(mp.votes)
+}
+
+func (mp *MasternodePayee) Votes() []*MasternodePaymentVote {
+	return mp.votes
+}
+
+type MasternodeBlockPayees struct {
+	number *big.Int //blockHeight
+	payees []*MasternodePayee
+
+	log log.Logger
+}
+
+//vote
+func (mbp *MasternodeBlockPayees) Add(vote *MasternodePaymentVote) {
+
+	//When the masternode has been voted
+	for _, mp := range mbp.payees {
+		if mp.account == vote.Hash() {
+			mp.Add(vote)
+			return
+		}
+	}
+	payee := NewMasternodePayee(vote.Hash(), vote)
+	mbp.payees = append(mbp.payees, payee)
 
 }
 
+//select the Masternode that has been voted the most
+func (mbp *MasternodeBlockPayees) Best() (common.Hash, bool) {
 
+	if len(mbp.payees) < 1 {
+		mbp.log.Info("ERROR: ", "couldn't find any payee!")
+	}
+	votes := -1
+	hash := common.Hash{}
 
-type MasternodeBlockPayees struct{
-
+	for _, payee := range mbp.payees {
+		if votes < payee.Count() {
+			hash = payee.account
+			votes = payee.Count()
+		}
+	}
+	return hash, votes > -1
 }
 
+//Used to record the last winning block of the masternode. At least 2 votes need to be satisfied
+// Have(2,masternode.account)
+func (mbp *MasternodeBlockPayees) Have(votes int, hash common.Hash) bool {
+	if len(mbp.payees) < 1 {
+		mbp.log.Info("ERROR: ", "couldn't find any payee!")
+	}
+	for _, payee := range mbp.payees {
+		if payee.Count() >= votes && payee.account == hash {
+			return true
+		}
+	}
+	return false
+}
 
+// vote for the winning payment
 type MasternodePaymentVote struct {
-
-	number *big.Int   //blockHeight
+	number     *big.Int //blockHeight
 	masternode *masternode.Masternode
 
-	KeySize         int
-	log log.Logger
-
+	KeySize int
+	log     log.Logger
 }
 
 func (mpv *MasternodePaymentVote) Hash() common.Hash {
@@ -71,11 +140,9 @@ func (mpv *MasternodePaymentVote) Hash() common.Hash {
 	return tlvHash
 }
 
-
 func (mpv *MasternodePaymentVote) CheckSignature(pubkey, signature []byte) bool {
 	return crypto.VerifySignature(pubkey, mpv.Hash().Bytes(), signature)
 }
-
 
 // Implements the Verify method from SigningMethod
 // For this verify method, key must be an ecdsa.PublicKey struct
@@ -139,9 +206,5 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 	}
 }
 
-
 type MasternodePayments struct {
-
 }
-
-

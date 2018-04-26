@@ -1265,7 +1265,7 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 func RegisterEthServiceMaster(stack *masternode.Masternode, cfg *eth.Config) {
 	var err error
 	err = stack.Register(func(ctx *masternode.ServiceContext) (masternode.Service, error) {
-		fullNode, err := eth.NewMaster(ctx, cfg)
+		fullNode, err := eth.NewMasternode(ctx, cfg)
 		if fullNode != nil && cfg.LightServ > 0 {
 			ls, _ := les.NewLesServer(fullNode, cfg)
 			fullNode.AddLesServer(ls)

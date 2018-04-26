@@ -56,8 +56,8 @@ type Masternode struct {
 	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
 
-	serverConfig p2p.Config
-	server       *p2p.Server // Currently running P2P networking layer
+	serverConfig p2p.MasternodeConfig
+	server       *p2p.MasternodeServer // Currently running P2P networking layer
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
@@ -189,7 +189,7 @@ func (n *Masternode) Start() error {
 	}
 
 	n.log.Info("Starting peer-to-peer master node", "instance", n.serverConfig.Name)
-	running := &p2p.Server{Config: n.serverConfig}
+	running := &p2p.MasternodeServer{MasternodeConfig: n.serverConfig}
 
 	// Otherwise copy and specialize the P2P configuration
 	services := make(map[reflect.Type]Service)
@@ -253,7 +253,7 @@ func (n *Masternode) Start() error {
 	return nil
 }
 
-func (n *Masternode) Config() p2p.Config{
+func (n *Masternode) Config() p2p.MasternodeConfig{
 
 	return n.serverConfig
 }
@@ -607,7 +607,7 @@ func (n *Masternode) RPCHandler() (*rpc.Server, error) {
 // Server retrieves the currently running P2P network layer. This method is meant
 // only to inspect fields of the currently running server, life cycle management
 // should be left to this Node entity.
-func (n *Masternode) Server() *p2p.Server {
+func (n *Masternode) Server() *p2p.MasternodeServer{
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 

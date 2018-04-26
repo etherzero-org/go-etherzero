@@ -186,7 +186,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 // New creates a new Ethereum object (including the
 // initialisation of the common Ethereum object)
-func NewMaster(ctx *masternode.ServiceContext, config *Config) (*Ethereum, error) {
+func NewMasternode(ctx *masternode.ServiceContext, config *Config) (*Ethereum, error) {
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run eth.Ethereum in light sync mode, use les.LightEthereum")
 	}
