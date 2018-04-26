@@ -277,7 +277,7 @@ func (srv *MasternodeServer) Start() (err error) {
 		return errors.New("server already running")
 	}
 	srv.running = true
-	srv.log = srv.Config.Logger
+	srv.log = srv.MasternodeConfig.Logger
 	if srv.log == nil {
 		srv.log = log.New()
 	}

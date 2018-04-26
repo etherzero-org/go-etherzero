@@ -428,7 +428,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *Ethereum) MasterAPIs() []rpc.API {
+func (s *Ethereum) MasternodeAPIs() []rpc.API {
 	apis := ethapi.GetAPIs(s.ApiBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
@@ -572,7 +572,7 @@ func (s *Ethereum) Protocols() []p2p.Protocol {
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *Ethereum) MasterProtocols() []p2p.Protocol {
+func (s *Ethereum) MasternodeProtocols() []p2p.Protocol {
 	if s.lesServer == nil {
 		return s.masternodeManager.SubProtocols
 	}
@@ -605,7 +605,7 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 
 // Start implements node.Service, starting all internal goroutines needed by the
 // Ethereum protocol implementation.
-func (s *Ethereum) StartMaster(srvr *p2p.Server) error {
+func (s *Ethereum) StartMasternode(srvr *p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -652,7 +652,7 @@ func (s *Ethereum) Stop() error {
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Ethereum protocol.
-func (s *Ethereum) StopMaster() error {
+func (s *Ethereum) StopMasternode() error {
 	if s.stopDbUpgrade != nil {
 		s.stopDbUpgrade()
 	}

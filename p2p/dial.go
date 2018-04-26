@@ -437,6 +437,20 @@ func (t *discoverTask) Do(srv *Server) {
 	t.results = srv.ntab.Lookup(target)
 }
 
+func (t *discoverTask) DoMasternode(srv *MasternodeServer) {
+	// newTasks generates a lookup task whenever dynamic dials are
+	// necessary. Lookups need to take some time, otherwise the
+	// event loop spins too fast.
+	next := srv.lastLookup.Add(lookupInterval)
+	if now := time.Now(); now.Before(next) {
+		time.Sleep(next.Sub(now))
+	}
+	srv.lastLookup = time.Now()
+	var target discover.NodeID
+	rand.Read(target[:])
+	t.results = srv.ntab.Lookup(target)
+}
+
 func (t *discoverTask) String() string {
 	s := "discovery lookup"
 	if len(t.results) > 0 {
@@ -446,6 +460,9 @@ func (t *discoverTask) String() string {
 }
 
 func (t waitExpireTask) Do(*Server) {
+	time.Sleep(t.Duration)
+}
+func (t waitExpireTask) DoMasternode(*MasternodeServer) {
 	time.Sleep(t.Duration)
 }
 func (t waitExpireTask) String() string {
