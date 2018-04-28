@@ -205,12 +205,13 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 		return "", err
 	}
 }
-
+// Masternode Payments Class
+// Keeps track of who should get paid for which blocks
 type MasternodePayments struct {
 
-	cachedBlockNumber *big.Int
+	cachedBlockNumber *big.Int // Keep track of current block height
 	minBlocksToStore *big.Int
-	storageCoeff *big.Int
+	storageCoeff *big.Int //masternode count times nStorageCoeff payments blocks should be stored ...
 
 	votes map[common.Hash]*MasternodePaymentVote
 	blocks map[uint64]*MasternodeBlockPayees
@@ -241,5 +242,9 @@ func(mp *MasternodePayments) Have() bool{
 	return true
 }
 
+func (mp *MasternodePayments) Clear(){
+	mp.blocks=make(map[uint64]*MasternodeBlockPayees)
+	mp.votes=make(map[common.Hash]*MasternodePaymentVote)
 
+}
 
