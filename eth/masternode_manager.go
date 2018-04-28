@@ -51,10 +51,12 @@ type MasternodeManager struct {
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
-	fetcher    *fetcher.Fetcher
-	peers      *peerSet
+	fetcher *fetcher.Fetcher
+	peers   *peerSet
 
 	masternodes map[string]*masternode.Masternode //id -> masternode
+
+	enableds map[string]*masternode.Masternode //id -> masternode
 
 	is *InstantSend
 
@@ -91,7 +93,6 @@ type MasterNodelist struct {
 // local MasterNodelists.
 type MasterNodelists []*MasterNodelist
 
-
 type ltrInfo struct {
 	tx     *types.Transaction
 	sentTo map[*peer]struct{}
@@ -105,8 +106,7 @@ type LesTxRelay struct {
 	lock         sync.RWMutex
 }
 
-
-func MasterNodelistManager(ma *masternode.Masternode) {
+func (m *MasternodeManager) List() map[string]*masternode.Masternode {
 	//Managme the masterNodelist
 	//srv := ma.Server()
 	//masterpeers := srv.PeersInfo()
@@ -114,10 +114,11 @@ func MasterNodelistManager(ma *masternode.Masternode) {
 	//for _,ma:=range masterpeers{
 	//	fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress,ma.MasterState)
 	//}
+	return m.masternodes
 
 }
 
-func MasterNodeAdd(ma *masternode.Masternode) {
+func Add(ma *masternode.Masternode) {
 	srv := ma.Server()
 	node, _ := discover.ParseNode("enode://d79eee6402b5e61d846cdbd068a4db9d4a392c2c1929a205bb91abfea1723b63c02595156b11f340585e7fdf1918f1143067287e0efb45e8029b82e9a9abe6c0@127.0.0.1:31211")
 	srv.AddPeer(node)
@@ -126,7 +127,7 @@ func MasterNodeAdd(ma *masternode.Masternode) {
 
 // send sends a list of transactions to at most a given number of peers at
 // once, never resending any particular transaction to the same peer twice
-func (self *LesTxRelay)sendMasterNodelist(txs types.Transactions, mlist *MasterNodelists, count int) {
+func (self *LesTxRelay) sendMasterNodelist(txs types.Transactions, mlist *MasterNodelists, count int) {
 	sendTo := make(map[*peer]types.Transactions)
 	self.peerStartPos++ // rotate the starting position of the peer list
 	if self.peerStartPos >= len(self.peerList) {
@@ -292,7 +293,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash
 	var winnerMasternode *masternode.Masternode
 
 	for _, paid := range paids {
-		i:=big.NewInt(int64(paid))
+		i := big.NewInt(int64(paid))
 		fmt.Printf("%s\t%d\n", paid, paidMasternodes[i].CalculateScore(hash))
 		score := paidMasternodes[i].CalculateScore(hash)
 		if score.Cmp(highest) > 0 {
@@ -307,7 +308,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash
 	return winnerMasternode
 }
 
-func (mm *MasternodeManager) GetMasternodeRank(	id string) (int, bool) {
+func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 
 	var rank int = 0
 	mm.syncer()
@@ -316,14 +317,14 @@ func (mm *MasternodeManager) GetMasternodeRank(	id string) (int, bool) {
 	if block == nil {
 		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ", block.Number())
 	}
-	masternodeScores:=mm.GetMasternodeScores(block.Hash(),1)
+	masternodeScores := mm.GetMasternodeScores(block.Hash(), 1)
 
-	tRank:=0
-	for _,masternode := range masternodeScores{
-		info:=masternode.MasternodeInfo()
+	tRank := 0
+	for _, masternode := range masternodeScores {
+		info := masternode.MasternodeInfo()
 		tRank++
-		if id == info.ID{
-			rank=tRank
+		if id == info.ID {
+			rank = tRank
 			break
 		}
 	}
@@ -433,14 +434,14 @@ func (mm *MasternodeManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		info:=mm.active.MasternodeInfo()
+		info := mm.active.MasternodeInfo()
 		rank, ok := mm.GetMasternodeRank(info.ID)
 		if !ok {
 			mm.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
-			return errResp(ErrCalculateRankForMasternode,"msg %v: %v", msg, ok)
+			return errResp(ErrCalculateRankForMasternode, "msg %v: %v", msg, ok)
 		} else if rank > SIGNATURES_TOTAL {
 			mm.log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
-			return errResp(ErrMasternodeNotInTheTop,"msg %v: %v", msg, ok)
+			return errResp(ErrMasternodeNotInTheTop, "msg %v: %v", msg, ok)
 		}
 		mm.log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
 		mm.is.ProcessTxLockVotes(votes)
