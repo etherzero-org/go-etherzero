@@ -213,7 +213,7 @@ type MasternodePayments struct {
 	storageCoeff *big.Int
 
 	votes map[common.Hash]*MasternodePaymentVote
-	blocks map[*big.Int]*MasternodeBlockPayees
+	blocks map[uint64]*MasternodeBlockPayees
 	lastVote map[common.Hash]*big.Int
 	didNotVote map[common.Hash]*big.Int
 

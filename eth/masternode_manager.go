@@ -118,7 +118,8 @@ func (m *MasternodeManager) List() map[string]*masternode.Masternode {
 
 }
 
-func Add(ma *masternode.Masternode) {
+func(m *MasternodeManager) Add(ma *masternode.Masternode) {
+
 	srv := ma.Server()
 	node, _ := discover.ParseNode("enode://d79eee6402b5e61d846cdbd068a4db9d4a392c2c1929a205bb91abfea1723b63c02595156b11f340585e7fdf1918f1143067287e0efb45e8029b82e9a9abe6c0@127.0.0.1:31211")
 	srv.AddPeer(node)
@@ -277,10 +278,10 @@ func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) 
 // Deterministically select the oldest/best masternode to pay on the network
 func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash) *masternode.Masternode {
 
-	var paidMasternodes map[*big.Int]*masternode.Masternode
+	var paidMasternodes map[uint64]*masternode.Masternode
 
 	for _, masternode := range mm.masternodes {
-		paidMasternodes[masternode.Paid()] = masternode
+		paidMasternodes[masternode.Paid().Uint64()] = masternode
 	}
 
 	var paids []int
@@ -293,7 +294,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash
 	var winnerMasternode *masternode.Masternode
 
 	for _, paid := range paids {
-		i := big.NewInt(int64(paid))
+		i := uint64(paid)
 		fmt.Printf("%s\t%d\n", paid, paidMasternodes[i].CalculateScore(hash))
 		score := paidMasternodes[i].CalculateScore(hash)
 		if score.Cmp(highest) > 0 {
