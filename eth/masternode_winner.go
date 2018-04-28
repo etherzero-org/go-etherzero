@@ -135,7 +135,7 @@ func (mpv *MasternodePaymentVote) Hash() common.Hash {
 
 	tlvHash := rlpHash([]interface{}{
 		mpv.number,
-		mpv.masternode.ID,
+		mpv.masternode.MasternodeInfo().ID,
 	})
 	return tlvHash
 }

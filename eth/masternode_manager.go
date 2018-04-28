@@ -276,7 +276,7 @@ func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) 
 // Deterministically select the oldest/best masternode to pay on the network
 func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash) *masternode.Masternode {
 
-	var paidMasternodes map[int]*masternode.Masternode
+	var paidMasternodes map[*big.Int]*masternode.Masternode
 
 	for _, masternode := range mm.masternodes {
 		paidMasternodes[masternode.Paid()] = masternode
@@ -292,11 +292,12 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash
 	var winnerMasternode *masternode.Masternode
 
 	for _, paid := range paids {
-		fmt.Printf("%s\t%d\n", paid, paidMasternodes[paid].CalculateScore(hash))
-		score := paidMasternodes[paid].CalculateScore(hash)
+		i:=big.NewInt(int64(paid))
+		fmt.Printf("%s\t%d\n", paid, paidMasternodes[i].CalculateScore(hash))
+		score := paidMasternodes[i].CalculateScore(hash)
 		if score.Cmp(highest) > 0 {
 			highest = score
-			winnerMasternode = paidMasternodes[paid]
+			winnerMasternode = paidMasternodes[i]
 		}
 		countTenth++
 		if countTenth >= tenthNetWork {
@@ -306,7 +307,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash
 	return winnerMasternode
 }
 
-func (mm *MasternodeManager) GetMasternodeRank(	id discover.NodeID) (int, bool) {
+func (mm *MasternodeManager) GetMasternodeRank(	id string) (int, bool) {
 
 	var rank int = 0
 	mm.syncer()
@@ -319,8 +320,9 @@ func (mm *MasternodeManager) GetMasternodeRank(	id discover.NodeID) (int, bool) 
 
 	tRank:=0
 	for _,masternode := range masternodeScores{
+		info:=masternode.MasternodeInfo()
 		tRank++
-		if id == masternode.ID{
+		if id == info.ID{
 			rank=tRank
 			break
 		}
@@ -431,9 +433,10 @@ func (mm *MasternodeManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		rank, ok := mm.GetMasternodeRank(mm.active.ID)
+		info:=mm.active.MasternodeInfo()
+		rank, ok := mm.GetMasternodeRank(info.ID)
 		if !ok {
-			mm.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.active.ID.String(), " rank: ", rank)
+			mm.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
 			return errResp(ErrCalculateRankForMasternode,"msg %v: %v", msg, ok)
 		} else if rank > SIGNATURES_TOTAL {
 			mm.log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")

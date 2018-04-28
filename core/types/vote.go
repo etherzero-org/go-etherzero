@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/p2p/discover"
 )
 
 const (
@@ -24,18 +23,18 @@ var (
 
 type TxLockVote struct {
 	txHash          common.Hash
-	masternodeId    discover.NodeID
+	masternodeId    string
 	sig             []byte
 	confirmedHeight int
 	createdTime     time.Time
 	KeySize         int
 }
 
-func (tlv *TxLockVote) MasternodeId() discover.NodeID {
+func (tlv *TxLockVote) MasternodeId() string {
 	return tlv.masternodeId
 }
 
-func NewTxLockVote(hash common.Hash, id discover.NodeID) *TxLockVote {
+func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
 
 	tv := &TxLockVote{
 		txHash:          hash,
@@ -147,7 +146,7 @@ type TxLockCondidate struct {
 	confirmedHeight int
 	createdTime     time.Time
 	txLockRequest   *TxLockRequest
-	masternodeVotes map[discover.NodeID]*TxLockVote
+	masternodeVotes map[string]*TxLockVote
 	attacked        bool
 }
 
@@ -161,7 +160,7 @@ func NewTxLockCondidata(request *TxLockRequest) TxLockCondidate {
 		confirmedHeight: -1,
 		createdTime:     time.Now(),
 		txLockRequest:   request,
-		masternodeVotes: make(map[discover.NodeID]*TxLockVote),
+		masternodeVotes: make(map[string]*TxLockVote),
 		attacked:        false,
 	}
 
@@ -194,7 +193,7 @@ func (tc *TxLockCondidate) CountVotes() int {
 	}
 }
 
-func (tc *TxLockCondidate) HasMasternodeVoted(id discover.NodeID) bool {
+func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
 
 	return tc.masternodeVotes[id] != nil
 }

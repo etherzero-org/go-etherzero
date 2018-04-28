@@ -100,17 +100,18 @@ func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 	}
 
 	var alreadyVoted bool = false
+	info:=is.active.MasternodeInfo()
 
 	if _, ok := is.voteds[txHash]; !ok {
 		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
-		if txLockCondidate.HasMasternodeVoted(is.active.ID) {
+		if txLockCondidate.HasMasternodeVoted(info.ID) {
 			alreadyVoted = true
-			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.active.ID.String())
+			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", info.ID)
 			return
 		}
 	}
 
-	t := types.NewTxLockVote(txHash, is.active.ID) //构建一个投票对象
+	t := types.NewTxLockVote(txHash, info.ID) //构建一个投票对象
 
 	if alreadyVoted {
 		return

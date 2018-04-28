@@ -35,7 +35,6 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/rpc"
 	"github.com/prometheus/prometheus/util/flock"
-	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/common"
 	"math/big"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
@@ -82,10 +81,10 @@ type Masternode struct {
 	lock sync.RWMutex
 
 	//etherzero masternode
-	paid		 int 	//last paid height
-	txid 	common.Hash
+	name string
+	paid		 *big.Int 	//last paid height
+	txHash 	common.Hash
 	CollateralMinConfBlockHash common.Hash //remember the hash of the block where masternode collateral had minimum required confirmations
-	ID         discover.NodeID
 
 	log log.Logger
 }
@@ -689,7 +688,7 @@ func (n *Masternode) ResolvePath(x string) string {
 }
 
 // Paid returns the masternode last paid height
-func (n *Masternode) Paid() int{
+func (n *Masternode) Paid() *big.Int{
 	return n.paid
 }
 
@@ -733,7 +732,7 @@ func (m *Masternode) CalculateScore(hash common.Hash)*big.Int{
 
 	blockHash:= rlpHash([]interface{}{
 		hash,
-		m.txid,
+		m.txHash,
 		m.CollateralMinConfBlockHash,
 	})
 
@@ -746,7 +745,7 @@ type MasternodeInfo struct {
 	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
 	Name  string `json:"name"`  // Name of the Masternode
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
-	Account common.Hash `json:"account"`
+	Account common.Address `json:"account"`
 	IP    string `json:"ip"`    // IP address of the node
 	TxHash common.Hash `json:"txHash"` //Send a transaction to the contract through the masternode account to prove that you own the account
 	Ports struct {
@@ -755,4 +754,32 @@ type MasternodeInfo struct {
 	} `json:"ports"`
 	ListenAddr string                 `json:"listenAddr"`
 	Protocols  map[string]interface{} `json:"protocols"`
+}
+
+func (m *Masternode) MasternodeInfo() *MasternodeInfo{
+	node:=m.server.Self()
+	srv:=m.server
+	info:=&MasternodeInfo{
+		Name:m.name,
+		ID:node.ID.String(),
+		IP:node.IP.String(),
+		TxHash:m.txHash,
+		ListenAddr:srv.ListenAddr,
+		Protocols:  make(map[string]interface{}),
+
+	}
+	info.Ports.Discovery = int(node.UDP)
+	info.Ports.Listener = int(node.TCP)
+
+	// Gather all the running protocol infos (only once per protocol type)
+	for _, proto := range srv.Protocols {
+		if _, ok := info.Protocols[proto.Name]; !ok {
+			nodeInfo := interface{}("unknown")
+			if query := proto.NodeInfo; query != nil {
+				nodeInfo = proto.NodeInfo()
+			}
+			info.Protocols[proto.Name] = nodeInfo
+		}
+	}
+	return info
 }
