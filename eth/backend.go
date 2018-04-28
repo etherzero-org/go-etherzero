@@ -446,12 +446,7 @@ func (s *Ethereum) MasternodeAPIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
-		}, {
-			Namespace: "eth",
-			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.masternodeManager.downloader, s.eventMux),
-			Public:    true,
-		}, {
+		},  {
 			Namespace: "miner",
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),

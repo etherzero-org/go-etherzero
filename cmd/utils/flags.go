@@ -47,7 +47,6 @@ import (
 	"github.com/ethzero/go-ethzero/ethstats"
 	"github.com/ethzero/go-ethzero/les"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/metrics"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/p2p"
@@ -747,17 +746,6 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
-// setIPC creates an IPC path configuration from the set command line flags,
-// returning an empty string if IPC was explicitly disabled, or the set path.
-func setMasterIPC(ctx *cli.Context, cfg *masternode.Config) {
-	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
-	switch {
-	case ctx.GlobalBool(IPCDisabledFlag.Name):
-		cfg.IPCPath = ""
-	case ctx.GlobalIsSet(IPCPathFlag.Name):
-		cfg.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
-	}
-}
 
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
@@ -991,31 +979,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
-// SetNodeConfig applies node-related command line flags to the config.
-func SetMasterNodeConfig(ctx *cli.Context, cfg *masternode.Config) {
-	SetP2PMasterConfig(ctx, &cfg.P2P)
-	setMasterIPC(ctx, cfg)
-	switch {
-	case ctx.GlobalIsSet(DataDirFlag.Name):
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DeveloperFlag.Name):
-		cfg.DataDir = "" // unless explicitly requested, use memory databases
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(masternode.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(masternode.DefaultDataDir(), "rinkeby")
-	}
-
-	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
-		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
-	}
-	if ctx.GlobalIsSet(LightKDFFlag.Name) {
-		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
-	}
-	if ctx.GlobalIsSet(NoUSBFlag.Name) {
-		cfg.NoUSB = ctx.GlobalBool(NoUSBFlag.Name)
-	}
-}
 
 func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
 	if ctx.GlobalIsSet(GpoBlocksFlag.Name) {
@@ -1257,21 +1220,6 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 			return fullNode, err
 		})
 	}
-	if err != nil {
-		Fatalf("Failed to register the Ethereum service: %v", err)
-	}
-}
-// RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthServiceMaster(stack *masternode.Masternode, cfg *eth.Config) {
-	var err error
-	err = stack.Register(func(ctx *masternode.ServiceContext) (masternode.Service, error) {
-		fullNode, err := eth.NewMasternode(ctx, cfg)
-		if fullNode != nil && cfg.LightServ > 0 {
-			ls, _ := les.NewLesServer(fullNode, cfg)
-			fullNode.AddLesServer(ls)
-			}
-		return fullNode, err
-		})
 	if err != nil {
 		Fatalf("Failed to register the Ethereum service: %v", err)
 	}

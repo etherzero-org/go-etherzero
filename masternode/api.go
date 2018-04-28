@@ -64,15 +64,6 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 
 // masternode list
 func (api *PrivateAdminAPI) MasterNodelist(ctx *cli.Context) {
-	// Make sure the server is running, fail otherwise
-	server := api.node.Server()
-	masterpeers := server.PeersInfo()
-
-	fmt.Println("Master Node list :")
-	for _,ma:=range masterpeers{
-		fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress,ma.MasterState)
-	}
-
 }
 
 // RemovePeer disconnects from a a remote node if the connection exists
@@ -257,25 +248,6 @@ func NewPublicAdminAPI(node *Masternode) *PublicAdminAPI {
 	return &PublicAdminAPI{node: node}
 }
 
-// Peers retrieves all the information we know about each individual peer at the
-// protocol granularity.
-func (api *PublicAdminAPI) Peers() ([]*p2p.PeerInfo, error) {
-	server := api.node.Server()
-	if server == nil {
-		return nil, ErrNodeStopped
-	}
-	return server.PeersInfo(), nil
-}
-
-// NodeInfo retrieves all the information we know about the host node at the
-// protocol granularity.
-func (api *PublicAdminAPI) NodeInfo() (*p2p.NodeInfo, error) {
-	server := api.node.Server()
-	if server == nil {
-		return nil, ErrNodeStopped
-	}
-	return server.NodeInfo(), nil
-}
 
 // Datadir retrieves the current data directory the node is using.
 func (api *PublicAdminAPI) Datadir() string {

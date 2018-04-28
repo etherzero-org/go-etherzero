@@ -207,4 +207,39 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 }
 
 type MasternodePayments struct {
+
+	cachedBlockNumber *big.Int
+	minBlocksToStore *big.Int
+	storageCoeff *big.Int
+
+	votes map[common.Hash]*MasternodePaymentVote
+	blocks map[*big.Int]*MasternodeBlockPayees
+	lastVote map[common.Hash]*big.Int
+	didNotVote map[common.Hash]*big.Int
+
 }
+
+func NewMasternodePayments(){
+
+}
+
+func (mp *MasternodePayments) Add(hash common.Hash,vote *MasternodePaymentVote){
+
+	mp.votes[vote.Hash()]=vote
+}
+
+func(mp *MasternodePayments) VoteCount()int{
+	return len(mp.votes)
+}
+
+func (mp*MasternodePayments) BlockCount()int{
+	return len(mp.blocks)
+}
+
+func(mp *MasternodePayments) Have() bool{
+
+	return true
+}
+
+
+

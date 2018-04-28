@@ -187,7 +187,7 @@ func makeConfigMasterNode(ctx *cli.Context) (*masternode.Masternode, gethMasterN
 		}
 	}
 	// Apply flags.
-	utils.SetMasterNodeConfig(ctx, &cfg.MasterNode)
+	//utils.SetMasterNodeConfig(ctx, &cfg.MasterNode)
 	stack, err := masternode.New(&cfg.MasterNode)
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
@@ -236,8 +236,8 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 }
 
 func makeFullMasterNode(ctx *cli.Context) *masternode.Masternode {
-	stack, cfg := makeConfigMasterNode(ctx)
-	utils.RegisterEthServiceMaster(stack, &cfg.Eth)
+	stack,_ := makeConfigMasterNode(ctx)
+	//utils.RegisterEthServiceMaster(stack, &cfg.Eth)
 	//utils.RegisterEthService(stack, &cfg.Eth)
 
 	return stack

@@ -56,8 +56,8 @@ type Masternode struct {
 	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
 
-	serverConfig p2p.MasternodeConfig
-	server       *p2p.MasternodeServer // Currently running P2P networking layer
+	serverConfig p2p.Config
+	server       *p2p.Server // Currently running P2P networking layer
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
@@ -155,9 +155,9 @@ func (n *Masternode) Register(constructor ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.server != nil {
-		return ErrNodeRunning
-	}
+	//if n.server != nil {
+	//	return ErrNodeRunning
+	//}
 	n.serviceFuncs = append(n.serviceFuncs, constructor)
 	return nil
 }
@@ -168,14 +168,15 @@ func (n *Masternode) Start() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's already running
-	if n.server != nil {
-		return ErrNodeRunning
-	}
+	//if n.server != nil {
+	//	return ErrNodeRunning
+	//}
+	/*
 	// Initialize the p2p server. This creates the node key and
 	// discovery databases.
 	n.serverConfig = n.config.P2P
 	n.serverConfig.PrivateKey = n.config.NodeKey()
-	//n.serverConfig.MaxPeers=8888
+	n.serverConfig.MaxPeers=8888
 	n.serverConfig.Name = n.config.NodeName()
 	n.serverConfig.Logger = n.log
 	if n.serverConfig.StaticNodes == nil {
@@ -250,13 +251,10 @@ func (n *Masternode) Start() error {
 	n.server = running
 	n.stop = make(chan struct{})
 
+	*/
 	return nil
 }
 
-func (n *Masternode) Config() p2p.MasternodeConfig{
-
-	return n.serverConfig
-}
 
 func (n *Masternode) openDataDir() error {
 	if n.config.DataDir == "" {
@@ -283,9 +281,9 @@ func (n *Masternode) openDataDir() error {
 func (n *Masternode) startRPC(services map[reflect.Type]Service) error {
 	// Gather all the possible APIs to surface
 	apis := n.apis()
-	for _, service := range services {
-		apis = append(apis, service.MasternodeAPIs()...)
-	}
+	//for _, service := range services {
+	//	apis = append(apis, service.MasternodeAPIs()...)
+	//}
 	// Start the various API endpoints, terminating all in case of errors
 	if err := n.startInProc(apis); err != nil {
 		return err
@@ -509,9 +507,9 @@ func (n *Masternode) Stop() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's not running
-	if n.server == nil {
-		return ErrNodeStopped
-	}
+	//if n.server == nil {
+	//	return ErrNodeStopped
+	//}
 
 	// Terminate the API, services and the p2p server.
 	n.stopWS()
@@ -521,14 +519,14 @@ func (n *Masternode) Stop() error {
 	failure := &StopError{
 		Services: make(map[reflect.Type]error),
 	}
-	for kind, service := range n.services {
-		if err := service.StopMasternode(); err != nil {
-			failure.Services[kind] = err
-		}
-	}
-	n.server.Stop()
+	//for kind, service := range n.services {
+	//	if err := service.StopMasternode(); err != nil {
+	//		failure.Services[kind] = err
+	//	}
+	//}
+	//n.server.Stop()
 	n.services = nil
-	n.server = nil
+	//n.server = nil
 
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {
@@ -560,10 +558,10 @@ func (n *Masternode) Stop() error {
 // at the time of invocation, the method immediately returns.
 func (n *Masternode) Wait() {
 	n.lock.RLock()
-	if n.server == nil {
-		n.lock.RUnlock()
-		return
-	}
+	//if n.server == nil {
+	//	n.lock.RUnlock()
+	//	return
+	//}
 	stop := n.stop
 	n.lock.RUnlock()
 
@@ -587,9 +585,9 @@ func (n *Masternode) Attach() (*rpc.Client, error) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
-	if n.server == nil {
-		return nil, ErrNodeStopped
-	}
+	//if n.server == nil {
+	//	return nil, ErrNodeStopped
+	//}
 	return rpc.DialInProc(n.inprocHandler), nil
 }
 
@@ -607,7 +605,7 @@ func (n *Masternode) RPCHandler() (*rpc.Server, error) {
 // Server retrieves the currently running P2P network layer. This method is meant
 // only to inspect fields of the currently running server, life cycle management
 // should be left to this Node entity.
-func (n *Masternode) Server() *p2p.MasternodeServer{
+func (n *Masternode) Server() *p2p.Server{
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
@@ -620,9 +618,9 @@ func (n *Masternode) Service(service interface{}) error {
 	defer n.lock.RUnlock()
 
 	// Short circuit if the node's not running
-	if n.server == nil {
-		return ErrNodeStopped
-	}
+	//if n.server == nil {
+	//	return ErrNodeStopped
+	//}
 	// Otherwise try to find the service to return
 	element := reflect.ValueOf(service).Elem()
 	if running, ok := n.services[element.Type()]; ok {
@@ -631,6 +629,12 @@ func (n *Masternode) Service(service interface{}) error {
 	}
 	return ErrServiceUnknown
 }
+
+func (n *Masternode) Config() p2p.Config{
+
+	return n.serverConfig
+}
+
 
 // DataDir retrieves the current datadir used by the protocol stack.
 // Deprecated: No files should be stored in this directory, use InstanceDir instead.
@@ -689,6 +693,8 @@ func (n *Masternode) Paid() int{
 	return n.paid
 }
 
+
+
 // apis returns the collection of RPC descriptors this node offers.
 func (n *Masternode) apis() []rpc.API {
 	return []rpc.API{
@@ -740,8 +746,9 @@ type MasternodeInfo struct {
 	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
 	Name  string `json:"name"`  // Name of the Masternode
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
-	account common.Hash `json:"account"`
+	Account common.Hash `json:"account"`
 	IP    string `json:"ip"`    // IP address of the node
+	TxHash common.Hash `json:"txHash"` //Send a transaction to the contract through the masternode account to prove that you own the account
 	Ports struct {
 		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
 		Listener  int `json:"listener"`  // TCP listening port for RLPx
