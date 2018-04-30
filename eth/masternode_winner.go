@@ -31,6 +31,7 @@ import (
 const (
 	MNPAYMENTS_SIGNATURES_REQUIRED         = 6
 	MNPAYMENTS_SIGNATURES_TOTAL            = 10
+
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70208
 )
@@ -39,55 +40,77 @@ var (
 	ErrInvalidKeyType = errors.New("key is of invalid type")
 	// Sadly this is missing from crypto/ecdsa compared to crypto/rsa
 	ErrECDSAVerification = errors.New("crypto/ecdsa: verification error")
+
+
 )
 
 // Masternode Payments Class
 // Keeps track of who should get paid for which blocks
 type MasternodePayments struct {
-
 	cachedBlockNumber *big.Int // Keep track of current block height
-	minBlocksToStore *big.Int
-	storageCoeff *big.Int //masternode count times nStorageCoeff payments blocks should be stored ...
+	minBlocksToStore  *big.Int
+	storageCoeff      *big.Int //masternode count times nStorageCoeff payments blocks should be stored ...
+	manager           *MasternodeManager
 
-	votes map[common.Hash]*MasternodePaymentVote
-	blocks map[uint64]*MasternodeBlockPayees
-	lastVote map[common.Hash]*big.Int
+	votes      map[common.Hash]*MasternodePaymentVote
+	blocks     map[uint64]*MasternodeBlockPayees
+	lastVote   map[common.Hash]*big.Int
 	didNotVote map[common.Hash]*big.Int
-
 }
 
-func NewMasternodePayments(){
-
+func NewMasternodePayments(manager *MasternodeManager,number *big.Int) *MasternodePayments{
+	payments:=&MasternodePayments{
+		cachedBlockNumber:number,
+		minBlocksToStore:big.NewInt(1),
+		storageCoeff:big.NewInt(1),
+		manager:manager,
+		votes:make(map[common.Hash]*MasternodePaymentVote),
+		blocks:make(map[uint64]*MasternodeBlockPayees),
+		lastVote:make(map[common.Hash]*big.Int),
+		didNotVote:make(map[common.Hash]*big.Int),
+	}
+	return payments
 }
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
-func (mp *MasternodePayments) Add(hash common.Hash,vote *MasternodePaymentVote){
+func (mp *MasternodePayments) Add(hash common.Hash, vote *MasternodePaymentVote) bool{
 
-	mp.votes[vote.Hash()]=vote
+	if mp.Has(hash) {
+		return false
+	}
+	mp.votes[hash] = vote
+
+	if payee:=mp.blocks[vote.number.Uint64()];payee==nil{
+		blockPayees:=NewMasternodeBlockPayees(vote.number)
+		blockPayees.Add(vote)
+	}else{
+		mp.blocks[vote.number.Uint64()].Add(vote)
+	}
+
+	return true
 }
 
-func(mp *MasternodePayments) VoteCount()int{
+func (mp *MasternodePayments) VoteCount() int {
 	return len(mp.votes)
 }
 
-func (mp*MasternodePayments) BlockCount()int{
+func (mp *MasternodePayments) BlockCount() int {
 	return len(mp.blocks)
 }
 
-func(mp *MasternodePayments) Have(hash common.Hash) bool{
+func (mp *MasternodePayments) Has(hash common.Hash) bool {
 
-	if vote,ok:=mp.votes[hash];ok{
+	if vote := mp.votes[hash]; vote != nil {
 		return vote.IsVerified()
 	}
 	return false
 }
 
-func (mp *MasternodePayments) Clear(){
-	mp.blocks=make(map[uint64]*MasternodeBlockPayees)
-	mp.votes=make(map[common.Hash]*MasternodePaymentVote)
+func (mp *MasternodePayments) Clear() {
+	mp.blocks = make(map[uint64]*MasternodeBlockPayees)
+	mp.votes = make(map[common.Hash]*MasternodePaymentVote)
 
 }
-
 
 type MasternodePayee struct {
 	account common.Address
@@ -119,15 +142,22 @@ func (mp *MasternodePayee) Votes() []*MasternodePaymentVote {
 type MasternodeBlockPayees struct {
 	number *big.Int //blockHeight
 	payees []*MasternodePayee
+	//payees *set.Set
+}
 
-	log log.Logger
+func NewMasternodeBlockPayees(number *big.Int)*MasternodeBlockPayees{
+
+	payee:=&MasternodeBlockPayees{
+		number:number,
+	}
+	return payee
 }
 
 //vote
 func (mbp *MasternodeBlockPayees) Add(vote *MasternodePaymentVote) {
 
 	//When the masternode has been voted
-	info:=vote.masternode.MasternodeInfo()
+	info := vote.masternode.MasternodeInfo()
 	for _, mp := range mbp.payees {
 		if mp.account == info.Account {
 			mp.Add(vote)
@@ -143,7 +173,7 @@ func (mbp *MasternodeBlockPayees) Add(vote *MasternodePaymentVote) {
 func (mbp *MasternodeBlockPayees) Best() (common.Address, bool) {
 
 	if len(mbp.payees) < 1 {
-		mbp.log.Info("ERROR: ", "couldn't find any payee!")
+		log.Info("ERROR: ", "couldn't find any payee!")
 	}
 	votes := -1
 	hash := common.Address{}
@@ -158,13 +188,13 @@ func (mbp *MasternodeBlockPayees) Best() (common.Address, bool) {
 }
 
 //Used to record the last winning block of the masternode. At least 2 votes need to be satisfied
-// Have(2,masternode.account)
-func (mbp *MasternodeBlockPayees) Have(votes int, address common.Address) bool {
+// Has(2,masternode.account)
+func (mbp *MasternodeBlockPayees) Has(num int, address common.Address) bool {
 	if len(mbp.payees) < 1 {
-		mbp.log.Info("ERROR: ", "couldn't find any payee!")
+		log.Info("ERROR: ", "couldn't find any payee!")
 	}
 	for _, payee := range mbp.payees {
-		if payee.Count() >= votes && payee.account == address {
+		if payee.Count() >= num && payee.account == address {
 			return true
 		}
 	}
@@ -177,7 +207,6 @@ type MasternodePaymentVote struct {
 	masternode *masternode.Masternode
 
 	KeySize int
-	log     log.Logger
 }
 
 func (mpv *MasternodePaymentVote) Hash() common.Hash {
@@ -255,7 +284,15 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 	}
 }
 
-func (v *MasternodePaymentVote) IsVerified() bool{
+func (v *MasternodePaymentVote) IsVerified() bool {
 	return true
 }
 
+func (v *MasternodePaymentVote) CheckValid(height big.Int) (error,bool){
+
+	//info:=v.masternode.MasternodeInfo()
+
+	//v.number
+
+	return nil,true
+}

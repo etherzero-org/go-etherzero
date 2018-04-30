@@ -1,13 +1,13 @@
 package types
 
 import (
-	"time"
-	"errors"
-	"math/big"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"errors"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
+	"math/big"
+	"time"
 )
 
 const (
@@ -174,7 +174,7 @@ func (tc *TxLockCondidate) Hash() common.Hash {
 
 func (tc *TxLockCondidate) AddVote(vote *TxLockVote) bool {
 
-	if tc.masternodeVotes[vote.MasternodeId()] == nil {
+	if node := tc.masternodeVotes[vote.MasternodeId()]; node == nil {
 		tc.masternodeVotes[vote.MasternodeId()] = vote
 		return true
 	}
