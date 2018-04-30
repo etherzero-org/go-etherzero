@@ -52,6 +52,8 @@ type Masternode struct {
 	config   *Config
 	accman   *accounts.Manager
 
+	account common.Address	//Masternode account information
+
 	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
 
@@ -763,6 +765,7 @@ func (m *Masternode) MasternodeInfo() *MasternodeInfo{
 		Name:m.name,
 		ID:node.ID.String(),
 		IP:node.IP.String(),
+		Account:m.account,
 		TxHash:m.txHash,
 		ListenAddr:srv.ListenAddr,
 		Protocols:  make(map[string]interface{}),
