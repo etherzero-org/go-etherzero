@@ -26,6 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/masternode"
 	"math/big"
+	"fmt"
 )
 
 const (
@@ -37,9 +38,9 @@ const (
 )
 
 var (
-	ErrInvalidKeyType = errors.New("key is of invalid type")
+	errInvalidKeyType = errors.New("key is of invalid type")
 	// Sadly this is missing from crypto/ecdsa compared to crypto/rsa
-	ErrECDSAVerification = errors.New("crypto/ecdsa: verification error")
+	errECDSAVerification = errors.New("crypto/ecdsa: verification error")
 
 
 )
@@ -232,7 +233,7 @@ func (m *MasternodePaymentVote) Verify(sighash []byte, signature string, key int
 	case *ecdsa.PublicKey:
 		ecdsaKey = k
 	default:
-		return ErrInvalidKeyType
+		return errInvalidKeyType
 	}
 
 	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
@@ -242,7 +243,7 @@ func (m *MasternodePaymentVote) Verify(sighash []byte, signature string, key int
 	if verifystatus := ecdsa.Verify(ecdsaKey, sighash, r, s); verifystatus == true {
 		return nil
 	} else {
-		return ErrECDSAVerification
+		return errECDSAVerification
 	}
 }
 
@@ -255,7 +256,7 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 	case *ecdsa.PrivateKey:
 		ecdsaKey = k
 	default:
-		return "", ErrInvalidKeyType
+		return "", errInvalidKeyType
 	}
 	// Sign the string and return r, s
 	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey, signingString[:]); err == nil {
@@ -288,11 +289,31 @@ func (v *MasternodePaymentVote) IsVerified() bool {
 	return true
 }
 
-func (v *MasternodePaymentVote) CheckValid(height big.Int) (error,bool){
+//TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting master node
+func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool,error){
 
-	//info:=v.masternode.MasternodeInfo()
+	info:=v.masternode.MasternodeInfo()
 
+	var minRequiredProtocal uint =0
+
+	if v.number.Cmp(height)>0{
+		minRequiredProtocal=MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
+	}else{
+		minRequiredProtocal=MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
+	}
+
+	if info.ProtocolVersion<minRequiredProtocal{
+		return false ,fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d",info.ProtocolVersion,minRequiredProtocal)
+	}
+
+	if v.number.Cmp(height) <0 {return true,nil}
 	//v.number
 
-	return nil,true
+	//TODO:Voting validity check is not judged here
+
+
+	// Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
+	// Regular clients (miners included) need to verify masternode rank for future block votes only.
+
+	return true,nil
 }

@@ -160,6 +160,12 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+
+	// These two fields are used to record the payment records
+	// of the winning master node and autonomous community
+	Masternode common.Address
+
+	Contract common.Hash
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the

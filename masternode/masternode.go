@@ -84,10 +84,17 @@ type Masternode struct {
 
 	//etherzero masternode
 	name string
-	paid		 *big.Int 	//last paid height
-	protocolVersion int
+
+	//last paid height
+	paid		 *big.Int
+
+	//protocolVersion should contain the version number of the protocol.
+	protocolVersion uint
+
 	txHash 	common.Hash
-	CollateralMinConfBlockHash common.Hash //remember the hash of the block where masternode collateral had minimum required confirmations
+
+	//remember the hash of the block where masternode collateral had minimum required confirmations
+	CollateralMinConfBlockHash common.Hash
 
 	log log.Logger
 }
@@ -750,7 +757,7 @@ type MasternodeInfo struct {
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
 	Account common.Address `json:"account"`
 	IP    string `json:"ip"`    // IP address of the node
-	ProtocolVersion int `json:"protocolVersion"`
+	ProtocolVersion uint `json:"protocolVersion"`
 	TxHash common.Hash `json:"txHash"` //Send a transaction to the contract through the masternode account to prove that you own the account
 	Ports struct {
 		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
