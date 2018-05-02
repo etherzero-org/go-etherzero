@@ -23,13 +23,10 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
-const (
-	SIGNATURES_TOTAL = 10
-)
 
 type InstantSend struct {
 

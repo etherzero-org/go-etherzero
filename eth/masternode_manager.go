@@ -40,6 +40,10 @@ import (
 	"sort"
 )
 
+const (
+	SIGNATURES_TOTAL = 10
+)
+
 type MasternodeManager struct {
 	networkId uint64
 

@@ -605,6 +605,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header
 	accumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
+
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
