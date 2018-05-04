@@ -768,6 +768,7 @@ type MasternodeInfo struct {
 }
 
 func (m *Masternode) MasternodeInfo() *MasternodeInfo{
+
 	node:=m.server.Self()
 	srv:=m.server
 	info:=&MasternodeInfo{

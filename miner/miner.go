@@ -32,6 +32,7 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
 // Backend wraps all methods required for mining.
@@ -40,6 +41,8 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
+
+	GetWinner() (*masternode.Masternode,error)
 }
 
 // Miner creates blocks and searches for proof-of-work values.

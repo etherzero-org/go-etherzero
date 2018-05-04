@@ -68,18 +68,18 @@ type Ethereum struct {
 	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	// Handlers
-	txPool          *core.TxPool
-	blockchain      *core.BlockChain
-	protocolManager *ProtocolManager
+	txPool            *core.TxPool
+	blockchain        *core.BlockChain
+	protocolManager   *ProtocolManager
 	masternodeManager *MasternodeManager
-	lesServer       LesServer
+	lesServer         LesServer
 
 	// DB interfaces
 	chainDb ethdb.Database // Block chain database
 
-	eventMux       *event.TypeMux
-	engine         consensus.Engine
-	accountManager *accounts.Manager
+	eventMux         *event.TypeMux
+	engine           consensus.Engine
+	accountManager   *accounts.Manager
 	activeMasternode *masternode.Masternode // Responsible for activating the Masternode and pinging the network
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
@@ -171,6 +171,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+
+	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
+		return nil, err
+	}
+
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 
@@ -368,6 +373,12 @@ func CreateConsensusEngineMaster(ctx *masternode.ServiceContext, config *ethash.
 		return engine
 	}
 }
+
+func (s *Ethereum) GetWinner() (*masternode.Masternode,error) {
+	hash := s.blockchain.CurrentBlock().Hash()
+	return s.masternodeManager.GetNextMasternodeInQueueForPayment(hash)
+}
+
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) APIs() []rpc.API {
@@ -425,7 +436,6 @@ func (s *Ethereum) APIs() []rpc.API {
 	}...)
 }
 
-
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) MasternodeAPIs() []rpc.API {
@@ -446,7 +456,7 @@ func (s *Ethereum) MasternodeAPIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
-		},  {
+		}, {
 			Namespace: "miner",
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
@@ -573,6 +583,7 @@ func (s *Ethereum) MasternodeProtocols() []p2p.Protocol {
 	}
 	return append(s.masternodeManager.SubProtocols, s.lesServer.Protocols()...)
 }
+
 // Start implements node.Service, starting all internal goroutines needed by the
 // Ethereum protocol implementation.
 func (s *Ethereum) Start(srvr *p2p.Server) error {

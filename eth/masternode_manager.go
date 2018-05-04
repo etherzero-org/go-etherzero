@@ -37,6 +37,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/pkg/errors"
 	"sort"
 )
 
@@ -122,7 +123,7 @@ func (m *MasternodeManager) List() map[string]*masternode.Masternode {
 
 }
 
-func(m *MasternodeManager) Add(ma *masternode.Masternode) {
+func (m *MasternodeManager) Add(ma *masternode.Masternode) {
 
 	srv := ma.Server()
 	node, _ := discover.ParseNode("enode://d79eee6402b5e61d846cdbd068a4db9d4a392c2c1929a205bb91abfea1723b63c02595156b11f340585e7fdf1918f1143067287e0efb45e8029b82e9a9abe6c0@127.0.0.1:31211")
@@ -192,9 +193,9 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		quitSync:    make(chan struct{}),
 	}
 
-	if len(manager.SubProtocols) == 0 {
-		return nil, errIncompatibleConfig
-	}
+	//if len(manager.SubProtocols) == 0 {
+	//	return nil, errIncompatibleConfig
+	//}
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)
 	}
@@ -280,37 +281,44 @@ func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) 
 }
 
 // Deterministically select the oldest/best masternode to pay on the network
-func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(hash common.Hash) *masternode.Masternode {
+// Pass in the hash value of the block that participates in the calculation.
+// Dash is the Hash passed to the first 100 blocks.
+// If use the current block Hash, there is a risk that the current block will be discarded.
+func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Hash) (*masternode.Masternode, error) {
 
-	var paidMasternodes map[uint64]*masternode.Masternode
-
-	for _, masternode := range mm.masternodes {
-		paidMasternodes[masternode.Paid().Uint64()] = masternode
+	var (
+		paids        []int
+		tenthNetWork = len(mm.masternodes) / 10
+		countTenth   = 0
+		highest      *big.Int
+		winner       *masternode.Masternode
+		sortMap      map[int]*masternode.Masternode
+	)
+	if mm.masternodes == nil {
+		return nil, errors.New("The Masternode collection is empty")
+	}
+	for _, node := range mm.masternodes {
+		i := int(node.Paid().Int64())
+		paids = append(paids, i)
+		sortMap[i] = node
 	}
 
-	var paids []int
 	sort.Ints(paids)
 
-	var tenthNetWork = len(mm.masternodes) / 10
-	var countTenth = 0
-	var highest *big.Int
-
-	var winnerMasternode *masternode.Masternode
-
-	for _, paid := range paids {
-		i := uint64(paid)
-		fmt.Printf("%s\t%d\n", paid, paidMasternodes[i].CalculateScore(hash))
-		score := paidMasternodes[i].CalculateScore(hash)
+	for _, i := range paids {
+		fmt.Printf("%s\t%d\n", i, sortMap[i].CalculateScore(block))
+		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
-			winnerMasternode = paidMasternodes[i]
+			winner = sortMap[i]
 		}
 		countTenth++
 		if countTenth >= tenthNetWork {
 			break
 		}
 	}
-	return winnerMasternode
+
+	return winner, nil
 }
 
 func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {

@@ -493,6 +493,11 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
+	if self.chain.Config().IsEthzeroMasternode(header.Number) {
+		if node, err := self.eth.GetWinner(); err != nil {
+			work.Block.Masternode = node.MasternodeInfo().Account
+		}
+	}
 
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
