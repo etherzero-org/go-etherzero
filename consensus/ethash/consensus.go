@@ -42,7 +42,7 @@ var (
 	maxUncles                       = 2                 // Maximum number of uncles allowed in a single block
 	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
 	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                       // Block reward in wei for successfully mining a block upward from Ethzero
-	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Block reward in wei for successfully mining a block upward from Ethzero
+	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Genesis reward in wei for successfully mining the etherzero block upward from Ethzero
 
 	)
 

@@ -19,8 +19,9 @@ package eth
 
 import (
 	"fmt"
-	"math/big"
 	"sync"
+	"sort"
+	"math/big"
 	"sync/atomic"
 
 	"github.com/ethzero/go-ethzero/common"
@@ -38,7 +39,6 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/pkg/errors"
-	"sort"
 )
 
 const (
@@ -64,6 +64,8 @@ type MasternodeManager struct {
 	enableds map[string]*masternode.Masternode //id -> masternode
 
 	is *InstantSend
+
+	winner *MasternodePayments
 
 	active *masternode.Masternode
 
@@ -295,7 +297,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 		sortMap      map[int]*masternode.Masternode
 	)
 	if mm.masternodes == nil {
-		return nil, errors.New("The Masternode collection is empty")
+		return nil, errors.New("no masternode detected")
 	}
 	for _, node := range mm.masternodes {
 		i := int(node.Paid().Int64())
@@ -483,3 +485,4 @@ func (mm *MasternodeManager) handleMsg(p *peer) error {
 	}
 	return nil
 }
+
