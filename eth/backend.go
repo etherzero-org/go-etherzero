@@ -171,6 +171,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+
+	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
+		return nil, err
+	}
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 
@@ -368,6 +372,12 @@ func CreateConsensusEngineMaster(ctx *masternode.ServiceContext, config *ethash.
 		return engine
 	}
 }
+
+func (s *Ethereum) GetWinner() (*masternode.Masternode,error) {
+	hash := s.blockchain.CurrentBlock().Hash()
+	return s.masternodeManager.GetNextMasternodeInQueueForPayment(hash)
+}
+
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) APIs() []rpc.API {
