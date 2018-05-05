@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/core/types"
 )
 
 const (
@@ -111,6 +112,35 @@ func (mp *MasternodePayments) Clear() {
 	mp.blocks = make(map[uint64]*MasternodeBlockPayees)
 	mp.votes = make(map[common.Hash]*MasternodePaymentVote)
 
+}
+
+func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool{
+
+	active:=mp.manager.active.MasternodeInfo()
+
+	rank,ok := mp.manager.GetMasternodeRank(active.ID)
+
+	if ok{
+		log.Info("ProcessBlock -- Unknown Masternode")
+		return false
+	}
+	if rank >MNPAYMENTS_SIGNATURES_TOTAL{
+		log.Info("Masternode not in the top ",MNPAYMENTS_SIGNATURES_TOTAL , "( ",rank,")")
+		return false
+	}
+	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
+	log.Info("ProcessBlock -- Start: nBlockHeight=",block.String()," masternode=",active.ID)
+
+	info,err:=mp.manager.GetNextMasternodeInQueueForPayment(block.Hash())
+	if err!=nil{
+		log.Info("ERROR: Failed to find masternode to pay",err)
+		return false
+	}
+
+	vote:=NewMasternodePaymentVote(block.Number(),info)
+	 mp.Add(block.Hash(),vote)
+
+	return true
 }
 
 type MasternodePayee struct {
@@ -208,6 +238,17 @@ type MasternodePaymentVote struct {
 	masternode *masternode.Masternode
 
 	KeySize int
+}
+
+//Voted block number,activeMasternode
+func NewMasternodePaymentVote(blockHeight *big.Int,active *masternode.Masternode) *MasternodePaymentVote{
+
+	vote:=MasternodePaymentVote{
+		number:blockHeight,
+		masternode:active,
+		KeySize:0,
+	}
+	return &vote
 }
 
 func (mpv *MasternodePaymentVote) Hash() common.Hash {
