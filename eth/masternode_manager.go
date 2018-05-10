@@ -214,7 +214,12 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+
+	vote:=func(block *types.Block) bool{
+		return manager.winner.ProcessBlock(block)
+	}
+
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer,vote)
 
 	return manager, nil
 }

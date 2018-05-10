@@ -143,6 +143,60 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool{
 	return true
 }
 
+//Handle the voting of other masternodes
+func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) (bool){
+
+	if m.votes[vote.Hash()] != nil{
+		log.Trace("ERROR:Avoid processing same vote multiple times","hash=",vote.Hash().String()," , Height:",vote.number.String())
+		return false
+	}
+
+	m.votes[vote.Hash()]=vote
+	// but first mark vote as non-verified,
+	// AddPaymentVote() below should take care of it if vote is actually ok
+
+
+	//vote out of range
+	firstBlock:=m.cachedBlockNumber.Sub(m.cachedBlockNumber,m.StorageLimit())
+	if vote.number.Cmp(firstBlock)>0 || vote.number.Cmp(m.cachedBlockNumber.Add(m.cachedBlockNumber,big.NewInt(20)))>0 {
+		log.Trace("ERROR:vote out of range: ","FirstBlock=",firstBlock.String(),", BlockHeight=",vote.number," CacheHeight=",m.cachedBlockNumber.String())
+		return false
+	}
+
+	if !vote.IsVerified() {
+		log.Trace("ERROR: invalid message, error:")
+		return false
+	}
+
+	//canvote
+
+	info:=vote.masternode.MasternodeInfo()
+
+	//checkSignature
+	//if vote.CheckSignature(vote.masternode.MasternodeInfo().ID)
+
+	log.Info("masternode_winner vote: ","address:",info.Account.String(),"blockHeight:",vote.number,"cacheHeight:",m.cachedBlockNumber.String(),"Hash:",vote.Hash().String())
+
+	if m.Add(vote.Hash(),vote) {
+		//Relay
+
+	}
+
+	return true
+
+}
+
+func (m *MasternodePayments) StorageLimit() *big.Int{
+
+	count:=len(m.manager.masternodes)
+	size:=big.NewInt(1).Mul(m.storageCoeff,big.NewInt(int64(count)))
+
+	if size.Cmp(m.minBlocksToStore) >0{
+		return size
+	}
+	return m.minBlocksToStore
+}
+
 type MasternodePayee struct {
 	account common.Address
 	votes   []*MasternodePaymentVote
