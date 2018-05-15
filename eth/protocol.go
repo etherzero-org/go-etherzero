@@ -26,6 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 )
 
 // Constants to match up protocol versions and messages
@@ -38,17 +39,13 @@ const (
 // Official short name of the protocol used during capability negotiation.
 var ProtocolName = "etz"
 
-// Official short name of the masternode protocol used during capability negotiation.
-var MasternodeProtocolName = "etzmasternode"
-
 // Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
-
-// Supported versions of the etz masternode protocol (first is primary).
-var MasternodeProtocolVersions = []uint{etz64}
+var ProtocolVersions = []uint{etz64, eth63, eth62}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{35, 17, 8}
+
+var con contract.Contract
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -73,6 +70,7 @@ const (
 	// Masternode Protocol messages
 	NewVoteMsg    = 0x20
 	NewTxLockVote = 0x21
+	MasternodePingMsg = 0x22
 )
 
 type errCode int
@@ -196,3 +194,4 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+

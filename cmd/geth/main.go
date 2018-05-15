@@ -96,7 +96,6 @@ var (
 		utils.CacheGCFlag,
 		utils.TrieCacheGenFlag,
 		utils.ListenPortFlag,
-		utils.ListenMasterPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
 		utils.EtherbaseFlag,
@@ -109,6 +108,8 @@ var (
 		utils.DiscoveryV5Flag,
 		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
+		utils.MasternodeContractFlag,
+		utils.MasternodeIPFlag,
 		utils.NodeKeyHexFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
@@ -308,7 +309,5 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
-
-	//utils.StartMasterNode(stack)
 
 }

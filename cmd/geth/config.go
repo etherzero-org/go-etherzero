@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"unicode"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/ethzero/go-ethzero/cmd/utils"
 	"github.com/ethzero/go-ethzero/dashboard"
@@ -34,8 +34,6 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	whisper "github.com/ethzero/go-ethzero/whisper/whisperv5"
 	"github.com/naoina/toml"
-	"github.com/ethzero/go-ethzero/masternode"
-
 )
 
 var (
@@ -83,13 +81,6 @@ type gethConfig struct {
 	Ethstats  ethstatsConfig
 	Dashboard dashboard.Config
 }
-type gethMasterNodeConfig struct {
-	Eth       	eth.Config
-	Shh       	whisper.Config
-	MasterNode 	masternode.Config
-	Ethstats  	ethstatsConfig
-	Dashboard 	dashboard.Config
-}
 
 func loadConfig(file string, cfg *gethConfig) error {
 	f, err := os.Open(file)
@@ -105,31 +96,9 @@ func loadConfig(file string, cfg *gethConfig) error {
 	}
 	return err
 }
-func loadMasterConfig(file string, cfg *gethMasterNodeConfig) error {
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
 
-	err = tomlSettings.NewDecoder(bufio.NewReader(f)).Decode(cfg)
-	// Add file name to errors that have a line number.
-	if _, ok := err.(*toml.LineError); ok {
-		err = errors.New(file + ", " + err.Error())
-	}
-	return err
-}
 func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
-	cfg.Name = clientIdentifier
-	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
-	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
-	cfg.IPCPath = "geth.ipc"
-	return cfg
-}
-func defaultMasterNodeConfig() masternode.Config {
-	cfg := masternode.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
@@ -171,32 +140,6 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	return stack, cfg
 }
 
-
-func makeConfigMasterNode(ctx *cli.Context) (*masternode.Masternode, gethMasterNodeConfig) {
-	// Load defaults.
-	cfg := gethMasterNodeConfig{
-		Eth:       eth.DefaultConfig,
-		Shh:       whisper.DefaultConfig,
-		MasterNode: defaultMasterNodeConfig(),
-		Dashboard:  dashboard.DefaultConfig,
-	}
-	// Load config file.
-	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
-		if err := loadMasterConfig(file, &cfg); err != nil {
-			utils.Fatalf("%v", err)
-		}
-	}
-	// Apply flags.
-	//utils.SetMasterNodeConfig(ctx, &cfg.MasterNode)
-	stack, err := masternode.New(&cfg.MasterNode)
-	if err != nil {
-		utils.Fatalf("Failed to create the protocol stack: %v", err)
-	}
-	return stack, cfg
-}
-
-
-
 // enableWhisper returns true in case one of the whisper flags is set.
 func enableWhisper(ctx *cli.Context) bool {
 	for _, flag := range whisperFlags {
@@ -232,14 +175,6 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
 	}
-	return stack
-}
-
-func makeFullMasterNode(ctx *cli.Context) *masternode.Masternode {
-	stack,_ := makeConfigMasterNode(ctx)
-	//utils.RegisterEthServiceMaster(stack, &cfg.Eth)
-	//utils.RegisterEthService(stack, &cfg.Eth)
-
 	return stack
 }
 

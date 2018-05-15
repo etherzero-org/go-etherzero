@@ -1,0 +1,181 @@
+[
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "count",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "id",
+        "type": "bytes32"
+      },
+      {
+        "name": "subId",
+        "type": "bytes32"
+      },
+      {
+        "name": "misc",
+        "type": "bytes32"
+      }
+    ],
+    "name": "register",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      }
+    ],
+    "name": "getId",
+    "outputs": [
+      {
+        "name": "id",
+        "type": "bytes32"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "id",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getInfo",
+    "outputs": [
+      {
+        "name": "subId",
+        "type": "bytes32"
+      },
+      {
+        "name": "misc",
+        "type": "bytes32"
+      },
+      {
+        "name": "preId",
+        "type": "bytes32"
+      },
+      {
+        "name": "nextId",
+        "type": "bytes32"
+      },
+      {
+        "name": "blockNumber",
+        "type": "uint256"
+      },
+      {
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "MasterNode",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "id",
+        "type": "bytes32"
+      }
+    ],
+    "name": "has",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "lastId",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "etzPerNode",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "fallback"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "id",
+        "type": "bytes32"
+      }
+    ],
+    "name": "join",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "id",
+        "type": "bytes32"
+      }
+    ],
+    "name": "quit",
+    "type": "event"
+  }
+]

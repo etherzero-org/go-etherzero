@@ -28,6 +28,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/rlp"
 	"gopkg.in/fatih/set.v0"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
 var (
@@ -137,6 +138,10 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 		p.knownTxs.Add(tx.Hash())
 	}
 	return p2p.Send(p.rw, TxMsg, txs)
+}
+
+func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
+	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
 }
 
 // SendNewBlockHashes announces the availability of a number of blocks through

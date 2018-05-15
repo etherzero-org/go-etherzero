@@ -165,6 +165,9 @@ func (n *Node) Start() error {
 	running := &p2p.Server{Config: n.serverConfig}
 	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
+	n.log.Info("masternode", "contract", n.serverConfig.MasternodeContract.Hex())
+	n.log.Info("masternode", "addr", n.serverConfig.MasternodeAddr.String())
+
 	// Otherwise copy and specialize the P2P configuration
 	services := make(map[reflect.Type]Service)
 	for _, constructor := range n.serviceFuncs {

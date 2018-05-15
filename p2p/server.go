@@ -141,6 +141,10 @@ type Config struct {
 
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
+
+    // Masternode
+	MasternodeContract common.Address
+	MasternodeAddr net.TCPAddr
 }
 
 // Server manages all peer connections.
@@ -918,6 +922,10 @@ type NodeInfo struct {
 	} `json:"ports"`
 	ListenAddr string                 `json:"listenAddr"`
 	Protocols  map[string]interface{} `json:"protocols"`
+	Masternode struct {
+		MasternodeContract string `json:"masternodeContract"`
+		MasternodeAddr string `json:"masternodeAddr"`
+	} `json:"masternode"`
 }
 
 // NodeInfo gathers and returns a collection of metadata known about the host.
@@ -936,6 +944,8 @@ func (srv *Server) NodeInfo() *NodeInfo {
 	info.Ports.Discovery = int(node.UDP)
 	info.Ports.Listener = int(node.TCP)
 
+	info.Masternode.MasternodeContract = srv.MasternodeContract.String()
+	info.Masternode.MasternodeAddr = srv.MasternodeAddr.String()
 
 	// Gather all the running protocol infos (only once per protocol type)
 	for _, proto := range srv.Protocols {

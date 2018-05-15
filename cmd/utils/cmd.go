@@ -33,8 +33,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/masternode"
-
 )
 
 const (
@@ -81,19 +79,6 @@ func StartNode(stack *node.Node) {
 		debug.Exit() // ensure trace and CPU profile data is flushed.
 		debug.LoudPanic("boom")
 	}()
-}
-
-
-
-func StartMasterNode(stack *masternode.Masternode) {
-
-	//var am *masternode.ActiveMasternode
-	//stack = stack
-	//am.ManageStateInitial()
-	if err := stack.Start(); err != nil {
-		Fatalf("Error starting protocol stack: %v", err)
-	}
-
 }
 
 func ImportChain(chain *core.BlockChain, fn string) error {

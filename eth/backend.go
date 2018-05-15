@@ -49,6 +49,7 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/rpc"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 )
 
 type LesServer interface {
@@ -86,6 +87,7 @@ type Ethereum struct {
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
 	ApiBackend *EthApiBackend
+	ContractBackend *ContractBackend
 
 	miner     *miner.Miner
 	gasPrice  *big.Int
@@ -95,6 +97,9 @@ type Ethereum struct {
 	netRPCService *ethapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+
+	masternodeContract *contract.Contract
+
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -140,91 +145,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	log.Info("Initialising Ethzero protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
-	if !config.SkipBcVersionCheck {
-		bcVersion := core.GetBlockChainVersion(chainDb)
-		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, core.BlockChainVersion)
-		}
-		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
-	}
-	var (
-		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
-	)
-	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, eth.chainConfig, eth.engine, vmConfig)
-	if err != nil {
-		return nil, err
-	}
-	// Rewind the chain in case of an incompatible config upgrade.
-	//if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
-	//	log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-	//	eth.blockchain.SetHead(compat.RewindTo)
-	//	core.WriteChainConfig(chainDb, genesisHash, chainConfig)
-	//}
-	eth.bloomIndexer.Start(eth.blockchain)
-
-	if config.TxPool.Journal != "" {
-		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
-	}
-	eth.txPool = core.NewTxPool(config.TxPool, eth.chainConfig, eth.blockchain)
-
-	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
-		return nil, err
-	}
-
-	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
-		return nil, err
-	}
-	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
-	eth.miner.SetExtra(makeExtraData(config.ExtraData))
-
-	eth.ApiBackend = &EthApiBackend{eth, nil}
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
-	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
-
-	return eth, nil
-}
-
-// New creates a new Ethereum object (including the
-// initialisation of the common Ethereum object)
-func NewMasternode(ctx *masternode.ServiceContext, config *Config) (*Ethereum, error) {
-	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run eth.Ethereum in light sync mode, use les.LightEthereum")
-	}
-	if !config.SyncMode.IsValid() {
-		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
-	}
-	chainDb, err := CreateDBMaster(ctx, config, "chaindata")
-	if err != nil {
-		return nil, err
-	}
-	stopDbUpgrade := upgradeDeduplicateData(chainDb)
-	chainConfig, _, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
-	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
-		return nil, genesisErr
-	}
-	log.Info("Initialised chain configuration", "config", chainConfig)
-
-	eth := &Ethereum{
-		config:         config,
-		chainDb:        chainDb,
-		chainConfig:    chainConfig,
-		eventMux:       ctx.EventMux,
-		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngineMaster(ctx, &config.Ethash, chainConfig, chainDb),
-		shutdownChan:   make(chan bool),
-		stopDbUpgrade:  stopDbUpgrade,
-		networkId:      config.NetworkId,
-		gasPrice:       config.GasPrice,
-		etherbase:      config.Etherbase,
-		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
-	}
-
-	log.Info("Initialising Ethzero protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := core.GetBlockChainVersion(chainDb)
@@ -253,6 +173,13 @@ func NewMasternode(ctx *masternode.ServiceContext, config *Config) (*Ethereum, e
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, eth.chainConfig, eth.blockchain)
+
+	eth.ContractBackend = NewContractBackend(eth)
+
+
+	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, eth.ContractBackend); err != nil {
+		return nil, err
+	}
 
 	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
@@ -600,11 +527,18 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 		}
 		maxPeers -= s.config.LightPeers
 	}
+
+	contract, err := contract.NewContract(srvr.MasternodeContract, s.ContractBackend)
+	if err != nil {
+		return err
+	}
+	s.masternodeContract = contract
 	// Start the networking layer and the light server if requested
-	s.protocolManager.Start(maxPeers)
+	s.protocolManager.Start(maxPeers, srvr, contract)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
+
 	return nil
 }
 

@@ -57,6 +57,7 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	whisper "github.com/ethzero/go-ethzero/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
+	"net"
 )
 
 var (
@@ -464,11 +465,6 @@ var (
 		Usage: "Network listening port",
 		Value: 21212,
 	}
-	ListenMasterPortFlag = cli.IntFlag{
-		Name:  "masterport",
-		Usage: "Network listening port",
-		Value: 31212,
-	}
 	BootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
 		Usage: "Comma separated enode URLs for P2P discovery bootstrap (set v4+v5 instead for light servers)",
@@ -508,6 +504,17 @@ var (
 	NetrestrictFlag = cli.StringFlag{
 		Name:  "netrestrict",
 		Usage: "Restricts network communication to the given IP networks (CIDR masks)",
+	}
+
+	MasternodeContractFlag = cli.StringFlag{
+		Name:  "masternode.contract",
+		Usage: "Masternode contract address",
+		Value: "0xe260bf670cbae2731ad3bb8bfb0536c415693e13",
+	}
+	MasternodeIPFlag = cli.StringFlag{
+		Name:  "masternode.ip",
+		Usage: "Masternode public ip",
+		Value: "",
 	}
 
 	// ATM the url is left to the user and deployment to
@@ -594,6 +601,18 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
+func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
+	if account := ctx.GlobalString(MasternodeContractFlag.Name); len(account) == 42 {
+		cfg.MasternodeContract = common.HexToAddress(account)
+	}
+	if ip := ctx.GlobalString(MasternodeIPFlag.Name); len(ip) > 0 {
+		cfg.MasternodeAddr = net.TCPAddr{
+			IP :net.ParseIP(ip),
+			Port:ctx.GlobalInt(ListenPortFlag.Name),
+		}
+	}
+}
+
 // setBootstrapNodes creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
@@ -657,14 +676,6 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
 		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
-	}
-}
-
-// setListenAddress creates a TCP listening address string from set command
-// line flags.
-func setListenMasterAddress(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenMasterPortFlag.Name) {
-		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenMasterPortFlag.Name))
 	}
 }
 
@@ -826,6 +837,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setListenAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
+	setMasternode(ctx, cfg)
 
 	lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
@@ -888,7 +900,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 func SetP2PMasterConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
-	setListenMasterAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 
