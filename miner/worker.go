@@ -53,6 +53,11 @@ const (
 	gaspoolvalue = 90000000
 )
 
+var (
+	masternodeReward *big.Int = big.NewInt(1.8e+18) // Maternode winner get 45% Block reward in wei for successfully mining a block from etherzero masternode
+	GovernanceReward *big.Int = big.NewInt(0.4e+18) // Governance get 10% Block reward in wei for successfully mining a block from etherzero masternode
+)
+
 // Agent can register themself with the worker
 type Agent interface {
 	Work() chan<- *Work
@@ -156,7 +161,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 
 	go worker.wait()
 	worker.commitNewWork()
-
 
 	return worker
 }
@@ -496,6 +500,8 @@ func (self *worker) commitNewWork() {
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		if node, err := self.eth.GetWinner(); err != nil {
 			work.Block.Masternode = node.MasternodeInfo().Account
+			blockReward := masternodeReward
+			work.state.AddBalance(work.Block.Masternode, blockReward)
 		}
 	}
 

@@ -20,29 +20,30 @@ package eth
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"errors"
 	"math/big"
+	"errors"
 	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/core/types"
 )
 
 const (
-	MNPAYMENTS_SIGNATURES_REQUIRED         = 6
-	MNPAYMENTS_SIGNATURES_TOTAL            = 10
+	MNPAYMENTS_SIGNATURES_REQUIRED = 6
+	MNPAYMENTS_SIGNATURES_TOTAL    = 10
 
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70208
 )
 
+
+
 var (
 	errInvalidKeyType = errors.New("key is of invalid type")
 	// Sadly this is missing from crypto/ecdsa compared to crypto/rsa
 	errECDSAVerification = errors.New("crypto/ecdsa: verification error")
-
-
 )
 
 // Masternode Payments Class
@@ -59,32 +60,32 @@ type MasternodePayments struct {
 	didNotVote map[common.Hash]*big.Int
 }
 
-func NewMasternodePayments(manager *MasternodeManager,number *big.Int) *MasternodePayments{
-	payments:=&MasternodePayments{
-		cachedBlockNumber:number,
-		minBlocksToStore:big.NewInt(1),
-		storageCoeff:big.NewInt(1),
-		manager:manager,
-		votes:make(map[common.Hash]*MasternodePaymentVote),
-		blocks:make(map[uint64]*MasternodeBlockPayees),
-		lastVote:make(map[common.Hash]*big.Int),
-		didNotVote:make(map[common.Hash]*big.Int),
+func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *MasternodePayments {
+	payments := &MasternodePayments{
+		cachedBlockNumber: number,
+		minBlocksToStore:  big.NewInt(1),
+		storageCoeff:      big.NewInt(1),
+		manager:           manager,
+		votes:             make(map[common.Hash]*MasternodePaymentVote),
+		blocks:            make(map[uint64]*MasternodeBlockPayees),
+		lastVote:          make(map[common.Hash]*big.Int),
+		didNotVote:        make(map[common.Hash]*big.Int),
 	}
 	return payments
 }
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
-func (mp *MasternodePayments) Add(hash common.Hash, vote *MasternodePaymentVote) bool{
+func (mp *MasternodePayments) Add(hash common.Hash, vote *MasternodePaymentVote) bool {
 
 	if mp.Has(hash) {
 		return false
 	}
 	mp.votes[hash] = vote
 
-	if payee:=mp.blocks[vote.number.Uint64()];payee==nil{
-		blockPayees:=NewMasternodeBlockPayees(vote.number)
+	if payee := mp.blocks[vote.number.Uint64()]; payee == nil {
+		blockPayees := NewMasternodeBlockPayees(vote.number)
 		blockPayees.Add(vote)
-	}else{
+	} else {
 		mp.blocks[vote.number.Uint64()].Add(vote)
 	}
 
@@ -111,6 +112,89 @@ func (mp *MasternodePayments) Clear() {
 	mp.blocks = make(map[uint64]*MasternodeBlockPayees)
 	mp.votes = make(map[common.Hash]*MasternodePaymentVote)
 
+}
+
+func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool{
+
+	active:=mp.manager.active.MasternodeInfo()
+
+	rank,ok := mp.manager.GetMasternodeRank(active.ID)
+
+	if ok{
+		log.Info("ProcessBlock -- Unknown Masternode")
+		return false
+	}
+	if rank >MNPAYMENTS_SIGNATURES_TOTAL{
+		log.Info("Masternode not in the top ",MNPAYMENTS_SIGNATURES_TOTAL , "( ",rank,")")
+		return false
+	}
+	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
+	log.Info("ProcessBlock -- Start: nBlockHeight=",block.String()," masternode=",active.ID)
+
+	info,err:=mp.manager.GetNextMasternodeInQueueForPayment(block.Hash())
+	if err!=nil{
+		log.Info("ERROR: Failed to find masternode to pay",err)
+		return false
+	}
+
+	vote:=NewMasternodePaymentVote(block.Number(),info)
+	 mp.Add(block.Hash(),vote)
+
+	return true
+}
+
+//Handle the voting of other masternodes
+func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) (bool){
+
+	if m.votes[vote.Hash()] != nil{
+		log.Trace("ERROR:Avoid processing same vote multiple times","hash=",vote.Hash().String()," , Height:",vote.number.String())
+		return false
+	}
+
+	m.votes[vote.Hash()]=vote
+	// but first mark vote as non-verified,
+	// AddPaymentVote() below should take care of it if vote is actually ok
+
+
+	//vote out of range
+	firstBlock:=m.cachedBlockNumber.Sub(m.cachedBlockNumber,m.StorageLimit())
+	if vote.number.Cmp(firstBlock)>0 || vote.number.Cmp(m.cachedBlockNumber.Add(m.cachedBlockNumber,big.NewInt(20)))>0 {
+		log.Trace("ERROR:vote out of range: ","FirstBlock=",firstBlock.String(),", BlockHeight=",vote.number," CacheHeight=",m.cachedBlockNumber.String())
+		return false
+	}
+
+	if !vote.IsVerified() {
+		log.Trace("ERROR: invalid message, error:")
+		return false
+	}
+
+	//canvote
+
+	info:=vote.masternode.MasternodeInfo()
+
+	//checkSignature
+	//if vote.CheckSignature(vote.masternode.MasternodeInfo().ID)
+
+	log.Info("masternode_winner vote: ","address:",info.Account.String(),"blockHeight:",vote.number,"cacheHeight:",m.cachedBlockNumber.String(),"Hash:",vote.Hash().String())
+
+	if m.Add(vote.Hash(),vote) {
+		//Relay
+
+	}
+
+	return true
+
+}
+
+func (m *MasternodePayments) StorageLimit() *big.Int{
+
+	count:=len(m.manager.masternodes)
+	size:=big.NewInt(1).Mul(m.storageCoeff,big.NewInt(int64(count)))
+
+	if size.Cmp(m.minBlocksToStore) >0{
+		return size
+	}
+	return m.minBlocksToStore
 }
 
 type MasternodePayee struct {
@@ -146,10 +230,10 @@ type MasternodeBlockPayees struct {
 	//payees *set.Set
 }
 
-func NewMasternodeBlockPayees(number *big.Int)*MasternodeBlockPayees{
+func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 
-	payee:=&MasternodeBlockPayees{
-		number:number,
+	payee := &MasternodeBlockPayees{
+		number: number,
 	}
 	return payee
 }
@@ -208,6 +292,17 @@ type MasternodePaymentVote struct {
 	masternode *masternode.Masternode
 
 	KeySize int
+}
+
+//Voted block number,activeMasternode
+func NewMasternodePaymentVote(blockHeight *big.Int,active *masternode.Masternode) *MasternodePaymentVote{
+
+	vote:=MasternodePaymentVote{
+		number:blockHeight,
+		masternode:active,
+		KeySize:0,
+	}
+	return &vote
 }
 
 func (mpv *MasternodePaymentVote) Hash() common.Hash {
@@ -290,30 +385,31 @@ func (v *MasternodePaymentVote) IsVerified() bool {
 }
 
 //TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting master node
-func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool,error){
+func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
 
-	info:=v.masternode.MasternodeInfo()
+	info := v.masternode.MasternodeInfo()
 
-	var minRequiredProtocal uint =0
+	var minRequiredProtocal uint = 0
 
-	if v.number.Cmp(height)>0{
-		minRequiredProtocal=MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
-	}else{
-		minRequiredProtocal=MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
+	if v.number.Cmp(height) > 0 {
+		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
+	} else {
+		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
 	}
 
-	if info.ProtocolVersion<minRequiredProtocal{
-		return false ,fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d",info.ProtocolVersion,minRequiredProtocal)
+	if info.ProtocolVersion < minRequiredProtocal {
+		return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", info.ProtocolVersion, minRequiredProtocal)
 	}
 
-	if v.number.Cmp(height) <0 {return true,nil}
+	if v.number.Cmp(height) < 0 {
+		return true, nil
+	}
 	//v.number
 
 	//TODO:Voting validity check is not judged here
 
-
 	// Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
 	// Regular clients (miners included) need to verify masternode rank for future block votes only.
 
-	return true,nil
+	return true, nil
 }
