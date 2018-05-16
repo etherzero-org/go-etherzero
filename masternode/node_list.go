@@ -122,7 +122,6 @@ func (l *NodeList) Init(contract *contract.Contract) {
 
 func NodeID2HalfID(ID discover.NodeID) halfID {
 	var hid halfID
-	hidS := hid[0:32]
-	copy(hidS, ID[0:32])
+	copy(hid[:], ID[:32])
 	return hid
 }
