@@ -103,18 +103,17 @@ type ProtocolManager struct {
 	// and processing
 	wg sync.WaitGroup
 
-	nodeList *masternode.NodeList
-	chaindb  ethdb.Database
-
 	srvr *p2p.Server
 
 	contract     *contract.Contract
 	isMasternode bool
+	nodeList *masternode.NodeList
+
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, contractBackend *ContractBackend) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:    networkId,
@@ -128,7 +127,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		txsyncCh:     make(chan *txsync),
 		quitSync:     make(chan struct{}),
 		nodeList:     masternode.NewNodeList(),
-		chaindb:      chaindb,
 		isMasternode: false,
 	}
 
@@ -868,7 +866,7 @@ func (self *ProtocolManager) masternodeLoop() {
 		buf.Write(self.srvr.Self().ID[:])
 		buf.Write(misc[:])
 		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
-		fmt.Println("Masternode transaction data:", len(buf.Bytes()), d)
+		fmt.Println("Masternode transaction data:", d)
 	}
 
 	self.nodeList.Init(self.contract)
