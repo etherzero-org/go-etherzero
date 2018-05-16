@@ -99,6 +99,12 @@ type ProtocolManager struct {
 	// etherzero masternode
 	winner *MasternodePayments
 
+	active *masternode.Masternode
+
+	is *InstantSend
+
+	manager *MasternodeManager
+
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
@@ -698,6 +704,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			p.MarkTransaction(tx.Hash())
 		}
 		pm.txpool.AddRemotes(txs)
+
+	case p.version >= etz64 && msg.Code == NewVoteMsg:
+		// A batch of vote arrived to one of our previous requests
+		var votes []*types.TxLockVote
+		if err := msg.Decode(&votes); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		info := pm.active.MasternodeInfo()
+		rank, ok := pm.manager.GetMasternodeRank(info.ID)
+		if !ok {
+			log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
+			return errResp(ErrCalculateRankForMasternode, "msg %v: %v", msg, ok)
+		} else if rank > SIGNATURES_TOTAL {
+			log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
+			return errResp(ErrMasternodeNotInTheTop, "msg %v: %v", msg, ok)
+		}
+		log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
+		pm.is.ProcessTxLockVotes(votes)
 
 	//case msg.Code == MasternodePingMsg:
 	//	var ping masternode.PingMsg;

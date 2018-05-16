@@ -37,7 +37,6 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/pkg/errors"
 )
 
@@ -46,6 +45,7 @@ const (
 )
 
 type MasternodeManager struct {
+
 	networkId uint64
 
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
@@ -361,133 +361,4 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 	return masternodeScores
 }
 
-// handleMsg is invoked whenever an inbound message is received from a remote
-// peer. The remote connection is torn down upon returning any error.
-func (mm *MasternodeManager) handleMsg(p *peer) error {
-	// Read the next message from the remote peer, and ensure it's fully consumed
-	msg, err := p.rw.ReadMsg()
-	if err != nil {
-		return err
-	}
-	if msg.Size > ProtocolMaxMsgSize {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-	}
-	defer msg.Discard()
-
-	// Handle the message depending on its contents
-	switch {
-	case msg.Code == StatusMsg:
-		// Status messages should never arrive after the handshake
-		return errResp(ErrExtraStatusMsg, "uncontrolled status message")
-	case p.version >= etz64 && msg.Code == GetNodeDataMsg:
-		// Decode the retrieval message
-		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-		if _, err := msgStream.List(); err != nil {
-			return err
-		}
-		// Gather state data until the fetch or network limits is reached
-		var (
-			hash  common.Hash
-			bytes int
-			data  [][]byte
-		)
-		for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
-			// Retrieve the hash of the next state entry
-			if err := msgStream.Decode(&hash); err == rlp.EOL {
-				break
-			} else if err != nil {
-				return errResp(ErrDecode, "msg %v: %v", msg, err)
-			}
-			// Retrieve the requested state entry, stopping if enough was found
-			if entry, err := mm.blockchain.TrieNode(hash); err == nil {
-				data = append(data, entry)
-				bytes += len(entry)
-			}
-		}
-		return p.SendNodeData(data)
-
-	case p.version >= etz64 && msg.Code == NodeDataMsg:
-		// A batch of node state data arrived to one of our previous requests
-		var data [][]byte
-		if err := msg.Decode(&data); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-	case p.version >= etz64 && msg.Code == GetReceiptsMsg:
-		// Decode the retrieval message
-		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
-		if _, err := msgStream.List(); err != nil {
-			return err
-		}
-		// Gather state data until the fetch or network limits is reached
-		var (
-			hash     common.Hash
-			bytes    int
-			receipts []rlp.RawValue
-		)
-		for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
-			// Retrieve the hash of the next block
-			if err := msgStream.Decode(&hash); err == rlp.EOL {
-				break
-			} else if err != nil {
-				return errResp(ErrDecode, "msg %v: %v", msg, err)
-			}
-			// Retrieve the requested block's receipts, skipping if unknown to us
-			results := mm.blockchain.GetReceiptsByHash(hash)
-			if results == nil {
-				if header := mm.blockchain.GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
-					continue
-				}
-			}
-			// If known, encode and queue for response packet
-			if encoded, err := rlp.EncodeToBytes(results); err != nil {
-				log.Error("Failed to encode receipt", "err", err)
-			} else {
-				receipts = append(receipts, encoded)
-				bytes += len(encoded)
-			}
-		}
-		return p.SendReceiptsRLP(receipts)
-
-	case p.version >= etz64 && msg.Code == NewVoteMsg:
-		// A batch of vote arrived to one of our previous requests
-		var votes []*types.TxLockVote
-		if err := msg.Decode(&votes); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		info := mm.active.MasternodeInfo()
-		rank, ok := mm.GetMasternodeRank(info.ID)
-		if !ok {
-			mm.log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
-			return errResp(ErrCalculateRankForMasternode, "msg %v: %v", msg, ok)
-		} else if rank > SIGNATURES_TOTAL {
-			mm.log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
-			return errResp(ErrMasternodeNotInTheTop, "msg %v: %v", msg, ok)
-		}
-		mm.log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
-		mm.is.ProcessTxLockVotes(votes)
-
-	case msg.Code == TxMsg:
-		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&mm.acceptTxs) == 0 {
-			break
-		}
-		// Transactions can be processed, parse all of them and deliver to the pool
-		var txs []*types.Transaction
-		if err := msg.Decode(&txs); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		for i, tx := range txs {
-			// Validate and mark the remote transaction
-			if tx == nil {
-				return errResp(ErrDecode, "transaction %d is nil", i)
-			}
-			p.MarkTransaction(tx.Hash())
-		}
-		mm.txpool.AddRemotes(txs)
-
-	default:
-		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
-	}
-	return nil
-}
 

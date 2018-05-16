@@ -226,51 +226,8 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 	return db, nil
 }
 
-// CreateDB creates the chain database.
-func CreateDBMaster(ctx *masternode.ServiceContext, config *Config, name string) (ethdb.Database, error) {
-	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
-	if err != nil {
-		return nil, err
-	}
-	if db, ok := db.(*ethdb.LDBDatabase); ok {
-		db.Meter("eth/db/chaindata/")
-	}
-	return db, nil
-}
-
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
-	}
-	// Otherwise assume proof-of-work
-	switch {
-	case config.PowMode == ethash.ModeFake:
-		log.Warn("Ethash used in fake mode")
-		return ethash.NewFaker()
-	case config.PowMode == ethash.ModeTest:
-		log.Warn("Ethash used in test mode")
-		return ethash.NewTester()
-	case config.PowMode == ethash.ModeShared:
-		log.Warn("Ethash used in shared mode")
-		return ethash.NewShared()
-	default:
-		engine := ethash.New(ethash.Config{
-			CacheDir:       ctx.ResolvePath(config.CacheDir),
-			CachesInMem:    config.CachesInMem,
-			CachesOnDisk:   config.CachesOnDisk,
-			DatasetDir:     config.DatasetDir,
-			DatasetsInMem:  config.DatasetsInMem,
-			DatasetsOnDisk: config.DatasetsOnDisk,
-		})
-		engine.SetThreads(-1) // Disable CPU mining
-		return engine
-	}
-}
-
-// CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngineMaster(ctx *masternode.ServiceContext, config *ethash.Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -589,24 +546,3 @@ func (s *Ethereum) Stop() error {
 	return nil
 }
 
-// Stop implements node.Service, terminating all internal goroutines used by the
-// Ethereum protocol.
-func (s *Ethereum) StopMasternode() error {
-	if s.stopDbUpgrade != nil {
-		s.stopDbUpgrade()
-	}
-	s.bloomIndexer.Close()
-	s.blockchain.Stop()
-	s.masternodeManager.Stop()
-	if s.lesServer != nil {
-		s.lesServer.Stop()
-	}
-	s.txPool.Stop()
-	s.miner.Stop()
-	s.eventMux.Stop()
-
-	s.chainDb.Close()
-	close(s.shutdownChan)
-
-	return nil
-}
