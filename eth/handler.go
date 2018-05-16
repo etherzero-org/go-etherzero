@@ -99,10 +99,6 @@ type ProtocolManager struct {
 	// etherzero masternode
 	winner *MasternodePayments
 
-	active *masternode.Masternode
-
-	is *InstantSend
-
 	manager *MasternodeManager
 
 	// wait group is used for graceful shutdowns during downloading
@@ -113,7 +109,8 @@ type ProtocolManager struct {
 
 	contract     *contract.Contract
 	isMasternode bool
-	nodeList     *masternode.NodeList
+	nodeList *masternode.NodeList
+
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -200,10 +197,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		return manager.blockchain.InsertChain(blocks)
 	}
 
-	vote := func(block *types.Block) bool {
+	vote:=func(block *types.Block) bool{
 		return manager.winner.ProcessBlock(block)
 	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer,vote)
 
 	return manager, nil
 }
@@ -710,17 +707,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		info := pm.active.MasternodeInfo()
-		rank, ok := pm.manager.GetMasternodeRank(info.ID)
-		if !ok {
-			log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
-			return errResp(ErrCalculateRankForMasternode, "msg %v: %v", msg, ok)
-		} else if rank > SIGNATURES_TOTAL {
-			log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
-			return errResp(ErrMasternodeNotInTheTop, "msg %v: %v", msg, ok)
-		}
-		log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
-		pm.is.ProcessTxLockVotes(votes)
+
+		pm.manager.ProcessTxLockVotes(votes)
 
 	//case msg.Code == MasternodePingMsg:
 	//	var ping masternode.PingMsg;
@@ -945,6 +933,12 @@ func (self *ProtocolManager) masternodeLoop() {
 			//	t.Reset(time.Second * 100)
 		}
 	}
+}
+
+
+func (self *ProtocolManager) MasternodeManager(manager *MasternodeManager){
+
+	self.manager=manager
 }
 
 // NodeInfo represents a short summary of the Ethereum sub-protocol metadata

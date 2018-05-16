@@ -362,3 +362,18 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 }
 
 
+func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool{
+
+	info := mm.active.MasternodeInfo()
+	rank, ok := mm.GetMasternodeRank(info.ID)
+	if !ok {
+		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
+		return false
+	} else if rank > SIGNATURES_TOTAL {
+		log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
+		return false
+	}
+	log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
+	return mm.is.ProcessTxLockVotes(votes)
+}
+
