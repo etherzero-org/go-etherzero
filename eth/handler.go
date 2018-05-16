@@ -113,8 +113,7 @@ type ProtocolManager struct {
 
 	contract     *contract.Contract
 	isMasternode bool
-	nodeList *masternode.NodeList
-
+	nodeList     *masternode.NodeList
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -201,10 +200,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		return manager.blockchain.InsertChain(blocks)
 	}
 
-	vote:=func(block *types.Block) bool{
+	vote := func(block *types.Block) bool {
 		return manager.winner.ProcessBlock(block)
 	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer,vote)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
 
 	return manager, nil
 }
