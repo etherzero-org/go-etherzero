@@ -22,11 +22,11 @@ import (
 	"math/big"
 
 	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 )
 
 // Constants to match up protocol versions and messages
@@ -68,8 +68,8 @@ const (
 	ReceiptsMsg    = 0x10
 
 	// Masternode Protocol messages
-	NewVoteMsg    = 0x20
-	NewTxLockVote = 0x21
+	NewTxLockVoteMsg  = 0x20
+	NewWinnerVoteMsg  = 0x21
 	MasternodePingMsg = 0x22
 )
 
@@ -194,4 +194,3 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
-

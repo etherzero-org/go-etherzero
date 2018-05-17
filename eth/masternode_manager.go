@@ -377,3 +377,7 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool{
 	return mm.is.ProcessTxLockVotes(votes)
 }
 
+func (mm *MasternodeManager) ProcessPaymentVotes(vote *MasternodePaymentVote) bool{
+
+	return mm.winner.Vote(vote)
+}

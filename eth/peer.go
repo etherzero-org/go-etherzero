@@ -25,10 +25,10 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/rlp"
 	"gopkg.in/fatih/set.v0"
-	"github.com/ethzero/go-ethzero/masternode"
 )
 
 var (
@@ -142,6 +142,16 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 
 func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
 	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
+}
+
+// SendNewTxLockVote propagates an TxLockVote to a remote masternode.
+func (p *peer) SendNewTxLockVote(vote types.TxLockVote) error {
+	return p2p.Send(p.rw, NewTxLockVoteMsg, vote)
+}
+
+// SendNewWinnerVote propagates an winner vote to a remote masternode.
+func (p *peer) SendNewWinnerVote(winner MasternodePaymentVote) error {
+	return p2p.Send(p.rw, NewWinnerVoteMsg, winner)
 }
 
 // SendNewBlockHashes announces the availability of a number of blocks through
