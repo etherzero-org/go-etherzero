@@ -24,7 +24,7 @@ import (
 // TxPreEvent is posted when a transaction enters the transaction pool.
 type TxPreEvent struct{ Tx *types.Transaction }
 
-// TxPreEvent is posted when a vote enters the transaction pool.
+// VoteEvent is posted when a vote enters the transaction pool.
 type VoteEvent struct{ Vote *types.TxLockVote}
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.

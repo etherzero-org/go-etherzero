@@ -113,12 +113,12 @@ func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 	if alreadyVoted {
 		return
 	}
-	signByte, err := t.Sign(t.Hash(), is.active.Config().PrivateKey)
+	signByte, err := t.Sign(t.Hash(), is.active.Stack.Server().PrivateKey)
 
 	if err != nil {
 		return
 	}
-	sigErr := t.Verify(t.Hash().Bytes(), signByte, is.active.Config().PrivateKey.Public())
+	sigErr := t.Verify(t.Hash().Bytes(), signByte, is.active.Stack.Server().PrivateKey.Public())
 
 	if sigErr != nil {
 		return
@@ -154,7 +154,7 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.TxLockRequest) bool 
 
 	if is.Candidates == nil {
 		is.log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
-		txlockcondidate := types.NewTxLockCondidata(request)
+		txlockcondidate := types.NewTxLockCondidate(request)
 		is.Candidates[txhash] = &txlockcondidate
 	} else {
 		is.log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())

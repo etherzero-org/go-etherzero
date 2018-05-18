@@ -154,9 +154,9 @@ func (tc *TxLockCondidate) TxLockRequest() *TxLockRequest {
 	return tc.txLockRequest
 }
 
-func NewTxLockCondidata(request *TxLockRequest) TxLockCondidate {
+func NewTxLockCondidate(request *TxLockRequest) TxLockCondidate {
 
-	txlockcondidata := TxLockCondidate{
+	txlockcondidate := TxLockCondidate{
 		confirmedHeight: -1,
 		createdTime:     time.Now(),
 		txLockRequest:   request,
@@ -164,7 +164,7 @@ func NewTxLockCondidata(request *TxLockRequest) TxLockCondidate {
 		attacked:        false,
 	}
 
-	return txlockcondidata
+	return txlockcondidate
 }
 
 func (tc *TxLockCondidate) Hash() common.Hash {

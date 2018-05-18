@@ -29,6 +29,7 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
 // txPermanent is the number of mined blocks after a mined transaction is
@@ -54,6 +55,7 @@ type MasternodePool struct {
 	//odr          OdrBackend
 	relay     TxRelayBackend
 	voteRelay VoteRelayBackend
+	active *masternode.Masternode
 	head      common.Hash
 	votes     map[common.Hash]*types.TxLockVote    //votes by vote hash
 	nonce     map[common.Address]uint64            // "pending" nonce
@@ -94,7 +96,7 @@ type VoteRelayBackend interface {
 }
 
 // NewTxPool creates a new Masternode transaction & vote pool
-func NewMasternodePool(config *params.ChainConfig, relay TxRelayBackend, vr VoteRelayBackend) *MasternodePool {
+func NewMasternodePool(config *params.ChainConfig, relay TxRelayBackend, vr VoteRelayBackend,active *masternode.Masternode) *MasternodePool {
 	pool := &MasternodePool{
 		config:      config,
 		signer:      types.NewEIP155Signer(config.ChainId),
@@ -105,6 +107,7 @@ func NewMasternodePool(config *params.ChainConfig, relay TxRelayBackend, vr Vote
 		chainHeadCh: make(chan ChainHeadEvent, chainHeadChanSize),
 		relay:       relay,
 		voteRelay:   vr,
+		active:active,
 	}
 	// Subscribe events from blockchain
 	//pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
@@ -282,6 +285,9 @@ func (self *MasternodePool) add(ctx context.Context, tx *types.Transaction) erro
 		if nonce > self.nonce[addr] {
 			self.nonce[addr] = nonce
 		}
+		info:=self.active.MasternodeInfo()
+		vote:=types.NewTxLockVote(hash,info.ID)
+		self.addVote(ctx,vote)
 
 		// Notify the subscribers. This event is posted in a goroutine
 		// because it's possible that somewhere during the post "Remove transaction"

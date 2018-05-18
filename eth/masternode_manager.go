@@ -35,7 +35,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/pkg/errors"
 )
@@ -127,10 +126,12 @@ func (m *MasternodeManager) List() map[string]*masternode.Masternode {
 
 func (m *MasternodeManager) Add(ma *masternode.Masternode) {
 
-	srv := ma.Server()
-	node, _ := discover.ParseNode("enode://d79eee6402b5e61d846cdbd068a4db9d4a392c2c1929a205bb91abfea1723b63c02595156b11f340585e7fdf1918f1143067287e0efb45e8029b82e9a9abe6c0@127.0.0.1:31211")
-	srv.AddPeer(node)
+	info:=ma.MasternodeInfo()
 
+	if m.masternodes[info.ID] ==nil {
+		m.masternodes[info.ID]=ma
+	}
+	log.Warn(" The Masternode already exists ", "Masternode ID", info.ID)
 }
 
 // send sends a list of transactions to at most a given number of peers at
@@ -305,7 +306,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 		return nil, errors.New("no masternode detected")
 	}
 	for _, node := range mm.masternodes {
-		i := int(node.Paid().Int64())
+		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
 	}
