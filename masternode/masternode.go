@@ -46,6 +46,7 @@ const (
 
 // Node is a container on which services can be registered.
 type Masternode struct {
+
 	eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	Stack    *node.Node     // Ethereum protocol stack
 	account  common.Address //Masternode account information
@@ -203,6 +204,7 @@ type MasternodeInfo struct {
 	Account         common.Address `json:"account"`
 	IP              string         `json:"ip"` // IP address of the node
 	ProtocolVersion uint           `json:"protocolVersion"`
+	Height			*big.Int       `json:"paid"`  //last paid height
 	TxHash          common.Hash    `json:"txHash"` //Send a transaction to the contract through the masternode account to prove that you own the account
 	Ports           struct {
 		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
@@ -222,6 +224,7 @@ func (m *Masternode) MasternodeInfo() *MasternodeInfo {
 		ID:              node.ID.String(),
 		IP:              node.IP.String(),
 		Account:         m.account,
+		Height:			 m.Height,
 		ProtocolVersion: m.protocolVersion,
 		ListenAddr:      srv.ListenAddr,
 		Protocols:       make(map[string]interface{}),
