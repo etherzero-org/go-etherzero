@@ -88,96 +88,22 @@ type MasternodeManager struct {
 	log log.Logger
 }
 
-type MasterNodelist struct {
-	url string
-	// caches
-	hash atomic.Value
-	size atomic.Value
-	from atomic.Value
-}
-
-// local MasterNodelists.
-type MasterNodelists []*MasterNodelist
-
-type ltrInfo struct {
-	tx     *types.Transaction
-	sentTo map[*peer]struct{}
-}
-type LesTxRelay struct {
-	txSent       map[common.Hash]*ltrInfo
-	txPending    map[common.Hash]struct{}
-	ps           *peerSet
-	peerList     []*peer
-	peerStartPos int
-	lock         sync.RWMutex
-}
-
 func (m *MasternodeManager) List() map[string]*masternode.Masternode {
-	//Managme the masterNodelist
-	//srv := ma.Server()
-	//masterpeers := srv.PeersInfo()
-	//fmt.Println("Master Node list :")
-	//for _,ma:=range masterpeers{
-	//	fmt.Println( ma.Name,ma.ID,ma.Network.LocalAddress,ma.MasterState)
-	//}
+
 	return m.masternodes
 
 }
 
-func (m *MasternodeManager) Add(ma *masternode.Masternode) {
+func (m *MasternodeManager) Add(node *masternode.Masternode) {
 
-	info:=ma.MasternodeInfo()
+	info:=node.MasternodeInfo()
 
 	if m.masternodes[info.ID] ==nil {
-		m.masternodes[info.ID]=ma
+		m.masternodes[info.ID]=node
 	}
 	log.Warn(" The Masternode already exists ", "Masternode ID", info.ID)
 }
 
-// send sends a list of transactions to at most a given number of peers at
-// once, never resending any particular transaction to the same peer twice
-func (self *LesTxRelay) sendMasterNodelist(txs types.Transactions, mlist *MasterNodelists, count int) {
-	sendTo := make(map[*peer]types.Transactions)
-	self.peerStartPos++ // rotate the starting position of the peer list
-	if self.peerStartPos >= len(self.peerList) {
-		self.peerStartPos = 0
-	}
-
-	for _, tx := range txs {
-		hash := tx.Hash()
-		ltr, ok := self.txSent[hash]
-		if !ok {
-			ltr = &ltrInfo{
-				sentTo: make(map[*peer]struct{}),
-			}
-			self.txSent[hash] = ltr
-			self.txPending[hash] = struct{}{}
-		}
-
-		if len(self.peerList) > 0 {
-			cnt := count
-			pos := self.peerStartPos
-			for {
-				peer := self.peerList[pos]
-				if _, ok := ltr.sentTo[peer]; !ok {
-					sendTo[peer] = append(sendTo[peer], tx)
-					ltr.sentTo[peer] = struct{}{}
-					cnt--
-				}
-				if cnt == 0 {
-					break // sent it to the desired number of peers
-				}
-				pos++
-				if pos == len(self.peerList) {
-					pos = 0
-				}
-				if pos == self.peerStartPos {
-					break // tried all available peers
-				}
-			}
-		}
-	}
-}
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
@@ -336,7 +262,8 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 	block := mm.blockchain.CurrentBlock()
 
 	if block == nil {
-		mm.log.Info("ERROR: GetBlockHash() failed at nBlockHeight:%d ", block.Number())
+		mm.log.Info("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
+		return rank,false
 	}
 	masternodeScores := mm.GetMasternodeScores(block.Hash(), 1)
 

@@ -23,25 +23,24 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/rlp"
 )
-
 
 type InstantSend struct {
 
 	// maps for AlreadyHave
-	lockRequestAccepted map[common.Hash]*types.TxLockRequest // tx hash - tx
-	lockRequestRejected map[common.Hash]*types.TxLockRequest // tx hash - tx
-	txLockedVotes       map[common.Hash]*types.TxLockVote    // vote hash - vote
-	txLockVotesOrphan   map[common.Hash]*types.TxLockVote    // vote hash - vote
+	accepted          map[common.Hash]*types.Transaction // tx hash - tx
+	rejected          map[common.Hash]*types.Transaction // tx hash - tx
+	txLockedVotes     map[common.Hash]*types.TxLockVote  // vote hash - vote
+	txLockVotesOrphan map[common.Hash]*types.TxLockVote  // vote hash - vote
 
 	Candidates map[common.Hash]*types.TxLockCondidate // tx hash - lock candidate
 
 	//std::map<COutPoint, std::set<uint256> > mapVotedOutpoints; // utxo - tx hash set
 	//std::map<COutPoint, uint256> mapLockedOutpoints; // utxo - tx hash
 	voteds    map[common.Hash]int                  //用于缓存本地的投票对象，实际只有一笔
-	lockedTxs map[common.Hash]*types.TxLockRequest //
+	lockedTxs map[common.Hash]*types.Transaction //
 
 	//track masternodes who voted with no txreq (for DOS protection)
 	//追踪没有txreq投票的masternodes（用于DOS保护）
@@ -53,7 +52,7 @@ type InstantSend struct {
 }
 
 //received a consensus TxLockRequest
-func (is *InstantSend) ProcessTxLockRequest(request *types.TxLockRequest) bool {
+func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
 
 	txHash := request.Hash()
 
@@ -85,19 +84,19 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.TxLockRequest) bool {
 func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 
 	txHash := condidate.Hash()
-	if _, ok := is.lockRequestAccepted[txHash]; !ok {
+	if _, ok := is.accepted[txHash]; !ok {
 		return
 	}
 
 	txlockRequest := condidate.TxLockRequest()
-	nonce := txlockRequest.Tx().Nonce()
+	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
 		is.log.Info("nonce error")
 		return
 	}
 
 	var alreadyVoted bool = false
-	info:=is.active.MasternodeInfo()
+	info := is.active.MasternodeInfo()
 
 	if _, ok := is.voteds[txHash]; !ok {
 		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
@@ -145,9 +144,9 @@ func (is *InstantSend) Vote(hash common.Hash) {
 	is.TryToFinalizeLockCandidate(txLockCondidate)
 }
 
-func (is *InstantSend) CreateTxLockCandidate(request *types.TxLockRequest) bool {
+func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 
-	if !request.IsValid() {
+	if !request.CheckNonce() {
 		return false
 	}
 	txhash := request.Hash()
@@ -177,8 +176,7 @@ func (is *InstantSend) ProcessTxLockVote(vote *types.TxLockVote) bool {
 	}
 
 	signatures := txLockCondidate.CountVotes()
-	txlockRequest := txLockCondidate.TxLockRequest()
-	signaturesMax := txlockRequest.MaxSignatures()
+	signaturesMax := txLockCondidate.MaxSignatures()
 	is.log.Info("ProcessTxLockVote Transaction Lock signatures count:", signatures, "/", signaturesMax, ",vote Hash:", vote.Hash().String())
 
 	is.TryToFinalizeLockCandidate(txLockCondidate)
@@ -187,13 +185,28 @@ func (is *InstantSend) ProcessTxLockVote(vote *types.TxLockVote) bool {
 }
 
 func (is *InstantSend) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
-
 	for i := range votes {
 		if !is.ProcessTxLockVote(votes[i]) {
 			is.log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
 		}
 	}
 	return true
+}
+
+func (is *InstantSend) Accept(tx *types.Transaction) {
+	if is.accepted[tx.Hash()] != nil {
+		is.accepted[tx.Hash()] = tx
+	} else {
+		log.Info("transaction already exists in the Accept Map", "tx hash:", tx.Hash().String())
+	}
+}
+
+func (is *InstantSend) Reject(tx *types.Transaction) {
+	if is.rejected[tx.Hash()] != nil {
+		is.rejected[tx.Hash()] = tx
+	} else {
+		log.Info("transaction already exists in the Reject Map", "tx hash:", tx.Hash().String())
+	}
 }
 
 func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {

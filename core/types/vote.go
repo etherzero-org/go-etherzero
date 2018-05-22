@@ -145,18 +145,18 @@ func (tq *TxLockRequest) Tx() *Transaction {
 type TxLockCondidate struct {
 	confirmedHeight int
 	createdTime     time.Time
-	txLockRequest   *TxLockRequest
+	txLockRequest   *Transaction
 	masternodeVotes map[string]*TxLockVote
 	attacked        bool
 }
 
-func (tc *TxLockCondidate) TxLockRequest() *TxLockRequest {
+func (tc *TxLockCondidate) TxLockRequest() *Transaction {
 	return tc.txLockRequest
 }
 
-func NewTxLockCondidate(request *TxLockRequest) TxLockCondidate {
+func NewTxLockCondidate(request *Transaction) TxLockCondidate {
 
-	txlockcondidate := TxLockCondidate{
+	txLockCondidate := TxLockCondidate{
 		confirmedHeight: -1,
 		createdTime:     time.Now(),
 		txLockRequest:   request,
@@ -164,7 +164,7 @@ func NewTxLockCondidate(request *TxLockRequest) TxLockCondidate {
 		attacked:        false,
 	}
 
-	return txlockcondidate
+	return txLockCondidate
 }
 
 func (tc *TxLockCondidate) Hash() common.Hash {
@@ -196,4 +196,8 @@ func (tc *TxLockCondidate) CountVotes() int {
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
 
 	return tc.masternodeVotes[id] != nil
+}
+
+func (tc *TxLockCondidate) MaxSignatures() int {
+	return int(tc.txLockRequest.Size()) * SIGNATURES_TOTAL
 }
