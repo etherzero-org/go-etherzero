@@ -39,7 +39,6 @@ import (
 	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
@@ -109,12 +108,12 @@ type ProtocolManager struct {
 
 	contract     *contract.Contract
 	isMasternode bool
-	nodeList     *masternode.NodeList
+	masternodes  *ContractNodeSet
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, masternodes *ContractNodeSet) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:    networkId,
@@ -127,7 +126,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers:  make(chan struct{}),
 		txsyncCh:     make(chan *txsync),
 		quitSync:     make(chan struct{}),
-		nodeList:     masternode.NewNodeList(),
+		masternodes:  masternodes,
 		isMasternode: false,
 	}
 
@@ -331,6 +330,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 			}
 		}()
 	}
+
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
@@ -848,22 +848,23 @@ func (self *ProtocolManager) txBroadcastLoop() {
 //}
 
 func (self *ProtocolManager) masternodeSelfCheck() bool {
-	hid := masternode.NodeID2HalfID(self.srvr.Self().ID)
-	data, err := masternode.GetContractData(self.contract, hid)
+	var id [8]byte
+	copy(id[:], self.srvr.Self().ID[:8])
+	data, err := GetContractNodeContext(self.contract, id)
 	if err != nil {
 		log.Error("masternodeSelfCheck GetContractData", "error", err)
 		return false
 	}
-	if int(data.Node.Port) != self.srvr.Config.MasternodeAddr.Port {
-		log.Error("masternodeSelfCheck", "data.Port", data.Node.Port, "MasternodeAddr.Port", self.srvr.Config.MasternodeAddr.Port)
+	if int(data.Node.Node.TCP) != self.srvr.Config.MasternodeAddr.Port {
+		log.Error("masternodeSelfCheck", "data.Port", data.Node.Node.TCP, "MasternodeAddr.Port", self.srvr.Config.MasternodeAddr.Port)
 		return false
 	}
-	if !data.Node.IP.Equal(self.srvr.Config.MasternodeAddr.IP) {
-		log.Error("masternodeSelfCheck", "data.IP", data.Node.IP, "MasternodeAddr.IP", self.srvr.Config.MasternodeAddr.IP)
+	if !data.Node.Node.IP.Equal(self.srvr.Config.MasternodeAddr.IP) {
+		log.Error("masternodeSelfCheck", "data.IP", data.Node.Node.IP, "MasternodeAddr.IP", self.srvr.Config.MasternodeAddr.IP)
 		return false
 	}
-	if data.Node.ID != self.srvr.Self().ID {
-		log.Error("masternodeSelfCheck", "data.ID", data.Node.ID.String())
+	if data.Node.Node.ID != self.srvr.Self().ID {
+		log.Error("masternodeSelfCheck", "data.ID", data.Node.Node.ID.String())
 		return false
 	}
 	return true
@@ -886,8 +887,8 @@ func (self *ProtocolManager) masternodeLoop() {
 		fmt.Println("Masternode transaction data:", d)
 	}
 
-	self.nodeList.Init(self.contract)
-	self.nodeList.Show()
+	self.masternodes.Init(self.contract)
+	self.masternodes.Show()
 
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
@@ -913,12 +914,22 @@ func (self *ProtocolManager) masternodeLoop() {
 		select {
 		case join := <-joinCh:
 			fmt.Println("join", common.Bytes2Hex(join.Id[:]))
-			self.nodeList.NodeJoin(self.contract, join.Id)
-			self.nodeList.Show()
+			node, err := self.masternodes.NodeJoin(join.Id)
+			if err == nil {
+				if bytes.Equal(join.Id[:], self.srvr.Self().ID[0:32]) {
+					self.isMasternode = true
+				}else{
+					self.srvr.AddPeer(node.Node)
+				}
+				self.masternodes.Show()
+			}
 		case quit := <-quitCh:
 			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
-			self.nodeList.NodeQuit(self.contract, quit.Id)
-			self.nodeList.Show()
+			if bytes.Equal(quit.Id[:], self.srvr.Self().ID[0:32]) {
+				self.isMasternode = false
+			}
+			self.masternodes.NodeQuit(quit.Id)
+			self.masternodes.Show()
 
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()

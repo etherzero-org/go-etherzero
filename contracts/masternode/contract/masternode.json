@@ -1,27 +1,56 @@
 [
   {
-    "constant": true,
-    "inputs": [],
-    "name": "count",
-    "outputs": [
+    "anonymous": false,
+    "inputs": [
       {
-        "name": "",
-        "type": "uint256"
+        "indexed": false,
+        "name": "id",
+        "type": "bytes8"
+      },
+      {
+        "indexed": false,
+        "name": "addr",
+        "type": "address"
       }
     ],
+    "name": "quit",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "id",
+        "type": "bytes8"
+      },
+      {
+        "indexed": false,
+        "name": "addr",
+        "type": "address"
+      }
+    ],
+    "name": "join",
+    "type": "event"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "MasterNode",
+    "outputs": [],
     "payable": false,
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "constant": false,
     "inputs": [
       {
-        "name": "id",
+        "name": "id1",
         "type": "bytes32"
       },
       {
-        "name": "subId",
+        "name": "id2",
         "type": "bytes32"
       },
       {
@@ -36,99 +65,18 @@
     "type": "function"
   },
   {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "getId",
-    "outputs": [
-      {
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "fallback"
   },
   {
     "constant": true,
-    "inputs": [
-      {
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getInfo",
+    "inputs": [],
+    "name": "count",
     "outputs": [
       {
-        "name": "subId",
-        "type": "bytes32"
-      },
-      {
-        "name": "misc",
-        "type": "bytes32"
-      },
-      {
-        "name": "preId",
-        "type": "bytes32"
-      },
-      {
-        "name": "nextId",
-        "type": "bytes32"
-      },
-      {
-        "name": "blockNumber",
+        "name": "",
         "type": "uint256"
-      },
-      {
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [],
-    "name": "MasterNode",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "has",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "lastId",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32"
       }
     ],
     "payable": false,
@@ -150,32 +98,98 @@
     "type": "function"
   },
   {
-    "payable": true,
-    "stateMutability": "payable",
-    "type": "fallback"
-  },
-  {
-    "anonymous": false,
+    "constant": true,
     "inputs": [
       {
-        "indexed": false,
-        "name": "id",
-        "type": "bytes32"
+        "name": "addr",
+        "type": "address"
       }
     ],
-    "name": "join",
-    "type": "event"
+    "name": "getId",
+    "outputs": [
+      {
+        "name": "id",
+        "type": "bytes8"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "anonymous": false,
+    "constant": true,
     "inputs": [
       {
-        "indexed": false,
         "name": "id",
-        "type": "bytes32"
+        "type": "bytes8"
       }
     ],
-    "name": "quit",
-    "type": "event"
+    "name": "getInfo",
+    "outputs": [
+      {
+        "name": "id1",
+        "type": "bytes32"
+      },
+      {
+        "name": "id2",
+        "type": "bytes32"
+      },
+      {
+        "name": "misc",
+        "type": "bytes32"
+      },
+      {
+        "name": "preId",
+        "type": "bytes8"
+      },
+      {
+        "name": "nextId",
+        "type": "bytes8"
+      },
+      {
+        "name": "blockNumber",
+        "type": "uint256"
+      },
+      {
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "id",
+        "type": "bytes8"
+      }
+    ],
+    "name": "has",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "lastId",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes8"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
   }
 ]
