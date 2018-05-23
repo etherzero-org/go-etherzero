@@ -19,9 +19,9 @@ package eth
 
 import (
 	"fmt"
-	"sync"
-	"sort"
 	"math/big"
+	"sort"
+	"sync"
 	"sync/atomic"
 
 	"github.com/ethzero/go-ethzero/common"
@@ -44,7 +44,6 @@ const (
 )
 
 type MasternodeManager struct {
-
 	networkId uint64
 
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
@@ -96,14 +95,13 @@ func (m *MasternodeManager) List() map[string]*masternode.Masternode {
 
 func (m *MasternodeManager) Add(node *masternode.Masternode) {
 
-	info:=node.MasternodeInfo()
+	info := node.MasternodeInfo()
 
-	if m.masternodes[info.ID] ==nil {
-		m.masternodes[info.ID]=node
+	if m.masternodes[info.ID] == nil {
+		m.masternodes[info.ID] = node
 	}
 	log.Warn(" The Masternode already exists ", "Masternode ID", info.ID)
 }
-
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
@@ -142,11 +140,11 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		return manager.blockchain.InsertChain(blocks)
 	}
 
-	vote:=func(block *types.Block) bool{
+	vote := func(block *types.Block) bool {
 		return manager.winner.ProcessBlock(block)
 	}
 
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer,vote)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
 
 	return manager, nil
 }
@@ -263,7 +261,7 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 
 	if block == nil {
 		mm.log.Info("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
-		return rank,false
+		return rank, false
 	}
 	masternodeScores := mm.GetMasternodeScores(block.Hash(), 1)
 
@@ -290,7 +288,7 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 }
 
 
-func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool{
+func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
 
 	info := mm.active.MasternodeInfo()
 	rank, ok := mm.GetMasternodeRank(info.ID)
@@ -305,7 +303,19 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool{
 	return mm.is.ProcessTxLockVotes(votes)
 }
 
-func (mm *MasternodeManager) ProcessPaymentVotes(vote *MasternodePaymentVote) bool{
+func (mm *MasternodeManager) ProcessPaymentVotes(vote *MasternodePaymentVote) bool {
 
 	return mm.winner.Vote(vote)
+}
+
+
+
+func(mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool{
+
+
+	mn.is.ProcessTxLockRequest(tx)
+	mn.is.Accept(tx)
+	mn.is.Vote(tx.Hash())
+
+	return true
 }
