@@ -48,7 +48,7 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 		Node:            n,
 		Account:         account,
 		OriginBlock:     block,
-		State:           0,
+		State:           MasternodeUnconnected,
 		ProtocolVersion: 64,
 	}
 }
@@ -72,6 +72,7 @@ type MasternodeSet struct {
 	closed      bool
 	contract    *contract.Contract
 	initialized bool
+	srvr *p2p.Server
 	SelfID      string
 	PrivateKey  *ecdsa.PrivateKey
 }
@@ -156,6 +157,31 @@ func (ns *MasternodeSet) SetState(id string, state int) bool {
 		return false
 	}
 	n.State = state
+	return true
+}
+
+func (ns *MasternodeSet) CheckSelf() bool {
+	ns.lock.RLock()
+	defer ns.lock.RUnlock()
+
+	n := ns.nodes[ns.SelfID]
+	if n == nil {
+		return false
+	}
+
+	if int(n.Node.TCP) != ns.srvr.Config.MasternodeAddr.Port {
+		log.Error("masternodeSelfCheck", "data.Port", n.Node.TCP, "MasternodeAddr.Port", ns.srvr.Config.MasternodeAddr.Port)
+		return false
+	}
+	if !n.Node.IP.Equal(ns.srvr.Config.MasternodeAddr.IP) {
+		log.Error("masternodeSelfCheck", "data.IP", n.Node.IP, "MasternodeAddr.IP", ns.srvr.Config.MasternodeAddr.IP)
+		return false
+	}
+	if n.Node.ID != ns.srvr.Self().ID {
+		log.Error("masternodeSelfCheck", "data.ID", n.Node.ID.String())
+		return false
+	}
+
 	return true
 }
 

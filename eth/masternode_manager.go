@@ -151,46 +151,46 @@ func (mm *MasternodeManager) removePeer(id string) {
 	}
 }
 
-func (mm *MasternodeManager) Start(maxPeers int) {
-	mm.maxPeers = maxPeers
-
-	// broadcast transactions
-	mm.txCh = make(chan core.TxPreEvent, txChanSize)
-	mm.txSub = mm.txpool.SubscribeTxPreEvent(mm.txCh)
-	go mm.txBroadcastLoop()
-
-	// broadcast mined blocks
-	mm.minedBlockSub = mm.eventMux.Subscribe(core.NewMinedBlockEvent{})
-	go mm.minedBroadcastLoop()
-
-	// start sync handlers
-	go mm.syncer()
-	go mm.txsyncLoop()
+func (mm *MasternodeManager) Start() {
+	//mm.maxPeers = maxPeers
+	//
+	//// broadcast transactions
+	//mm.txCh = make(chan core.TxPreEvent, txChanSize)
+	//mm.txSub = mm.txpool.SubscribeTxPreEvent(mm.txCh)
+	//go mm.txBroadcastLoop()
+	//
+	//// broadcast mined blocks
+	//mm.minedBlockSub = mm.eventMux.Subscribe(core.NewMinedBlockEvent{})
+	//go mm.minedBroadcastLoop()
+	//
+	//// start sync handlers
+	//go mm.syncer()
+	//go mm.txsyncLoop()
 }
 
 func (mm *MasternodeManager) Stop() {
-	log.Info("Stopping Etherzero masternode protocol")
-
-	mm.txSub.Unsubscribe()         // quits txBroadcastLoop
-	mm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-
-	// Quit the sync loop.
-	// After this send has completed, no new peers will be accepted.
-	mm.noMorePeers <- struct{}{}
-
-	// Quit fetcher, txsyncLoop.
-	close(mm.quitSync)
-
-	// Disconnect existing sessions.
-	// This also closes the gate for any new registrations on the peer set.
-	// sessions which are already established but not added to mm.peers yet
-	// will exit when they try to register.
-	mm.peers.Close()
-
-	// Wait for all peer handler goroutines and the loops to come down.
-	mm.wg.Wait()
-
-	log.Info("Etherzero masternode protocol stopped")
+	//log.Info("Stopping Etherzero masternode protocol")
+	//
+	//mm.txSub.Unsubscribe()         // quits txBroadcastLoop
+	//mm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	//
+	//// Quit the sync loop.
+	//// After this send has completed, no new peers will be accepted.
+	//mm.noMorePeers <- struct{}{}
+	//
+	//// Quit fetcher, txsyncLoop.
+	//close(mm.quitSync)
+	//
+	//// Disconnect existing sessions.
+	//// This also closes the gate for any new registrations on the peer set.
+	//// sessions which are already established but not added to mm.peers yet
+	//// will exit when they try to register.
+	//mm.peers.Close()
+	//
+	//// Wait for all peer handler goroutines and the loops to come down.
+	//mm.wg.Wait()
+	//
+	//log.Info("Etherzero masternode protocol stopped")
 }
 
 func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -298,7 +298,7 @@ func(mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool{
 
 
 	mn.is.ProcessTxLockRequest(tx)
-	log.Info("Transaction Lock Request accepted,","txHash:",tx.Hash().String(),"MasternodeId",mn.active.MasternodeInfo().ID)
+	log.Info("Transaction Lock Request accepted,","txHash:",tx.Hash().String(),"MasternodeId",mn.masternodes.SelfID)
 	mn.is.Accept(tx)
 	mn.is.Vote(tx.Hash())
 

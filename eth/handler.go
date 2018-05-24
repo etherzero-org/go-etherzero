@@ -108,7 +108,6 @@ type ProtocolManager struct {
 	srvr *p2p.Server
 
 	contract     *contract.Contract
-	isMasternode bool
 	masternodes  *masternode.MasternodeSet
 }
 
@@ -128,7 +127,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		txsyncCh:     make(chan *txsync),
 		quitSync:     make(chan struct{}),
 		masternodes:  masternodes,
-		isMasternode: false,
 	}
 
 	// Figure out whether to allow fast sync or not
@@ -859,32 +857,9 @@ func (self *ProtocolManager) txBroadcastLoop() {
 //	return res, err
 //}
 
-func (self *ProtocolManager) masternodeSelfCheck() bool {
-	var id [8]byte
-	copy(id[:], self.srvr.Self().ID[:8])
-	data, err := masternode.GetMasternodeContext(self.contract, id)
-	if err != nil {
-		log.Error("masternodeSelfCheck GetContractData", "error", err)
-		return false
-	}
-	if int(data.Node.Node.TCP) != self.srvr.Config.MasternodeAddr.Port {
-		log.Error("masternodeSelfCheck", "data.Port", data.Node.Node.TCP, "MasternodeAddr.Port", self.srvr.Config.MasternodeAddr.Port)
-		return false
-	}
-	if !data.Node.Node.IP.Equal(self.srvr.Config.MasternodeAddr.IP) {
-		log.Error("masternodeSelfCheck", "data.IP", data.Node.Node.IP, "MasternodeAddr.IP", self.srvr.Config.MasternodeAddr.IP)
-		return false
-	}
-	if data.Node.Node.ID != self.srvr.Self().ID {
-		log.Error("masternodeSelfCheck", "data.ID", data.Node.Node.ID.String())
-		return false
-	}
-	return true
-}
-
 func (self *ProtocolManager) masternodeLoop() {
-	if self.masternodeSelfCheck() {
-		self.isMasternode = true
+	if self.masternodes.CheckSelf() {
+		self.manager.Stop()
 		fmt.Println("masternodeCheck true")
 	} else if !self.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
 		var misc [32]byte
@@ -928,7 +903,7 @@ func (self *ProtocolManager) masternodeLoop() {
 			node, err := self.masternodes.NodeJoin(join.Id)
 			if err == nil {
 				if bytes.Equal(join.Id[:], self.srvr.Self().ID[0:32]) {
-					self.isMasternode = true
+					self.manager.Start()
 				}else{
 					self.srvr.AddPeer(node.Node)
 				}
@@ -937,7 +912,7 @@ func (self *ProtocolManager) masternodeLoop() {
 		case quit := <-quitCh:
 			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
 			if bytes.Equal(quit.Id[:], self.srvr.Self().ID[0:32]) {
-				self.isMasternode = false
+				self.manager.Stop()
 			}
 			self.masternodes.NodeQuit(quit.Id)
 			self.masternodes.Show()
