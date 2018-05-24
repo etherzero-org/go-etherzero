@@ -699,7 +699,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			p.MarkTransaction(tx.Hash())
 		}
 
-		pm.txpool.AddRemotes(txs)
+		errs:=pm.txpool.AddRemotes(txs)
+		//Only the transactions that join the tx pool will start voting
+		for i,err:= range errs{
+			if err==nil{
+				log.Info("Start a voting transaction","tx Hash:",txs[i].Hash().String())
+				pm.manager.ProcessTxVote(txs[i])
+			}
+		}
+
 
 	case p.version >= etz64 && msg.Code == NewTxLockVoteMsg:
 		// A batch of vote arrived to one of our previous requests
