@@ -83,14 +83,14 @@ func NewMasternodeSet() *MasternodeSet {
 	}
 }
 
-func (ns *MasternodeSet) Init(contract *contract.Contract, srvr *p2p.Server) {
+func (ns *MasternodeSet) Init(contract *contract.Contract, srvr *p2p.Server) error {
 	var (
 		lastId [8]byte
 		ctx    *MasternodeContext
 	)
 	lastId, err := contract.LastId(nil)
 	if err != nil {
-		return
+		return err
 	}
 	for lastId != ([8]byte{}) {
 		ctx, err = GetMasternodeContext(contract, lastId)
@@ -105,6 +105,8 @@ func (ns *MasternodeSet) Init(contract *contract.Contract, srvr *p2p.Server) {
 	ns.contract = contract
 	ns.PrivateKey = srvr.Config.PrivateKey
 	ns.initialized = true
+	ns.srvr = srvr
+	return nil
 }
 
 func (ns *MasternodeSet) Initialized() bool {
@@ -219,8 +221,10 @@ func (ns *MasternodeSet) Show() {
 	}
 }
 
-func (ns *MasternodeSet) GetNodes() *map[string]*Masternode {
-	return &ns.nodes
+func (ns *MasternodeSet) GetNodes() map[string]*Masternode {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+	return ns.nodes
 }
 
 func (ns *MasternodeSet) Len() int {

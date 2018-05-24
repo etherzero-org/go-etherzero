@@ -486,7 +486,10 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 		return err
 	}
 	s.masternodeContract = contract
-	s.masternodes.Init(contract, srvr)
+	if err = s.masternodes.Init(contract, srvr); err != nil {
+		return err
+	}
+
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers, srvr, contract)
 	if s.lesServer != nil {

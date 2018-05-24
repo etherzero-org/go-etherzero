@@ -214,7 +214,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	for _, node := range *mm.masternodes.GetNodes() {
+	for _, node := range mm.masternodes.GetNodes() {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
@@ -266,7 +266,7 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 
 	masternodeScores := make(map[*big.Int]*masternode.Masternode)
 
-	for _, m := range *mm.masternodes.GetNodes() {
+	for _, m := range mm.masternodes.GetNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
 	return masternodeScores
