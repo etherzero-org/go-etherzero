@@ -81,7 +81,7 @@ type Ethereum struct {
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
 	accountManager *accounts.Manager
-	activeMasternode *masternode.Masternode // Responsible for activating the Masternode and pinging the network
+	//activeMasternode *masternode.Masternode // Responsible for activating the Masternode and pinging the network
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
@@ -99,8 +99,7 @@ type Ethereum struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 
 	masternodeContract *contract.Contract
-	masternodes *ContractNodeSet
-
+	masternodes *masternode.MasternodeSet
 
 }
 
@@ -143,7 +142,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		etherbase:      config.Etherbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
-		masternodes:    NewContractNodeSet(),
+		masternodes:    masternode.NewMasternodeSet(),
 	}
 
 	log.Info("Initialising Ethzero protocol", "versions", ProtocolVersions, "network", config.NetworkId)
@@ -184,7 +183,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 
-	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
+	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, eth.masternodes); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.manager=eth.masternodeManager
@@ -442,7 +441,7 @@ func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 
 func (s *Ethereum) MasternodeManager() *MasternodeManager    { return s.masternodeManager }
-func (s *Ethereum) ActiveMasternode() *masternode.Masternode { return s.activeMasternode }
+//func (s *Ethereum) ActiveMasternode() *masternode.Masternode { return s.activeMasternode }
 
 func (s *Ethereum) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Ethereum) BlockChain() *core.BlockChain       { return s.blockchain }
@@ -487,7 +486,7 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 		return err
 	}
 	s.masternodeContract = contract
-	s.masternodes.Init(contract)
+	s.masternodes.Init(contract, srvr)
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers, srvr, contract)
 	if s.lesServer != nil {

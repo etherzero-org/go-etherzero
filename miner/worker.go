@@ -499,7 +499,7 @@ func (self *worker) commitNewWork() {
 	}
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		if node, err := self.eth.GetWinner(); err != nil {
-			work.Block.Masternode = node.MasternodeInfo().Account
+			work.Block.Masternode = node.Account
 			blockReward := masternodeReward
 			work.state.AddBalance(work.Block.Masternode, blockReward)
 		}

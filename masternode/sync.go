@@ -20,7 +20,6 @@ import (
 	//"sync/atomic"
 	"time"
 
-	"github.com/ethzero/go-ethzero/core/types"
 	//"github.com/ethzero/go-ethzero/eth/downloader"
 	//"github.com/ethzero/go-ethzero/log"
 )
@@ -34,25 +33,25 @@ const (
 	txsyncPackSize = 100 * 1024
 )
 
-const (
-	masternodeSyncFailed         = -1
-	masternodeSyncInitial        = 0 // sync just started, was reset recently or still in IDB
-	masternodeSyncWaiting        = 1 //waiting after initial to see if we can get more headers/blocks
-	masternodeSyncList           = 2
-	masternodeSyncMnw            = 3
-	masternodeSyncGovernance     = 4
-	masternodeSyncGovobj         = 10
-	masternodeSyncGovobjVote     = 11
-	masternodeSyncFinished       = 999
-	masternodeSyncTickSeconds    = 6
-	masternodeSyncTimeoutSeconds = 30
-	masternodeSyncEnoughPeers    = 6
-)
+//const (
+//	masternodeSyncFailed         = -1
+//	masternodeSyncInitial        = 0 // sync just started, was reset recently or still in IDB
+//	masternodeSyncWaiting        = 1 //waiting after initial to see if we can get more headers/blocks
+//	masternodeSyncList           = 2
+//	masternodeSyncMnw            = 3
+//	masternodeSyncGovernance     = 4
+//	masternodeSyncGovobj         = 10
+//	masternodeSyncGovobjVote     = 11
+//	masternodeSyncFinished       = 999
+//	masternodeSyncTickSeconds    = 6
+//	masternodeSyncTimeoutSeconds = 30
+//	masternodeSyncEnoughPeers    = 6
+//)
 
-type txsync struct {
-	p   *Masternode
-	txs []*types.Transaction
-}
+//type txsync struct {
+//	p   *Masternode
+//	txs []*types.Transaction
+//}
 
 /*
 // syncTransactions starts sending all currently pending transactions to the given peer.

@@ -57,7 +57,7 @@ type MasternodeManager struct {
 	fetcher *fetcher.Fetcher
 	peers   *peerSet
 
-	masternodes map[string]*masternode.Masternode //id -> masternode
+	masternodes *masternode.MasternodeSet
 
 	enableds map[string]*masternode.Masternode //id -> masternode
 
@@ -65,7 +65,7 @@ type MasternodeManager struct {
 
 	winner *MasternodePayments
 
-	active *masternode.Masternode
+	//active *Masternode
 
 	SubProtocols []p2p.Protocol
 
@@ -87,25 +87,9 @@ type MasternodeManager struct {
 	log log.Logger
 }
 
-func (m *MasternodeManager) List() map[string]*masternode.Masternode {
-
-	return m.masternodes
-
-}
-
-func (m *MasternodeManager) Add(node *masternode.Masternode) {
-
-	info := node.MasternodeInfo()
-
-	if m.masternodes[info.ID] == nil {
-		m.masternodes[info.ID] = node
-	}
-	log.Warn(" The Masternode already exists ", "Masternode ID", info.ID)
-}
-
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
+func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, masternodes *masternode.MasternodeSet) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
 		networkId:   networkId,
@@ -118,6 +102,7 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		masternodes: masternodes,
 	}
 
 	//if len(manager.SubProtocols) == 0 {
@@ -220,7 +205,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 
 	var (
 		paids        []int
-		tenthNetWork = len(mm.masternodes) / 10
+		tenthNetWork = mm.masternodes.Len() / 10
 		countTenth   = 0
 		highest      *big.Int
 		winner       *masternode.Masternode
@@ -229,7 +214,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	for _, node := range mm.masternodes {
+	for _, node := range *mm.masternodes.GetNodes() {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
@@ -267,9 +252,9 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 
 	tRank := 0
 	for _, masternode := range masternodeScores {
-		info := masternode.MasternodeInfo()
+		//info := MasternodeInfo()
 		tRank++
-		if id == info.ID {
+		if id == masternode.ID {
 			rank = tRank
 			break
 		}
@@ -281,7 +266,7 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 
 	masternodeScores := make(map[*big.Int]*masternode.Masternode)
 
-	for _, m := range mm.masternodes {
+	for _, m := range *mm.masternodes.GetNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
 	return masternodeScores
@@ -290,10 +275,9 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 
 func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
 
-	info := mm.active.MasternodeInfo()
-	rank, ok := mm.GetMasternodeRank(info.ID)
+	rank, ok := mm.GetMasternodeRank(mm.masternodes.SelfID)
 	if !ok {
-		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", info.ID, " rank: ", rank)
+		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.masternodes.SelfID, " rank: ", rank)
 		return false
 	} else if rank > SIGNATURES_TOTAL {
 		log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")

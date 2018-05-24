@@ -44,6 +44,7 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 	"net"
+	"github.com/ethzero/go-ethzero/masternode"
 )
 
 const (
@@ -108,12 +109,12 @@ type ProtocolManager struct {
 
 	contract     *contract.Contract
 	isMasternode bool
-	masternodes  *ContractNodeSet
+	masternodes  *masternode.MasternodeSet
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, masternodes *ContractNodeSet) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, masternodes *masternode.MasternodeSet) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:    networkId,
@@ -216,6 +217,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if err := pm.peers.Unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
 	}
+	pm.masternodes.SetState(id, masternode.MasternodeDisconnected)
 	// Hard disconnect at the networking layer
 	if peer != nil {
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
@@ -331,6 +333,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		}()
 	}
 
+	pm.masternodes.SetState(p.id, masternode.MasternodeConnected)
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
@@ -851,7 +854,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 func (self *ProtocolManager) masternodeSelfCheck() bool {
 	var id [8]byte
 	copy(id[:], self.srvr.Self().ID[:8])
-	data, err := GetContractNodeContext(self.contract, id)
+	data, err := masternode.GetMasternodeContext(self.contract, id)
 	if err != nil {
 		log.Error("masternodeSelfCheck GetContractData", "error", err)
 		return false
@@ -888,7 +891,6 @@ func (self *ProtocolManager) masternodeLoop() {
 		fmt.Println("Masternode transaction data:", d)
 	}
 
-	self.masternodes.Init(self.contract)
 	self.masternodes.Show()
 
 	joinCh := make(chan *contract.ContractJoin, 32)

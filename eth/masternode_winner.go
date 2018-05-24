@@ -114,9 +114,7 @@ func (mp *MasternodePayments) Clear() {
 
 func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 
-	active := mp.manager.active.MasternodeInfo()
-
-	rank, ok := mp.manager.GetMasternodeRank(active.ID)
+	rank, ok := mp.manager.GetMasternodeRank(mp.manager.masternodes.SelfID)
 
 	if ok {
 		log.Info("ProcessBlock -- Unknown Masternode")
@@ -127,7 +125,7 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternode=", active.ID)
+	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternode=", mp.manager.masternodes.SelfID)
 
 	info, err := mp.manager.GetNextMasternodeInQueueForPayment(block.Hash())
 	if err != nil {
@@ -167,12 +165,10 @@ func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) bool {
 
 	//canvote
 
-	info := vote.masternode.MasternodeInfo()
-
 	//checkSignature
 	//if vote.CheckSignature(vote.masternode.MasternodeInfo().ID)
 
-	log.Info("masternode_winner vote: ", "address:", info.Account.String(), "blockHeight:", vote.number, "cacheHeight:", m.cachedBlockNumber.String(), "Hash:", vote.Hash().String())
+	log.Info("masternode_winner vote: ", "address:", vote.masternode.Account.String(), "blockHeight:", vote.number, "cacheHeight:", m.cachedBlockNumber.String(), "Hash:", vote.Hash().String())
 
 	if m.Add(vote.Hash(), vote) {
 		//Relay
@@ -185,7 +181,7 @@ func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) bool {
 
 func (m *MasternodePayments) StorageLimit() *big.Int {
 
-	count := len(m.manager.masternodes)
+	count := m.manager.masternodes.Len()
 	size := big.NewInt(1).Mul(m.storageCoeff, big.NewInt(int64(count)))
 
 	if size.Cmp(m.minBlocksToStore) > 0 {
@@ -239,14 +235,14 @@ func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 func (mbp *MasternodeBlockPayees) Add(vote *MasternodePaymentVote) {
 
 	//When the masternode has been voted
-	info := vote.masternode.MasternodeInfo()
+	//info := vote.masternode.MasternodeInfo()
 	for _, mp := range mbp.payees {
-		if mp.account == info.Account {
+		if mp.account == vote.masternode.Account {
 			mp.Add(vote)
 			return
 		}
 	}
-	payee := NewMasternodePayee(info.Account, vote)
+	payee := NewMasternodePayee(vote.masternode.Account, vote)
 	mbp.payees = append(mbp.payees, payee)
 
 }
@@ -306,7 +302,7 @@ func (mpv *MasternodePaymentVote) Hash() common.Hash {
 
 	tlvHash := rlpHash([]interface{}{
 		mpv.number,
-		mpv.masternode.MasternodeInfo().ID,
+		mpv.masternode.ID,
 	})
 	return tlvHash
 }
@@ -384,7 +380,7 @@ func (v *MasternodePaymentVote) IsVerified() bool {
 //TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting master node
 func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
 
-	info := v.masternode.MasternodeInfo()
+	// info := v.masternode.MasternodeInfo()
 
 	var minRequiredProtocal uint = 0
 
@@ -394,8 +390,8 @@ func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
 		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
 	}
 
-	if info.ProtocolVersion < minRequiredProtocal {
-		return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", info.ProtocolVersion, minRequiredProtocal)
+	if v.masternode.ProtocolVersion < minRequiredProtocal {
+		return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", v.masternode.ProtocolVersion, minRequiredProtocal)
 	}
 
 	if v.number.Cmp(height) < 0 {

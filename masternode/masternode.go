@@ -1,36 +1,26 @@
-// Copyright 2015 The go-ethereum Authors
-// Copyright 2018 The go-etherzero Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package masternode
 
 import (
+	"crypto/ecdsa"
+	"encoding/binary"
 	"errors"
+	"fmt"
+	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
+	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/p2p"
+	"github.com/ethzero/go-ethzero/p2p/discover"
+	"github.com/ethzero/go-ethzero/rlp"
 	"math/big"
 	"net"
-	"reflect"
 	"sync"
+)
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/node"
-	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/rpc"
+const (
+	MasternodeUnconnected = iota
+	MasternodeConnected
+	MasternodeDisconnected
 )
 
 var (
@@ -39,41 +29,204 @@ var (
 	errNotRegistered     = errors.New("masternode is not registered")
 )
 
-// Constants to match up protocol versions and messages
-const (
-	etz64 = 64
-)
-
-// Node is a container on which services can be registered.
 type Masternode struct {
-
-	eventmux *event.TypeMux // Event multiplexer used between the services of a stack
-	Stack    *node.Node     // Ethereum protocol stack
-	account  common.Address //Masternode account information
-
-	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
-	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
-
-	httpEndpoint  string        // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	httpWhitelist []string      // HTTP RPC modules to allow through this endpoint
-	httpListener  net.Listener  // HTTP RPC listener socket to server API requests
-	httpHandler   *rpc.Server   // HTTP RPC request handler to process the API requests
-	stop          chan struct{} // Channel to wait for termination notifications
-	lock          sync.RWMutex
-
-	//etherzero masternode
-	name string
-
-	//last paid height
-	Height *big.Int
-
-	//protocolVersion should contain the version number of the protocol.
-	protocolVersion uint
-
-	//remember the hash of the block where masternode collateral had minimum required confirmations
+	ID                         string
+	Node                       *discover.Node
+	Account                    common.Address
+	OriginBlock                uint64
+	Height                     *big.Int
+	State                      int
 	CollateralMinConfBlockHash common.Hash
+	ProtocolVersion            uint
+}
 
-	log log.Logger
+func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
+	id := GetMasternodeID(nodeId)
+	n := discover.NewNode(nodeId, ip, 0, port)
+	return &Masternode{
+		ID:              id,
+		Node:            n,
+		Account:         account,
+		OriginBlock:     block,
+		State:           0,
+		ProtocolVersion: 64,
+	}
+}
+
+func (n *Masternode) String() string {
+	return n.Node.String()
+}
+
+func (n *Masternode) CalculateScore(hash common.Hash) *big.Int {
+	blockHash := rlpHash([]interface{}{
+		hash,
+		n.Account,
+		n.CollateralMinConfBlockHash,
+	})
+	return blockHash.Big()
+}
+
+type MasternodeSet struct {
+	nodes       map[string]*Masternode
+	lock        sync.RWMutex
+	closed      bool
+	contract    *contract.Contract
+	initialized bool
+	SelfID      string
+	PrivateKey  *ecdsa.PrivateKey
+}
+
+func NewMasternodeSet() *MasternodeSet {
+	return &MasternodeSet{
+		nodes: make(map[string]*Masternode),
+	}
+}
+
+func (ns *MasternodeSet) Init(contract *contract.Contract, srvr *p2p.Server) {
+	var (
+		lastId [8]byte
+		ctx    *MasternodeContext
+	)
+	lastId, err := contract.LastId(nil)
+	if err != nil {
+		return
+	}
+	for lastId != ([8]byte{}) {
+		ctx, err = GetMasternodeContext(contract, lastId)
+		if err != nil {
+			log.Error("Init NodeSet", "error", err)
+			break
+		}
+		ns.Register(ctx.Node)
+		lastId = ctx.pre
+	}
+	ns.SelfID = GetMasternodeID(srvr.Self().ID)
+	ns.contract = contract
+	ns.PrivateKey = srvr.Config.PrivateKey
+	ns.initialized = true
+}
+
+func (ns *MasternodeSet) Initialized() bool {
+	return ns.initialized
+}
+
+// Register injects a new node into the working set, or returns an error if the
+// node is already known.
+func (ns *MasternodeSet) Register(n *Masternode) error {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+
+	if ns.closed {
+		return errClosed
+	}
+	if _, ok := ns.nodes[n.ID]; ok {
+		return errAlreadyRegistered
+	}
+	ns.nodes[n.ID] = n
+	return nil
+}
+
+// Unregister removes a remote peer from the active set, disabling any further
+// actions to/from that particular entity.
+func (ns *MasternodeSet) Unregister(id string) error {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+
+	if _, ok := ns.nodes[id]; !ok {
+		return errNotRegistered
+	}
+	delete(ns.nodes, id)
+	return nil
+}
+
+// Peer retrieves the registered peer with the given id.
+func (ns *MasternodeSet) Node(id string) *Masternode {
+	ns.lock.RLock()
+	defer ns.lock.RUnlock()
+
+	return ns.nodes[id]
+}
+
+func (ns *MasternodeSet) SetState(id string, state int) bool {
+	ns.lock.RLock()
+	defer ns.lock.RUnlock()
+
+	n := ns.nodes[id]
+	if n == nil {
+		return false
+	}
+	n.State = state
+	return true
+}
+
+// Close disconnects all nodes.
+// No new nodes can be registered after Close has returned.
+func (ns *MasternodeSet) Close() {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+
+	//for _, p := range ns.nodes {
+	//	p.Disconnect(p2p.DiscQuitting)
+	//}
+	ns.closed = true
+}
+
+func (ns *MasternodeSet) NodeJoin(id [8]byte) (*Masternode, error) {
+	ctx, err := GetMasternodeContext(ns.contract, id)
+	if err != nil {
+		return &Masternode{}, err
+	}
+	err = ns.Register(ctx.Node)
+	if err != nil {
+		return &Masternode{}, err
+	}
+	return ctx.Node, nil
+}
+
+func (ns *MasternodeSet) NodeQuit(id [8]byte) {
+	ns.Unregister(fmt.Sprintf("%x", id[:8]))
+}
+
+func (ns *MasternodeSet) Show() {
+	for _, n := range ns.nodes {
+		fmt.Println(n.String())
+	}
+}
+
+func (ns *MasternodeSet) GetNodes() *map[string]*Masternode {
+	return &ns.nodes
+}
+
+func (ns *MasternodeSet) Len() int {
+	return len(ns.nodes)
+}
+
+func GetMasternodeID(ID discover.NodeID) string {
+	return fmt.Sprintf("%x", ID[:8])
+}
+
+type MasternodeContext struct {
+	Node *Masternode
+	pre  [8]byte
+	next [8]byte
+}
+
+func GetMasternodeContext(contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
+	data, err := contract.ContractCaller.GetInfo(nil, id)
+	if err != nil {
+		return &MasternodeContext{}, err
+	}
+	// version := int(data.Misc[0])
+	var ip net.IP = data.Misc[1:17]
+	port := binary.BigEndian.Uint16(data.Misc[17:19])
+	nodeId, _ := discover.BytesID(append(data.Id1[:], data.Id2[:]...))
+	node := newMasternode(nodeId, ip, port, data.Account, data.BlockNumber.Uint64())
+
+	return &MasternodeContext{
+		Node: node,
+		pre:  data.PreId,
+		next: data.NextId,
+	}, nil
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -81,166 +234,4 @@ func rlpHash(x interface{}) (h common.Hash) {
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
-}
-
-// New creates a new P2P node, ready for protocol registration.
-func New(node *node.Node, name string) (*Masternode, error) {
-
-	// Note: any interaction with Config that would create/touch files
-	// in the data directory or instance directory is delayed until Start.
-	return &Masternode{
-		name:            name,
-		Stack:           node,
-		Height:          big.NewInt(-1),
-		protocolVersion: etz64,
-		eventmux:        new(event.TypeMux),
-	}, nil
-}
-
-// Start create a live P2P node and starts running it.
-func (n *Masternode) Start() error {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-	return nil
-}
-
-// Stop terminates a running node along with all it's services. In the node was
-// not started, an error is returned.
-func (n *Masternode) Stop() error {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	// Terminate the API, services and the p2p server.
-	n.rpcAPIs = nil
-	failure := &StopError{
-		Services: make(map[reflect.Type]error),
-	}
-
-	// unblock n.Wait
-	close(n.stop)
-
-	if len(failure.Services) > 0 {
-		return failure
-	}
-
-	return nil
-}
-
-// Wait blocks the thread until the node is stopped. If the node is not running
-// at the time of invocation, the method immediately returns.
-func (n *Masternode) Wait() {
-	n.lock.RLock()
-	//if n.server == nil {
-	//	n.lock.RUnlock()
-	//	return
-	//}
-	stop := n.stop
-	n.lock.RUnlock()
-
-	<-stop
-}
-
-// Restart terminates a running node and boots up a new one in its place. If the
-// node isn't running, an error is returned.
-func (n *Masternode) Restart() error {
-	if err := n.Stop(); err != nil {
-		return err
-	}
-	if err := n.Start(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Attach creates an RPC client attached to an in-process API handler.
-func (n *Masternode) Attach() (*rpc.Client, error) {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
-
-	//if n.server == nil {
-	//	return nil, ErrNodeStopped
-	//}
-	return rpc.DialInProc(n.inprocHandler), nil
-}
-
-// RPCHandler returns the in-process RPC request handler.
-func (n *Masternode) RPCHandler() (*rpc.Server, error) {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
-
-	if n.inprocHandler == nil {
-		return nil, ErrNodeStopped
-	}
-	return n.inprocHandler, nil
-}
-
-// EventMux retrieves the event multiplexer used by all the network services in
-// the current protocol stack.
-func (n *Masternode) EventMux() *event.TypeMux {
-	return n.eventmux
-}
-
-
-//TODO:TBA
-// Deterministically calculate a given "score" for a Masternode depending on how close it's hash is to
-// the proof of work for that block. The further away they are the better, the furthest will win the election
-// and get paid this block
-func (m *Masternode) CalculateScore(hash common.Hash) *big.Int {
-
-	blockHash := rlpHash([]interface{}{
-		hash,
-		m.account,
-		m.CollateralMinConfBlockHash,
-	})
-
-	return blockHash.Big()
-}
-
-// MasternodeInfo represents a short summary of the information known about the host.
-type MasternodeInfo struct {
-	ID              string         `json:"id"`    // Unique node identifier (also the encryption key)
-	Name            string         `json:"name"`  // Name of the Masternode
-	Enode           string         `json:"enode"` // Enode URL for adding this peer from remote peers
-	Account         common.Address `json:"account"`
-	IP              string         `json:"ip"` // IP address of the node
-	ProtocolVersion uint           `json:"protocolVersion"`
-	Height			*big.Int       `json:"paid"`  //last paid height
-	TxHash          common.Hash    `json:"txHash"` //Send a transaction to the contract through the masternode account to prove that you own the account
-	Ports           struct {
-		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
-		Listener  int `json:"listener"`  // TCP listening port for RLPx
-	} `json:"ports"`
-	ListenAddr string                 `json:"listenAddr"`
-	Protocols  map[string]interface{} `json:"protocols"`
-}
-
-func (m *Masternode) MasternodeInfo() *MasternodeInfo {
-
-	node := m.Stack.Server().Self()
-	srv := m.Stack.Server()
-
-	info := &MasternodeInfo{
-		Name:            m.name,
-		ID:              node.ID.String(),
-		IP:              node.IP.String(),
-		Account:         m.account,
-		Height:			 m.Height,
-		ProtocolVersion: m.protocolVersion,
-		ListenAddr:      srv.ListenAddr,
-		Protocols:       make(map[string]interface{}),
-	}
-	info.Ports.Discovery = int(node.UDP)
-	info.Ports.Listener = int(node.TCP)
-
-	// Gather all the running protocol infos (only once per protocol type)
-	for _, proto := range srv.Protocols {
-		if _, ok := info.Protocols[proto.Name]; !ok {
-			nodeInfo := interface{}("unknown")
-			if query := proto.NodeInfo; query != nil {
-				nodeInfo = proto.NodeInfo()
-			}
-			info.Protocols[proto.Name] = nodeInfo
-		}
-	}
-	return info
 }
