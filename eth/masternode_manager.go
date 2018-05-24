@@ -298,6 +298,7 @@ func(mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool{
 
 
 	mn.is.ProcessTxLockRequest(tx)
+	log.Info("Transaction Lock Request accepted,","txHash:",tx.Hash().String(),"MasternodeId",mn.active.MasternodeInfo().ID)
 	mn.is.Accept(tx)
 	mn.is.Vote(tx.Hash())
 
