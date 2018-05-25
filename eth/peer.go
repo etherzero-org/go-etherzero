@@ -25,10 +25,10 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/rlp"
 	"gopkg.in/fatih/set.v0"
-	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 var (
