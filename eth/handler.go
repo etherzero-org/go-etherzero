@@ -26,12 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"bytes"
-	"encoding/binary"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/consensus/misc"
-	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/eth/downloader"
@@ -43,7 +40,6 @@ import (
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
-	"net"
 	"github.com/ethzero/go-ethzero/masternode"
 )
 
@@ -105,15 +101,11 @@ type ProtocolManager struct {
 	// and processing
 	wg sync.WaitGroup
 
-	srvr *p2p.Server
-
-	contract     *contract.Contract
-	masternodes  *masternode.MasternodeSet
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, masternodes *masternode.MasternodeSet) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:    networkId,
@@ -126,7 +118,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers:  make(chan struct{}),
 		txsyncCh:     make(chan *txsync),
 		quitSync:     make(chan struct{}),
-		masternodes:  masternodes,
 	}
 
 	// Figure out whether to allow fast sync or not
@@ -215,17 +206,15 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if err := pm.peers.Unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
 	}
-	pm.masternodes.SetState(id, masternode.MasternodeDisconnected)
+	pm.manager.masternodes.SetState(id, masternode.MasternodeDisconnected)
 	// Hard disconnect at the networking layer
 	if peer != nil {
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
 
-func (pm *ProtocolManager) Start(maxPeers int, srvr *p2p.Server, contract *contract.Contract) {
-	pm.srvr = srvr
+func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.maxPeers = maxPeers
-	pm.contract = contract
 
 	// broadcast transactions
 	pm.txCh = make(chan core.TxPreEvent, txChanSize)
@@ -240,7 +229,6 @@ func (pm *ProtocolManager) Start(maxPeers int, srvr *p2p.Server, contract *contr
 	go pm.syncer()
 	go pm.txsyncLoop()
 
-	go pm.masternodeLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -331,7 +319,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		}()
 	}
 
-	pm.masternodes.SetState(p.id, masternode.MasternodeConnected)
+	pm.manager.masternodes.SetState(p.id, masternode.MasternodeConnected)
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
@@ -857,86 +845,6 @@ func (self *ProtocolManager) txBroadcastLoop() {
 //	return res, err
 //}
 
-func (self *ProtocolManager) masternodeLoop() {
-	if self.masternodes.CheckSelf() {
-		self.manager.Stop()
-		fmt.Println("masternodeCheck true")
-	} else if !self.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
-		var misc [32]byte
-		misc[0] = 1
-		copy(misc[1:17], self.srvr.Config.MasternodeAddr.IP)
-		binary.BigEndian.PutUint16(misc[17:19], uint16(self.srvr.Config.MasternodeAddr.Port))
-
-		var buf bytes.Buffer
-		buf.Write(self.srvr.Self().ID[:])
-		buf.Write(misc[:])
-		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
-		fmt.Println("Masternode transaction data:", d)
-	}
-
-	self.masternodes.Show()
-
-	joinCh := make(chan *contract.ContractJoin, 32)
-	quitCh := make(chan *contract.ContractQuit, 32)
-	joinSub, err1 := self.contract.WatchJoin(nil, joinCh)
-	if err1 != nil {
-		// TODO: exit
-		return
-	}
-	quitSub, err2 := self.contract.WatchQuit(nil, quitCh)
-	if err2 != nil {
-		// TODO: exit
-		return
-	}
-
-	//pingMsg := &masternode.PingMsg{
-	//	ID: self.node.ID,
-	//	IP: self.node.IP,
-	//	Port: self.node.TCP,
-	//}
-	//t := time.NewTimer(time.Second * 5)
-
-	for {
-		select {
-		case join := <-joinCh:
-			fmt.Println("join", common.Bytes2Hex(join.Id[:]))
-			node, err := self.masternodes.NodeJoin(join.Id)
-			if err == nil {
-				if bytes.Equal(join.Id[:], self.srvr.Self().ID[0:32]) {
-					self.manager.Start()
-				}else{
-					self.srvr.AddPeer(node.Node)
-				}
-				self.masternodes.Show()
-			}
-		case quit := <-quitCh:
-			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
-			if bytes.Equal(quit.Id[:], self.srvr.Self().ID[0:32]) {
-				self.manager.Stop()
-			}
-			self.masternodes.NodeQuit(quit.Id)
-			self.masternodes.Show()
-
-		case err := <-joinSub.Err():
-			joinSub.Unsubscribe()
-			fmt.Println("eventJoin err", err.Error())
-		case err := <-quitSub.Err():
-			quitSub.Unsubscribe()
-			fmt.Println("eventQuit err", err.Error())
-
-			//case <-t.C:
-			//	pingMsg.Update(self.privateKey)
-			//	peers := self.peers.peers
-			//	for _, peer := range peers {
-			//		fmt.Println("peer", peer.ID())
-			//		if err := peer.SendMasternodePing(pingMsg); err != nil {
-			//			fmt.Println("err:", err)
-			//		}
-			//	}
-			//	t.Reset(time.Second * 100)
-		}
-	}
-}
 
 func (self *ProtocolManager) MasternodeManager(manager *MasternodeManager) {
 

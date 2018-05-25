@@ -114,7 +114,7 @@ func (mp *MasternodePayments) Clear() {
 
 func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 
-	rank, ok := mp.manager.GetMasternodeRank(mp.manager.masternodes.SelfID)
+	rank, ok := mp.manager.GetMasternodeRank(mp.manager.active.ID)
 
 	if ok {
 		log.Info("ProcessBlock -- Unknown Masternode")
@@ -125,7 +125,7 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternode=", mp.manager.masternodes.SelfID)
+	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternode=", mp.manager.active.ID)
 
 	info, err := mp.manager.GetNextMasternodeInQueueForPayment(block.Hash())
 	if err != nil {

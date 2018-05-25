@@ -24,8 +24,11 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"bytes"
+	"encoding/binary"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/eth/downloader"
@@ -37,6 +40,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/pkg/errors"
+	"net"
 )
 
 const (
@@ -65,7 +69,7 @@ type MasternodeManager struct {
 
 	winner *MasternodePayments
 
-	//active *Masternode
+	active *masternode.ActiveMasternode
 
 	SubProtocols []p2p.Protocol
 
@@ -85,11 +89,14 @@ type MasternodeManager struct {
 	wg sync.WaitGroup
 
 	log log.Logger
+
+	contract *contract.Contract
+	srvr     *p2p.Server
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, masternodes *masternode.MasternodeSet) (*MasternodeManager, error) {
+func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
 		networkId:   networkId,
@@ -102,7 +109,6 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
-		masternodes: masternodes,
 	}
 
 	//if len(manager.SubProtocols) == 0 {
@@ -151,46 +157,23 @@ func (mm *MasternodeManager) removePeer(id string) {
 	}
 }
 
-func (mm *MasternodeManager) Start() {
-	//mm.maxPeers = maxPeers
-	//
-	//// broadcast transactions
-	//mm.txCh = make(chan core.TxPreEvent, txChanSize)
-	//mm.txSub = mm.txpool.SubscribeTxPreEvent(mm.txCh)
-	//go mm.txBroadcastLoop()
-	//
-	//// broadcast mined blocks
-	//mm.minedBlockSub = mm.eventMux.Subscribe(core.NewMinedBlockEvent{})
-	//go mm.minedBroadcastLoop()
-	//
-	//// start sync handlers
-	//go mm.syncer()
-	//go mm.txsyncLoop()
+func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract) {
+	mm.contract = contract
+	mm.srvr = srvr
+
+	mns, err := masternode.NewMasternodeSet(contract)
+	if err != nil {
+		log.Error("masternode.NewMasternodeSet", "error", err)
+	}
+	mm.masternodes = mns
+
+	mm.active = masternode.NewActiveMasternode(srvr)
+
+	go mm.masternodeLoop()
 }
 
 func (mm *MasternodeManager) Stop() {
-	//log.Info("Stopping Etherzero masternode protocol")
-	//
-	//mm.txSub.Unsubscribe()         // quits txBroadcastLoop
-	//mm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	//
-	//// Quit the sync loop.
-	//// After this send has completed, no new peers will be accepted.
-	//mm.noMorePeers <- struct{}{}
-	//
-	//// Quit fetcher, txsyncLoop.
-	//close(mm.quitSync)
-	//
-	//// Disconnect existing sessions.
-	//// This also closes the gate for any new registrations on the peer set.
-	//// sessions which are already established but not added to mm.peers yet
-	//// will exit when they try to register.
-	//mm.peers.Close()
-	//
-	//// Wait for all peer handler goroutines and the loops to come down.
-	//mm.wg.Wait()
-	//
-	//log.Info("Etherzero masternode protocol stopped")
+
 }
 
 func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -214,7 +197,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	for _, node := range mm.masternodes.GetNodes() {
+	for _, node := range mm.masternodes.Nodes() {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
@@ -266,18 +249,17 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 
 	masternodeScores := make(map[*big.Int]*masternode.Masternode)
 
-	for _, m := range mm.masternodes.GetNodes() {
+	for _, m := range mm.masternodes.Nodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
 	return masternodeScores
 }
 
-
 func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
 
-	rank, ok := mm.GetMasternodeRank(mm.masternodes.SelfID)
+	rank, ok := mm.GetMasternodeRank(mm.active.ID)
 	if !ok {
-		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.masternodes.SelfID, " rank: ", rank)
+		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.active.ID, " rank: ", rank)
 		return false
 	} else if rank > SIGNATURES_TOTAL {
 		log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
@@ -292,15 +274,112 @@ func (mm *MasternodeManager) ProcessPaymentVotes(vote *MasternodePaymentVote) bo
 	return mm.winner.Vote(vote)
 }
 
-
-
-func(mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool{
-
+func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 
 	mn.is.ProcessTxLockRequest(tx)
-	log.Info("Transaction Lock Request accepted,","txHash:",tx.Hash().String(),"MasternodeId",mn.masternodes.SelfID)
+	log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mn.active.ID)
 	mn.is.Accept(tx)
 	mn.is.Vote(tx.Hash())
 
 	return true
+}
+
+func (mn *MasternodeManager) updateActiveMasternode() {
+	var state int
+	
+	n := mn.masternodes.Node(mn.active.ID)
+	if n == nil {
+		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+	} else if int(n.Node.TCP) != mn.active.Addr.Port {
+		log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mn.active.Addr.Port)
+		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+	} else if !n.Node.IP.Equal(mn.active.Addr.IP) {
+		log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mn.active.Addr.IP)
+		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+	} else {
+		state = masternode.ACTIVE_MASTERNODE_STARTED
+	}
+	
+	mn.active.SetState(state)
+}
+func (mn *MasternodeManager) masternodeLoop() {
+	mn.updateActiveMasternode()
+	if mn.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
+		fmt.Println("masternodeCheck true")
+	} else if !mn.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
+		var misc [32]byte
+		misc[0] = 1
+		copy(misc[1:17], mn.srvr.Config.MasternodeAddr.IP)
+		binary.BigEndian.PutUint16(misc[17:19], uint16(mn.srvr.Config.MasternodeAddr.Port))
+
+		var buf bytes.Buffer
+		buf.Write(mn.srvr.Self().ID[:])
+		buf.Write(misc[:])
+		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
+		fmt.Println("Masternode transaction data:", d)
+	}
+
+	mn.masternodes.Show()
+
+	joinCh := make(chan *contract.ContractJoin, 32)
+	quitCh := make(chan *contract.ContractQuit, 32)
+	joinSub, err1 := mn.contract.WatchJoin(nil, joinCh)
+	if err1 != nil {
+		// TODO: exit
+		return
+	}
+	quitSub, err2 := mn.contract.WatchQuit(nil, quitCh)
+	if err2 != nil {
+		// TODO: exit
+		return
+	}
+
+	//pingMsg := &masternode.PingMsg{
+	//	ID: self.node.ID,
+	//	IP: self.node.IP,
+	//	Port: self.node.TCP,
+	//}
+	//t := time.NewTimer(time.Second * 5)
+
+	for {
+		select {
+		case join := <-joinCh:
+			fmt.Println("join", common.Bytes2Hex(join.Id[:]))
+			node, err := mn.masternodes.NodeJoin(join.Id)
+			if err == nil {
+				if bytes.Equal(join.Id[:], mn.srvr.Self().ID[0:32]) {
+					mn.updateActiveMasternode()
+				} else {
+					mn.srvr.AddPeer(node.Node)
+				}
+				mn.masternodes.Show()
+			}
+
+		case quit := <-quitCh:
+			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
+			mn.masternodes.NodeQuit(quit.Id)
+			if bytes.Equal(quit.Id[:], mn.srvr.Self().ID[0:32]) {
+				mn.updateActiveMasternode()
+			}
+			mn.masternodes.Show()
+
+		case err := <-joinSub.Err():
+			joinSub.Unsubscribe()
+			fmt.Println("eventJoin err", err.Error())
+		case err := <-quitSub.Err():
+			quitSub.Unsubscribe()
+			fmt.Println("eventQuit err", err.Error())
+
+			//case <-t.C:
+			//	pingMsg.Update(self.privateKey)
+			//	peers := self.peers.peers
+			//	for _, peer := range peers {
+			//		fmt.Println("peer", peer.ID())
+			//		if err := peer.SendMasternodePing(pingMsg); err != nil {
+			//			fmt.Println("err:", err)
+			//		}
+			//	}
+			//	t.Reset(time.Second * 100)
+		}
+	}
 }

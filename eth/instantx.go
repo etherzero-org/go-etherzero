@@ -48,7 +48,7 @@ type InstantSend struct {
 	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
 	log log.Logger
 
-	masternodes *masternode.MasternodeSet
+	active *masternode.ActiveMasternode
 }
 
 //received a consensus TxLockRequest
@@ -100,24 +100,24 @@ func (is *InstantSend) vote(condidate *types.TxLockCondidate) {
 
 	if _, ok := is.voteds[txHash]; !ok {
 		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
-		if txLockCondidate.HasMasternodeVoted(is.masternodes.SelfID) {
+		if txLockCondidate.HasMasternodeVoted(is.active.ID) {
 			alreadyVoted = true
-			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.masternodes.SelfID)
+			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.active.ID)
 			return
 		}
 	}
 
-	t := types.NewTxLockVote(txHash, is.masternodes.SelfID) //构建一个投票对象
+	t := types.NewTxLockVote(txHash, is.active.ID) //构建一个投票对象
 
 	if alreadyVoted {
 		return
 	}
-	signByte, err := t.Sign(t.Hash(), is.masternodes.PrivateKey)
+	signByte, err := t.Sign(t.Hash(), is.active.PrivateKey)
 
 	if err != nil {
 		return
 	}
-	sigErr := t.Verify(t.Hash().Bytes(), signByte, is.masternodes.PrivateKey.Public())
+	sigErr := t.Verify(t.Hash().Bytes(), signByte, is.active.PrivateKey.Public())
 
 	if sigErr != nil {
 		return

@@ -1,7 +1,6 @@
 package masternode
 
 import (
-	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rlp"
 	"math/big"
@@ -71,26 +69,19 @@ type MasternodeSet struct {
 	lock        sync.RWMutex
 	closed      bool
 	contract    *contract.Contract
-	initialized bool
-	srvr *p2p.Server
-	SelfID      string
-	PrivateKey  *ecdsa.PrivateKey
 }
 
-func NewMasternodeSet() *MasternodeSet {
-	return &MasternodeSet{
+func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
+	ms := &MasternodeSet{
 		nodes: make(map[string]*Masternode),
 	}
-}
-
-func (ns *MasternodeSet) Init(contract *contract.Contract, srvr *p2p.Server) error {
 	var (
 		lastId [8]byte
 		ctx    *MasternodeContext
 	)
 	lastId, err := contract.LastId(nil)
 	if err != nil {
-		return err
+		return &MasternodeSet{}, err
 	}
 	for lastId != ([8]byte{}) {
 		ctx, err = GetMasternodeContext(contract, lastId)
@@ -98,19 +89,12 @@ func (ns *MasternodeSet) Init(contract *contract.Contract, srvr *p2p.Server) err
 			log.Error("Init NodeSet", "error", err)
 			break
 		}
-		ns.Register(ctx.Node)
+		ms.nodes[ctx.Node.ID] = ctx.Node
+
 		lastId = ctx.pre
 	}
-	ns.SelfID = GetMasternodeID(srvr.Self().ID)
-	ns.contract = contract
-	ns.PrivateKey = srvr.Config.PrivateKey
-	ns.initialized = true
-	ns.srvr = srvr
-	return nil
-}
-
-func (ns *MasternodeSet) Initialized() bool {
-	return ns.initialized
+	ms.contract = contract
+	return ms, nil
 }
 
 // Register injects a new node into the working set, or returns an error if the
@@ -147,7 +131,10 @@ func (ns *MasternodeSet) Node(id string) *Masternode {
 	ns.lock.RLock()
 	defer ns.lock.RUnlock()
 
-	return ns.nodes[id]
+	if v, ok := ns.nodes[id]; ok {
+		return v
+	}
+	return nil
 }
 
 func (ns *MasternodeSet) SetState(id string, state int) bool {
@@ -159,31 +146,6 @@ func (ns *MasternodeSet) SetState(id string, state int) bool {
 		return false
 	}
 	n.State = state
-	return true
-}
-
-func (ns *MasternodeSet) CheckSelf() bool {
-	ns.lock.RLock()
-	defer ns.lock.RUnlock()
-
-	n := ns.nodes[ns.SelfID]
-	if n == nil {
-		return false
-	}
-
-	if int(n.Node.TCP) != ns.srvr.Config.MasternodeAddr.Port {
-		log.Error("masternodeSelfCheck", "data.Port", n.Node.TCP, "MasternodeAddr.Port", ns.srvr.Config.MasternodeAddr.Port)
-		return false
-	}
-	if !n.Node.IP.Equal(ns.srvr.Config.MasternodeAddr.IP) {
-		log.Error("masternodeSelfCheck", "data.IP", n.Node.IP, "MasternodeAddr.IP", ns.srvr.Config.MasternodeAddr.IP)
-		return false
-	}
-	if n.Node.ID != ns.srvr.Self().ID {
-		log.Error("masternodeSelfCheck", "data.ID", n.Node.ID.String())
-		return false
-	}
-
 	return true
 }
 
@@ -221,7 +183,7 @@ func (ns *MasternodeSet) Show() {
 	}
 }
 
-func (ns *MasternodeSet) GetNodes() map[string]*Masternode {
+func (ns *MasternodeSet) Nodes() map[string]*Masternode {
 	ns.lock.Lock()
 	defer ns.lock.Unlock()
 	return ns.nodes

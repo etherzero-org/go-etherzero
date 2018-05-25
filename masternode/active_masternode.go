@@ -20,68 +20,66 @@
 package masternode
 
 import (
-	"github.com/ethzero/go-ethzero/common"
+	"crypto/ecdsa"
+	"github.com/ethzero/go-ethzero/p2p"
+	"github.com/ethzero/go-ethzero/p2p/discover"
 	"net"
 )
 
-const(
-	ACTIVE_MASTERNODE_INITIAL          = 0; // initial state
-	ACTIVE_MASTERNODE_SYNC_IN_PROCESS  = 1;
-	ACTIVE_MASTERNODE_INPUT_TOO_NEW    = 2;
-	ACTIVE_MASTERNODE_NOT_CAPABLE      = 3;
-	ACTIVE_MASTERNODE_STARTED          = 4;
-
+const (
+	ACTIVE_MASTERNODE_INITIAL         = 0 // initial state
+	ACTIVE_MASTERNODE_SYNC_IN_PROCESS = 1
+	ACTIVE_MASTERNODE_INPUT_TOO_NEW   = 2
+	ACTIVE_MASTERNODE_NOT_CAPABLE     = 3
+	ACTIVE_MASTERNODE_STARTED         = 4
 )
 
-const(
-	masternodetype_unknow =0
-	masternodetype_remote =1
-)
 //Responsible for activating the Masternode and pinging the network
-type ActiveMasternode struct{
-
-	masternodeType int
-
-	activeState	int
-	// Keys for the active Masternode
-	MasternodeKey string
-	//MasternodeID       NodeID // the Masternode's public key
-	// Initialized while registering Masternode
-	IP       net.IP // len 4 for IPv4 or 16 for IPv6
-	UDP, TCP uint16 // port numbers
-	txid common.Hash
-	// This is a cached copy of sha3(ID) which is used for Masternode
-	// distance calculations. This is part of Node in order to make it
-	// possible to write tests that need a node at a certain distance.
-	// In those tests, the content of sha will not actually correspond
-	// with ID.
-	sha common.Hash
-
+type ActiveMasternode struct {
+	ID          string
+	NodeID      discover.NodeID
+	PrivateKey  *ecdsa.PrivateKey
+	activeState int
+	Addr        net.TCPAddr
 }
 
-func (am *ActiveMasternode) Type() (int){
-	return am.masternodeType
+func NewActiveMasternode(srvr *p2p.Server) *ActiveMasternode {
+	nodeId := srvr.Self().ID
+	id := GetMasternodeID(nodeId)
+	am := &ActiveMasternode{
+		ID:          id,
+		NodeID:      nodeId,
+		activeState: ACTIVE_MASTERNODE_INITIAL,
+		PrivateKey:  srvr.Config.PrivateKey,
+		Addr:        srvr.MasternodeAddr,
+	}
+	return am
 }
 
-func (am *ActiveMasternode)State()(int){
+func (am *ActiveMasternode) State() int {
 	return am.activeState
 }
 
-func (am *ActiveMasternode) ManageStateInitial(){
-
+func (am *ActiveMasternode) SetState(state int) {
+	am.activeState = state
 }
 
-func (am *ActiveMasternode) manageStateRemote(){}
-
-
-func (am *ActiveMasternode) UpdateSentinelPing()(bool,error){
-
-	return true,nil
-}
-
-func (am *ActiveMasternode)SendMasternodePing()(bool,error){
-
-	return true,nil
-}
-
-
+//
+//func (am *ActiveMasternode) ManageStateInitial(){
+//
+//}
+//
+//func (am *ActiveMasternode) manageStateRemote(){}
+//
+//
+//func (am *ActiveMasternode) UpdateSentinelPing()(bool,error){
+//
+//	return true,nil
+//}
+//
+//func (am *ActiveMasternode)SendMasternodePing()(bool,error){
+//
+//	return true,nil
+//}
+//
+//

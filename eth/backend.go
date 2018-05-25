@@ -142,7 +142,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		etherbase:      config.Etherbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
-		masternodes:    masternode.NewMasternodeSet(),
 	}
 
 	log.Info("Initialising Ethzero protocol", "versions", ProtocolVersions, "network", config.NetworkId)
@@ -179,11 +178,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	eth.ContractBackend = NewContractBackend(eth)
 
 
-	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, eth.masternodes); err != nil {
+	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 
-	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, eth.masternodes); err != nil {
+	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.manager=eth.masternodeManager
@@ -481,20 +480,19 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 		maxPeers -= s.config.LightPeers
 	}
 
-	contract, err := contract.NewContract(srvr.MasternodeContract, s.ContractBackend)
-	if err != nil {
-		return err
-	}
-	s.masternodeContract = contract
-	if err = s.masternodes.Init(contract, srvr); err != nil {
-		return err
-	}
-
 	// Start the networking layer and the light server if requested
-	s.protocolManager.Start(maxPeers, srvr, contract)
+	s.protocolManager.Start(maxPeers)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
+
+	contractBackend := NewContractBackend(s)
+	contract, err := contract.NewContract(srvr.MasternodeContract, contractBackend)
+	if err != nil {
+		return err
+	}
+
+	s.masternodeManager.Start(srvr, contract)
 
 	return nil
 }
