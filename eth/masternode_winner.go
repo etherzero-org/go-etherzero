@@ -26,8 +26,8 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"math/big"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 const (

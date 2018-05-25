@@ -40,7 +40,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 const (
@@ -700,7 +700,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case p.version >= etz64 && msg.Code == NewTxLockVoteMsg:
 		// A batch of vote arrived to one of our previous requests
-		var votes []*types.TxLockVote
+		var votes []*masternode.TxLockVote
 		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}

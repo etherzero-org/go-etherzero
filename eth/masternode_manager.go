@@ -36,11 +36,11 @@ import (
 	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/pkg/errors"
 	"net"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 const (
@@ -255,7 +255,7 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 	return masternodeScores
 }
 
-func (mm *MasternodeManager) ProcessTxLockVotes(votes []*types.TxLockVote) bool {
+func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 
 	rank, ok := mm.GetMasternodeRank(mm.active.ID)
 	if !ok {

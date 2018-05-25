@@ -19,13 +19,14 @@ package core
 import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 // TxPreEvent is posted when a transaction enters the transaction pool.
 type TxPreEvent struct{ Tx *types.Transaction }
 
 // VoteEvent is posted when a vote enters the transaction pool.
-type VoteEvent struct{ Vote *types.TxLockVote}
+type VoteEvent struct{ Vote *masternode.TxLockVote}
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.
 type PendingLogsEvent struct {

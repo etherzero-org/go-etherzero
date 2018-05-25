@@ -28,8 +28,8 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 // txPermanent is the number of mined blocks after a mined transaction is
@@ -57,7 +57,7 @@ type MasternodePool struct {
 	voteRelay VoteRelayBackend
 	active    *masternode.Masternode
 	head      common.Hash
-	votes     map[common.Hash]*types.TxLockVote    //votes by vote hash
+	votes     map[common.Hash]*masternode.TxLockVote    //votes by vote hash
 	nonce     map[common.Address]uint64            // "pending" nonce
 	pending   map[common.Hash]*types.Transaction   // pending transactions by tx hash
 	mined     map[common.Hash][]*types.Transaction // mined transactions by block hash
@@ -90,7 +90,7 @@ type TxRelayBackend interface {
 //  because they have been replaced by a re-send or because they have been mined
 //  long ago and no rollback is expected
 type VoteRelayBackend interface {
-	Send(vote types.TxLockVote)
+	Send(vote masternode.TxLockVote)
 	NewHead(head common.Hash, mined []common.Hash, rollback []common.Hash)
 	Discard(hashes []common.Hash)
 }
@@ -285,7 +285,7 @@ func (self *MasternodePool) add(ctx context.Context, tx *types.Transaction) erro
 		if nonce > self.nonce[addr] {
 			self.nonce[addr] = nonce
 		}
-		vote := types.NewTxLockVote(hash, self.active.ID)
+		vote := masternode.NewTxLockVote(hash, self.active.ID)
 		self.addVote(ctx, vote)
 
 
@@ -301,7 +301,7 @@ func (self *MasternodePool) add(ctx context.Context, tx *types.Transaction) erro
 	return nil
 }
 
-func (self *MasternodePool) AddVote(ctx context.Context, vote *types.TxLockVote) error {
+func (self *MasternodePool) AddVote(ctx context.Context, vote *masternode.TxLockVote) error {
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -314,7 +314,7 @@ func (self *MasternodePool) AddVote(ctx context.Context, vote *types.TxLockVote)
 	return nil
 }
 
-func (self *MasternodePool) addVote(ctx context.Context, vote *types.TxLockVote) error {
+func (self *MasternodePool) addVote(ctx context.Context, vote *masternode.TxLockVote) error {
 
 	hash := vote.Hash()
 	if self.votes[hash] != nil {

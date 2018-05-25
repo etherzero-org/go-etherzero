@@ -32,7 +32,7 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/masternode"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 // Backend wraps all methods required for mining.

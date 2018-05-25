@@ -1,4 +1,4 @@
-package types
+package masternode
 
 import (
 	"crypto/ecdsa"
@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/core/types"
 	"math/big"
 	"time"
 )
@@ -122,7 +123,7 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 }
 
 type TxLockRequest struct {
-	tx *Transaction
+	tx *types.Transaction
 }
 
 func (tq *TxLockRequest) Hash() common.Hash {
@@ -138,23 +139,23 @@ func (tq *TxLockRequest) IsValid() bool {
 	return tq.tx.CheckNonce()
 }
 
-func (tq *TxLockRequest) Tx() *Transaction {
+func (tq *TxLockRequest) Tx() *types.Transaction {
 	return tq.tx
 }
 
 type TxLockCondidate struct {
 	confirmedHeight int
 	createdTime     time.Time
-	txLockRequest   *Transaction
+	txLockRequest   *types.Transaction
 	masternodeVotes map[string]*TxLockVote
 	attacked        bool
 }
 
-func (tc *TxLockCondidate) TxLockRequest() *Transaction {
+func (tc *TxLockCondidate) TxLockRequest() *types.Transaction {
 	return tc.txLockRequest
 }
 
-func NewTxLockCondidate(request *Transaction) TxLockCondidate {
+func NewTxLockCondidate(request *types.Transaction) TxLockCondidate {
 
 	txLockCondidate := TxLockCondidate{
 		confirmedHeight: -1,

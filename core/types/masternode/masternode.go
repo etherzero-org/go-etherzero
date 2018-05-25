@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
-	"github.com/ethzero/go-ethzero/rlp"
 	"math/big"
 	"net"
 	"sync"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
+	"github.com/ethzero/go-ethzero/rlp"
 )
 
 const (
@@ -26,6 +26,13 @@ var (
 	errAlreadyRegistered = errors.New("masternode is already registered")
 	errNotRegistered     = errors.New("masternode is not registered")
 )
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
 
 type Masternode struct {
 	ID                         string
@@ -219,11 +226,4 @@ func GetMasternodeContext(contract *contract.Contract, id [8]byte) (*MasternodeC
 		pre:  data.PreId,
 		next: data.NextId,
 	}, nil
-}
-
-func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
 }

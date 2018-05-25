@@ -42,7 +42,6 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/internal/ethapi"
 	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/masternode"
 	"github.com/ethzero/go-ethzero/miner"
 	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/p2p"
@@ -50,6 +49,7 @@ import (
 	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/rpc"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 type LesServer interface {
