@@ -145,7 +145,7 @@ func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) bool {
 
 	if m.votes[vote.Hash()] != nil {
 		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.number.String())
-		return false
+		return  false
 	}
 
 	m.votes[vote.Hash()] = vote

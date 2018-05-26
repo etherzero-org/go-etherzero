@@ -95,6 +95,9 @@ type ProtocolManager struct {
 	// etherzero masternode
 	winner        *MasternodePayments
 	voteCh        chan core.VoteEvent
+	voteSub       event.Subscription
+	winnerCh	  chan core.PaymentVoteEvent
+	winnerSub	  event.Subscription
 	paymentVoteCh chan core.PaymentVoteEvent
 
 	manager *MasternodeManager
@@ -704,15 +707,25 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		for i ,vote:=range votes{
+			if vote == nil{
+				return errResp(ErrDecode,"vote %d is nil",i);
+
+			}
+			p.MarkVote(vote.Hash())
+		}
 		pm.manager.ProcessTxLockVotes(votes)
 
 	case p.version >= etz64 && msg.Code == NewWinnerVoteMsg:
 		// A batch of PaymentVote arrived to one of our previous requests
-		var vote *MasternodePaymentVote
-		if err := msg.Decode(&vote); err != nil {
+		var votes []*MasternodePaymentVote
+		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.manager.ProcessPaymentVotes(vote)
+		for _,vote:=range votes {
+			p.MarkWinnerVote(vote.Hash())
+		}
+		pm.manager.ProcessPaymentVotes(votes)
 
 	//case msg.Code == MasternodePingMsg:
 	//	var ping masternode.PingMsg;
@@ -785,8 +798,15 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 	}
 }
 
+// BroadcastVote will propagate a txVote to all Masternodes which are not known to
+// already have the given txVote
 func (self *ProtocolManager) BroadcastVote(hash common.Hash,vote *masternode.TxLockVote){
+	peers := self.peers.PeersWithoutVote(hash)
 
+	for _,peer:=range peers{
+		peer.SendNewTxLockVote(vote)
+	}
+	log.Trace("Broadcast vote","hash" ,hash,"recipients",len(peers))
 }
 
 func (self *ProtocolManager) BroadcastPaymentVote(hash common.Hash,paymentvote *masternode.MasternodePaymentVote){
@@ -810,10 +830,26 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.voteCh:
+			self.BroadcastVote(event.Vote.Hash(),event.Vote)
+
+		// Err() channel will be closed when unsubscribing.
+		case <-self.voteSub.Err():
+			return
 		}
 	}
 }
 
+func (self *ProtocolManager) winnerVoteBroadcastLoop(){
+	for {
+		select {
+		case event:=<-self.winnerCh:
+			self.BroadcastPaymentVote(event.PaymentVote.Hash(),event.PaymentVote)
+
+		case <-self.winnerSub.Err():
+			return
+		}
+	}
+}
 //func (self *ProtocolManager) getContractData(account *common.Address) (*masternode.ContractData, error){
 //	dataPrefix, _ := hex.DecodeString("38266b22000000000000000000000000")
 //	data := append(dataPrefix, account.Bytes()...)

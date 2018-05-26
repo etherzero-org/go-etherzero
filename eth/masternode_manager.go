@@ -242,9 +242,15 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	return mm.is.ProcessTxLockVotes(votes)
 }
 
-func (mm *MasternodeManager) ProcessPaymentVotes(vote *MasternodePaymentVote) bool {
+func (mm *MasternodeManager) ProcessPaymentVotes(votes []*MasternodePaymentVote) bool {
 
-	return mm.winner.Vote(vote)
+	for i,vote :=range votes{
+		if !mm.winner.Vote(vote) {
+			log.Info("Payment Winner vote :: Block Payment winner vote failed ","vote hash:",vote.Hash().String(),"i:%s",i)
+			return false
+		}
+	}
+	return true
 }
 
 func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {

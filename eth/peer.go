@@ -41,6 +41,10 @@ const (
 	maxKnownTxs      = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks   = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 	handshakeTimeout = 5 * time.Second
+
+	//etz Masternode
+	maxKnownVotes       = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
+	maxKnownWinnerVotes = 1024 // Maximum winnerVotes hashes to keep in the known list (prevent DOS)
 )
 
 // PeerInfo represents a short summary of the Ethereum sub-protocol metadata known
@@ -66,6 +70,9 @@ type peer struct {
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+
+	knownVotes       *set.Set // Set of vote hashes known to be known by this peer
+	knownWinnerVotes *set.Set // Set of winner vote hashes known to be known by this peer
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -131,6 +138,24 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
+// MarkVote marks a vote as known for the peer,ensuring that it
+// will never be propagated to this particular peer.
+func (p *peer) MarkVote(hash common.Hash) {
+	for p.knownVotes.Size() >= maxKnownVotes {
+		p.knownVotes.Pop()
+	}
+	p.knownVotes.Add(hash)
+}
+
+// MarkWinnerVote marks a Winner vote as knows for the peer,ensuring that it
+// will never be propagated to this particular peer.
+func (p *peer) MarkWinnerVote(hash common.Hash) {
+	for p.knownWinnerVotes.Size() >= maxKnownWinnerVotes {
+		p.knownWinnerVotes.Pop()
+	}
+	p.knownWinnerVotes.Add(hash)
+}
+
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
@@ -145,7 +170,7 @@ func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
 }
 
 // SendNewTxLockVote propagates an TxLockVote to a remote masternode.
-func (p *peer) SendNewTxLockVote(vote masternode.TxLockVote) error {
+func (p *peer) SendNewTxLockVote(vote *masternode.TxLockVote) error {
 	return p2p.Send(p.rw, NewTxLockVoteMsg, vote)
 }
 
@@ -396,6 +421,36 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if !p.knownTxs.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+// PeersWithoutVote retrieves a list of Masternodes that do not have a given Vote
+// in their set of knows hashes.
+func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownVotes.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+// PeersWithoutWinnerVote retrieves a list of Masternodes that do not have a given Winner Vote
+// in their set of knows hashes.
+func (ps *peerSet) PeersWithoutWinnerVote(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownWinnerVotes.Has(hash) {
 			list = append(list, p)
 		}
 	}
