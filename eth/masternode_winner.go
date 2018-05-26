@@ -18,17 +18,13 @@
 package eth
 
 import (
-	"fmt"
 	"errors"
 	"math/big"
-	"crypto/ecdsa"
-	"crypto/rand"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/log"
 )
 
 const (
@@ -53,7 +49,7 @@ type MasternodePayments struct {
 	storageCoeff      *big.Int //masternode count times nStorageCoeff payments blocks should be stored ...
 	manager           *MasternodeManager
 
-	votes      map[common.Hash]*MasternodePaymentVote
+	votes      map[common.Hash]*masternode.MasternodePaymentVote
 	blocks     map[uint64]*MasternodeBlockPayees
 	lastVote   map[common.Hash]*big.Int
 	didNotVote map[common.Hash]*big.Int
@@ -65,7 +61,7 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 		minBlocksToStore:  big.NewInt(1),
 		storageCoeff:      big.NewInt(1),
 		manager:           manager,
-		votes:             make(map[common.Hash]*MasternodePaymentVote),
+		votes:             make(map[common.Hash]*masternode.MasternodePaymentVote),
 		blocks:            make(map[uint64]*MasternodeBlockPayees),
 		lastVote:          make(map[common.Hash]*big.Int),
 		didNotVote:        make(map[common.Hash]*big.Int),
@@ -74,18 +70,18 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 }
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
-func (mp *MasternodePayments) Add(hash common.Hash, vote *MasternodePaymentVote) bool {
+func (mp *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodePaymentVote) bool {
 
 	if mp.Has(hash) {
 		return false
 	}
 	mp.votes[hash] = vote
 
-	if payee := mp.blocks[vote.number.Uint64()]; payee == nil {
-		blockPayees := NewMasternodeBlockPayees(vote.number)
+	if payee := mp.blocks[vote.Number.Uint64()]; payee == nil {
+		blockPayees := NewMasternodeBlockPayees(vote.Number)
 		blockPayees.Add(vote)
 	} else {
-		mp.blocks[vote.number.Uint64()].Add(vote)
+		mp.blocks[vote.Number.Uint64()].Add(vote)
 	}
 
 	return true
@@ -109,7 +105,7 @@ func (mp *MasternodePayments) Has(hash common.Hash) bool {
 
 func (mp *MasternodePayments) Clear() {
 	mp.blocks = make(map[uint64]*MasternodeBlockPayees)
-	mp.votes = make(map[common.Hash]*MasternodePaymentVote)
+	mp.votes = make(map[common.Hash]*masternode.MasternodePaymentVote)
 
 }
 
@@ -134,18 +130,18 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 		return false
 	}
 
-	vote := NewMasternodePaymentVote(block.Number(), info)
+	vote := masternode.NewMasternodePaymentVote(block.Number(), info)
 	mp.Add(block.Hash(), vote)
 
 	return true
 }
 
 //Handle the voting of other masternodes
-func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) bool {
+func (m *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote) bool {
 
 	if m.votes[vote.Hash()] != nil {
-		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.number.String())
-		return  false
+		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())
+		return false
 	}
 
 	m.votes[vote.Hash()] = vote
@@ -154,8 +150,8 @@ func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) bool {
 
 	//vote out of range
 	firstBlock := m.cachedBlockNumber.Sub(m.cachedBlockNumber, m.StorageLimit())
-	if vote.number.Cmp(firstBlock) > 0 || vote.number.Cmp(m.cachedBlockNumber.Add(m.cachedBlockNumber, big.NewInt(20))) > 0 {
-		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.number, " CacheHeight=", m.cachedBlockNumber.String())
+	if vote.Number.Cmp(firstBlock) > 0 || vote.Number.Cmp(m.cachedBlockNumber.Add(m.cachedBlockNumber, big.NewInt(20))) > 0 {
+		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", m.cachedBlockNumber.String())
 		return false
 	}
 
@@ -169,7 +165,7 @@ func (m *MasternodePayments) Vote(vote *MasternodePaymentVote) bool {
 	//checkSignature
 	//if vote.CheckSignature(vote.masternode.MasternodeInfo().ID)
 
-	log.Info("masternode_winner vote: ", "address:", vote.masternode.Account.String(), "blockHeight:", vote.number, "cacheHeight:", m.cachedBlockNumber.String(), "Hash:", vote.Hash().String())
+	log.Info("masternode_winner vote: ", "address:", vote.Masternode.Account.String(), "blockHeight:", vote.Number, "cacheHeight:", m.cachedBlockNumber.String(), "Hash:", vote.Hash().String())
 
 	if m.Add(vote.Hash(), vote) {
 		//Relay
@@ -193,10 +189,10 @@ func (m *MasternodePayments) StorageLimit() *big.Int {
 
 type MasternodePayee struct {
 	account common.Address
-	votes   []*MasternodePaymentVote
+	votes   []*masternode.MasternodePaymentVote
 }
 
-func NewMasternodePayee(address common.Address, vote *MasternodePaymentVote) *MasternodePayee {
+func NewMasternodePayee(address common.Address, vote *masternode.MasternodePaymentVote) *MasternodePayee {
 
 	mp := &MasternodePayee{
 		account: address,
@@ -205,7 +201,7 @@ func NewMasternodePayee(address common.Address, vote *MasternodePaymentVote) *Ma
 	return mp
 }
 
-func (mp *MasternodePayee) Add(vote *MasternodePaymentVote) {
+func (mp *MasternodePayee) Add(vote *masternode.MasternodePaymentVote) {
 
 	mp.votes = append(mp.votes, vote)
 }
@@ -214,7 +210,7 @@ func (mp *MasternodePayee) Count() int {
 	return len(mp.votes)
 }
 
-func (mp *MasternodePayee) Votes() []*MasternodePaymentVote {
+func (mp *MasternodePayee) Votes() []*masternode.MasternodePaymentVote {
 	return mp.votes
 }
 
@@ -233,17 +229,17 @@ func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 }
 
 //vote
-func (mbp *MasternodeBlockPayees) Add(vote *MasternodePaymentVote) {
+func (mbp *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {
 
 	//When the masternode has been voted
 	//info := vote.masternode.MasternodeInfo()
 	for _, mp := range mbp.payees {
-		if mp.account == vote.masternode.Account {
+		if mp.account == vote.Masternode.Account {
 			mp.Add(vote)
 			return
 		}
 	}
-	payee := NewMasternodePayee(vote.masternode.Account, vote)
+	payee := NewMasternodePayee(vote.Masternode.Account, vote)
 	mbp.payees = append(mbp.payees, payee)
 
 }
@@ -278,132 +274,4 @@ func (mbp *MasternodeBlockPayees) Has(num int, address common.Address) bool {
 		}
 	}
 	return false
-}
-
-// vote for the winning payment
-type MasternodePaymentVote struct {
-	number     *big.Int //blockHeight
-	masternode *masternode.Masternode
-
-	KeySize int
-}
-
-//Voted block number,activeMasternode
-func NewMasternodePaymentVote(blockHeight *big.Int, active *masternode.Masternode) *MasternodePaymentVote {
-
-	vote := MasternodePaymentVote{
-		number:     blockHeight,
-		masternode: active,
-		KeySize:    0,
-	}
-	return &vote
-}
-
-func (mpv *MasternodePaymentVote) Hash() common.Hash {
-
-	tlvHash := rlpHash([]interface{}{
-		mpv.number,
-		mpv.masternode.ID,
-	})
-	return tlvHash
-}
-
-func (mpv *MasternodePaymentVote) CheckSignature(pubkey, signature []byte) bool {
-	return crypto.VerifySignature(pubkey, mpv.Hash().Bytes(), signature)
-}
-
-// Implements the Verify method from SigningMethod
-// For this verify method, key must be an ecdsa.PublicKey struct
-func (m *MasternodePaymentVote) Verify(sighash []byte, signature string, key interface{}) error {
-
-	// Get the key
-	var ecdsaKey *ecdsa.PublicKey
-	switch k := key.(type) {
-	case *ecdsa.PublicKey:
-		ecdsaKey = k
-	default:
-		return errInvalidKeyType
-	}
-
-	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
-	s := big.NewInt(0).SetBytes(sighash[m.KeySize:])
-
-	// Verify the signature
-	if verifystatus := ecdsa.Verify(ecdsaKey, sighash, r, s); verifystatus == true {
-		return nil
-	} else {
-		return errECDSAVerification
-	}
-}
-
-// Implements the Sign method from SigningMethod
-// For this signing method, key must be an ecdsa.PrivateKey struct
-func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{}) (string, error) {
-	// Get the key
-	var ecdsaKey *ecdsa.PrivateKey
-	switch k := key.(type) {
-	case *ecdsa.PrivateKey:
-		ecdsaKey = k
-	default:
-		return "", errInvalidKeyType
-	}
-	// Sign the string and return r, s
-	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey, signingString[:]); err == nil {
-		curveBits := ecdsaKey.Curve.Params().BitSize
-		keyBytes := curveBits / 8
-		if curveBits%8 > 0 {
-			keyBytes += 1
-		}
-
-		// We serialize the outpus (r and s) into big-endian byte arrays and pad
-		// them with zeros on the left to make sure the sizes work out. Both arrays
-		// must be keyBytes long, and the output must be 2*keyBytes long.
-		rBytes := r.Bytes()
-		rBytesPadded := make([]byte, keyBytes)
-		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
-		sBytes := s.Bytes()
-		sBytesPadded := make([]byte, keyBytes)
-		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-		out := append(rBytesPadded, sBytesPadded...)
-
-		return string(out[:]), nil
-	} else {
-		return "", err
-	}
-}
-
-func (v *MasternodePaymentVote) IsVerified() bool {
-	return true
-}
-
-//TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting master node
-func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
-
-	// info := v.masternode.MasternodeInfo()
-
-	var minRequiredProtocal uint = 0
-
-	if v.number.Cmp(height) > 0 {
-		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
-	} else {
-		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
-	}
-
-	if v.masternode.ProtocolVersion < minRequiredProtocal {
-		return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", v.masternode.ProtocolVersion, minRequiredProtocal)
-	}
-
-	if v.number.Cmp(height) < 0 {
-		return true, nil
-	}
-	//v.number
-
-	//TODO:Voting validity check is not judged here
-
-	// Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
-	// Regular clients (miners included) need to verify masternode rank for future block votes only.
-
-	return true, nil
 }

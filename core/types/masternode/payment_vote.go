@@ -1,13 +1,13 @@
 package masternode
 
 import (
-	"fmt"
-	"math/big"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"errors"
-	"github.com/ethzero/go-ethzero/crypto"
+	"fmt"
 	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/crypto"
+	"math/big"
 )
 
 const (
@@ -17,8 +17,6 @@ const (
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206
 	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70208
 )
-
-
 
 var (
 	errInvalidKeyType = errors.New("key is of invalid type")

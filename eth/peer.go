@@ -175,7 +175,7 @@ func (p *peer) SendNewTxLockVote(vote *masternode.TxLockVote) error {
 }
 
 // SendNewWinnerVote propagates an winner vote to a remote masternode.
-func (p *peer) SendNewWinnerVote(winner MasternodePaymentVote) error {
+func (p *peer) SendNewWinnerVote(winner *masternode.MasternodePaymentVote) error {
 	return p2p.Send(p.rw, NewWinnerVoteMsg, winner)
 }
 

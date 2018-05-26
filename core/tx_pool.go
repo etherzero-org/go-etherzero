@@ -211,6 +211,7 @@ type TxPool struct {
 	chain        blockChain
 	gasPrice     *big.Int
 	txFrombalance *big.Int
+
 	txFeed       event.Feed
 	scope        event.SubscriptionScope
 	chainHeadCh  chan ChainHeadEvent

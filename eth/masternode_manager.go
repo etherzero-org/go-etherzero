@@ -18,19 +18,20 @@
 package eth
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"math/big"
+	"net"
 	"sort"
 	"sync"
-	"net"
-	"bytes"
-	"math/big"
-	"encoding/binary"
 
-	"github.com/pkg/errors"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/eth/fetcher"
 	"github.com/ethzero/go-ethzero/ethdb"
@@ -38,8 +39,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -69,6 +69,12 @@ type MasternodeManager struct {
 	winner *MasternodePayments
 
 	active *masternode.ActiveMasternode
+
+	scope event.SubscriptionScope
+
+	voteFeed event.Feed
+
+	winnerFeed event.Feed
 
 	SubProtocols []p2p.Protocol
 
@@ -147,6 +153,18 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 
 func (mm *MasternodeManager) Stop() {
 
+}
+
+// SubscribeTxPreEvent registers a subscription of VoteEvent and
+// starts sending event to the given channel.
+func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subscription {
+	return self.scope.Track(self.voteFeed.Subscribe(ch))
+}
+
+// SubscribeWinnerVoteEvent registers a subscription of PaymentVoteEvent and
+// starts sending event to the given channel.
+func (self *MasternodeManager) SubscribeWinnerVoteEvent(ch chan<- core.PaymentVoteEvent) event.Subscription {
+	return self.scope.Track(self.winnerFeed.Subscribe(ch))
 }
 
 func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -242,11 +260,11 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	return mm.is.ProcessTxLockVotes(votes)
 }
 
-func (mm *MasternodeManager) ProcessPaymentVotes(votes []*MasternodePaymentVote) bool {
+func (mm *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
 
-	for i,vote :=range votes{
+	for i, vote := range votes {
 		if !mm.winner.Vote(vote) {
-			log.Info("Payment Winner vote :: Block Payment winner vote failed ","vote hash:",vote.Hash().String(),"i:%s",i)
+			log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String(), "i:%s", i)
 			return false
 		}
 	}
@@ -265,7 +283,7 @@ func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 
 func (mn *MasternodeManager) updateActiveMasternode() {
 	var state int
-	
+
 	n := mn.masternodes.Node(mn.active.ID)
 	if n == nil {
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
@@ -278,7 +296,7 @@ func (mn *MasternodeManager) updateActiveMasternode() {
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
-	
+
 	mn.active.SetState(state)
 }
 func (mn *MasternodeManager) masternodeLoop() {

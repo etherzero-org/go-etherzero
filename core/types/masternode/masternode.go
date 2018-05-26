@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
+	"github.com/ethzero/go-ethzero/rlp"
 	"math/big"
 	"net"
 	"sync"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/rlp"
 )
 
 const (
@@ -72,10 +72,10 @@ func (n *Masternode) CalculateScore(hash common.Hash) *big.Int {
 }
 
 type MasternodeSet struct {
-	nodes       map[string]*Masternode
-	lock        sync.RWMutex
-	closed      bool
-	contract    *contract.Contract
+	nodes    map[string]*Masternode
+	lock     sync.RWMutex
+	closed   bool
+	contract *contract.Contract
 }
 
 func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
