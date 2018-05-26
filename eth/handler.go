@@ -31,6 +31,7 @@ import (
 	"github.com/ethzero/go-ethzero/consensus/misc"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/eth/fetcher"
 	"github.com/ethzero/go-ethzero/ethdb"
@@ -40,7 +41,6 @@ import (
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 const (
@@ -93,14 +93,15 @@ type ProtocolManager struct {
 	noMorePeers chan struct{}
 
 	// etherzero masternode
-	winner *MasternodePayments
+	winner        *MasternodePayments
+	voteCh        chan core.VoteEvent
+	paymentVoteCh chan core.PaymentVoteEvent
 
 	manager *MasternodeManager
 
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
-
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -108,16 +109,16 @@ type ProtocolManager struct {
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
-		networkId:    networkId,
-		eventMux:     mux,
-		txpool:       txpool,
-		blockchain:   blockchain,
-		chainconfig:  config,
-		peers:        newPeerSet(),
-		newPeerCh:    make(chan *peer),
-		noMorePeers:  make(chan struct{}),
-		txsyncCh:     make(chan *txsync),
-		quitSync:     make(chan struct{}),
+		networkId:   networkId,
+		eventMux:    mux,
+		txpool:      txpool,
+		blockchain:  blockchain,
+		chainconfig: config,
+		peers:       newPeerSet(),
+		newPeerCh:   make(chan *peer),
+		noMorePeers: make(chan struct{}),
+		txsyncCh:    make(chan *txsync),
+		quitSync:    make(chan struct{}),
 	}
 
 	// Figure out whether to allow fast sync or not
@@ -688,15 +689,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			p.MarkTransaction(tx.Hash())
 		}
 
-		errs:=pm.txpool.AddRemotes(txs)
+		errs := pm.txpool.AddRemotes(txs)
 		//Only the transactions that join the tx pool will start voting
-		for i,err:= range errs{
-			if err==nil{
-				log.Info("Start a voting transaction","tx Hash:",txs[i].Hash().String())
+		for i, err := range errs {
+			if err == nil {
+				log.Info("Start a voting transaction", "tx Hash:", txs[i].Hash().String())
 				pm.manager.ProcessTxVote(txs[i])
 			}
 		}
-
 
 	case p.version >= etz64 && msg.Code == NewTxLockVoteMsg:
 		// A batch of vote arrived to one of our previous requests
@@ -785,6 +785,14 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 	}
 }
 
+func (self *ProtocolManager) BroadcastVote(hash common.Hash,vote *masternode.TxLockVote){
+
+}
+
+func (self *ProtocolManager) BroadcastPaymentVote(hash common.Hash,paymentvote *masternode.MasternodePaymentVote){
+
+}
+
 func (self *ProtocolManager) txBroadcastLoop() {
 	for {
 		select {
@@ -794,6 +802,14 @@ func (self *ProtocolManager) txBroadcastLoop() {
 		// Err() channel will be closed when unsubscribing.
 		case <-self.txSub.Err():
 			return
+		}
+	}
+}
+
+func (self *ProtocolManager) voteBroadcastLoop() {
+	for {
+		select {
+		case event := <-self.voteCh:
 		}
 	}
 }
@@ -844,7 +860,6 @@ func (self *ProtocolManager) txBroadcastLoop() {
 //	}
 //	return res, err
 //}
-
 
 func (self *ProtocolManager) MasternodeManager(manager *MasternodeManager) {
 

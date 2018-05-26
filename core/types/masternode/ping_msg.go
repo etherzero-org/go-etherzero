@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"net"
+	"time"
+
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/crypto/secp256k1"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rlp"
-	"math/big"
-	"net"
-	"time"
 )
 
 type PingMsg struct {

@@ -19,16 +19,16 @@ package eth
 
 import (
 	"fmt"
-	"math/big"
 	"sort"
 	"sync"
-	"sync/atomic"
-
+	"net"
 	"bytes"
+	"math/big"
 	"encoding/binary"
+
+	"github.com/pkg/errors"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
-	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/eth/downloader"
@@ -38,9 +38,8 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
-	"github.com/pkg/errors"
-	"net"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 )
 
 const (
@@ -110,32 +109,6 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 	}
-
-	//if len(manager.SubProtocols) == 0 {
-	//	return nil, errIncompatibleConfig
-	//}
-	validator := func(header *types.Header) error {
-		return engine.VerifyHeader(blockchain, header, true)
-	}
-	heighter := func() uint64 {
-		return blockchain.CurrentBlock().NumberU64()
-	}
-
-	inserter := func(blocks types.Blocks) (int, error) {
-		// If fast sync is running, deny importing weird blocks
-		if atomic.LoadUint32(&manager.fastSync) == 1 {
-			log.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
-			return 0, nil
-		}
-		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
-		return manager.blockchain.InsertChain(blocks)
-	}
-
-	vote := func(block *types.Block) bool {
-		return manager.winner.ProcessBlock(block)
-	}
-
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
 
 	return manager, nil
 }

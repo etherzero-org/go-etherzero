@@ -18,15 +18,16 @@
 package eth
 
 import (
+	"fmt"
+	"errors"
+	"math/big"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"errors"
-	"fmt"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/log"
-	"math/big"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 

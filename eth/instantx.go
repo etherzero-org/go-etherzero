@@ -19,11 +19,12 @@ package eth
 
 import (
 	"fmt"
+
+	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
