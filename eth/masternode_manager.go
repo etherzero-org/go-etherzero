@@ -40,6 +40,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/pkg/errors"
+	"math/rand"
 )
 
 const (
@@ -278,6 +279,32 @@ func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 	return true
 }
 
+// If server is masternode, connect one masternode at least
+func(mn *MasternodeManager) checkPeers() {
+	if mn.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
+		return
+	}
+	for _, p := range mn.peers.peers {
+		if p.isMasternode {
+			return
+		}
+	}
+
+	nodes := make(map[int]*masternode.Masternode)
+	var i int = 0
+	for _, p := range mn.masternodes.Nodes() {
+		if p.State == masternode.MasternodeConnected && p.ID != mn.active.ID {
+			nodes[i] = p
+			i++
+		}
+	}
+	if i <= 0 {
+		return
+	}
+	key := rand.Intn(i-1)
+	mn.srvr.AddPeer(nodes[key].Node)
+}
+
 func (mn *MasternodeManager) updateActiveMasternode() {
 	var state int
 
@@ -300,6 +327,7 @@ func (mn *MasternodeManager) masternodeLoop() {
 	mn.updateActiveMasternode()
 	if mn.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternodeCheck true")
+		mn.checkPeers()
 	} else if !mn.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
 		var misc [32]byte
 		misc[0] = 1
