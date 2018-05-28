@@ -146,13 +146,13 @@ func (mm *MasternodeManager) Stop() {
 // SubscribeTxPreEvent registers a subscription of VoteEvent and
 // starts sending event to the given channel.
 func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subscription {
-	return self.scope.Track(self.voteFeed.Subscribe(ch))
+	return self.is.SubscribeVoteEvent(ch)
 }
 
 // SubscribeWinnerVoteEvent registers a subscription of PaymentVoteEvent and
 // starts sending event to the given channel.
 func (self *MasternodeManager) SubscribeWinnerVoteEvent(ch chan<- core.PaymentVoteEvent) event.Subscription {
-	return self.scope.Track(self.winnerFeed.Subscribe(ch))
+	return self.winner.SubscribeWinnerVoteEvent(ch)
 }
 
 func (mm *MasternodeManager) newPeer(p *peer) {
@@ -251,7 +251,7 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 		if !mm.is.ProcessTxLockVote(votes[i]) {
 			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
 		}else{
-			mm.voteFeed.Send(core.VoteEvent{votes[i]})
+			mm.winner.winnerFeed.Send(core.VoteEvent{votes[i]})
 		}
 	}
 

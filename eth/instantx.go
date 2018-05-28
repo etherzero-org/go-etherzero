@@ -26,6 +26,8 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/event"
+	"github.com/ethzero/go-ethzero/core"
 )
 
 type InstantSend struct {
@@ -48,7 +50,8 @@ type InstantSend struct {
 	masternodeOrphanVotes map[common.Hash]int
 	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
 	log log.Logger
-
+	voteFeed     event.Feed
+	scope event.SubscriptionScope
 	active *masternode.ActiveMasternode
 }
 
@@ -108,27 +111,30 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 		}
 	}
 
-	t := masternode.NewTxLockVote(txHash, is.active.ID) //构建一个投票对象
+	vote := masternode.NewTxLockVote(txHash, is.active.ID) //构建一个投票对象
 
 	if alreadyVoted {
 		return
 	}
-	signByte, err := t.Sign(t.Hash(), is.active.PrivateKey)
+	signByte, err := vote.Sign(vote.Hash(), is.active.PrivateKey)
 
 	if err != nil {
 		return
 	}
-	sigErr := t.Verify(t.Hash().Bytes(), signByte, is.active.PrivateKey.Public())
+	sigErr := vote.Verify(vote.Hash().Bytes(), signByte, is.active.PrivateKey.Public())
 
 	if sigErr != nil {
 		return
 	}
-	tvHash := t.Hash()
 
-	is.txLockedVotes[tvHash] = t
+	// vote constructed sucessfully, let's store and relay it
+	tvHash := vote.Hash()
+	is.voteFeed.Send(vote)
+
+	is.txLockedVotes[tvHash] = vote
 	txLock := is.Candidates[txHash]
 
-	if txLock.AddVote(t) {
+	if txLock.AddVote(vote) {
 		is.log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
 		is.voteds[txHash] = 1
 	}
@@ -218,6 +224,19 @@ func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 	}
 	return is.lockedTxs[hash] != nil
 
+}
+
+
+func(is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote){
+
+	is.voteFeed.Send(core.VoteEvent{vote})
+}
+
+
+// SubscribeTxPreEvent registers a subscription of VoteEvent and
+// starts sending event to the given channel.
+func (self *InstantSend) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subscription {
+	return self.scope.Track(self.voteFeed.Subscribe(ch))
 }
 
 func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {

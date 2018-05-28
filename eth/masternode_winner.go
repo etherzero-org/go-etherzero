@@ -25,6 +25,8 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/core"
+	"github.com/ethzero/go-ethzero/event"
 )
 
 const (
@@ -53,6 +55,9 @@ type MasternodePayments struct {
 	blocks     map[uint64]*MasternodeBlockPayees
 	lastVote   map[common.Hash]*big.Int
 	didNotVote map[common.Hash]*big.Int
+	scope event.SubscriptionScope
+
+	winnerFeed event.Feed
 }
 
 func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *MasternodePayments {
@@ -76,6 +81,7 @@ func (mp *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodeP
 		return false
 	}
 	mp.votes[hash] = vote
+	mp.winnerFeed.Send(vote)
 
 	if payee := mp.blocks[vote.Number.Uint64()]; payee == nil {
 		blockPayees := NewMasternodeBlockPayees(vote.Number)
@@ -131,6 +137,7 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 	}
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(), info)
+	// vote constructed sucessfully, let's store and relay it
 	mp.Add(block.Hash(), vote)
 
 	return true
@@ -169,7 +176,7 @@ func (m *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote) bool {
 
 	if m.Add(vote.Hash(), vote) {
 		//Relay
-
+		m.winnerFeed.Send(vote)
 	}
 
 	return true
@@ -186,6 +193,18 @@ func (m *MasternodePayments) StorageLimit() *big.Int {
 	}
 	return m.minBlocksToStore
 }
+
+// SubscribeWinnerVoteEvent registers a subscription of PaymentVoteEvent and
+// starts sending event to the given channel.
+func (self *MasternodePayments) SubscribeWinnerVoteEvent(ch chan<- core.PaymentVoteEvent) event.Subscription {
+	return self.scope.Track(self.winnerFeed.Subscribe(ch))
+}
+
+func(is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVote){
+
+	is.winnerFeed.Send(core.PaymentVoteEvent{vote})
+}
+
 
 type MasternodePayee struct {
 	account common.Address
@@ -227,6 +246,8 @@ func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 	}
 	return payee
 }
+
+
 
 //vote
 func (mbp *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {
