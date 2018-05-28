@@ -50,6 +50,11 @@ const (
 	// txChanSize is the size of channel listening to TxPreEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
+
+	// temporarily set to 4096
+	voteChanSize = 4096
+	// temporarily set to 4096
+	winnerChanSize = 4096
 )
 
 var (
@@ -93,9 +98,11 @@ type ProtocolManager struct {
 	noMorePeers chan struct{}
 
 	// etherzero masternode
-	winner        *MasternodePayments
-	voteCh        chan core.VoteEvent
-	paymentVoteCh chan core.PaymentVoteEvent
+	winner    *MasternodePayments
+	voteCh    chan core.VoteEvent
+	voteSub   event.Subscription
+	winnerCh  chan core.PaymentVoteEvent
+	winnerSub event.Subscription
 
 	manager *MasternodeManager
 
@@ -225,6 +232,16 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// broadcast mined blocks
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
+
+	// broadcast votes
+	pm.voteCh = make(chan core.VoteEvent, voteChanSize)
+	pm.voteSub = pm.manager.SubscribeVoteEvent(pm.voteCh)
+	go pm.voteBroadcastLoop()
+
+	// broadcast payment votes
+	pm.winnerCh = make(chan core.PaymentVoteEvent, winnerChanSize)
+	pm.winnerSub = pm.manager.SubscribeWinnerVoteEvent(pm.winnerCh)
+	go pm.winnerVoteBroadcastLoop()
 
 	// start sync handlers
 	go pm.syncer()
@@ -704,15 +721,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		for i, vote := range votes {
+			if vote == nil {
+				return errResp(ErrDecode, "vote %d is nil", i)
+			}
+			p.MarkVote(vote.Hash())
+		}
 		pm.manager.ProcessTxLockVotes(votes)
 
 	case p.version >= etz64 && msg.Code == NewWinnerVoteMsg:
 		// A batch of PaymentVote arrived to one of our previous requests
-		var vote *MasternodePaymentVote
-		if err := msg.Decode(&vote); err != nil {
+		var votes []*masternode.MasternodePaymentVote
+		if err := msg.Decode(&votes); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.manager.ProcessPaymentVotes(vote)
+		for _, vote := range votes {
+			p.MarkWinnerVote(vote.Hash())
+		}
+		pm.manager.ProcessPaymentVotes(votes)
 
 	//case msg.Code == MasternodePingMsg:
 	//	var ping masternode.PingMsg;
@@ -785,12 +811,26 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 	}
 }
 
-func (self *ProtocolManager) BroadcastVote(hash common.Hash,vote *masternode.TxLockVote){
+// BroadcastVote will propagate a txVote to all Masternodes which are not known to
+// already have the given txVote
+func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *masternode.TxLockVote) {
+	peers := self.peers.PeersWithoutVote(hash)
 
+	for _, peer := range peers {
+		peer.SendNewTxLockVote(vote)
+	}
+	log.Trace("Broadcast vote", "hash", hash, "recipients", len(peers))
 }
 
-func (self *ProtocolManager) BroadcastPaymentVote(hash common.Hash,paymentvote *masternode.MasternodePaymentVote){
+// BroadcastPaymentVote will propagate a WinnerVote to all Masternodes which are not known to
+// already have the given WinnerVote
+func (self *ProtocolManager) BroadcastPaymentVote(hash common.Hash, paymentvote *masternode.MasternodePaymentVote) {
+	peers := self.peers.PeersWithoutWinnerVote(hash)
 
+	for _, peer := range peers {
+		peer.SendNewWinnerVote(paymentvote)
+	}
+	log.Trace("Broadcast Winner vote", "hash", hash.String(), "recipients", len(peers))
 }
 
 func (self *ProtocolManager) txBroadcastLoop() {
@@ -809,7 +849,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 func (self *ProtocolManager) voteBroadcastLoop() {
 	for {
 		select {
-		case  <-self.voteCh:
+		case event := <-self.voteCh:
 		}
 	}
 }
