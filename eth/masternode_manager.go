@@ -257,6 +257,15 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 		return false
 	}
 	log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
+
+	for i := range votes {
+		if !mm.is.ProcessTxLockVote(votes[i]) {
+			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
+		}else{
+			mm.voteFeed.Send(core.VoteEvent{votes[i]})
+		}
+	}
+
 	return mm.is.ProcessTxLockVotes(votes)
 }
 

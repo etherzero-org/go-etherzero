@@ -25,6 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/core"
 )
 
 const (
