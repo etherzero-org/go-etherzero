@@ -492,7 +492,7 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 		return err
 	}
 
-	s.masternodeManager.Start(srvr, contract)
+	s.masternodeManager.Start(srvr, contract, s.protocolManager.peers)
 
 	return nil
 }

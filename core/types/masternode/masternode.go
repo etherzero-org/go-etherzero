@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
+	"github.com/ethzero/go-ethzero/rlp"
 	"math/big"
 	"net"
 	"sync"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/rlp"
 )
 
 const (
@@ -35,14 +35,15 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 type Masternode struct {
-	ID                         string
-	Node                       *discover.Node
-	Account                    common.Address
-	OriginBlock                uint64
-	Height                     *big.Int
-	State                      int
+	ID              string
+	Node            *discover.Node
+	Account         common.Address
+	OriginBlock     uint64
+	Height          *big.Int
+	State           int
+	ProtocolVersion uint
+
 	CollateralMinConfBlockHash common.Hash
-	ProtocolVersion            uint
 }
 
 func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
@@ -72,10 +73,10 @@ func (n *Masternode) CalculateScore(hash common.Hash) *big.Int {
 }
 
 type MasternodeSet struct {
-	nodes       map[string]*Masternode
-	lock        sync.RWMutex
-	closed      bool
-	contract    *contract.Contract
+	nodes    map[string]*Masternode
+	lock     sync.RWMutex
+	closed   bool
+	contract *contract.Contract
 }
 
 func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
@@ -133,15 +134,17 @@ func (ns *MasternodeSet) Unregister(id string) error {
 	return nil
 }
 
+func (ns *MasternodeSet) CheckNodeID(nodeId discover.NodeID) bool {
+	id := GetMasternodeID(nodeId)
+	return ns.Node(id) != nil
+}
+
 // Peer retrieves the registered peer with the given id.
 func (ns *MasternodeSet) Node(id string) *Masternode {
 	ns.lock.RLock()
 	defer ns.lock.RUnlock()
 
-	if v, ok := ns.nodes[id]; ok {
-		return v
-	}
-	return nil
+	return ns.nodes[id]
 }
 
 func (ns *MasternodeSet) SetState(id string, state int) bool {

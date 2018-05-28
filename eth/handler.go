@@ -207,7 +207,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if err := pm.peers.Unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
 	}
-	pm.manager.masternodes.SetState(id, masternode.MasternodeDisconnected)
+	pm.manager.removePeer(id)
 	// Hard disconnect at the networking layer
 	if peer != nil {
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
@@ -320,7 +320,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		}()
 	}
 
-	pm.manager.masternodes.SetState(p.id, masternode.MasternodeConnected)
+	pm.manager.newPeer(p)
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
@@ -809,7 +809,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 func (self *ProtocolManager) voteBroadcastLoop() {
 	for {
 		select {
-		case event := <-self.voteCh:
+		case  <-self.voteCh:
 		}
 	}
 }

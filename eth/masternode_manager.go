@@ -103,7 +103,6 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		txpool:      txpool,
 		blockchain:  blockchain,
 		chainconfig: config,
-		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
@@ -114,25 +113,13 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 }
 
 func (mm *MasternodeManager) removePeer(id string) {
-	// Short circuit if the peer was already removed
-	peer := mm.peers.Peer(id)
-	if peer == nil {
-		return
-	}
-	log.Debug("Removing Etherzero masternode peer", "peer", id)
-
-	if err := mm.peers.Unregister(id); err != nil {
-		log.Error("Peer removal failed", "peer", id, "err", err)
-	}
-	// Hard disconnect at the networking layer
-	if peer != nil {
-		peer.Peer.Disconnect(p2p.DiscUselessPeer)
-	}
+	mm.masternodes.SetState(id, masternode.MasternodeDisconnected)
 }
 
-func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract) {
+func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract, peers *peerSet) {
 	mm.contract = contract
 	mm.srvr = srvr
+	mm.peers = peers
 
 	mns, err := masternode.NewMasternodeSet(contract)
 	if err != nil {
@@ -149,8 +136,9 @@ func (mm *MasternodeManager) Stop() {
 
 }
 
-func (mm *MasternodeManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
-	return newPeer(pv, p, newMeteredMsgWriter(rw))
+func (mm *MasternodeManager) newPeer(p *peer) {
+	p.SetMasternode(true)
+    mm.masternodes.SetState(p.id, masternode.MasternodeConnected)
 }
 
 // Deterministically select the oldest/best masternode to pay on the network
