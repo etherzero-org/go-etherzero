@@ -850,6 +850,23 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.voteCh:
+			self.BroadcastVote(event.Vote.Hash(), event.Vote)
+
+		// Err() channel will be closed when unsubscribing.
+		case <-self.voteSub.Err():
+			return
+		}
+	}
+}
+
+func (self *ProtocolManager) winnerVoteBroadcastLoop() {
+	for {
+		select {
+		case event := <-self.winnerCh:
+			self.BroadcastPaymentVote(event.PaymentVote.Hash(), event.PaymentVote)
+
+		case <-self.winnerSub.Err():
+			return
 		}
 	}
 }
