@@ -116,6 +116,7 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		quitSync:    make(chan struct{}),
 	}
 
+	manager.masternodes = &masternode.MasternodeSet{}
 	manager.is=NewInstantx()
 	manager.winner=NewMasternodePayments(manager,blockchain.CurrentBlock().Number())
 
