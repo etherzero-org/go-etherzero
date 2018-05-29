@@ -155,9 +155,9 @@ func (tc *TxLockCondidate) TxLockRequest() *types.Transaction {
 	return tc.txLockRequest
 }
 
-func NewTxLockCondidate(request *types.Transaction) TxLockCondidate {
+func NewTxLockCondidate(request *types.Transaction) *TxLockCondidate {
 
-	txLockCondidate := TxLockCondidate{
+	txLockCondidate := &TxLockCondidate{
 		confirmedHeight: -1,
 		createdTime:     time.Now(),
 		txLockRequest:   request,

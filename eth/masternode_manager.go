@@ -116,6 +116,9 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		quitSync:    make(chan struct{}),
 	}
 
+	manager.is=NewInstantx()
+	manager.winner=NewMasternodePayments(manager,blockchain.CurrentBlock().Number())
+
 	return manager, nil
 }
 
@@ -251,6 +254,7 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 		if !mm.is.ProcessTxLockVote(votes[i]) {
 			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
 		}else{
+			//Vote valid, let us forward it
 			mm.winner.winnerFeed.Send(core.VoteEvent{votes[i]})
 		}
 	}

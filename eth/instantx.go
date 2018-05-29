@@ -28,6 +28,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/core"
+
 )
 
 type InstantSend struct {
@@ -42,18 +43,39 @@ type InstantSend struct {
 
 	//std::map<COutPoint, std::set<uint256> > mapVotedOutpoints; // utxo - tx hash set
 	//std::map<COutPoint, uint256> mapLockedOutpoints; // utxo - tx hash
-	voteds    map[common.Hash]int                  //用于缓存本地的投票对象，实际只有一笔
+	all    map[common.Hash]int                  // All votes to allow lookups
 	lockedTxs map[common.Hash]*types.Transaction //
 
 	//track masternodes who voted with no txreq (for DOS protection)
 	//追踪没有txreq投票的masternodes（用于DOS保护）
 	masternodeOrphanVotes map[common.Hash]int
+
 	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
-	log log.Logger
+
 	voteFeed     event.Feed
+
 	scope event.SubscriptionScope
-	active *masternode.ActiveMasternode
+
+	Active *masternode.ActiveMasternode
 }
+
+func NewInstantx() *InstantSend{
+
+	is:=&InstantSend{
+		accepted:make(map[common.Hash]*types.Transaction),
+		rejected:make(map[common.Hash]*types.Transaction),
+		txLockedVotes:make(map[common.Hash]*masternode.TxLockVote),
+		txLockVotesOrphan:make(map[common.Hash]*masternode.TxLockVote),
+		Candidates:make(map[common.Hash]*masternode.TxLockCondidate),
+		all:make(map[common.Hash]int),
+		lockedTxs:make(map[common.Hash]*types.Transaction),
+		masternodeOrphanVotes:make(map[common.Hash]int),
+	}
+
+	return is
+
+}
+
 
 //received a consensus TxLockRequest
 func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
@@ -64,17 +86,17 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
 
 	if _, ok := is.lockedTxs[txHash]; !ok {
 		// Conflicting with complete lock, proceed to see if we should cancel them both
-		is.log.Info("WARNING: Found conflicting completed Transaction Lock", "InstantSend  txid=", txHash, "completed lock txid=", is.lockedTxs[txHash])
+		log.Info("WARNING: Found conflicting completed Transaction Lock", "InstantSend  txid=", txHash, "completed lock txid=", is.lockedTxs[txHash])
 	}
 
 	// Check to see if there are votes for conflicting request,
 	// if so - do not fail, just warn user
-	if _, ok := is.voteds[txHash]; !ok {
-		is.log.Info("WARNING:Double spend attempt!", "InstantSend txid=", txHash, "Voted txid count :", is.voteds[txHash])
+	if _, ok := is.all[txHash]; !ok {
+		log.Info("WARNING:Double spend attempt!", "InstantSend txid=", txHash, "Voted txid count :", is.all[txHash])
 	}
 
 	if !is.CreateTxLockCandidate(request) {
-		is.log.Info("CreateTxLockCandidate failed, txid=", txHash)
+		log.Info("CreateTxLockCandidate failed, txid=", txHash)
 		return false
 	}
 	// Masternodes will sometimes propagate votes before the transaction is known to the client.
@@ -95,33 +117,33 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 	txlockRequest := condidate.TxLockRequest()
 	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
-		is.log.Info("nonce error")
+		log.Info("nonce error")
 		return
 	}
 
 	var alreadyVoted bool = false
 	//info := is.active.MasternodeInfo()
 
-	if _, ok := is.voteds[txHash]; !ok {
+	if _, ok := is.all[txHash]; !ok {
 		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
-		if txLockCondidate.HasMasternodeVoted(is.active.ID) {
+		if txLockCondidate.HasMasternodeVoted(is.Active.ID) {
 			alreadyVoted = true
-			is.log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.active.ID)
+			log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.Active.ID)
 			return
 		}
 	}
 
-	vote := masternode.NewTxLockVote(txHash, is.active.ID) //构建一个投票对象
+	vote := masternode.NewTxLockVote(txHash, is.Active.ID) //构建一个投票对象
 
 	if alreadyVoted {
 		return
 	}
-	signByte, err := vote.Sign(vote.Hash(), is.active.PrivateKey)
+	signByte, err := vote.Sign(vote.Hash(), is.Active.PrivateKey)
 
 	if err != nil {
 		return
 	}
-	sigErr := vote.Verify(vote.Hash().Bytes(), signByte, is.active.PrivateKey.Public())
+	sigErr := vote.Verify(vote.Hash().Bytes(), signByte, is.Active.PrivateKey.Public())
 
 	if sigErr != nil {
 		return
@@ -135,8 +157,8 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 	txLock := is.Candidates[txHash]
 
 	if txLock.AddVote(vote) {
-		is.log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
-		is.voteds[txHash] = 1
+		log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
+		is.all[txHash] = 1
 	}
 
 }
@@ -159,11 +181,11 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 	txhash := request.Hash()
 
 	if is.Candidates == nil {
-		is.log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
+		log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
 		txlockcondidate := masternode.NewTxLockCondidate(request)
-		is.Candidates[txhash] = &txlockcondidate
+		is.Candidates[txhash] = txlockcondidate
 	} else {
-		is.log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
+		log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
 	}
 
 	return true
@@ -174,9 +196,9 @@ func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	txhash := vote.Hash()
 	txLockCondidate := is.Candidates[txhash]
 
-	is.log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txhash.String())
-	if _, ok := is.voteds[txhash]; !ok {
-		is.voteds[txhash]++
+	log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txhash.String())
+	if _, ok := is.all[txhash]; !ok {
+		is.all[txhash]++
 	}
 	if txLockCondidate.AddVote(vote) {
 		return false
@@ -184,7 +206,7 @@ func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 
 	signatures := txLockCondidate.CountVotes()
 	signaturesMax := txLockCondidate.MaxSignatures()
-	is.log.Info("ProcessTxLockVote Transaction Lock signatures count:", signatures, "/", signaturesMax, ",vote Hash:", vote.Hash().String())
+	log.Info("ProcessTxLockVote Transaction Lock signatures count:", signatures, "/", signaturesMax, ",vote Hash:", vote.Hash().String())
 
 	is.TryToFinalizeLockCandidate(txLockCondidate)
 
@@ -194,7 +216,7 @@ func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 func (is *InstantSend) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 	for i := range votes {
 		if !is.ProcessTxLockVote(votes[i]) {
-			is.log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
+			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
 		}
 	}
 	return true
@@ -226,6 +248,15 @@ func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 
 }
 
+func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
+	txLockRequest := condidate.TxLockRequest()
+
+	txHash := txLockRequest.Hash()
+	if condidate.IsReady() {
+		is.lockedTxs[txHash] = txLockRequest
+	}
+}
+
 
 func(is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote){
 
@@ -239,14 +270,6 @@ func (self *InstantSend) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subs
 	return self.scope.Track(self.voteFeed.Subscribe(ch))
 }
 
-func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
-	txLockRequest := condidate.TxLockRequest()
-
-	txHash := txLockRequest.Hash()
-	if condidate.IsReady() {
-		is.lockedTxs[txHash] = txLockRequest
-	}
-}
 
 func (is *InstantSend) Have(hash common.Hash) bool {
 	return is.lockedTxs[hash] != nil
@@ -254,7 +277,7 @@ func (is *InstantSend) Have(hash common.Hash) bool {
 
 func (is *InstantSend) String() string {
 
-	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.voteds))
+	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.all))
 
 	return str
 }
