@@ -100,8 +100,8 @@ type MasternodeManager struct {
 	srvr     *p2p.Server
 }
 
-// NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
-// with the ethereum network.
+// NewProtocolManager returns a new Masternode sub protocol manager. The Masternode sub protocol manages peers capable
+// with the ETZ-Masternode network.
 func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
@@ -114,11 +114,11 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		masternodes: &masternode.MasternodeSet{},
 	}
 
-	manager.masternodes = &masternode.MasternodeSet{}
-	manager.is=NewInstantx()
-	manager.winner=NewMasternodePayments(manager,blockchain.CurrentBlock().Number())
+	manager.is = NewInstantx()
+	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number())
 
 	return manager, nil
 }
@@ -131,7 +131,7 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 	mm.contract = contract
 	mm.srvr = srvr
 	mm.peers = peers
-
+	log.Trace("MasternodeManqager start ")
 	mns, err := masternode.NewMasternodeSet(contract)
 	if err != nil {
 		log.Error("masternode.NewMasternodeSet", "error", err)
@@ -139,6 +139,8 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 	mm.masternodes = mns
 
 	mm.active = masternode.NewActiveMasternode(srvr)
+
+	mm.is.Active = mm.active
 
 	go mm.masternodeLoop()
 }
@@ -174,13 +176,15 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 		paids        []int
 		tenthNetWork = mm.masternodes.Len() / 10
 		countTenth   = 0
-		highest      *big.Int
+		highest=big.NewInt(0)
 		winner       *masternode.Masternode
-		sortMap      map[int]*masternode.Masternode
 	)
+
+	sortMap:=make(map[int]*masternode.Masternode)
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
+	fmt.Printf(" GetNextWinner masternodes.nodes %d \n",len(mm.masternodes.Nodes()))
 	for _, node := range mm.masternodes.Nodes() {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
@@ -190,7 +194,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	sort.Ints(paids)
 
 	for _, i := range paids {
-		fmt.Printf("%s\t%d\n", i, sortMap[i].CalculateScore(block))
+		fmt.Printf("GetNextWinner %s\t %d\n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
@@ -254,7 +258,7 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	for i := range votes {
 		if !mm.is.ProcessTxLockVote(votes[i]) {
 			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
-		}else{
+		} else {
 			//Vote valid, let us forward it
 			mm.winner.winnerFeed.Send(core.VoteEvent{votes[i]})
 		}
@@ -285,7 +289,7 @@ func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 }
 
 // If server is masternode, connect one masternode at least
-func(mn *MasternodeManager) checkPeers() {
+func (mn *MasternodeManager) checkPeers() {
 	if mn.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
 		return
 	}
@@ -306,7 +310,7 @@ func(mn *MasternodeManager) checkPeers() {
 	if i <= 0 {
 		return
 	}
-	key := rand.Intn(i-1)
+	key := rand.Intn(i - 1)
 	mn.srvr.AddPeer(nodes[key].Node)
 }
 

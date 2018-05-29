@@ -185,11 +185,13 @@ func (m *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote) bool {
 
 func (m *MasternodePayments) StorageLimit() *big.Int {
 
-	count := m.manager.masternodes.Len()
-	size := big.NewInt(1).Mul(m.storageCoeff, big.NewInt(int64(count)))
+	if m.manager.masternodes != nil{
+		count := m.manager.masternodes.Len()
+		size := big.NewInt(1).Mul(m.storageCoeff, big.NewInt(int64(count)))
 
-	if size.Cmp(m.minBlocksToStore) > 0 {
-		return size
+		if size.Cmp(m.minBlocksToStore) > 0 {
+			return size
+		}
 	}
 	return m.minBlocksToStore
 }
@@ -205,6 +207,15 @@ func(is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVot
 	is.winnerFeed.Send(core.PaymentVoteEvent{vote})
 }
 
+
+// heigth is blockNumber , address is masternode account
+func (mp *MasternodePayments) BlockWinner(height *big.Int,address common.Address)(common.Address,bool){
+
+	if mp.blocks[height.Uint64()] != nil{
+		return mp.blocks[height.Uint64()].Best()
+	}
+	return common.Address{},false
+}
 
 type MasternodePayee struct {
 	account common.Address

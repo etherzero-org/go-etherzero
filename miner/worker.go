@@ -497,11 +497,20 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
+
+	fmt.Printf("worker.go \n Header.Number:%v,IsEthzeroMasternode:%v \n ",header.Number,self.chain.Config().IsEthzeroMasternode(header.Number))
+
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
-		if node, err := self.eth.GetWinner(); err != nil {
+		node, err := self.eth.GetWinner();
+		if  err != nil {
+			fmt.Printf("GetWinner successed,node:%v,ID:%v\n",node.Account.String(),node.ID)
+			log.Info("GetWinner successed,node:%v,ID:%v\n",node.Account.String(),node.ID)
 			work.Block.Masternode = node.Account
 			blockReward := masternodeReward
 			work.state.AddBalance(work.Block.Masternode, blockReward)
+		}else{
+			fmt.Printf("getWinner err:%v\n",err)
+			log.Info("GetWinner error:\n",err)
 		}
 	}
 

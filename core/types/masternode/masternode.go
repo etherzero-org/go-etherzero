@@ -55,6 +55,7 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 		Account:         account,
 		OriginBlock:     block,
 		State:           MasternodeUnconnected,
+		Height:			 big.NewInt(-1),
 		ProtocolVersion: 64,
 	}
 }
@@ -200,7 +201,11 @@ func (ns *MasternodeSet) Nodes() map[string]*Masternode {
 }
 
 func (ns *MasternodeSet) Len() int {
-	return len(ns.nodes)
+
+	if ns.nodes != nil{
+		return len(ns.nodes)
+	}
+	return 0
 }
 
 func GetMasternodeID(ID discover.NodeID) string {

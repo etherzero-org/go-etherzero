@@ -69,11 +69,11 @@ type Ethereum struct {
 	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	// Handlers
-	txPool          *core.TxPool
-	blockchain      *core.BlockChain
-	protocolManager *ProtocolManager
+	txPool            *core.TxPool
+	blockchain        *core.BlockChain
+	protocolManager   *ProtocolManager
 	masternodeManager *MasternodeManager
-	lesServer       LesServer
+	lesServer         LesServer
 
 	// DB interfaces
 	chainDb ethdb.Database // Block chain database
@@ -86,7 +86,7 @@ type Ethereum struct {
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
-	ApiBackend *EthApiBackend
+	ApiBackend      *EthApiBackend
 	ContractBackend *ContractBackend
 
 	miner     *miner.Miner
@@ -99,8 +99,7 @@ type Ethereum struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 
 	masternodeContract *contract.Contract
-	masternodes *masternode.MasternodeSet
-
+	masternodes        *masternode.MasternodeSet
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -146,7 +145,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	log.Info("Initialising Ethzero protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
-
 	if !config.SkipBcVersionCheck {
 		bcVersion := core.GetBlockChainVersion(chainDb)
 		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
@@ -177,7 +175,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	eth.ContractBackend = NewContractBackend(eth)
 
-
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
@@ -185,7 +182,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	eth.protocolManager.manager=eth.masternodeManager
+	eth.protocolManager.manager = eth.masternodeManager
 
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
@@ -260,7 +257,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 	}
 }
 
-func (s *Ethereum) GetWinner() (*masternode.Masternode,error) {
+func (s *Ethereum) GetWinner() (*masternode.Masternode, error) {
 	hash := s.blockchain.CurrentBlock().Hash()
 	return s.masternodeManager.GetNextMasternodeInQueueForPayment(hash)
 }
@@ -322,7 +319,6 @@ func (s *Ethereum) APIs() []rpc.API {
 	}...)
 }
 
-
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) MasternodeAPIs() []rpc.API {
@@ -343,7 +339,7 @@ func (s *Ethereum) MasternodeAPIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
-		},  {
+		}, {
 			Namespace: "miner",
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
@@ -439,7 +435,8 @@ func (s *Ethereum) StopMining()         { s.miner.Stop() }
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 
-func (s *Ethereum) MasternodeManager() *MasternodeManager    { return s.masternodeManager }
+func (s *Ethereum) MasternodeManager() *MasternodeManager { return s.masternodeManager }
+
 //func (s *Ethereum) ActiveMasternode() *masternode.Masternode { return s.activeMasternode }
 
 func (s *Ethereum) AccountManager() *accounts.Manager  { return s.accountManager }
@@ -497,7 +494,6 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	return nil
 }
 
-
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Ethereum protocol.
 func (s *Ethereum) Stop() error {
@@ -519,4 +515,3 @@ func (s *Ethereum) Stop() error {
 
 	return nil
 }
-
