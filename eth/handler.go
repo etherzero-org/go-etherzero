@@ -740,13 +740,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.manager.ProcessPaymentVotes(votes)
 
-	//case msg.Code == MasternodePingMsg:
-	//	var ping masternode.PingMsg;
-	//	msg.Decode(&ping)
-	//	if _, err := ping.Check(); err ==nil {
-	//		pm.nodeList.Put(masternode.NeMNode(&ping))
-	//		fmt.Println("recv MasternodePingMsg:", pm.nodeList.Len(), ping.SigTime.Int64(), ping.ID)
-	//	}
+	case msg.Code == MasternodePingMsg:
+		var ping = &masternode.PingMsg{}
+		msg.Decode(ping)
+		err := pm.manager.DealPingMsg(ping)
+		if err != nil {
+			log.Error("DealPingMsg", "error", err)
+		}
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -871,53 +871,6 @@ func (self *ProtocolManager) winnerVoteBroadcastLoop() {
 	}
 }
 
-//func (self *ProtocolManager) getContractData(account *common.Address) (*masternode.ContractData, error){
-//	dataPrefix, _ := hex.DecodeString("38266b22000000000000000000000000")
-//	data := append(dataPrefix, account.Bytes()...)
-//	res, err := self.callcontract(data)
-//	if err != nil || len(res) != 160 {
-//		return &masternode.ContractData{}, errCallcontract
-//	}
-//	version := int(res[0])
-//	if version == 0 {
-//		return &masternode.ContractData{}, nil
-//	}
-//	ip := net.IPv4(res[1], res[2], res[3], res[4])
-//	port := binary.BigEndian.Uint16(res[5:7])
-//	addr := net.TCPAddr{IP:ip, Port:int(port)}
-//	id, err := discover.BytesID(res[32:96])
-//	if err != nil {
-//		return &masternode.ContractData{}, err
-//	}
-//	pre := common.BytesToAddress(res[96:128])
-//	next := common.BytesToAddress(res[128:160])
-//	return &masternode.ContractData{
-//		ID:id,
-//		NetAddr:addr,
-//		Version:version,
-//		Pre:pre,
-//		Next:next,
-//	}, err
-//}
-
-//func (self *ProtocolManager) callContract(data []byte) ([]byte, error){
-//	msg := types.NewMessage(self.srvr.Config.MasternodeAccount, &contractAddress, 0, new(big.Int).SetUint64(0), 1000000, new(big.Int).SetUint64(0), data, false)
-//	context := core.NewEVMContext(msg, self.blockchain.CurrentHeader(), self.blockchain, nil)
-//	state, err := self.blockchain.State()
-//	if err != nil {
-//		log.Error("state", "error", err)
-//		return nil, err
-//	}
-//	evm := vm.NewEVM(context, state, self.chainconfig, vm.Config{})
-//	gp := new(core.GasPool).AddGas(math.MaxUint64)
-//	res, _, failed, err := core.ApplyMessage(evm, msg, gp)
-//	if failed || err != nil {
-//		log.Error("ApplyMessage failed", "failed", failed, "error", err)
-//		return nil, err
-//	}
-//	return res, err
-//}
-
 func (self *ProtocolManager) MasternodeManager(manager *MasternodeManager) {
 
 	self.manager = manager
@@ -931,6 +884,8 @@ type NodeInfo struct {
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
+
+	IsMasternode bool `json:"isMasternode"`
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
@@ -942,5 +897,7 @@ func (self *ProtocolManager) NodeInfo() *NodeInfo {
 		Genesis:    self.blockchain.Genesis().Hash(),
 		Config:     self.blockchain.Config(),
 		Head:       currentBlock.Hash(),
+
+		IsMasternode: self.manager.active.State() == masternode.ACTIVE_MASTERNODE_STARTED,
 	}
 }

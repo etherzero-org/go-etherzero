@@ -24,6 +24,10 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"net"
+	"time"
+	"github.com/ethzero/go-ethzero/log"
+	"github.com/ethzero/go-ethzero/crypto"
+	"encoding/binary"
 )
 
 const (
@@ -64,22 +68,17 @@ func (am *ActiveMasternode) SetState(state int) {
 	am.activeState = state
 }
 
-//
-//func (am *ActiveMasternode) ManageStateInitial(){
-//
-//}
-//
-//func (am *ActiveMasternode) manageStateRemote(){}
-//
-//
-//func (am *ActiveMasternode) UpdateSentinelPing()(bool,error){
-//
-//	return true,nil
-//}
-//
-//func (am *ActiveMasternode)SendMasternodePing()(bool,error){
-//
-//	return true,nil
-//}
-//
-//
+func (am *ActiveMasternode) NewPingMsg() (*PingMsg, error) {
+	sec := uint64(time.Now().Unix())
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], sec)
+	sig, err := crypto.Sign(crypto.Keccak256(b[:]), am.PrivateKey)
+	if err != nil {
+		log.Error("Can't sign PingMsg packet", "err", err)
+		return nil, err
+	}
+	return &PingMsg{
+		Time: sec,
+		Sig: sig,
+	}, nil
+}

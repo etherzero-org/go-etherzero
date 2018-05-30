@@ -13,12 +13,21 @@ import (
 	"math/big"
 	"net"
 	"sync"
+	"time"
 )
 
 const (
-	MasternodeUnconnected = iota
-	MasternodeConnected
+	MasternodeInit = iota
 	MasternodeDisconnected
+	MasternodeExpired
+	MasternodeEnable
+)
+
+const (
+	MASTERNODE_CHECK_INTERVAL = 30 * time.Second
+	MASTERNODE_PING_TIMEOUT   = 180 * time.Second
+	MASTERNODE_PING_INTERVAL  = 60 * time.Second
+	MASTERNODE_ONLINE_ENABLE  = 60 * time.Second
 )
 
 var (
@@ -34,6 +43,11 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
+type PingMsg struct {
+	Time uint64
+	Sig  []byte
+}
+
 type Masternode struct {
 	ID              string
 	Node            *discover.Node
@@ -42,6 +56,9 @@ type Masternode struct {
 	Height          *big.Int
 	State           int
 	ProtocolVersion uint
+	LastPingTime    uint64
+	UpdateTime      time.Time
+	AccOnlineTime   time.Duration
 
 	CollateralMinConfBlockHash common.Hash
 }
@@ -54,8 +71,8 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 		Node:            n,
 		Account:         account,
 		OriginBlock:     block,
-		State:           MasternodeUnconnected,
-		Height:			 big.NewInt(-1),
+		State:           MasternodeInit,
+		Height:          big.NewInt(-1),
 		ProtocolVersion: 64,
 	}
 }
@@ -148,6 +165,29 @@ func (ns *MasternodeSet) Node(id string) *Masternode {
 	return ns.nodes[id]
 }
 
+
+func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
+	ns.lock.RLock()
+	defer ns.lock.RUnlock()
+
+	n := ns.nodes[id]
+	if n == nil {
+		return
+	}
+
+	if !n.UpdateTime.IsZero() {
+		since := time.Since(n.UpdateTime)
+		if since < MASTERNODE_PING_TIMEOUT {
+			n.AccOnlineTime += time.Since(n.UpdateTime)
+		} else {
+			n.AccOnlineTime = time.Since(n.UpdateTime)
+		}
+	}
+
+	n.UpdateTime = time.Now()
+	n.LastPingTime = t
+}
+
 func (ns *MasternodeSet) SetState(id string, state int) bool {
 	ns.lock.RLock()
 	defer ns.lock.RUnlock()
@@ -202,10 +242,26 @@ func (ns *MasternodeSet) Nodes() map[string]*Masternode {
 
 func (ns *MasternodeSet) Len() int {
 
-	if ns.nodes != nil{
+	if ns.nodes != nil {
 		return len(ns.nodes)
 	}
 	return 0
+}
+
+func (ns *MasternodeSet) Check() {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+	for _, n := range ns.nodes {
+		if !n.UpdateTime.IsZero() {
+			since := time.Since(n.UpdateTime)
+			if since > MASTERNODE_PING_TIMEOUT {
+				n.State = MasternodeExpired
+				n.AccOnlineTime = 0
+			} else if n.State != MasternodeEnable && n.AccOnlineTime >= MASTERNODE_ONLINE_ENABLE {
+				n.State = MasternodeEnable
+			}
+		}
+	}
 }
 
 func GetMasternodeID(ID discover.NodeID) string {
