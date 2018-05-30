@@ -33,6 +33,7 @@ import (
 	"github.com/ethzero/go-ethzero/consensus/ethash"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/log"
@@ -51,12 +52,13 @@ const (
 // PublicEthereumAPI provides an API to access Ethereum related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
-	b Backend
+	b  Backend
+	ms *masternode.MasternodeSet
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
-func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
-	return &PublicEthereumAPI{b}
+func NewPublicEthereumAPI(b Backend, m *masternode.MasternodeSet) *PublicEthereumAPI {
+	return &PublicEthereumAPI{b, m}
 }
 
 // GasPrice returns a suggestion for a gas price.
@@ -67,6 +69,12 @@ func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*big.Int, error) {
 // ProtocolVersion returns the current Ethereum protocol version this node supports
 func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
+}
+
+// Masternodes return masternode info
+// TODO optimize the returned info's format
+func (s *PublicEthereumAPI) Masternodes() map[string]*masternode.Masternode {
+	return s.ms.Nodes()
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -235,6 +243,7 @@ func (s *PrivateAccountAPI) ListAccountsMaster() []common.Address {
 	}
 	return addresses
 }
+
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
 type rawWallet struct {
@@ -1248,9 +1257,9 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
 	}
-    if config := s.b.ChainConfig(); config.IsEthzeroTOSBlock(s.b.CurrentBlock().Number()) {
-        chainID = config.ChainId
-    }
+	if config := s.b.ChainConfig(); config.IsEthzeroTOSBlock(s.b.CurrentBlock().Number()) {
+		chainID = config.ChainId
+	}
 	signed, err := wallet.SignTx(account, tx, chainID)
 	if err != nil {
 		return common.Hash{}, err

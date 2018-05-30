@@ -31,9 +31,11 @@ import (
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/consensus/clique"
 	"github.com/ethzero/go-ethzero/consensus/ethash"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/bloombits"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/eth/filters"
@@ -48,8 +50,6 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/rpc"
-	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
-	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
 type LesServer interface {
@@ -265,7 +265,7 @@ func (s *Ethereum) GetWinner() (*masternode.Masternode, error) {
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) APIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.ApiBackend)
+	apis := ethapi.GetAPIs(s.ApiBackend, s.masternodeManager.masternodes)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -322,7 +322,7 @@ func (s *Ethereum) APIs() []rpc.API {
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) MasternodeAPIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.ApiBackend)
+	apis := ethapi.GetAPIs(s.ApiBackend,s.masternodes)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)

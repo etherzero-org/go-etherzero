@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/bloombits"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/eth/gasprice"
@@ -159,6 +160,12 @@ func (b *LesApiBackend) Downloader() *downloader.Downloader {
 
 func (b *LesApiBackend) ProtocolVersion() int {
 	return b.eth.LesVersion() + 10000
+}
+
+// Masternodes return masternode info
+// TODO LesApiBackend interface does not implemente this api for now(2018-05-30)
+func (b *LesApiBackend) Masternodes() map[string]*masternode.Masternode {
+	return nil
 }
 
 func (b *LesApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {

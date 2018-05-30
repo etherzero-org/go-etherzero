@@ -5498,6 +5498,11 @@ var properties = function () {
         new Property({
             name: 'protocolVersion',
             getter: 'eth_protocolVersion'
+        }),
+        new Property({
+            name: 'masternodes',
+            getter: 'eth_masternodes',
+            outputFormatter: formatters.outputLogFormatter
         })
     ];
 };

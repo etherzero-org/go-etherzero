@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/bloombits"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/eth/gasprice"
@@ -191,6 +192,13 @@ func (b *EthApiBackend) Downloader() *downloader.Downloader {
 func (b *EthApiBackend) ProtocolVersion() int {
 	return b.eth.EthVersion()
 }
+
+// Masternodes return masternode info
+// TODO EthApiBackend interface is not implemented this api
+func (b *EthApiBackend) Masternodes() map[string]*masternode.Masternode {
+	return nil
+}
+
 
 func (b *EthApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)

@@ -26,6 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/ethdb"
@@ -44,6 +45,7 @@ type Backend interface {
 	ChainDb() ethdb.Database
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
+	Masternodes() map[string]*masternode.Masternode // masternodes info
 
 	// BlockChain API
 	SetHead(number uint64)
@@ -71,13 +73,13 @@ type Backend interface {
 	CurrentBlock() *types.Block
 }
 
-func GetAPIs(apiBackend Backend) []rpc.API {
+func GetAPIs(apiBackend Backend, ms *masternode.MasternodeSet) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(apiBackend),
+			Service:   NewPublicEthereumAPI(apiBackend, ms),
 			Public:    true,
 		}, {
 			Namespace: "eth",
