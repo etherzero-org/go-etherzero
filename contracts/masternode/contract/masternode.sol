@@ -23,7 +23,7 @@ contract Masternode {
     event join(bytes8 id, address addr);
     event quit(bytes8 id, address addr);
 
-    function MasterNode() public {
+    constructor() public {
         lastId = bytes8(0);
         count = 0;
     }

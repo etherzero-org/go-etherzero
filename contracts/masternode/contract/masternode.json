@@ -35,15 +35,6 @@
   },
   {
     "constant": false,
-    "inputs": [],
-    "name": "MasterNode",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
     "inputs": [
       {
         "name": "id1",
@@ -63,6 +54,12 @@
     "payable": true,
     "stateMutability": "payable",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "constructor"
   },
   {
     "payable": true,
