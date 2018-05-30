@@ -74,7 +74,7 @@ func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 // Masternodes return masternode info
 // TODO optimize the returned info's format
 func (s *PublicEthereumAPI) Masternodes() map[string]*masternode.Masternode {
-	return s.ms.Nodes()
+	return s.ms.AllNodes()
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not

@@ -176,8 +176,9 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Hash) (*masternode.Masternode, error) {
 
 	var (
+		enableNodes  = mm.masternodes.EnableNodes()
 		paids        []int
-		tenthNetWork = mm.masternodes.Len() / 10
+		tenthNetWork = len(enableNodes) / 10 // TODO: when len < 10
 		countTenth   = 0
 		highest      = big.NewInt(0)
 		winner       *masternode.Masternode
@@ -187,8 +188,8 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(mm.masternodes.Nodes()))
-	for _, node := range mm.masternodes.Nodes() {
+	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(enableNodes))
+	for _, node := range enableNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
@@ -240,7 +241,7 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 
 	masternodeScores := make(map[*big.Int]*masternode.Masternode)
 
-	for _, m := range mm.masternodes.Nodes() {
+	for _, m := range mm.masternodes.EnableNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
 	return masternodeScores
@@ -304,7 +305,7 @@ func (mm *MasternodeManager) checkPeers() {
 
 	nodes := make(map[int]*masternode.Masternode)
 	var i int = 0
-	for _, p := range mm.masternodes.Nodes() {
+	for _, p := range mm.masternodes.EnableNodes() {
 		if p.State == masternode.MasternodeEnable && p.ID != mm.active.ID {
 			nodes[i] = p
 			i++

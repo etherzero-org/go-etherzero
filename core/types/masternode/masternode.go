@@ -234,10 +234,22 @@ func (ns *MasternodeSet) Show() {
 	}
 }
 
-func (ns *MasternodeSet) Nodes() map[string]*Masternode {
+func (ns *MasternodeSet) AllNodes() map[string]*Masternode {
 	ns.lock.Lock()
 	defer ns.lock.Unlock()
 	return ns.nodes
+}
+
+func (ns *MasternodeSet) EnableNodes() map[string]*Masternode {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+	enableNodes := make(map[string]*Masternode)
+	for id, n := range ns.nodes {
+		if n.State == MasternodeEnable {
+			enableNodes[id] = n
+		}
+	}
+	return enableNodes
 }
 
 func (ns *MasternodeSet) Len() int {
