@@ -257,9 +257,13 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 	}
 }
 
-func (s *Ethereum) GetWinner() (*masternode.Masternode, error) {
+func (s *Ethereum) BestMasternode() (*masternode.Masternode, error) {
 	hash := s.blockchain.CurrentBlock().Hash()
-	return s.masternodeManager.GetNextMasternodeInQueueForPayment(hash)
+	masternode,err := s.masternodeManager.BestMasternode(hash)
+	if err != nil {
+		return nil,err
+	}
+	return masternode,nil
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

@@ -130,7 +130,7 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternode=", mp.manager.active.ID)
 
-	info, err := mp.manager.GetNextMasternodeInQueueForPayment(block.Hash())
+	info, err := mp.manager.BestMasternode(block.Hash())
 	if err != nil {
 		log.Info("ERROR: Failed to find masternode to pay", err)
 		return false

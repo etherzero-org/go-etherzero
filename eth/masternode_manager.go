@@ -42,6 +42,8 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/crypto/secp256k1"
 )
 
 const (
@@ -171,7 +173,7 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 // Pass in the hash value of the block that participates in the calculation.
 // Dash is the Hash passed to the first 100 blocks.
 // If use the current block Hash, there is a risk that the current block will be discarded.
-func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Hash) (*masternode.Masternode, error) {
+func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Masternode, error) {
 
 	var (
 		enableNodes  = mm.masternodes.EnableNodes()
@@ -186,17 +188,19 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(enableNodes))
+	fmt.Printf(" BestMasternode masternodes.nodes %d \n", len(enableNodes))
 	for _, node := range enableNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
 	}
 
-	sort.Ints(paids)
+	// Sort them low to high
+	sort.Sort(sort.IntSlice(paids))
+
 
 	for _, i := range paids {
-		fmt.Printf("GetNextWinner %s\t %d\n", i, sortMap[i].CalculateScore(block))
+		fmt.Printf("BestMasternode %s\t %d\n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
@@ -415,4 +419,23 @@ func (mn *MasternodeManager) masternodeLoop() {
 			//	t.Reset(time.Second * 100)
 		}
 	}
+}
+
+func (mm *MasternodeManager) DealPingMsg(pm *masternode.PingMsg) error {
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], pm.Time)
+	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
+	if err != nil || len(key) != 65 {
+		return err
+	}
+	id := fmt.Sprintf("%x", key[1:9])
+	node := mm.masternodes.Node(id)
+	if node == nil {
+		return fmt.Errorf("error id %s", id)
+	}
+	if node.LastPingTime > pm.Time {
+		return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
+	}
+	mm.masternodes.RecvPingMsg(id, pm.Time)
+	return nil
 }
