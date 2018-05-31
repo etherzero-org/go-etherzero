@@ -1,20 +1,4 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-package contract
+package eth
 
 import (
 	"crypto/ecdsa"
@@ -26,7 +10,12 @@ import (
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"fmt"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"encoding/binary"
+	"net"
+	"github.com/ethzero/go-ethzero/p2p/discover"
 )
 
 var (
@@ -39,17 +28,18 @@ var (
 )
 
 func newTestBackend() *backends.SimulatedBackend {
+	val, _ := new(big.Int).SetString("20000000000000000000000", 10)
 	return backends.NewSimulatedBackend(core.GenesisAlloc{
-		addr0: {Balance: big.NewInt(1000000000000000000)},
-		addr1: {Balance: big.NewInt(1000000000000000000)},
-		addr2: {Balance: big.NewInt(1000000000000000000)},
+		addr0: {Balance: val},
+		addr1: {Balance: val},
+		addr2: {Balance: val},
 	})
 }
 
 func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.SimulatedBackend) (common.Address, error) {
 	deployTransactor := bind.NewKeyedTransactor(prvKey)
 	deployTransactor.Value = amount
-	addr, _, _, err := DeployContract(deployTransactor, backend)
+	addr, _, _, err := contract.DeployContract(deployTransactor, backend)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -59,17 +49,45 @@ func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.Simulat
 
 func TestIssueAndReceive(t *testing.T) {
 	backend := newTestBackend()
+
 	addr0, err := deploy(key0, big.NewInt(0), backend)
 	if err != nil {
 		t.Fatalf("deploy contract: expected no error, got %v", err)
 	}
-	contract, err1 := NewContract(addr0, backend)
+
+	contract, err1 := contract.NewContract(addr0, backend)
 	if err1 != nil {
 		t.Fatalf("expected no error, got %v", err1)
 	}
-	fmt.Println(addr0.Hex())
+
+	var (
+		id1 [32]byte
+		id2 [32]byte
+		misc [32]byte
+	)
+
+	addr := net.TCPAddr{net.ParseIP("127.0.0.88"), 21212, ""}
+
+	misc[0] = 1
+	copy(misc[1:17], addr.IP)
+	binary.BigEndian.PutUint16(misc[17:19], uint16(addr.Port))
+
+	nodeID, _ := discover.HexID("0x2cb5063f3fe98370023ecbf05a5f61534ac724e8bfc52e72e2f33dc57e6328a15bb6c09ce296c546a35c1469b6d2a013d6fc1f2a123ee867764e8c5e184e46ce")
+
+	copy(id1[:], nodeID[:32])
+	copy(id2[:], nodeID[32:64])
+
+	transactOpts := bind.NewKeyedTransactor(key0)
+	val, _ := new(big.Int).SetString("20000000000000000000", 10)
+	transactOpts.Value = val
+
+	tx, err := contract.Register(transactOpts, id1, id2, misc)
+	fmt.Println("Register", tx, err)
+	backend.Commit()
+
+	masternodes, _ := masternode.NewMasternodeSet(contract)
+	masternodes.Show()
 
 	count, err2 := contract.ContractCaller.Count(nil)
 	fmt.Println("count", count.String(), err2)
-
 }
