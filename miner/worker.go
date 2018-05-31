@@ -36,7 +36,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"gopkg.in/fatih/set.v0"
-	"github.com/ethzero/go-ethzero/node"
 )
 
 const (
@@ -53,7 +52,6 @@ const (
 
 	gaspoolvalue = 90000000
 )
-
 
 // Agent can register themself with the worker
 type Agent interface {
@@ -256,13 +254,13 @@ func (self *worker) update() {
 		case <-self.chainHeadCh:
 			self.commitNewWork()
 
-		// Handle ChainSideEvent
+			// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
 			self.uncleMu.Unlock()
 
-		// Handle TxPreEvent
+			// Handle TxPreEvent
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 {
@@ -280,7 +278,7 @@ func (self *worker) update() {
 				}
 			}
 
-		// System stopped
+			// System stopped
 		case <-self.txSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
@@ -469,8 +467,8 @@ func (self *worker) commitNewWork() {
 
 	// compute uncles for the new block.
 	var (
-		uncles    []*types.Header
-		badUncles []common.Hash
+		uncles     []*types.Header
+		badUncles  []common.Hash
 		masternode common.Address
 	)
 	for hash, uncle := range self.possibleUncles {
@@ -492,7 +490,6 @@ func (self *worker) commitNewWork() {
 	}
 	fmt.Printf("worker.go \n Header.Number:%v,IsEthzeroMasternode:%v \n ", header.Number, self.chain.Config().IsEthzeroMasternode(header.Number))
 
-
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		node, err := self.eth.BestMasternode()
 		if err == nil {
@@ -508,8 +505,7 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
-	work.Block.Masternode=masternode
-
+	work.Block.Masternode = masternode
 
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
