@@ -26,6 +26,9 @@ import (
 	"sort"
 	"sync"
 
+	"math/rand"
+	"time"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
@@ -42,8 +45,6 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/pkg/errors"
-	"math/rand"
-	"time"
 )
 
 const (
@@ -175,6 +176,11 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 // If use the current block Hash, there is a risk that the current block will be discarded.
 func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Hash) (*masternode.Masternode, error) {
 
+	// masternode invalid
+	if mm.masternodes == nil {
+		return nil, errors.New(("no masternode detected"))
+	}
+
 	var (
 		enableNodes  = mm.masternodes.EnableNodes()
 		paids        []int
@@ -185,20 +191,17 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	)
 
 	sortMap := make(map[int]*masternode.Masternode)
-	if mm.masternodes == nil {
-		return nil, errors.New("no masternode detected")
-	}
+
 	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(enableNodes))
 	for _, node := range enableNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
 	}
-
 	sort.Ints(paids)
 
 	for _, i := range paids {
-		fmt.Printf("GetNextWinner %s\t %d\n", i, sortMap[i].CalculateScore(block))
+		fmt.Printf("GetNextWinner %d\t %d\n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
@@ -209,7 +212,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 			break
 		}
 	}
-
+	fmt.Printf("winner %+v", winner)
 	return winner, nil
 }
 
