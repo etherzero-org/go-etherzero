@@ -4,20 +4,21 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rlp"
-	"math/big"
-	"net"
-	"sync"
-	"time"
 )
 
 const (
-	MasternodeInit = iota
+	MasternodeInit         = iota
 	MasternodeDisconnected
 	MasternodeExpired
 	MasternodeEnable
@@ -107,7 +108,7 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 	)
 	lastId, err := contract.LastId(nil)
 	if err != nil {
-		return &MasternodeSet{}, err
+		return ms, err
 	}
 	for lastId != ([8]byte{}) {
 		ctx, err = GetMasternodeContext(contract, lastId)
@@ -120,6 +121,7 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 		lastId = ctx.pre
 	}
 	ms.contract = contract
+
 	return ms, nil
 }
 
@@ -164,7 +166,6 @@ func (ns *MasternodeSet) Node(id string) *Masternode {
 
 	return ns.nodes[id]
 }
-
 
 func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
 	ns.lock.RLock()
