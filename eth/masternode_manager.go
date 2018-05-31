@@ -22,12 +22,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"net"
 	"sort"
 	"sync"
 
-	"math/rand"
-	"time"
+	"github.com/pkg/errors"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
@@ -44,7 +44,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -174,12 +173,7 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 // Pass in the hash value of the block that participates in the calculation.
 // Dash is the Hash passed to the first 100 blocks.
 // If use the current block Hash, there is a risk that the current block will be discarded.
-func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Hash) (*masternode.Masternode, error) {
-
-	// masternode invalid
-	if mm.masternodes == nil {
-		return nil, errors.New(("no masternode detected"))
-	}
+func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Masternode, error) {
 
 	var (
 		enableNodes  = mm.masternodes.EnableNodes()
@@ -191,17 +185,21 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	)
 
 	sortMap := make(map[int]*masternode.Masternode)
-
-	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(enableNodes))
+	if mm.masternodes == nil {
+		return nil, errors.New("no masternode detected")
+	}
+	fmt.Printf(" BestMasternode masternodes.nodes %d \n", len(enableNodes))
 	for _, node := range enableNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
 	}
-	sort.Ints(paids)
+
+	// Sort them low to high
+	sort.Sort(sort.IntSlice(paids))
 
 	for _, i := range paids {
-		fmt.Printf("GetNextWinner %d\t %d\n", i, sortMap[i].CalculateScore(block))
+		fmt.Printf("BestMasternode %s\t %d\n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
@@ -212,7 +210,7 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 			break
 		}
 	}
-	fmt.Printf("winner %+v", winner)
+
 	return winner, nil
 }
 
@@ -285,12 +283,12 @@ func (mm *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodeP
 	return true
 }
 
-func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
+func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 
-	mm.is.ProcessTxLockRequest(tx)
-	log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mm.active.ID)
-	mm.is.Accept(tx)
-	mm.is.Vote(tx.Hash())
+	mn.is.ProcessTxLockRequest(tx)
+	log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mn.active.ID)
+	mn.is.Accept(tx)
+	mn.is.Vote(tx.Hash())
 
 	return true
 }
@@ -321,82 +319,85 @@ func (mm *MasternodeManager) checkPeers() {
 	mm.srvr.AddPeer(nodes[key].Node)
 }
 
-func (mm *MasternodeManager) updateActiveMasternode() {
+func (mn *MasternodeManager) updateActiveMasternode() {
 	var state int
 
-	n := mm.masternodes.Node(mm.active.ID)
+	n := mn.masternodes.Node(mn.active.ID)
 	if n == nil {
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else if int(n.Node.TCP) != mm.active.Addr.Port {
-		log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
+	} else if int(n.Node.TCP) != mn.active.Addr.Port {
+		log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mn.active.Addr.Port)
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
-		log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
+	} else if !n.Node.IP.Equal(mn.active.Addr.IP) {
+		log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mn.active.Addr.IP)
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
 
-	mm.active.SetState(state)
+	mn.active.SetState(state)
 }
-func (mm *MasternodeManager) masternodeLoop() {
-	mm.updateActiveMasternode()
-	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
+func (mn *MasternodeManager) masternodeLoop() {
+	mn.updateActiveMasternode()
+	if mn.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternodeCheck true")
-		mm.checkPeers()
-	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
+		mn.checkPeers()
+	} else if !mn.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
 		var misc [32]byte
 		misc[0] = 1
-		copy(misc[1:17], mm.srvr.Config.MasternodeAddr.IP)
-		binary.BigEndian.PutUint16(misc[17:19], uint16(mm.srvr.Config.MasternodeAddr.Port))
+		copy(misc[1:17], mn.srvr.Config.MasternodeAddr.IP)
+		binary.BigEndian.PutUint16(misc[17:19], uint16(mn.srvr.Config.MasternodeAddr.Port))
 
 		var buf bytes.Buffer
-		buf.Write(mm.srvr.Self().ID[:])
+		buf.Write(mn.srvr.Self().ID[:])
 		buf.Write(misc[:])
 		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
 		fmt.Println("Masternode transaction data:", d)
 	}
 
-	mm.masternodes.Show()
+	mn.masternodes.Show()
 
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
-	joinSub, err1 := mm.contract.WatchJoin(nil, joinCh)
+	joinSub, err1 := mn.contract.WatchJoin(nil, joinCh)
 	if err1 != nil {
 		// TODO: exit
 		return
 	}
-	quitSub, err2 := mm.contract.WatchQuit(nil, quitCh)
+	quitSub, err2 := mn.contract.WatchQuit(nil, quitCh)
 	if err2 != nil {
 		// TODO: exit
 		return
 	}
 
-	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
-	check := time.NewTimer(masternode.MASTERNODE_CHECK_INTERVAL)
+	//pingMsg := &masternode.PingMsg{
+	//	ID: self.node.ID,
+	//	IP: self.node.IP,
+	//	Port: self.node.TCP,
+	//}
+	//t := time.NewTimer(time.Second * 5)
 
 	for {
 		select {
 		case join := <-joinCh:
 			fmt.Println("join", common.Bytes2Hex(join.Id[:]))
-			node, err := mm.masternodes.NodeJoin(join.Id)
+			node, err := mn.masternodes.NodeJoin(join.Id)
 			if err == nil {
-				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:32]) {
-					mm.updateActiveMasternode()
-					ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
+				if bytes.Equal(join.Id[:], mn.srvr.Self().ID[0:32]) {
+					mn.updateActiveMasternode()
 				} else {
-					mm.srvr.AddPeer(node.Node)
+					mn.srvr.AddPeer(node.Node)
 				}
-				mm.masternodes.Show()
+				mn.masternodes.Show()
 			}
 
 		case quit := <-quitCh:
 			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
-			mm.masternodes.NodeQuit(quit.Id)
-			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:32]) {
-				mm.updateActiveMasternode()
+			mn.masternodes.NodeQuit(quit.Id)
+			if bytes.Equal(quit.Id[:], mn.srvr.Self().ID[0:32]) {
+				mn.updateActiveMasternode()
 			}
-			mm.masternodes.Show()
+			mn.masternodes.Show()
 
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()
@@ -405,29 +406,17 @@ func (mm *MasternodeManager) masternodeLoop() {
 			quitSub.Unsubscribe()
 			fmt.Println("eventQuit err", err.Error())
 
-		case <-ping.C:
-			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
-				continue
-			}
-			msg, err := mm.active.NewPingMsg()
-			if err != nil {
-				log.Error("NewPingMsg", "error", err)
-				continue
-			}
-			peers := mm.peers.peers
-			for _, peer := range peers {
-				log.Debug("sending ping msg", "peer", peer.id)
-				if err := peer.SendMasternodePing(msg); err != nil {
-					log.Error("SendMasternodePing", "error", err)
-				}
-			}
-			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
-
-		case <-check.C:
-			mm.masternodes.Check()
-			check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
+			//case <-t.C:
+			//	pingMsg.Update(self.privateKey)
+			//	peers := self.peers.peers
+			//	for _, peer := range peers {
+			//		fmt.Println("peer", peer.ID())
+			//		if err := peer.SendMasternodePing(pingMsg); err != nil {
+			//			fmt.Println("err:", err)
+			//		}
+			//	}
+			//	t.Reset(time.Second * 100)
 		}
-
 	}
 }
 

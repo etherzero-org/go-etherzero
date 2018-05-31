@@ -501,15 +501,15 @@ func (self *worker) commitNewWork() {
 	fmt.Printf("worker.go \n Header.Number:%v,IsEthzeroMasternode:%v \n ",header.Number,self.chain.Config().IsEthzeroMasternode(header.Number))
 
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
-		node, err := self.eth.GetWinner();
+		node, err := self.eth.BestMasternode();
 		if  err != nil {
-			fmt.Printf("GetWinner successed,node:%v,ID:%v\n",node.Account.String(),node.ID)
-			log.Info("GetWinner successed,node:%v,ID:%v\n",node.Account.String(),node.ID)
+			fmt.Printf("BestMasternode successed,node:%v,ID:%v\n",node.Account.String(),node.ID)
+			log.Info("BestMasternode successed,node:%v,ID:%v\n",node.Account.String(),node.ID)
 			work.Block.Masternode = node.Account
 			blockReward := masternodeReward
 			work.state.AddBalance(work.Block.Masternode, blockReward)
 		}else{
-			fmt.Printf("getWinner err:%v\n",err)
+			fmt.Printf("getWinner err:%s\n",err)
 			log.Info("GetWinner error:\n",err)
 		}
 	}
