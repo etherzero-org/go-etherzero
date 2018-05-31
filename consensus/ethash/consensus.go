@@ -30,21 +30,23 @@ import (
 	"github.com/ethzero/go-ethzero/consensus/misc"
 	"github.com/ethzero/go-ethzero/core/state"
 	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	set "gopkg.in/fatih/set.v0"
-	"github.com/ethzero/go-ethzero/log"
 )
 
 // Ethash proof-of-work protocol constants.
 var (
-	FrontierBlockReward    *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-	maxUncles                       = 2                 // Maximum number of uncles allowed in a single block
-	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
+	FrontierBlockReward       *big.Int = big.NewInt(5e+18)                                         // Block reward in wei for successfully mining a block
+	ByzantiumBlockReward      *big.Int = big.NewInt(3e+18)                                         // Block reward in wei for successfully mining a block upward from Byzantium
+	maxUncles                          = 2                                                         // Maximum number of uncles allowed in a single block
+	allowedFutureBlockTime             = 15 * time.Second                                          // Max time from current time allowed for blocks, before they're considered future blocks
 	EthzeroBlockReward        *big.Int = big.NewInt(1.8e+18)                                       // Block reward in wei for successfully mining a block upward from Ethzero
 	EthzeroGenesisBlockReward *big.Int = new(big.Int).Mul(big.NewInt(1e+18), big.NewInt(97000000)) // Genesis reward in wei for successfully mining the etherzero block upward from Ethzero
+	MasternodeReward          *big.Int = big.NewInt(1.8e+18)                                       // Maternode winner get 45% Block reward in wei for successfully mining a block from etherzero masternode
+	GovernanceReward          *big.Int = big.NewInt(0.4e+18)                                       // Governance get 10% Block reward in wei for successfully mining a block from etherzero masternode
 
-	)
+)
 
 // Various error messages to mark blocks invalid. These should be private to
 // prevent engine specific errors from being referenced in the remainder of the
@@ -319,14 +321,14 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 
 // Some weird constants to avoid constant memory allocs for them.
 var (
-	expDiffPeriod = big.NewInt(100000)
+	expDiffPeriod          = big.NewInt(100000)
 	expEtherzeroDiffPeriod = big.NewInt(50000000)
-	big1          = big.NewInt(1)
-	big2          = big.NewInt(2)
-	big9          = big.NewInt(9)
-	big10         = big.NewInt(10)
-	bigMinus99    = big.NewInt(-99)
-	big2999999    = big.NewInt(2999999)
+	big1                   = big.NewInt(1)
+	big2                   = big.NewInt(2)
+	big9                   = big.NewInt(9)
+	big10                  = big.NewInt(10)
+	bigMinus99             = big.NewInt(-99)
+	big2999999             = big.NewInt(2999999)
 )
 
 // calcDifficultyEthzero is the difficulty adjustment algorithm. It returns the
@@ -400,7 +402,6 @@ func calcDifficultyEthzeroGenesis(time uint64, parent *types.Header) *big.Int {
 	diff := params.EthzeroGenesisDifficulty
 	return diff
 }
-
 
 // calcDifficultyByzantium is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time given the
@@ -600,12 +601,12 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
-func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header, receipts []*types.Receipt, masternode common.Address) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 
-	accumulateRewards(chain.Config(), state, header, uncles)
+	accumulateRewards(chain.Config(), state, header, uncles, masternode)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts), nil
@@ -620,7 +621,7 @@ var (
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header, masternode common.Address) {
 	// Select the correct block reward based on chain progression
 	blockReward := FrontierBlockReward
 	if config.IsByzantium(header.Number) {
@@ -633,6 +634,13 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 
 	if config.IsEthzeroTOSBlock(header.Number) {
 		blockReward = EthzeroBlockReward
+	}
+
+	if config.IsEthzeroMasternode(header.Number) && len(masternode) > 1 {
+		blockReward := MasternodeReward
+		state.AddBalance(masternode, blockReward)
+		state.AddBalance(params.MainnetGovernanceAddress, GovernanceReward)
+		fmt.Printf("accumulateRewards successed,Account:%v\n", masternode.String())
 	}
 
 	// Accumulate the rewards for the miner and any included uncles

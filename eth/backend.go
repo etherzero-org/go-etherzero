@@ -259,11 +259,11 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 
 func (s *Ethereum) BestMasternode() (*masternode.Masternode, error) {
 	hash := s.blockchain.CurrentBlock().Hash()
-	masternode,err := s.masternodeManager.BestMasternode(hash)
+	masternode, err := s.masternodeManager.BestMasternode(hash)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return masternode,nil
+	return masternode, nil
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
@@ -326,7 +326,7 @@ func (s *Ethereum) APIs() []rpc.API {
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) MasternodeAPIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.ApiBackend,s.masternodes)
+	apis := ethapi.GetAPIs(s.ApiBackend, s.masternodes)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
