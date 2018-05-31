@@ -193,10 +193,11 @@ func (b *EthApiBackend) ProtocolVersion() int {
 	return b.eth.EthVersion()
 }
 
+
+
 // Masternodes return masternode info
-// TODO EthApiBackend interface is not implemented this api
 func (b *EthApiBackend) Masternodes() map[string]*masternode.Masternode {
-	return nil
+	return b.eth.masternodeManager.masternodes.AllNodes()
 }
 
 

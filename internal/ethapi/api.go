@@ -233,15 +233,9 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 	return addresses
 }
 
-// ListAccounts will return a list of addresses for accounts this node manages.
-func (s *PrivateAccountAPI) ListAccountsMaster() []common.Address {
-	addresses := make([]common.Address, 0) // return [] instead of nil if empty
-	for _, wallet := range s.am.Wallets() {
-		for _, account := range wallet.Accounts() {
-			addresses = append(addresses, account.Address)
-		}
-	}
-	return addresses
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) Masternodes()  map[string]*masternode.Masternode {
+	return s.b.Masternodes()
 }
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its

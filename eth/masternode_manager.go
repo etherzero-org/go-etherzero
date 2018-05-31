@@ -173,7 +173,7 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 // Pass in the hash value of the block that participates in the calculation.
 // Dash is the Hash passed to the first 100 blocks.
 // If use the current block Hash, there is a risk that the current block will be discarded.
-func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Masternode, error) {
+func (mm *MasternodeManager)BestMasternode(block common.Hash) (*masternode.Masternode, error) {
 	// masternodes is nil
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
