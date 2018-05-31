@@ -23,12 +23,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/accounts/abi/bind/backends"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
-	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/pkg/errors"
 )
@@ -41,26 +38,8 @@ func uintID(i uint32) discover.NodeID {
 	return id
 }
 
-var (
-	key0, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	key1, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
-	key2, _ = crypto.HexToECDSA("49a7b37aa6f6645917e7b807e9d1c00d4fa71f18343b0d4122a4d2df64dd6fee")
-	addr0   = crypto.PubkeyToAddress(key0.PublicKey)
-	addr1   = crypto.PubkeyToAddress(key1.PublicKey)
-	addr2   = crypto.PubkeyToAddress(key2.PublicKey)
-)
-
-//  newTestBackend generate new backend
-func newTestBackend() *backends.SimulatedBackend {
-	return backends.NewSimulatedBackend(core.GenesisAlloc{
-		addr0: {Balance: big.NewInt(1000000000000000000)},
-		addr1: {Balance: big.NewInt(1000000000000000000)},
-		addr2: {Balance: big.NewInt(1000000000000000000)},
-	})
-}
-
 // TestMasternodeManager_BestMasternode
-// Tests function for BestMasternode
+// Test function for choose BestMasternode
 func TestMasternodeManager_BestMasternode(t *testing.T) {
 	// initial the parameter may needed during this test function
 	manager := &MasternodeManager{
@@ -141,6 +120,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 		}
 	}
 }
+
 func TestMasternodeManager_GetMasternodeScores(t *testing.T) {
 
 }
