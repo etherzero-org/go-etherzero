@@ -244,13 +244,15 @@ func (ns *MasternodeSet) AllNodes() map[string]*Masternode {
 func (ns *MasternodeSet) EnableNodes() map[string]*Masternode {
 	ns.lock.Lock()
 	defer ns.lock.Unlock()
-	enableNodes := make(map[string]*Masternode)
-	for id, n := range ns.nodes {
-		if n.State == MasternodeEnable {
-			enableNodes[id] = n
-		}
-	}
-	return enableNodes
+	//enableNodes := make(map[string]*Masternode)
+	//for id, n := range ns.nodes {
+	//	if n.State == MasternodeEnable {
+	//		enableNodes[id] = n
+	//	}
+	//}
+	//return enableNodes
+	return ns.nodes
+
 }
 
 func (ns *MasternodeSet) Len() int {

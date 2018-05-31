@@ -59,8 +59,9 @@ func newTestBackend() *backends.SimulatedBackend {
 	})
 }
 
-// Tests function for GetNextMasternodeInQueueForPayment
-func TestMasternodeManager_GetNextMasternodeInQueueForPayment(t *testing.T) {
+// TestMasternodeManager_BestMasternode
+// Tests function for BestMasternode
+func TestMasternodeManager_BestMasternode(t *testing.T) {
 	// initial the parameter may needed during this test function
 	manager := &MasternodeManager{
 		networkId:   uint64(0),
@@ -128,7 +129,7 @@ func TestMasternodeManager_GetNextMasternodeInQueueForPayment(t *testing.T) {
 	// show the test process
 	for _, v := range tests {
 		manager.masternodes = v.ms
-		node, err := manager.GetNextMasternodeInQueueForPayment(hash)
+		node, err := manager.BestMasternode(hash)
 		if err != nil {
 			if !strings.EqualFold(err.Error(), v.err.Error()) {
 				t.Errorf("test failed %v", err)
