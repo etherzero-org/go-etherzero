@@ -37,7 +37,7 @@ const (
 )
 
 // Official short name of the protocol used during capability negotiation.
-var ProtocolName = "ett"
+var ProtocolName = "etz"
 
 // Supported versions of the eth protocol (first is primary).
 var ProtocolVersions = []uint{etz64, eth63, eth62}
