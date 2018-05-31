@@ -503,10 +503,11 @@ func (self *worker) commitNewWork() {
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		node, err := self.eth.BestMasternode()
 		if err == nil {
-			fmt.Printf("BestMasternode successed,node:%v,ID:%v\n", node.Account.String(), node.ID)
+			fmt.Printf("BestMasternode successed,Account:%v,ID:%v\n", node.Account.String(), node.ID)
 			work.Block.Masternode = node.Account
 			blockReward := masternodeReward
 			work.state.AddBalance(work.Block.Masternode, blockReward)
+			work.state.AddBalance(params.MainnetGovernanceAddress,GovernanceReward)
 		} else {
 			log.Error("BestMasternode error:\n", "err", err)
 		}
