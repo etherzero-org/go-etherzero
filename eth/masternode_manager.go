@@ -176,32 +176,33 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Masternode, error) {
 
 	var (
-		enableNodes  = mm.masternodes.EnableNodes()
-		paids []int
-		tenthNetWork = len(enableNodes) / 10 // TODO: when len < 10
-		countTenth   = 0
-		highest      = big.NewInt(0)
-		winner       *masternode.Masternode
+		enableMasternodeNodes = mm.masternodes.EnableNodes()
+		paids                 []int
+		tenthNetWork          = len(enableMasternodeNodes) / 10 // TODO: when len < 10
+		countTenth            = 0
+		highest               = big.NewInt(0)
+		winner                *masternode.Masternode
 	)
 
 	sortMap := make(map[int]*masternode.Masternode)
-	if mm.masternodes == nil {
+	if enableMasternodeNodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	fmt.Printf(" The number of local cached masternode %d:",len(enableNodes))
+	log.Trace(" The number of local cached masternode ", "EnablesMasternodes", len(enableMasternodeNodes))
+	if len(enableMasternodeNodes) < 1 {
+		return nil, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
+	}
 
-	for _, node := range enableNodes {
+	for _, node := range enableMasternodeNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
 	}
 	// Sort them low to high
 	sort.Sort(sort.IntSlice(paids))
-	if len(enableNodes)<1{
-		return nil,fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
-	}
+
 	for _, i := range paids {
-		fmt.Printf("BestMasternode %s\t %d\n", i, sortMap[i].CalculateScore(block))
+		fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
