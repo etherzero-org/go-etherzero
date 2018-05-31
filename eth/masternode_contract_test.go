@@ -47,6 +47,7 @@ func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.Simulat
 	return addr, nil
 }
 
+
 func TestIssueAndReceive(t *testing.T) {
 	backend := newTestBackend()
 

@@ -6637,8 +6637,8 @@ module.exports = Settings;
         var properties = function () {
             return [
                 new Property({
-                    name: 'listAccountsMaster',
-                    getter: 'masternode_listAccountsMaster'
+                    name: 'masternodes',
+                    getter: 'masternode_masternodes'
                 })
             ];
         };
