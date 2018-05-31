@@ -5,17 +5,17 @@ import (
 	"math/big"
 	"testing"
 
+	"encoding/binary"
+	"fmt"
 	"github.com/ethzero/go-ethzero/accounts/abi/bind"
 	"github.com/ethzero/go-ethzero/accounts/abi/bind/backends"
 	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
-	"fmt"
+	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"encoding/binary"
-	"net"
+	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/p2p/discover"
+	"net"
 )
 
 var (
@@ -27,13 +27,37 @@ var (
 	addr2   = crypto.PubkeyToAddress(key2.PublicKey)
 )
 
+func genKeys(N int) (keys []*ecdsa.PrivateKey) {
+	for ; N > 0; N-- {
+		key, _ := crypto.GenerateKey()
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func genNodeID() discover.NodeID {
+	key, _ := crypto.GenerateKey()
+	return discover.PubkeyID(&key.PublicKey)
+}
+
 func newTestBackend() *backends.SimulatedBackend {
-	val, _ := new(big.Int).SetString("20000000000000000000000", 10)
+	val, _ := new(big.Int).SetString("200000000000000000000000", 10)
 	return backends.NewSimulatedBackend(core.GenesisAlloc{
 		addr0: {Balance: val},
 		addr1: {Balance: val},
 		addr2: {Balance: val},
 	})
+}
+
+func newTestBackendAndKeys(N int) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+	val, _ := new(big.Int).SetString("200000000000000000000000", 10)
+	genesis := core.GenesisAlloc{}
+	keys := genKeys(N)
+	for _, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		genesis[addr] = core.GenesisAccount{Balance: val}
+	}
+	return backends.NewSimulatedBackend(genesis), keys
 }
 
 func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.SimulatedBackend) (common.Address, error) {
@@ -47,44 +71,47 @@ func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.Simulat
 	return addr, nil
 }
 
+func TestMasternodeReg(t *testing.T) {
+	backend, keys := newTestBackendAndKeys(20)
 
-func TestIssueAndReceive(t *testing.T) {
-	backend := newTestBackend()
-
-	addr0, err := deploy(key0, big.NewInt(0), backend)
+	addr1, err := deploy(keys[0], big.NewInt(0), backend)
 	if err != nil {
 		t.Fatalf("deploy contract: expected no error, got %v", err)
 	}
 
-	contract, err1 := contract.NewContract(addr0, backend)
+	contract, err1 := contract.NewContract(addr1, backend)
 	if err1 != nil {
 		t.Fatalf("expected no error, got %v", err1)
 	}
 
 	var (
-		id1 [32]byte
-		id2 [32]byte
+		id1  [32]byte
+		id2  [32]byte
 		misc [32]byte
 	)
 
-	addr := net.TCPAddr{net.ParseIP("127.0.0.88"), 21212, ""}
+	for i, key := range keys {
+		ipString := fmt.Sprintf("127.0.0.%d", i)
+		addr := net.TCPAddr{net.ParseIP(ipString), 2121 + i, ""}
+		misc[0] = 1
+		copy(misc[1:17], addr.IP)
+		binary.BigEndian.PutUint16(misc[17:19], uint16(addr.Port))
 
-	misc[0] = 1
-	copy(misc[1:17], addr.IP)
-	binary.BigEndian.PutUint16(misc[17:19], uint16(addr.Port))
+		nodeID := genNodeID()
+		copy(id1[:], nodeID[:32])
+		copy(id2[:], nodeID[32:64])
 
-	nodeID, _ := discover.HexID("0x2cb5063f3fe98370023ecbf05a5f61534ac724e8bfc52e72e2f33dc57e6328a15bb6c09ce296c546a35c1469b6d2a013d6fc1f2a123ee867764e8c5e184e46ce")
+		transactOpts := bind.NewKeyedTransactor(key)
+		val, _ := new(big.Int).SetString("20000000000000000000", 10)
+		transactOpts.Value = val
 
-	copy(id1[:], nodeID[:32])
-	copy(id2[:], nodeID[32:64])
+		tx, err := contract.Register(transactOpts, id1, id2, misc)
+		if err != nil {
+			fmt.Println("Register Error:", tx, err)
+		}
 
-	transactOpts := bind.NewKeyedTransactor(key0)
-	val, _ := new(big.Int).SetString("20000000000000000000", 10)
-	transactOpts.Value = val
-
-	tx, err := contract.Register(transactOpts, id1, id2, misc)
-	fmt.Println("Register", tx, err)
-	backend.Commit()
+		backend.Commit()
+	}
 
 	masternodes, _ := masternode.NewMasternodeSet(contract)
 	masternodes.Show()
