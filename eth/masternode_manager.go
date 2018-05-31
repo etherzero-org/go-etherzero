@@ -206,7 +206,7 @@ func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Mast
 	sort.Sort(sort.IntSlice(paids))
 
 	for _, i := range paids {
-		fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
+		//fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
 		if score.Cmp(highest) > 0 {
 			highest = score
