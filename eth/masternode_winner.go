@@ -22,11 +22,11 @@ import (
 	"math/big"
 
 	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/event"
+	"github.com/ethzero/go-ethzero/log"
 )
 
 const (
@@ -55,7 +55,7 @@ type MasternodePayments struct {
 	blocks     map[uint64]*MasternodeBlockPayees
 	lastVote   map[common.Hash]*big.Int
 	didNotVote map[common.Hash]*big.Int
-	scope event.SubscriptionScope
+	scope      event.SubscriptionScope
 
 	winnerFeed event.Feed
 }
@@ -185,7 +185,7 @@ func (m *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote) bool {
 
 func (m *MasternodePayments) StorageLimit() *big.Int {
 
-	if m.manager.masternodes != nil{
+	if m.manager.masternodes != nil {
 		count := m.manager.masternodes.Len()
 		size := big.NewInt(1).Mul(m.storageCoeff, big.NewInt(int64(count)))
 
@@ -202,19 +202,18 @@ func (self *MasternodePayments) SubscribeWinnerVoteEvent(ch chan<- core.PaymentV
 	return self.scope.Track(self.winnerFeed.Subscribe(ch))
 }
 
-func(is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVote){
+func (is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVote) {
 
 	is.winnerFeed.Send(core.PaymentVoteEvent{vote})
 }
 
-
 // heigth is blockNumber , address is masternode account
-func (mp *MasternodePayments) BlockWinner(height *big.Int,address common.Address)(common.Address,bool){
+func (mp *MasternodePayments) BlockWinner(height *big.Int, address common.Address) (common.Address, bool) {
 
-	if mp.blocks[height.Uint64()] != nil{
+	if mp.blocks[height.Uint64()] != nil {
 		return mp.blocks[height.Uint64()].Best()
 	}
-	return common.Address{},false
+	return common.Address{}, false
 }
 
 type MasternodePayee struct {
@@ -257,8 +256,6 @@ func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 	}
 	return payee
 }
-
-
 
 //vote
 func (mbp *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {

@@ -35,6 +35,8 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/crypto/secp256k1"
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/eth/fetcher"
 	"github.com/ethzero/go-ethzero/ethdb"
@@ -42,8 +44,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/crypto/secp256k1"
 )
 
 const (
@@ -177,7 +177,7 @@ func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Mast
 
 	var (
 		enableNodes  = mm.masternodes.EnableNodes()
-		paids        []int
+		paids []int
 		tenthNetWork = len(enableNodes) / 10 // TODO: when len < 10
 		countTenth   = 0
 		highest      = big.NewInt(0)
@@ -188,17 +188,18 @@ func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Mast
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	fmt.Printf(" BestMasternode masternodes.nodes %d \n", len(enableNodes))
+	fmt.Printf(" The number of local cached masternode %d:",len(enableNodes))
+
 	for _, node := range enableNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
 	}
-
 	// Sort them low to high
 	sort.Sort(sort.IntSlice(paids))
-
-
+	if len(enableNodes)<1{
+		return nil,fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
+	}
 	for _, i := range paids {
 		fmt.Printf("BestMasternode %s\t %d\n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block)
@@ -212,6 +213,9 @@ func (mm *MasternodeManager) BestMasternode(block common.Hash) (*masternode.Mast
 		}
 	}
 
+	if winner == nil {
+		return nil, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
+	}
 	return winner, nil
 }
 
@@ -222,7 +226,7 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 	block := mm.blockchain.CurrentBlock()
 
 	if block == nil {
-		mm.log.Info("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
+		log.Error("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
 		return rank, false
 	}
 	masternodeScores := mm.GetMasternodeScores(block.Hash(), 1)
