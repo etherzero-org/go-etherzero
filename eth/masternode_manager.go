@@ -164,7 +164,7 @@ func (self *MasternodeManager) SubscribeWinnerVoteEvent(ch chan<- core.PaymentVo
 
 func (mm *MasternodeManager) newPeer(p *peer) {
 	p.SetMasternode(true)
-	mm.masternodes.SetState(p.id, masternode.MasternodeConnected)
+	mm.masternodes.SetState(p.id, masternode.MasternodeEnable)
 }
 
 // Deterministically select the oldest/best masternode to pay on the network
@@ -174,8 +174,9 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Hash) (*masternode.Masternode, error) {
 
 	var (
+		enableNodes  = mm.masternodes.EnableNodes()
 		paids        []int
-		tenthNetWork = mm.masternodes.Len() / 10
+		tenthNetWork = len(enableNodes) / 10 // TODO: when len < 10
 		countTenth   = 0
 		highest      = big.NewInt(0)
 		winner       *masternode.Masternode
@@ -185,8 +186,8 @@ func (mm *MasternodeManager) GetNextMasternodeInQueueForPayment(block common.Has
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
 	}
-	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(mm.masternodes.Nodes()))
-	for _, node := range mm.masternodes.Nodes() {
+	fmt.Printf(" GetNextWinner masternodes.nodes %d \n", len(enableNodes))
+	for _, node := range enableNodes {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
@@ -238,7 +239,7 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 
 	masternodeScores := make(map[*big.Int]*masternode.Masternode)
 
-	for _, m := range mm.masternodes.Nodes() {
+	for _, m := range mm.masternodes.EnableNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
 	return masternodeScores
@@ -290,11 +291,11 @@ func (mn *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 }
 
 // If server is masternode, connect one masternode at least
-func (mn *MasternodeManager) checkPeers() {
-	if mn.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
+func (mm *MasternodeManager) checkPeers() {
+	if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
 		return
 	}
-	for _, p := range mn.peers.peers {
+	for _, p := range mm.peers.peers {
 		if p.isMasternode {
 			return
 		}
@@ -302,8 +303,8 @@ func (mn *MasternodeManager) checkPeers() {
 
 	nodes := make(map[int]*masternode.Masternode)
 	var i int = 0
-	for _, p := range mn.masternodes.Nodes() {
-		if p.State == masternode.MasternodeConnected && p.ID != mn.active.ID {
+	for _, p := range mm.masternodes.EnableNodes() {
+		if p.State == masternode.MasternodeEnable && p.ID != mm.active.ID {
 			nodes[i] = p
 			i++
 		}
@@ -312,7 +313,7 @@ func (mn *MasternodeManager) checkPeers() {
 		return
 	}
 	key := rand.Intn(i - 1)
-	mn.srvr.AddPeer(nodes[key].Node)
+	mm.srvr.AddPeer(nodes[key].Node)
 }
 
 func (mn *MasternodeManager) updateActiveMasternode() {
