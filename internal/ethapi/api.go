@@ -238,6 +238,7 @@ func (s *PrivateAccountAPI) Masternodes()  map[string]*masternode.Masternode {
 	return s.b.Masternodes()
 }
 
+
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
 type rawWallet struct {
@@ -313,8 +314,8 @@ func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-// NewAccountMaster will create a new account and returns the address for the new account.
-func (s *PrivateAccountAPI) NewAccountMaster(password string) (common.Address, error) {
+// NewMasternodeAccount will create a new account and returns the address for the new account.
+func (s *PrivateAccountAPI) NewMasternodeAccount(password string) (common.Address, error) {
 	acc, err := fetchKeystoreMaster(s.am).NewAccountMaster(password)
 	if err == nil {
 		return acc.Address, nil
@@ -327,8 +328,8 @@ func fetchKeystoreMaster(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-// get and return the privateKey from the address.
-func (s *PrivateAccountAPI) GetPrivateKeyMaster(addr common.Address, password string) (bool, error) {
+// GetMasternodePrivateKey return the privateKey from the address.
+func (s *PrivateAccountAPI) GetMasternodePrivateKey(addr common.Address, password string) (bool, error) {
 	err := fetchKeystore(s.am).GetPrivateKeyMaster(accounts.Account{Address: addr}, password)
 	return err == nil, err
 }
