@@ -79,7 +79,7 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 }
 
 func (n *Masternode) String() string {
-	return n.Node.String()
+	return fmt.Sprintf("Account: %s\nNode: %s\n", n.Account.String(), n.Node)
 }
 
 func (n *Masternode) CalculateScore(hash common.Hash) *big.Int {
