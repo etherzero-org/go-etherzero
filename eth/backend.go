@@ -258,8 +258,8 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 }
 
 func (s *Ethereum) BestMasternode() (*masternode.Masternode, error) {
-	hash := s.blockchain.CurrentBlock().Hash()
-	masternode, err := s.masternodeManager.BestMasternode(hash)
+	block := s.blockchain.CurrentBlock()
+	masternode, err := s.masternodeManager.BestMasternode(block)
 	if err != nil {
 		return nil, err
 	}
