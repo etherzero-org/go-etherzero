@@ -2,11 +2,12 @@ package eth
 
 import (
 	"crypto/ecdsa"
-	"math/big"
-	"testing"
-
 	"encoding/binary"
 	"fmt"
+	"math/big"
+	"net"
+	"testing"
+
 	"github.com/ethzero/go-ethzero/accounts/abi/bind"
 	"github.com/ethzero/go-ethzero/accounts/abi/bind/backends"
 	"github.com/ethzero/go-ethzero/common"
@@ -15,7 +16,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/p2p/discover"
-	"net"
 )
 
 var (
@@ -71,51 +71,58 @@ func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.Simulat
 	return addr, nil
 }
 
-func TestMasternodeReg(t *testing.T) {
-	backend, keys := newTestBackendAndKeys(20)
+//newMasternodeSet generate a new MasternodeSet
+func newMasternodeSet(emptyFlag bool) (*masternode.MasternodeSet) {
+	backend, keys := newTestBackendAndKeys(1)
 
 	addr1, err := deploy(keys[0], big.NewInt(0), backend)
 	if err != nil {
-		t.Fatalf("deploy contract: expected no error, got %v", err)
+		fmt.Errorf("deploy contract: expected no error, got %v", err)
 	}
 
 	contract, err1 := contract.NewContract(addr1, backend)
 	if err1 != nil {
-		t.Fatalf("expected no error, got %v", err1)
+		fmt.Errorf("expected no error, got %v", err1)
 	}
 
-	var (
-		id1  [32]byte
-		id2  [32]byte
-		misc [32]byte
-	)
+	if emptyFlag {
+		var (
+			id1  [32]byte
+			id2  [32]byte
+			misc [32]byte
+		)
 
-	for i, key := range keys {
-		ipString := fmt.Sprintf("127.0.0.%d", i)
-		addr := net.TCPAddr{net.ParseIP(ipString), 2121 + i, ""}
-		misc[0] = 1
-		copy(misc[1:17], addr.IP)
-		binary.BigEndian.PutUint16(misc[17:19], uint16(addr.Port))
+		for i, key := range keys {
+			ipString := fmt.Sprintf("127.0.0.%d", i)
+			addr := net.TCPAddr{net.ParseIP(ipString), 2121 + i, ""}
+			misc[0] = 1
+			copy(misc[1:17], addr.IP)
+			binary.BigEndian.PutUint16(misc[17:19], uint16(addr.Port))
 
-		nodeID := genNodeID()
-		copy(id1[:], nodeID[:32])
-		copy(id2[:], nodeID[32:64])
+			nodeID := genNodeID()
+			copy(id1[:], nodeID[:32])
+			copy(id2[:], nodeID[32:64])
 
-		transactOpts := bind.NewKeyedTransactor(key)
-		val := new(big.Int).Mul(big.NewInt(20), big.NewInt(1e+18))
-		transactOpts.Value = val
+			transactOpts := bind.NewKeyedTransactor(key)
+			val := new(big.Int).Mul(big.NewInt(20), big.NewInt(1e+18))
+			transactOpts.Value = val
 
-		tx, err := contract.Register(transactOpts, id1, id2, misc)
-		if err != nil {
-			fmt.Println("Register Error:", tx, err)
+			tx, err := contract.Register(transactOpts, id1, id2, misc)
+			if err != nil {
+				fmt.Println("Register Error:", tx, err)
+			}
+
+			backend.Commit()
 		}
 
-		backend.Commit()
 	}
-
 	masternodes, _ := masternode.NewMasternodeSet(contract)
-	masternodes.Show()
 
 	count, err2 := contract.ContractCaller.Count(nil)
 	fmt.Println("count", count.String(), err2)
+	return masternodes
+}
+func TestMasternodeReg(t *testing.T) {
+	ms := newMasternodeSet(true)
+	ms.Show()
 }
