@@ -150,6 +150,8 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 
 	mm.is.Active = mm.active
 
+	mm.winner.active=mm.active
+
 	go mm.masternodeLoop()
 }
 
