@@ -142,7 +142,7 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 	}
 	mm.masternodes = mns
 
-	mm.active = masternode.NewActiveMasternode(srvr)
+	mm.active = masternode.NewActiveMasternode(srvr, mns)
 
 	mm.is.Active = mm.active
 
