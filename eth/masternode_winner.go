@@ -122,7 +122,7 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block,rank int) bool {
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", mp.active.ID)
 
-	vote := masternode.NewMasternodePaymentVote(block.Number(), mp.active.account)
+	vote := masternode.NewMasternodePaymentVote(block.Number(), mp.active.Account)
 	// vote constructed sucessfully, let's store and relay it
 	mp.Add(block.Hash(), vote)
 
