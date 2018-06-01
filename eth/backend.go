@@ -257,13 +257,13 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 	}
 }
 
-func (s *Ethereum) BestMasternode() (*masternode.Masternode, error) {
+func (s *Ethereum) BestMasternode() (common.Address, error) {
 	block := s.blockchain.CurrentBlock()
-	masternode, err := s.masternodeManager.BestMasternode(block)
+	account, err := s.masternodeManager.BestMasternode(block)
 	if err != nil {
-		return nil, err
+		return common.Address{}, err
 	}
-	return masternode, nil
+	return account, nil
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

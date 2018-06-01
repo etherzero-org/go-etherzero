@@ -88,6 +88,9 @@ type MasternodeManager struct {
 	txSub         event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
 
+	minBlocksToStore  *big.Int
+	storageCoeff      *big.Int //masternode count times nStorageCoeff payments blocks should be stored ...
+
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
 	txsyncCh    chan *txsync
@@ -99,6 +102,7 @@ type MasternodeManager struct {
 	wg sync.WaitGroup
 
 	log log.Logger
+
 
 	contract *contract.Contract
 	srvr     *p2p.Server
@@ -174,15 +178,14 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 // Pass in the hash value of the block that participates in the calculation.
 // Dash is the Hash passed to the first 100 blocks.
 // If use the current block Hash, there is a risk that the current block will be discarded.
-func (mm *MasternodeManager)BestMasternode(block *types.Block) (*masternode.Masternode, error) {
+func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address, error) {
 
-
-	if node,ok:=mm.winner.BlockWinner(block.Number());ok{
-		return node,nil
+	if account, ok := mm.winner.BlockWinner(block.Number()); ok {
+		return account, nil
 	}
 	// masternodes is nil
 	if mm.masternodes == nil {
-		return nil, errors.New("no masternode detected")
+		return common.Address{}, errors.New("no masternode detected")
 	}
 
 	var (
@@ -191,16 +194,16 @@ func (mm *MasternodeManager)BestMasternode(block *types.Block) (*masternode.Mast
 		tenthNetWork          = len(enableMasternodeNodes) / 10 // TODO: when len < 10
 		countTenth            = 0
 		highest               = big.NewInt(0)
-		best                  *masternode.Masternode
+		best                  common.Address
 	)
 
 	sortMap := make(map[int]*masternode.Masternode)
 	if enableMasternodeNodes == nil {
-		return nil,errors.New("no masternode detected")
+		return common.Address{}, errors.New("no masternode detected")
 	}
 	log.Trace(" The number of local cached masternode ", "EnablesMasternodes", len(enableMasternodeNodes))
 	if len(enableMasternodeNodes) < 1 {
-		return nil, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
+		return common.Address{}, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
 	}
 
 	for _, node := range enableMasternodeNodes {
@@ -216,16 +219,12 @@ func (mm *MasternodeManager)BestMasternode(block *types.Block) (*masternode.Mast
 		score := sortMap[i].CalculateScore(block.Hash())
 		if score.Cmp(highest) > 0 {
 			highest = score
-			best = sortMap[i]
+			best = sortMap[i].Account
 		}
 		countTenth++
 		if countTenth >= tenthNetWork {
 			break
 		}
-	}
-
-	if best == nil {
-		return nil, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
 	}
 	return best, nil
 }
@@ -264,6 +263,19 @@ func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProto
 	return masternodeScores
 }
 
+func (mm *MasternodeManager) StorageLimit() *big.Int {
+
+	if mm.masternodes != nil {
+		count := mm.masternodes.Len()
+		size := big.NewInt(1).Mul(mm.storageCoeff, big.NewInt(int64(count)))
+
+		if size.Cmp(mm.minBlocksToStore) > 0 {
+			return size
+		}
+	}
+	return mm.minBlocksToStore
+}
+
 func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 
 	rank, ok := mm.GetMasternodeRank(mm.active.ID)
@@ -291,7 +303,7 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 func (mm *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
 
 	for i, vote := range votes {
-		if !mm.winner.Vote(vote) {
+		if !mm.winner.Vote(vote,mm.StorageLimit()) {
 			log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String(), "i:%s", i)
 			return false
 		}

@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
 	"math/big"
@@ -27,19 +26,19 @@ var (
 // vote for the winning payment
 type MasternodePaymentVote struct {
 	Number     *big.Int //blockHeight
-	Masternode *Masternode
-
+	MasternodeAccount common.Address
 	KeySize int
 }
 
 //Voted block number,activeMasternode
-func NewMasternodePaymentVote(blockHeight *big.Int, active *Masternode) *MasternodePaymentVote {
+func NewMasternodePaymentVote(blockHeight *big.Int, account common.Address) *MasternodePaymentVote {
 
 	vote := MasternodePaymentVote{
 		Number:     blockHeight,
-		Masternode: active,
+		MasternodeAccount: account,
 		KeySize:    0,
 	}
+
 	return &vote
 }
 
@@ -47,7 +46,7 @@ func (mpv *MasternodePaymentVote) Hash() common.Hash {
 
 	tlvHash := rlpHash([]interface{}{
 		mpv.Number,
-		mpv.Masternode.ID,
+		mpv.MasternodeAccount,
 	})
 	return tlvHash
 }
@@ -127,17 +126,17 @@ func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
 
 	// info := v.masternode.MasternodeInfo()
 
-	var minRequiredProtocal uint = 0
+	//var minRequiredProtocal uint = 0
 
-	if v.Number.Cmp(height) > 0 {
-		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
-	} else {
-		minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
-	}
+	//if v.Number.Cmp(height) > 0 {
+	//	minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
+	//} else {
+	//	minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
+	//}
 
-	if v.Masternode.ProtocolVersion < minRequiredProtocal {
-		return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", v.Masternode.ProtocolVersion, minRequiredProtocal)
-	}
+	//if v.Masternode.ProtocolVersion < minRequiredProtocal {
+	//	return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", v.Masternode.ProtocolVersion, minRequiredProtocal)
+	//}
 
 	if v.Number.Cmp(height) < 0 {
 		return true, nil

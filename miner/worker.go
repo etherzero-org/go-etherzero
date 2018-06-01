@@ -491,10 +491,10 @@ func (self *worker) commitNewWork() {
 	fmt.Printf("worker.go \n Header.Number:%v,IsEthzeroMasternode:%v \n ", header.Number, self.chain.Config().IsEthzeroMasternode(header.Number))
 
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
-		node, err := self.eth.BestMasternode()
+		account, err := self.eth.BestMasternode()
 		if err == nil {
-			fmt.Printf("BestMasternode successed,Account:%v,ID:%v\n", node.Account.String(), node.ID)
-			masternode = node.Account
+			fmt.Printf("BestMasternode successed,Account:%v \n", account.String())
+			masternode = account
 		} else {
 			log.Error("BestMasternode error:\n", "err", err)
 		}
