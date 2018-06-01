@@ -28,6 +28,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/crypto"
 	"encoding/binary"
+	"github.com/ethzero/go-ethzero/common"
 )
 
 const (
@@ -42,12 +43,13 @@ const (
 type ActiveMasternode struct {
 	ID          string
 	NodeID      discover.NodeID
+	Account     common.Address
 	PrivateKey  *ecdsa.PrivateKey
 	activeState int
 	Addr        net.TCPAddr
 }
 
-func NewActiveMasternode(srvr *p2p.Server) *ActiveMasternode {
+func NewActiveMasternode(srvr *p2p.Server, mns *MasternodeSet) *ActiveMasternode {
 	nodeId := srvr.Self().ID
 	id := GetMasternodeID(nodeId)
 	am := &ActiveMasternode{
@@ -56,6 +58,9 @@ func NewActiveMasternode(srvr *p2p.Server) *ActiveMasternode {
 		activeState: ACTIVE_MASTERNODE_INITIAL,
 		PrivateKey:  srvr.Config.PrivateKey,
 		Addr:        srvr.MasternodeAddr,
+	}
+	if n := mns.Node(id); n != nil {
+		am.Account = n.Account
 	}
 	return am
 }

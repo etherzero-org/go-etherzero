@@ -6616,21 +6616,21 @@ module.exports = Settings;
         }
 
         var methods = function () {
-            var newAccountMaster = new Method({
-                name: 'newAccountMaster',
-                call: 'masternode_newAccountMaster',
+            var newMasternodeAccount = new Method({
+                name: 'newMasternodeAccount',
+                call: 'masternode_newMasternodeAccount',
                 params: 1,
                 inputFormatter: [null]
             });
-            var getPrivateKeyMaster = new Method({
-                name: 'getPrivateKeyMaster',
-                call: 'masternode_getPrivateKeyMaster',
+            var getMasternodePrivateKey = new Method({
+                name: 'getMasternodePrivateKey',
+                call: 'masternode_getMasternodePrivateKey',
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter,null]
             });
             return [
-                newAccountMaster,
-                getPrivateKeyMaster
+                newMasternodeAccount,
+                getMasternodePrivateKey
             ];
         };
 
