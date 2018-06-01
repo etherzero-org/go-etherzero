@@ -130,7 +130,7 @@ func (mp *MasternodePayments) ProcessBlock(block *types.Block) bool {
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternode=", mp.manager.active.ID)
 
-	info, err := mp.manager.BestMasternode(block.Hash())
+	info, err := mp.manager.BestMasternode(block)
 	if err != nil {
 		log.Info("ERROR: Failed to find masternode to pay", err)
 		return false
@@ -208,23 +208,23 @@ func (is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVo
 }
 
 // heigth is blockNumber , address is masternode account
-func (mp *MasternodePayments) BlockWinner(height *big.Int, address common.Address) (common.Address, bool) {
+func (mp *MasternodePayments) BlockWinner(height *big.Int) (*masternode.Masternode, bool) {
 
 	if mp.blocks[height.Uint64()] != nil {
 		return mp.blocks[height.Uint64()].Best()
 	}
-	return common.Address{}, false
+	return nil, false
 }
 
 type MasternodePayee struct {
-	account common.Address
+	node *masternode.Masternode
 	votes   []*masternode.MasternodePaymentVote
 }
 
-func NewMasternodePayee(address common.Address, vote *masternode.MasternodePaymentVote) *MasternodePayee {
+func NewMasternodePayee(node *masternode.Masternode, vote *masternode.MasternodePaymentVote) *MasternodePayee {
 
 	mp := &MasternodePayee{
-		account: address,
+		node: node,
 	}
 	mp.votes = append(mp.votes, vote)
 	return mp
@@ -263,42 +263,43 @@ func (mbp *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {
 	//When the masternode has been voted
 	//info := vote.masternode.MasternodeInfo()
 	for _, mp := range mbp.payees {
-		if mp.account == vote.Masternode.Account {
+		if mp.node.ID == vote.Masternode.ID{
 			mp.Add(vote)
 			return
 		}
 	}
-	payee := NewMasternodePayee(vote.Masternode.Account, vote)
+	payee := NewMasternodePayee(vote.Masternode, vote)
 	mbp.payees = append(mbp.payees, payee)
 
 }
 
 //select the Masternode that has been voted the most
-func (mbp *MasternodeBlockPayees) Best() (common.Address, bool) {
+func (mbp *MasternodeBlockPayees) Best() (*masternode.Masternode, bool) {
 
 	if len(mbp.payees) < 1 {
 		log.Info("ERROR: ", "couldn't find any payee!")
 	}
-	votes := -1
-	hash := common.Address{}
-
+	var(
+		votes = -1
+		node  *masternode.Masternode
+	)
 	for _, payee := range mbp.payees {
 		if votes < payee.Count() {
-			hash = payee.account
+			node = payee.node
 			votes = payee.Count()
 		}
 	}
-	return hash, votes > -1
+	return node, votes > -1
 }
 
 //Used to record the last winning block of the masternode. At least 2 votes need to be satisfied
 // Has(2,masternode.account)
-func (mbp *MasternodeBlockPayees) Has(num int, address common.Address) bool {
+func (mbp *MasternodeBlockPayees) Has(num int, id string) bool {
 	if len(mbp.payees) < 1 {
 		log.Info("ERROR: ", "couldn't find any payee!")
 	}
 	for _, payee := range mbp.payees {
-		if payee.Count() >= num && payee.account == address {
+		if payee.Count() >= num && payee.node.ID == id {
 			return true
 		}
 	}
