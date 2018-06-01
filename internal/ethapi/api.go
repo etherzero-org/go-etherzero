@@ -234,7 +234,7 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 }
 
 // Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) Masternodes()  map[string]*masternode.Masternode {
+func (s *PrivateAccountAPI) List()  map[string]*masternode.Masternode {
 	return s.b.Masternodes()
 }
 
@@ -328,8 +328,8 @@ func fetchKeystoreMaster(am *accounts.Manager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-// GetMasternodePrivateKey return the privateKey from the address.
-func (s *PrivateAccountAPI) GetMasternodePrivateKey(addr common.Address, password string) (bool, error) {
+// GetPrivateKey return the privateKey from the address.
+func (s *PrivateAccountAPI) GetPrivateKey(addr common.Address, password string) (bool, error) {
 	err := fetchKeystore(s.am).GetPrivateKeyMaster(accounts.Account{Address: addr}, password)
 	return err == nil, err
 }

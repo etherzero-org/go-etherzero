@@ -170,10 +170,10 @@ func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
-// NewAccountMaster is a wrapper around the personal.NewAccountMaster RPC method that uses a
+// NewMasternode is a wrapper around the personal.NewAccountMaster RPC method that uses a
 // non-echoing password prompt to acquire the passphrase and executes the original
 // RPC method (saved in jeth.NewAccountMaster) with it to actually execute the RPC call.
-func (b *bridge) NewAccountMaster(call otto.FunctionCall) (response otto.Value) {
+func (b *bridge) NewMasternode(call otto.FunctionCall) (response otto.Value) {
 	var (
 		password string
 		confirm  string
@@ -208,11 +208,11 @@ func (b *bridge) NewAccountMaster(call otto.FunctionCall) (response otto.Value) 
 	return ret
 }
 
-// GetPrivateKeyMaster is a wrapper around the personal.GetPrivateKeyMaster RPC method that
+// GetPrivateKey is a wrapper around the personal.GetPrivateKeyMaster RPC method that
 // uses a non-echoing password prompt to acquire the passphrase and executes the
 // original RPC method (saved in jeth.GetPrivateKeyMaster) with it to actually execute
 // the RPC call.
-func (b *bridge) GetPrivateKeyMaster(call otto.FunctionCall) (response otto.Value) {
+func (b *bridge) GetPrivateKey(call otto.FunctionCall) (response otto.Value) {
 	// Make sure we have an account specified to unlock
 	if !call.Argument(0).IsString() {
 		throwJSException("first argument must be the account to unlock")
