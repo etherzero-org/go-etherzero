@@ -73,7 +73,6 @@ func NewInstantx() *InstantSend{
 	}
 
 	return is
-
 }
 
 

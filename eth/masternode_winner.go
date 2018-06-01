@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
+	"io"
 )
 
 const (
@@ -200,9 +201,16 @@ func (self *MasternodePayments) CanVote(height *big.Int, address common.Address)
 	return true
 }
 
-func (self *MasternodePayments) CheckAndRemove(){
+// Must be called at startup or init
+func (self *MasternodePayments) CheckAndRemove(limit *big.Int){
 
-
+	for hash,vote := range self.votes {
+		if new(big.Int).Sub(self.cachedBlockNumber,vote.Number).Cmp(limit)>0 {
+			log.Info("CheckAndRemove -- Removing old Masternode payment: BlockHeight=",vote.Number.String())
+			delete(self.votes, hash)
+			delete(self.blocks,vote.Number.Uint64())
+		}
+	}
 
 }
 
