@@ -53,11 +53,6 @@ const (
 	gaspoolvalue = 90000000
 )
 
-var (
-	masternodeReward *big.Int = big.NewInt(1.8e+18) // Maternode winner get 45% Block reward in wei for successfully mining a block from etherzero masternode
-	GovernanceReward *big.Int = big.NewInt(0.4e+18) // Governance get 10% Block reward in wei for successfully mining a block from etherzero masternode
-)
-
 // Agent can register themself with the worker
 type Agent interface {
 	Work() chan<- *Work
@@ -259,13 +254,13 @@ func (self *worker) update() {
 		case <-self.chainHeadCh:
 			self.commitNewWork()
 
-		// Handle ChainSideEvent
+			// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
 			self.uncleMu.Unlock()
 
-		// Handle TxPreEvent
+			// Handle TxPreEvent
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 {
@@ -283,7 +278,7 @@ func (self *worker) update() {
 				}
 			}
 
-		// System stopped
+			// System stopped
 		case <-self.txSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
@@ -472,8 +467,9 @@ func (self *worker) commitNewWork() {
 
 	// compute uncles for the new block.
 	var (
-		uncles    []*types.Header
-		badUncles []common.Hash
+		uncles     []*types.Header
+		badUncles  []common.Hash
+		masternode common.Address
 	)
 	for hash, uncle := range self.possibleUncles {
 		if len(uncles) == 2 {
@@ -492,26 +488,24 @@ func (self *worker) commitNewWork() {
 	for _, hash := range badUncles {
 		delete(self.possibleUncles, hash)
 	}
-	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
-		log.Error("Failed to finalize block for sealing", "err", err)
-		return
-	}
-
 	fmt.Printf("worker.go \n Header.Number:%v,IsEthzeroMasternode:%v \n ", header.Number, self.chain.Config().IsEthzeroMasternode(header.Number))
 
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		node, err := self.eth.BestMasternode()
 		if err == nil {
 			fmt.Printf("BestMasternode successed,Account:%v,ID:%v\n", node.Account.String(), node.ID)
-			work.Block.Masternode = node.Account
-			blockReward := masternodeReward
-			work.state.AddBalance(work.Block.Masternode, blockReward)
-			work.state.AddBalance(params.MainnetGovernanceAddress,GovernanceReward)
+			masternode = node.Account
 		} else {
 			log.Error("BestMasternode error:\n", "err", err)
 		}
 	}
+
+	// Create the new block to seal with the consensus engine
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, masternode); err != nil {
+		log.Error("Failed to finalize block for sealing", "err", err)
+		return
+	}
+	work.Block.Masternode = masternode
 
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
