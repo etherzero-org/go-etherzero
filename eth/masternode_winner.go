@@ -84,6 +84,7 @@ func (mp *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodeP
 	if payee := mp.blocks[vote.Number.Uint64()]; payee == nil {
 		blockPayees := NewMasternodeBlockPayees(vote.Number)
 		blockPayees.Add(vote)
+		mp.blocks[vote.Number.Uint64()]=blockPayees
 	} else {
 		mp.blocks[vote.Number.Uint64()].Add(vote)
 	}
@@ -165,8 +166,6 @@ func (m *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote,storage
 	}
 	return true
 }
-
-
 
 // SubscribeWinnerVoteEvent registers a subscription of PaymentVoteEvent and
 // starts sending event to the given channel.
