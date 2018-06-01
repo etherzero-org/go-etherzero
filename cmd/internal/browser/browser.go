@@ -9,13 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"time"
 )
 
 // Commands returns a list of possible commands to use to open a url.
 func Commands() [][]string {
 	var cmds [][]string
-	time.Sleep(10)
 	if exe := os.Getenv("BROWSER"); exe != "" {
 		cmds = append(cmds, []string{exe})
 	}
