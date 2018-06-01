@@ -398,6 +398,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 			if err == nil {
 				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:32]) {
 					mm.updateActiveMasternode()
+					mm.active.Account = node.Account
 				} else {
 					mm.srvr.AddPeer(node.Node)
 				}
