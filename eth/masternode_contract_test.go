@@ -41,7 +41,7 @@ func genNodeID() discover.NodeID {
 }
 
 func newTestBackend() *backends.SimulatedBackend {
-	val, _ := new(big.Int).SetString("200000000000000000000000", 10)
+	val := new(big.Int).Mul(big.NewInt(200000), big.NewInt(1e+18))
 	return backends.NewSimulatedBackend(core.GenesisAlloc{
 		addr0: {Balance: val},
 		addr1: {Balance: val},
@@ -50,7 +50,7 @@ func newTestBackend() *backends.SimulatedBackend {
 }
 
 func newTestBackendAndKeys(N int) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
-	val, _ := new(big.Int).SetString("200000000000000000000000", 10)
+	val := new(big.Int).Mul(big.NewInt(200000), big.NewInt(1e+18))
 	genesis := core.GenesisAlloc{}
 	keys := genKeys(N)
 	for _, key := range keys {
@@ -102,7 +102,7 @@ func TestMasternodeReg(t *testing.T) {
 		copy(id2[:], nodeID[32:64])
 
 		transactOpts := bind.NewKeyedTransactor(key)
-		val, _ := new(big.Int).SetString("20000000000000000000", 10)
+		val := new(big.Int).Mul(big.NewInt(20), big.NewInt(1e+18))
 		transactOpts.Value = val
 
 		tx, err := contract.Register(transactOpts, id1, id2, misc)
