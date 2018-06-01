@@ -174,7 +174,12 @@ func (mm *MasternodeManager) newPeer(p *peer) {
 // Pass in the hash value of the block that participates in the calculation.
 // Dash is the Hash passed to the first 100 blocks.
 // If use the current block Hash, there is a risk that the current block will be discarded.
-func (mm *MasternodeManager)BestMasternode(block common.Hash) (*masternode.Masternode, error) {
+func (mm *MasternodeManager)BestMasternode(block *types.Block) (*masternode.Masternode, error) {
+
+
+	if node,ok:=mm.winner.BlockWinner(block.Number());ok{
+		return node,nil
+	}
 	// masternodes is nil
 	if mm.masternodes == nil {
 		return nil, errors.New("no masternode detected")
@@ -186,12 +191,12 @@ func (mm *MasternodeManager)BestMasternode(block common.Hash) (*masternode.Maste
 		tenthNetWork          = len(enableMasternodeNodes) / 10 // TODO: when len < 10
 		countTenth            = 0
 		highest               = big.NewInt(0)
-		winner                *masternode.Masternode
+		best                  *masternode.Masternode
 	)
 
 	sortMap := make(map[int]*masternode.Masternode)
 	if enableMasternodeNodes == nil {
-		return nil, errors.New("no masternode detected")
+		return nil,errors.New("no masternode detected")
 	}
 	log.Trace(" The number of local cached masternode ", "EnablesMasternodes", len(enableMasternodeNodes))
 	if len(enableMasternodeNodes) < 1 {
@@ -208,10 +213,10 @@ func (mm *MasternodeManager)BestMasternode(block common.Hash) (*masternode.Maste
 
 	for _, i := range paids {
 		//fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
-		score := sortMap[i].CalculateScore(block)
+		score := sortMap[i].CalculateScore(block.Hash())
 		if score.Cmp(highest) > 0 {
 			highest = score
-			winner = sortMap[i]
+			best = sortMap[i]
 		}
 		countTenth++
 		if countTenth >= tenthNetWork {
@@ -219,10 +224,10 @@ func (mm *MasternodeManager)BestMasternode(block common.Hash) (*masternode.Maste
 		}
 	}
 
-	if winner == nil {
+	if best == nil {
 		return nil, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
 	}
-	return winner, nil
+	return best, nil
 }
 
 func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
