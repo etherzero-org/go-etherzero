@@ -102,7 +102,7 @@ func TestMasternodeReg(t *testing.T) {
 		copy(id2[:], nodeID[32:64])
 
 		transactOpts := bind.NewKeyedTransactor(key)
-		val, _ := new(big.Int).SetString("20000000000000000000", 10)
+		val := new(big.Int).Mul(big.NewInt(20), big.NewInt(1e+18))
 		transactOpts.Value = val
 
 		tx, err := contract.Register(transactOpts, id1, id2, misc)
