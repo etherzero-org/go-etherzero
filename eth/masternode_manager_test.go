@@ -16,70 +16,15 @@
 package eth
 
 import (
-	"encoding/binary"
 	"errors"
-	"fmt"
 	"math/big"
-	"net"
 	"strings"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/accounts/abi/bind"
 	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"github.com/ethzero/go-ethzero/p2p/discover"
 )
-
-// uintID auxiliary function
-// generate new discover.NodeID
-func uintID(i uint32) discover.NodeID {
-	var id discover.NodeID
-	binary.BigEndian.PutUint32(id[:], i)
-	return id
-}
-
-func newMasterNodeSet() *masternode.MasternodeSet {
-	backend := newTestBackend()
-
-	addr0, err := deploy(key0, big.NewInt(0), backend)
-	if err != nil {
-		fmt.Errorf("deploy contract: expected no error, got %v", err)
-	}
-
-	contract, err1 := contract.NewContract(addr0, backend)
-	if err1 != nil {
-		fmt.Errorf("expected no error, got %v", err1)
-	}
-
-	var (
-		id1  [32]byte
-		id2  [32]byte
-		misc [32]byte
-	)
-
-	addr := net.TCPAddr{net.ParseIP("127.0.0.88"), 21212, ""}
-
-	misc[0] = 1
-	copy(misc[1:17], addr.IP)
-	binary.BigEndian.PutUint16(misc[17:19], uint16(addr.Port))
-
-	nodeID, _ := discover.HexID("0x2cb5063f3fe98370023ecbf05a5f61534ac724e8bfc52e72e2f33dc57e6328a15bb6c09ce296c546a35c1469b6d2a013d6fc1f2a123ee867764e8c5e184e46ce")
-
-	copy(id1[:], nodeID[:32])
-	copy(id2[:], nodeID[32:64])
-
-	transactOpts := bind.NewKeyedTransactor(key0)
-	val, _ := new(big.Int).SetString("20000000000000000000", 10)
-	transactOpts.Value = val
-
-	tx, err := contract.Register(transactOpts, id1, id2, misc)
-	fmt.Println("Register", tx, err)
-	backend.Commit()
-
-	masternodes, _ := masternode.NewMasternodeSet(contract)
-	return masternodes
-}
 
 // TestMasternodeManager_BestMasternode
 // Test function for choose BestMasternode
@@ -110,51 +55,71 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	for i := range account {
 		account[i] = byte(i)
 	}
+	// generate a new block data
+	tx1 := types.NewTransaction(1, common.BytesToAddress([]byte{0x11}), big.NewInt(111), 1111, big.NewInt(111111), []byte{0x11, 0x11, 0x11})
+	tx2 := types.NewTransaction(2, common.BytesToAddress([]byte{0x22}), big.NewInt(222), 2222, big.NewInt(222222), []byte{0x22, 0x22, 0x22})
+	tx3 := types.NewTransaction(3, common.BytesToAddress([]byte{0x33}), big.NewInt(333), 333, big.NewInt(33333), []byte{0x33, 0x33, 0x33})
+	txs := []*types.Transaction{tx1, tx2, tx3}
+	block := types.NewBlock(&types.Header{Number: big.NewInt(31415926)}, txs, nil, nil)
 
 	// generate a new masternode set and deploy the new nodeset
-	ms := newMasterNodeSet()
-	nodenum := int64(10)
-	for i := int64(0); i < nodenum; i++ {
-		node := discover.NewNode(discover.MustHexID("0x84d9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"), net.IP{127, 0, 55, byte(234 + i)}, uint16(3333+i), uint16(4444+i))
-		singleNode := &masternode.Masternode{
-			ID:                         fmt.Sprintf("%v", i+10),
-			Height:                     big.NewInt(10),
-			Node:                       node,
-			Account:                    account,
-			OriginBlock:                0,
-			State:                      masternode.MasternodeEnable,
-			ProtocolVersion:            64,
-			CollateralMinConfBlockHash: hash,
-		}
-		// register new node in the register code
-		ms.Register(singleNode)
-	}
+	ms := newMasternodeSet(true)
+
 	//// begin to test
 	testsbody := []struct {
-		ms  *masternode.MasternodeSet // input ms, MasternodeSet
-		err error                     // return type, error or nil
+		ms                  *masternode.MasternodeSet // input ms, MasternodeSet
+		voteNum             *big.Int                  // 投票的区块
+		err                 error                     // return type, error or nil
+		numberofmasternodes uint32                    //  is numberofmasternodes==0 ,return the error
 	}{
 		{
 			nil,
-			errors.New("no masternode detected"),
-		}, {
+			big.NewInt(31415926),
+			nil,
+			1,
+		},
+
+		{
 			ms,
 			nil,
+			errors.New("no masternode detected"),
+			20,
+		},
+		{
+			ms,
+			nil,
+			errors.New("The number of local masternodes is too less to obtain the best Masternode"),
+			0,
+		},
+		{
+			ms,
+			nil,
+			nil,
+			20,
 		},
 	}
-
+	number := big.NewInt(31415926)
 	// show the test process
 	for _, v := range testsbody {
+		// first two line test
+		if v.voteNum != nil {
+			manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
+			masternodePayee := NewMasternodePayee(*(new(common.Address)), nil)
+			manager.winner.blocks[31415926].payees = append(manager.winner.blocks[31415926].payees, masternodePayee)
+		}
+		if v.numberofmasternodes == 0 {
+			v.ms = newMasternodeSet(false)
+		}
 		manager.masternodes = v.ms
-		node, err := manager.BestMasternode(hash)
+		addr, err := manager.BestMasternode(block)
 		if err != nil {
 			if !strings.EqualFold(err.Error(), v.err.Error()) {
 				t.Errorf("test failed %v", err)
 			}
 		}
 
-		if node != nil {
-			t.Logf("winnerid is %v", node.ID)
+		if addr != *(new(common.Address)) {
+			t.Logf("winnerid is %v", addr.String())
 		}
 	}
 }
