@@ -194,7 +194,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 
 	vote := func(block *types.Block) bool {
-		return manager.winner.ProcessBlock(block)
+		rank, _ := manager.manager.GetMasternodeRank(manager.manager.active.ID)
+		return manager.winner.ProcessBlock(block, rank)
 	}
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
 
