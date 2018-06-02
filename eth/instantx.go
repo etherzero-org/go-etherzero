@@ -231,8 +231,29 @@ func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	// will actually process only after the lock request itself has arrived
 	if txLockCondidate == nil {
 		if is.votesOrphan[txHash] == nil {
-
+			//createEmptyCondidate
 			is.votesOrphan[txHash] = vote
+			reProcess := true
+			log.Info("CInstantSend::ProcessTxLockVote -- Orphan vote: txid=", txHash.String(), " masternodeId=", vote.MasternodeId())
+
+			var tx *types.Transaction
+
+			if tx = is.accepted[txHash]; tx != nil {
+				if tx = is.rejected[txHash]; tx != nil {
+					reProcess = false
+				}
+			}
+
+			// We have enough votes for corresponding lock to complete,
+			// tx lock request should already be received at this stage.
+			if reProcess && is.IsEnoughOrphanVotesForTx(txHash) {
+				log.Info("InstantSend::ProcessTxLockVote -- Found enough orphan votes, reprocessing Transaction Lock Request: txid=",txHash.String())
+				is.ProcessTxLockRequest(tx)
+				return true
+			}
+
+		}else{
+			log.Info("InstantSend::ProcessTxLockVote -- Orphan vote: txid= ",txHash.String(), "  masternode= ", vote.MasternodeId())
 		}
 	}
 
@@ -286,6 +307,11 @@ func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 	}
 	return is.lockedTxs[hash] != nil
 
+}
+
+
+func (is *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool{
+	return true
 }
 
 func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
