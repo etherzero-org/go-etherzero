@@ -16,7 +16,10 @@
 
 package params
 
-import "math/big"
+import (
+	"math/big"
+	"time"
+)
 
 var (
 	TargetGasLimit uint64 = GenesisGasLimit // The artificial target
@@ -78,15 +81,15 @@ const (
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 
-	InstantSendFailedTimeoutSeconds uint64 =60 //// For how long we are going to keep invalid votes and votes for failed lock attempts,must be greater than INSTANTSEND_LOCK_TIMEOUT_SECONDS
-	InstantSendLockTimeoutSeconds uint64 =15   // For how long we are going to accept votes/locks after we saw the first one for a specific transaction
+	InstantSendFailedTimeoutSeconds uint64 = 60 * uint64(time.Second) //// For how long we are going to keep invalid votes and votes for failed lock attempts,must be greater than INSTANTSEND_LOCK_TIMEOUT_SECONDS
+	InstantSendLockTimeoutSeconds   uint64 = 15 * uint64(time.Second) // For how long we are going to accept votes/locks after we saw the first one for a specific transaction
 )
 
 var (
-	DifficultyBoundDivisor = big.NewInt(2048)   // The bound divisor of the difficulty, used in the update calculations.
-	GenesisDifficulty      = big.NewInt(131072) // Difficulty of the Genesis block.
-	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
-	EthzeroGenesisDifficulty      = big.NewInt(17179869184)                // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-	DurationEthzeroLimit   = big.NewInt(8)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	DifficultyBoundDivisor   = big.NewInt(2048)        // The bound divisor of the difficulty, used in the update calculations.
+	GenesisDifficulty        = big.NewInt(131072)      // Difficulty of the Genesis block.
+	MinimumDifficulty        = big.NewInt(131072)      // The minimum that the difficulty may ever be.
+	EthzeroGenesisDifficulty = big.NewInt(17179869184) // The minimum that the difficulty may ever be.
+	DurationLimit            = big.NewInt(13)          // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	DurationEthzeroLimit     = big.NewInt(8)           // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 )

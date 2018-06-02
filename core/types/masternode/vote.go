@@ -40,15 +40,13 @@ func (tlv *TxLockVote) MasternodeId() string {
 }
 
 func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
-
-	tv := &TxLockVote{
+	return &TxLockVote{
 		txHash:          hash,
 		masternodeId:    id,
 		createdTime:     time.Now(),
 		ConfirmedHeight: big.NewInt(-1),
 		KeySize:         256,
 	}
-	return tv
 }
 
 func (tlv *TxLockVote) Hash() common.Hash {
@@ -139,7 +137,6 @@ func (self *TxLockVote) IsFailed() bool {
 }
 
 func (self *TxLockVote) IsTimeOut() bool {
-
 	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds
 }
 
