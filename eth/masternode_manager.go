@@ -408,7 +408,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 			fmt.Println("join", common.Bytes2Hex(join.Id[:]))
 			node, err := mm.masternodes.NodeJoin(join.Id)
 			if err == nil {
-				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:32]) {
+				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
 					mm.updateActiveMasternode()
 					mm.active.Account = node.Account
 				} else {
@@ -420,7 +420,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 		case quit := <-quitCh:
 			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
 			mm.masternodes.NodeQuit(quit.Id)
-			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:32]) {
+			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
 				mm.updateActiveMasternode()
 			}
 			mm.masternodes.Show()
