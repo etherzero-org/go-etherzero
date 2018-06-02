@@ -31,24 +31,25 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/rlp"
 
+	"time"
 )
 
 const (
 	/*
-		    At 15 signatures, 1/2 of the masternode network can be owned by
-		    one party without comprimising the security of InstantSend
-			在15个签名中，masternode网络的1/2可以由一方拥有，而不会包含InstantSend的安全性
-		    (1000/2150.0)**10 = 0.00047382219560689856
-		    (1000/2900.0)**10 = 2.3769498616783657e-05
-		    ### getting 5 of 10 signatures w/ 1000 nodes of 2900
-			获得10个签名中的5个/ 1000个2900的节点
-		    (1000/2900.0)**5 = 0.004875397277841433
+	   At 15 signatures, 1/2 of the masternode network can be owned by
+	   one party without comprimising the security of InstantSend
+	   (1000/2150.0)**10 = 0.00047382219560689856
+	   (1000/2900.0)**10 = 2.3769498616783657e-05
+	   ### getting 5 of 10 signatures w/ 1000 nodes of 2900
+	   (1000/2900.0)**5 = 0.004875397277841433
 	*/
 	INSTANTSEND_CONFIRMATIONS_REQUIRED = 6
 
 	DEFAULT_INSTANTSEND_DEPTH = 5
 
 	MIN_INSTANTSEND_PROTO_VERSION = 70208
+
+	SIGNATURES_REQUIRED = 6
 )
 
 type InstantSend struct {
@@ -68,8 +69,7 @@ type InstantSend struct {
 	mu        sync.Mutex
 
 	//track masternodes who voted with no txreq (for DOS protection)
-	//追踪没有txreq投票的masternodes（用于DOS保护）
-	masternodeOrphanVotes map[common.Hash]int
+	masternodeOrphanVotes map[string]uint64 //masternodeID - Orphan time
 	votesOrphan           map[common.Hash]*masternode.TxLockVote
 
 	/*
@@ -99,7 +99,7 @@ func NewInstantx() *InstantSend {
 		Candidates:            make(map[common.Hash]*masternode.TxLockCondidate),
 		all:                   make(map[common.Hash]int),
 		lockedTxs:             make(map[common.Hash]*types.Transaction),
-		masternodeOrphanVotes: make(map[common.Hash]int),
+		masternodeOrphanVotes: make(map[string]uint64),
 	}
 
 	return is
@@ -151,7 +151,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 
 	var alreadyVoted bool = false
 	if _, ok := is.all[txHash]; !ok {
-		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
+		txLockCondidate := is.Candidates[txHash]
 		if txLockCondidate.HasMasternodeVoted(is.Active.ID) {
 			alreadyVoted = true
 			log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.Active.ID)
@@ -159,7 +159,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 		}
 	}
 
-	vote := masternode.NewTxLockVote(txHash, is.Active.ID) //构建一个投票对象
+	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
 	if alreadyVoted {
 		return
 	}
@@ -216,7 +216,7 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 	return true
 }
 
-func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
+func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 
 	txHash := vote.Hash()
 
@@ -224,42 +224,56 @@ func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 		log.Error("CInstantSend::ProcessTxLockVote -- Vote is invalid, txid=", txHash.String())
 		return false
 	}
-	is.voteFeed.Send(vote)
-	txLockCondidate := is.Candidates[txHash]
+	self.voteFeed.Send(vote)
+	txLockCondidate := self.Candidates[txHash]
 
 	// Masternodes will sometimes propagate votes before the transaction is known to the client,
 	// will actually process only after the lock request itself has arrived
 	if txLockCondidate == nil {
-		if is.votesOrphan[txHash] == nil {
+		if self.votesOrphan[txHash] == nil {
 			//createEmptyCondidate
-			is.votesOrphan[txHash] = vote
+			self.votesOrphan[txHash] = vote
 			reProcess := true
 			log.Info("CInstantSend::ProcessTxLockVote -- Orphan vote: txid=", txHash.String(), " masternodeId=", vote.MasternodeId())
 
 			var tx *types.Transaction
 
-			if tx = is.accepted[txHash]; tx != nil {
-				if tx = is.rejected[txHash]; tx != nil {
+			if tx = self.accepted[txHash]; tx != nil {
+				if tx = self.rejected[txHash]; tx != nil {
 					reProcess = false
 				}
 			}
-
 			// We have enough votes for corresponding lock to complete,
 			// tx lock request should already be received at this stage.
-			if reProcess && is.IsEnoughOrphanVotesForTx(txHash) {
-				log.Info("InstantSend::ProcessTxLockVote -- Found enough orphan votes, reprocessing Transaction Lock Request: txid=",txHash.String())
-				is.ProcessTxLockRequest(tx)
+			if reProcess && self.IsEnoughOrphanVotesForTx(txHash) {
+				log.Info("InstantSend::ProcessTxLockVote -- Found enough orphan votes, reprocessing Transaction Lock Request: txid=", txHash.String())
+				self.ProcessTxLockRequest(tx)
 				return true
 			}
-
-		}else{
-			log.Info("InstantSend::ProcessTxLockVote -- Orphan vote: txid= ",txHash.String(), "  masternode= ", vote.MasternodeId())
+		} else {
+			log.Info("InstantSend::ProcessTxLockVote -- Orphan vote: txid= ", txHash.String(), "  masternode= ", vote.MasternodeId())
 		}
+		// This tracks those messages and allows only the same rate as of the rest of the network
+		// TODO: make sure this works good enough for multi-quorum
+		MasternodeOrphanExpireTime := 60 * uint64(time.Second) * 10 // keep time data for 10 minutes
+		if self.masternodeOrphanVotes[vote.MasternodeId()] == 0 {
+			self.masternodeOrphanVotes[vote.MasternodeId()] = MasternodeOrphanExpireTime
+		} else {
+			preOrphanVote := self.masternodeOrphanVotes[vote.MasternodeId()]
+			if preOrphanVote > uint64(time.Now().Unix()) && preOrphanVote > self.GetAverageMasternodeOrphanVoteTime() {
+				log.Info("InstantSend::ProcessTxLockVote -- masternode is spamming orphan Transaction Lock Votes: txid=",
+					txHash.String(), "masternode= \n", vote.MasternodeId())
+				return false
+			}
+			// not spamming, refresh
+			self.masternodeOrphanVotes[vote.MasternodeId()] = MasternodeOrphanExpireTime
+		}
+		return true
 	}
 
 	log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txHash.String())
-	if _, ok := is.all[txHash]; !ok {
-		is.all[txHash]++
+	if _, ok := self.all[txHash]; !ok {
+		self.all[txHash]++
 	}
 	if txLockCondidate.AddVote(vote) {
 		return false
@@ -269,9 +283,23 @@ func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	signaturesMax := txLockCondidate.MaxSignatures()
 	log.Info("ProcessTxLockVote Transaction Lock signatures count:", signatures, "/", signaturesMax, ",vote Hash:", vote.Hash().String())
 
-	is.TryToFinalizeLockCandidate(txLockCondidate)
+	self.TryToFinalizeLockCandidate(txLockCondidate)
 
 	return true
+}
+
+func (self *InstantSend) GetAverageMasternodeOrphanVoteTime() uint64 {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+	// NOTE: should never actually call this function when masternodeOrphanVotes is empty
+	if len(self.masternodeOrphanVotes) < 1 {
+		return 0
+	}
+	var total uint64 = 0
+	for moVote := range self.masternodeOrphanVotes {
+		total += self.masternodeOrphanVotes[moVote]
+	}
+	return total / uint64(len(self.masternodeOrphanVotes))
 }
 
 func (is *InstantSend) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
@@ -309,9 +337,18 @@ func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 
 }
 
+func (self *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool {
 
-func (is *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool{
-	return true
+	var countVotes int = 0
+	for txHash := range self.votesOrphan {
+		if txHash == hash {
+			countVotes++
+			if countVotes >= SIGNATURES_REQUIRED {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
