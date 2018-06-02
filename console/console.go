@@ -195,14 +195,14 @@ func (c *Console) init(preload []string) error {
 		return err
 	}
 	if obj := masternode.Object(); obj != nil { // make sure the admin api is enabled over the interface
-		if _, err = c.jsre.Run(`jeth.newAccountMaster = masternode.newMasternodeAccount;`); err != nil {
-			return fmt.Errorf("masternode.newMasternodeAccount: %v", err)
+		if _, err = c.jsre.Run(`jeth.newAccountMaster = masternode.newMasternode;`); err != nil {
+			return fmt.Errorf("masternode.newMasternode: %v", err)
 		}
-		if _, err = c.jsre.Run(`jeth.getPrivateKeyMaster = masternode.getMasternodePrivateKey;`); err != nil {
-			return fmt.Errorf("masternode.getMasternodePrivateKey: %v", err)
+		if _, err = c.jsre.Run(`jeth.getPrivateKeyMaster = masternode.getPrivateKey;`); err != nil {
+			return fmt.Errorf("masternode.getPrivateKey: %v", err)
 		}
-		obj.Set("newMasternodeAccount", bridge.NewAccountMaster)
-		obj.Set("getMasternodePrivateKey", bridge.GetPrivateKeyMaster)
+		obj.Set("newMasternode", bridge.NewMasternode)
+		obj.Set("getPrivateKey", bridge.GetPrivateKey)
 	}
 
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.

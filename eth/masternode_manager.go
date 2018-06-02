@@ -150,6 +150,8 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 
 	mm.is.Active = mm.active
 
+	mm.winner.active=mm.active
+
 	go mm.masternodeLoop()
 }
 
@@ -229,6 +231,17 @@ func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address,
 	return best, nil
 }
 
+func (mm *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
+
+	for i, vote := range votes {
+		if !mm.winner.Vote(vote,mm.StorageLimit()) {
+			log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String(), "i:%s", i)
+			return false
+		}
+	}
+	return true
+}
+
 func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 
 	var rank int = 0
@@ -300,16 +313,7 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	return mm.is.ProcessTxLockVotes(votes)
 }
 
-func (mm *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
 
-	for i, vote := range votes {
-		if !mm.winner.Vote(vote,mm.StorageLimit()) {
-			log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String(), "i:%s", i)
-			return false
-		}
-	}
-	return true
-}
 
 func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 

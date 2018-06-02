@@ -6616,29 +6616,29 @@ module.exports = Settings;
         }
 
         var methods = function () {
-            var newMasternodeAccount = new Method({
-                name: 'newMasternodeAccount',
-                call: 'masternode_newMasternodeAccount',
+            var newMasternode = new Method({
+                name: 'newMasternode',
+                call: 'masternode_newMasternode',
                 params: 1,
                 inputFormatter: [null]
             });
-            var getMasternodePrivateKey = new Method({
-                name: 'getMasternodePrivateKey',
-                call: 'masternode_getMasternodePrivateKey',
+            var getPrivateKey = new Method({
+                name: 'getPrivateKey',
+                call: 'masternode_getPrivateKey',
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter,null]
             });
             return [
-                newMasternodeAccount,
-                getMasternodePrivateKey
+                newMasternode,
+                getPrivateKey
             ];
         };
 
         var properties = function () {
             return [
                 new Property({
-                    name: 'masternodes',
-                    getter: 'masternode_masternodes'
+                    name: 'list',
+                    getter: 'masternode_list'
                 })
             ];
         };
