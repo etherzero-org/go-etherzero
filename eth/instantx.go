@@ -20,38 +20,78 @@ package eth
 import (
 	"fmt"
 
+	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/core"
+	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/crypto/sha3"
+	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/core"
+
+	"hash"
+	"math/big"
+	"sync"
+)
+
+const (
+	/*
+		    At 15 signatures, 1/2 of the masternode network can be owned by
+		    one party without comprimising the security of InstantSend
+			在15个签名中，masternode网络的1/2可以由一方拥有，而不会包含InstantSend的安全性
+		    (1000/2150.0)**10 = 0.00047382219560689856
+		    (1000/2900.0)**10 = 2.3769498616783657e-05
+		    ### getting 5 of 10 signatures w/ 1000 nodes of 2900
+			获得10个签名中的5个/ 1000个2900的节点
+		    (1000/2900.0)**5 = 0.004875397277841433
+	*/
+	INSTANTSEND_CONFIRMATIONS_REQUIRED = 6
+
+	DEFAULT_INSTANTSEND_DEPTH = 5
+
+	MIN_INSTANTSEND_PROTO_VERSION = 70208
+	// For how long we are going to accept votes/locks
+	// after we saw the first one for a specific transaction
+	INSTANTSEND_LOCK_TIMEOUT_SECONDS = 15
+
+	// For how long we are going to keep invalid votes and votes for failed lock attempts,
+	// must be greater than INSTANTSEND_LOCK_TIMEOUT_SECONDS
+	INSTANTSEND_FAILED_TIMEOUT_SECONDS = 60
 
 )
 
 type InstantSend struct {
 
 	// maps for AlreadyHave
-	accepted          map[common.Hash]*types.Transaction // tx hash - tx
-	rejected          map[common.Hash]*types.Transaction // tx hash - tx
-	txLockedVotes     map[common.Hash]*masternode.TxLockVote  // vote hash - vote
-	txLockVotesOrphan map[common.Hash]*masternode.TxLockVote  // vote hash - vote
+	accepted          map[common.Hash]*types.Transaction     // tx hash - tx
+	rejected          map[common.Hash]*types.Transaction     // tx hash - tx
+	txLockedVotes     map[common.Hash]*masternode.TxLockVote // vote hash - vote
+	txLockVotesOrphan map[common.Hash]*masternode.TxLockVote // vote hash - vote
 
 	Candidates map[common.Hash]*masternode.TxLockCondidate // tx hash - lock candidate
 
 	//std::map<COutPoint, std::set<uint256> > mapVotedOutpoints; // utxo - tx hash set
 	//std::map<COutPoint, uint256> mapLockedOutpoints; // utxo - tx hash
-	all    map[common.Hash]int                  // All votes to allow lookups
+	all       map[common.Hash]int                // All votes to allow lookups
 	lockedTxs map[common.Hash]*types.Transaction //
+	mu        sync.Mutex
 
 	//track masternodes who voted with no txreq (for DOS protection)
 	//追踪没有txreq投票的masternodes（用于DOS保护）
 	masternodeOrphanVotes map[common.Hash]int
 
-	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
+	/*
+	   At 15 signatures, 1/2 of the masternode network can be owned by
+	   one party without comprimising the security of InstantSend
+	   (1000/2150.0)**10 = 0.00047382219560689856
+	   (1000/2900.0)**10 = 2.3769498616783657e-05
 
+	   ### getting 5 of 10 signatures w/ 1000 nodes of 2900
+	   (1000/2900.0)**5 = 0.004875397277841433
+	*/
+
+	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
+	cachedHeight *big.Int
 	voteFeed     event.Feed
 
 	scope event.SubscriptionScope
@@ -59,22 +99,21 @@ type InstantSend struct {
 	Active *masternode.ActiveMasternode
 }
 
-func NewInstantx() *InstantSend{
+func NewInstantx() *InstantSend {
 
-	is:=&InstantSend{
-		accepted:make(map[common.Hash]*types.Transaction),
-		rejected:make(map[common.Hash]*types.Transaction),
-		txLockedVotes:make(map[common.Hash]*masternode.TxLockVote),
-		txLockVotesOrphan:make(map[common.Hash]*masternode.TxLockVote),
-		Candidates:make(map[common.Hash]*masternode.TxLockCondidate),
-		all:make(map[common.Hash]int),
-		lockedTxs:make(map[common.Hash]*types.Transaction),
-		masternodeOrphanVotes:make(map[common.Hash]int),
+	is := &InstantSend{
+		accepted:              make(map[common.Hash]*types.Transaction),
+		rejected:              make(map[common.Hash]*types.Transaction),
+		txLockedVotes:         make(map[common.Hash]*masternode.TxLockVote),
+		txLockVotesOrphan:     make(map[common.Hash]*masternode.TxLockVote),
+		Candidates:            make(map[common.Hash]*masternode.TxLockCondidate),
+		all:                   make(map[common.Hash]int),
+		lockedTxs:             make(map[common.Hash]*types.Transaction),
+		masternodeOrphanVotes: make(map[common.Hash]int),
 	}
 
 	return is
 }
-
 
 //received a consensus TxLockRequest
 func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
@@ -121,8 +160,6 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 	}
 
 	var alreadyVoted bool = false
-	//info := is.active.MasternodeInfo()
-
 	if _, ok := is.all[txHash]; !ok {
 		txLockCondidate := is.Candidates[txHash] //找到当前交易的侯选人
 		if txLockCondidate.HasMasternodeVoted(is.Active.ID) {
@@ -133,7 +170,6 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 	}
 
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID) //构建一个投票对象
-
 	if alreadyVoted {
 		return
 	}
@@ -256,12 +292,10 @@ func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCo
 	}
 }
 
-
-func(is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote){
+func (is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote) {
 
 	is.voteFeed.Send(core.VoteEvent{vote})
 }
-
 
 // SubscribeTxPreEvent registers a subscription of VoteEvent and
 // starts sending event to the given channel.
@@ -269,6 +303,45 @@ func (self *InstantSend) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subs
 	return self.scope.Track(self.voteFeed.Subscribe(ch))
 }
 
+func (self *InstantSend) CheckAndRemove() {
+
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	for txHash, lockCondidate := range self.Candidates {
+
+		if lockCondidate.IsExpired(self.cachedHeight) {
+			log.Info("InstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid= \n", txHash.String())
+			delete(self.rejected, txHash)
+			delete(self.accepted, txHash)
+			delete(self.Candidates, txHash)
+		}
+	}
+
+	for txHash, lockVote := range self.txLockedVotes {
+
+		if lockVote.IsExpired(self.cachedHeight) {
+			log.Info("InstantSend::CheckAndRemove -- Removing expired vote: txid=", txHash.String(), "  masternode= ", lockVote.MasternodeId())
+			delete(self.txLockedVotes, txHash)
+		}
+	}
+
+	for txHash, lockVote := range self.txLockedVotes {
+
+		if lockVote.IsFailed() {
+			log.Info("InstantSend::CheckAndRemove -- Removing Failed vote: txid=", txHash.String(), "Masternode= ", lockVote.MasternodeId())
+		}
+	}
+
+}
+
+func (is *InstantSend) GetConfirmations(hash common.Hash) int{
+
+	if is.IsLockedInstantSendTransaction(hash) {
+		return DEFAULT_INSTANTSEND_DEPTH
+	}
+	return 0
+}
 
 func (is *InstantSend) Have(hash common.Hash) bool {
 	return is.lockedTxs[hash] != nil
@@ -277,7 +350,6 @@ func (is *InstantSend) Have(hash common.Hash) bool {
 func (is *InstantSend) String() string {
 
 	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.all))
-
 	return str
 }
 

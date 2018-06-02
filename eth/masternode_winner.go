@@ -27,7 +27,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
-	"io"
 )
 
 const (
@@ -110,6 +109,7 @@ func (mp *MasternodePayments) Has(hash common.Hash) bool {
 }
 
 func (mp *MasternodePayments) Clear() {
+
 	mp.blocks = make(map[uint64]*MasternodeBlockPayees)
 	mp.votes = make(map[common.Hash]*masternode.MasternodePaymentVote)
 
@@ -213,8 +213,6 @@ func (self *MasternodePayments) CheckAndRemove(limit *big.Int){
 	}
 
 }
-
-
 
 type MasternodePayee struct {
 	masternodeAccount common.Address

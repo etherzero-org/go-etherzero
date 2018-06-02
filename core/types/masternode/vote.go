@@ -9,6 +9,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"math/big"
 	"time"
+	"github.com/ethzero/go-ethzero/eth"
 )
 
 const (
@@ -20,15 +21,19 @@ var (
 	ErrInvalidKeyType = errors.New("key is of invalid type")
 	// Sadly this is missing from crypto/ecdsa compared to crypto/rsa
 	ErrECDSAVerification = errors.New("crypto/ecdsa: verification error")
+
+	InstantSendKeepLock = big.NewInt(24)
 )
 
 type TxLockVote struct {
+
 	txHash          common.Hash
 	masternodeId    string
 	sig             []byte
-	confirmedHeight int
+	ConfirmedHeight *big.Int
 	createdTime     time.Time
 	KeySize         int
+
 }
 
 func (tlv *TxLockVote) MasternodeId() string {
@@ -41,7 +46,7 @@ func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
 		txHash:          hash,
 		masternodeId:    id,
 		createdTime:     time.Now(),
-		confirmedHeight: -1,
+		ConfirmedHeight: big.NewInt(-1),
 		KeySize:         256,
 	}
 	return tv
@@ -122,6 +127,25 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 	}
 }
 
+
+// Locks and votes expire nInstantSendKeepLock blocks after the block
+// corresponding tx was included into.
+func (self *TxLockVote) IsExpired(height *big.Int) bool{
+
+	return (self.ConfirmedHeight.Cmp(big.NewInt(-1))>0) && (new(big.Int).Sub(height,self.ConfirmedHeight).Cmp(InstantSendKeepLock)>0)
+}
+
+
+func (self *TxLockVote) IsFailed() bool {
+
+	return time.Now().Sub(self.createdTime ) > eth.INSTANTSEND_FAILED_TIMEOUT_SECONDS
+}
+
+func (self *TxLockVote) IsTimeOut() bool{
+
+	return time.Now().Sub(self.createdTime) > eth.INSTANTSEND_LOCK_TIMEOUT_SECONDS
+}
+
 type TxLockRequest struct {
 	tx *types.Transaction
 }
@@ -144,7 +168,7 @@ func (tq *TxLockRequest) Tx() *types.Transaction {
 }
 
 type TxLockCondidate struct {
-	confirmedHeight int
+	confirmedHeight *big.Int
 	createdTime     time.Time
 	txLockRequest   *types.Transaction
 	masternodeVotes map[string]*TxLockVote
@@ -158,7 +182,7 @@ func (tc *TxLockCondidate) TxLockRequest() *types.Transaction {
 func NewTxLockCondidate(request *types.Transaction) *TxLockCondidate {
 
 	txLockCondidate := &TxLockCondidate{
-		confirmedHeight: -1,
+		confirmedHeight: big.NewInt(-1),
 		createdTime:     time.Now(),
 		txLockRequest:   request,
 		masternodeVotes: make(map[string]*TxLockVote),
@@ -194,11 +218,20 @@ func (tc *TxLockCondidate) CountVotes() int {
 	}
 }
 
+// Locks and votes expire nInstantSendKeepLock blocks after the block
+// corresponding tx was included into.
+func (self *TxLockCondidate) IsExpired(height *big.Int) bool{
+
+	return (self.confirmedHeight.Cmp(big.NewInt(-1))>0) && (new(big.Int).Sub(height,self.confirmedHeight).Cmp(InstantSendKeepLock)>0)
+}
+
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
 
 	return tc.masternodeVotes[id] != nil
 }
 
 func (tc *TxLockCondidate) MaxSignatures() int {
+
 	return int(tc.txLockRequest.Size()) * SIGNATURES_TOTAL
+
 }
