@@ -77,6 +77,9 @@ const (
 	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
+
+	InstantSendFailedTimeoutSeconds uint64 =60 //// For how long we are going to keep invalid votes and votes for failed lock attempts,must be greater than INSTANTSEND_LOCK_TIMEOUT_SECONDS
+	InstantSendLockTimeoutSeconds uint64 =15   // For how long we are going to accept votes/locks after we saw the first one for a specific transaction
 )
 
 var (
@@ -86,4 +89,4 @@ var (
 	EthzeroGenesisDifficulty      = big.NewInt(17179869184)                // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 	DurationEthzeroLimit   = big.NewInt(8)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-	)
+)

@@ -19,6 +19,8 @@ package eth
 
 import (
 	"fmt"
+	"math/big"
+	"sync"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
@@ -29,9 +31,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/rlp"
 
-	"hash"
-	"math/big"
-	"sync"
 )
 
 const (
@@ -50,14 +49,6 @@ const (
 	DEFAULT_INSTANTSEND_DEPTH = 5
 
 	MIN_INSTANTSEND_PROTO_VERSION = 70208
-	// For how long we are going to accept votes/locks
-	// after we saw the first one for a specific transaction
-	INSTANTSEND_LOCK_TIMEOUT_SECONDS = 15
-
-	// For how long we are going to keep invalid votes and votes for failed lock attempts,
-	// must be greater than INSTANTSEND_LOCK_TIMEOUT_SECONDS
-	INSTANTSEND_FAILED_TIMEOUT_SECONDS = 60
-
 )
 
 type InstantSend struct {
@@ -79,6 +70,7 @@ type InstantSend struct {
 	//track masternodes who voted with no txreq (for DOS protection)
 	//追踪没有txreq投票的masternodes（用于DOS保护）
 	masternodeOrphanVotes map[common.Hash]int
+	votesOrphan           map[common.Hash]*masternode.TxLockVote
 
 	/*
 	   At 15 signatures, 1/2 of the masternode network can be owned by
@@ -89,12 +81,10 @@ type InstantSend struct {
 	   ### getting 5 of 10 signatures w/ 1000 nodes of 2900
 	   (1000/2900.0)**5 = 0.004875397277841433
 	*/
-
 	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
 	cachedHeight *big.Int
 	voteFeed     event.Feed
-
-	scope event.SubscriptionScope
+	scope        event.SubscriptionScope
 
 	Active *masternode.ActiveMasternode
 }
@@ -228,12 +218,27 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 
 func (is *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 
-	txhash := vote.Hash()
-	txLockCondidate := is.Candidates[txhash]
+	txHash := vote.Hash()
 
-	log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txhash.String())
-	if _, ok := is.all[txhash]; !ok {
-		is.all[txhash]++
+	if !vote.IsValid() {
+		log.Error("CInstantSend::ProcessTxLockVote -- Vote is invalid, txid=", txHash.String())
+		return false
+	}
+	is.voteFeed.Send(vote)
+	txLockCondidate := is.Candidates[txHash]
+
+	// Masternodes will sometimes propagate votes before the transaction is known to the client,
+	// will actually process only after the lock request itself has arrived
+	if txLockCondidate == nil {
+		if is.votesOrphan[txHash] == nil {
+
+			is.votesOrphan[txHash] = vote
+		}
+	}
+
+	log.Info("ProcessTxLockVote -- Transaction Lock Vote, txid=", txHash.String())
+	if _, ok := is.all[txHash]; !ok {
+		is.all[txHash]++
 	}
 	if txLockCondidate.AddVote(vote) {
 		return false
@@ -335,7 +340,7 @@ func (self *InstantSend) CheckAndRemove() {
 
 }
 
-func (is *InstantSend) GetConfirmations(hash common.Hash) int{
+func (is *InstantSend) GetConfirmations(hash common.Hash) int {
 
 	if is.IsLockedInstantSendTransaction(hash) {
 		return DEFAULT_INSTANTSEND_DEPTH

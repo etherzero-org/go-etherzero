@@ -4,12 +4,13 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"errors"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/core/types"
 	"math/big"
 	"time"
-	"github.com/ethzero/go-ethzero/eth"
+
+	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/params"
 )
 
 const (
@@ -26,14 +27,12 @@ var (
 )
 
 type TxLockVote struct {
-
 	txHash          common.Hash
 	masternodeId    string
 	sig             []byte
 	ConfirmedHeight *big.Int
 	createdTime     time.Time
 	KeySize         int
-
 }
 
 func (tlv *TxLockVote) MasternodeId() string {
@@ -127,23 +126,25 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 	}
 }
 
-
 // Locks and votes expire nInstantSendKeepLock blocks after the block
 // corresponding tx was included into.
-func (self *TxLockVote) IsExpired(height *big.Int) bool{
+func (self *TxLockVote) IsExpired(height *big.Int) bool {
 
-	return (self.ConfirmedHeight.Cmp(big.NewInt(-1))>0) && (new(big.Int).Sub(height,self.ConfirmedHeight).Cmp(InstantSendKeepLock)>0)
+	return (self.ConfirmedHeight.Cmp(big.NewInt(-1)) > 0) && (new(big.Int).Sub(height, self.ConfirmedHeight).Cmp(InstantSendKeepLock) > 0)
 }
-
 
 func (self *TxLockVote) IsFailed() bool {
 
-	return time.Now().Sub(self.createdTime ) > eth.INSTANTSEND_FAILED_TIMEOUT_SECONDS
+	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendFailedTimeoutSeconds
 }
 
-func (self *TxLockVote) IsTimeOut() bool{
+func (self *TxLockVote) IsTimeOut() bool {
 
-	return time.Now().Sub(self.createdTime) > eth.INSTANTSEND_LOCK_TIMEOUT_SECONDS
+	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds
+}
+
+func (self *TxLockVote) IsValid() bool {
+	return true
 }
 
 type TxLockRequest struct {
@@ -220,9 +221,9 @@ func (tc *TxLockCondidate) CountVotes() int {
 
 // Locks and votes expire nInstantSendKeepLock blocks after the block
 // corresponding tx was included into.
-func (self *TxLockCondidate) IsExpired(height *big.Int) bool{
+func (self *TxLockCondidate) IsExpired(height *big.Int) bool {
 
-	return (self.confirmedHeight.Cmp(big.NewInt(-1))>0) && (new(big.Int).Sub(height,self.confirmedHeight).Cmp(InstantSendKeepLock)>0)
+	return (self.confirmedHeight.Cmp(big.NewInt(-1)) > 0) && (new(big.Int).Sub(height, self.confirmedHeight).Cmp(InstantSendKeepLock) > 0)
 }
 
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
