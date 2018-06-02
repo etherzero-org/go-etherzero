@@ -18,7 +18,7 @@ func TestTxLockVote_IsValid(t *testing.T) {
 	}
 	txLockVote := NewTxLockVote(
 		hash,
-		fmt.Sprintf( "aaa"),
+		fmt.Sprintf("aaa"),
 	)
-	fmt.Printf("%v", txLockVote.IsTimeOut())
+	fmt.Printf("timeout ret is %v", txLockVote.IsTimeOut())
 }
