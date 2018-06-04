@@ -82,13 +82,13 @@ func (n *Masternode) String() string {
 	return fmt.Sprintf("Account: %s\nNode: %s\n", n.Account.String(), n.Node)
 }
 
-func (n *Masternode) CalculateScore(hash common.Hash) *big.Int {
+func (n *Masternode) CalculateScore(hash common.Hash) int64 {
 	blockHash := rlpHash([]interface{}{
 		hash,
 		n.Account,
 		n.CollateralMinConfBlockHash,
 	})
-	return blockHash.Big()
+	return blockHash.Big().Int64()
 }
 
 type MasternodeSet struct {

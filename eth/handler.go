@@ -104,7 +104,7 @@ type ProtocolManager struct {
 	winnerCh  chan core.PaymentVoteEvent
 	winnerSub event.Subscription
 
-	manager *MasternodeManager
+	mnManager *MasternodeManager
 
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
@@ -194,7 +194,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 
 	vote := func(block *types.Block) bool {
-		rank, _ := manager.manager.GetMasternodeRank(manager.manager.active.ID)
+		rank, _ := manager.mnManager.GetMasternodeRank(manager.mnManager.active.ID)
 		return manager.winner.ProcessBlock(block, rank)
 	}
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
@@ -215,7 +215,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if err := pm.peers.Unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
 	}
-	pm.manager.removePeer(id)
+	pm.mnManager.removePeer(id)
 	// Hard disconnect at the networking layer
 	if peer != nil {
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
@@ -236,12 +236,12 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 
 	// broadcast votes
 	pm.voteCh = make(chan core.VoteEvent, voteChanSize)
-	pm.voteSub = pm.manager.SubscribeVoteEvent(pm.voteCh)
+	pm.voteSub = pm.mnManager.SubscribeVoteEvent(pm.voteCh)
 	go pm.voteBroadcastLoop()
 
 	// broadcast payment votes
 	pm.winnerCh = make(chan core.PaymentVoteEvent, winnerChanSize)
-	pm.winnerSub = pm.manager.SubscribeWinnerVoteEvent(pm.winnerCh)
+	pm.winnerSub = pm.mnManager.SubscribeWinnerVoteEvent(pm.winnerCh)
 	go pm.winnerVoteBroadcastLoop()
 
 	// start sync handlers
@@ -338,7 +338,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		}()
 	}
 
-	pm.manager.newPeer(p)
+	pm.mnManager.newPeer(p)
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
@@ -712,7 +712,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		for i, err := range errs {
 			if err == nil {
 				log.Info("Start a voting transaction", "tx Hash:", txs[i].Hash().String())
-				pm.manager.ProcessTxVote(txs[i])
+				pm.mnManager.ProcessTxVote(txs[i])
 			}
 		}
 
@@ -728,7 +728,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkVote(vote.Hash())
 		}
-		pm.manager.ProcessTxLockVotes(votes)
+		pm.mnManager.ProcessTxLockVotes(votes)
 
 	case p.version >= etz64 && msg.Code == NewWinnerVoteMsg:
 		// A batch of PaymentVote arrived to one of our previous requests
@@ -739,12 +739,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		for _, vote := range votes {
 			p.MarkWinnerVote(vote.Hash())
 		}
-		pm.manager.ProcessPaymentVotes(votes)
+		pm.mnManager.ProcessPaymentVotes(votes)
 
 	case msg.Code == MasternodePingMsg:
 		var ping = &masternode.PingMsg{}
 		msg.Decode(ping)
-		err := pm.manager.DealPingMsg(ping)
+		err := pm.mnManager.DealPingMsg(ping)
 		if err != nil {
 			log.Error("DealPingMsg", "error", err)
 		}
@@ -874,7 +874,7 @@ func (self *ProtocolManager) winnerVoteBroadcastLoop() {
 
 func (self *ProtocolManager) MasternodeManager(manager *MasternodeManager) {
 
-	self.manager = manager
+	self.mnManager = manager
 }
 
 // NodeInfo represents a short summary of the Ethereum sub-protocol metadata
@@ -899,6 +899,6 @@ func (self *ProtocolManager) NodeInfo() *NodeInfo {
 		Config:     self.blockchain.Config(),
 		Head:       currentBlock.Hash(),
 
-		IsMasternode: self.manager.active.State() == masternode.ACTIVE_MASTERNODE_STARTED,
+		IsMasternode: self.mnManager.active.State() == masternode.ACTIVE_MASTERNODE_STARTED,
 	}
 }

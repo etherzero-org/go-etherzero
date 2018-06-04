@@ -195,7 +195,7 @@ func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address,
 		paids                 []int
 		tenthNetWork          = len(enableMasternodeNodes) / 10 // TODO: when len < 10
 		countTenth            = 0
-		highest               = big.NewInt(0)
+		highest               int64
 		best                  common.Address
 	)
 
@@ -219,7 +219,7 @@ func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address,
 	for _, i := range paids {
 		//fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block.Hash())
-		if score.Cmp(highest) > 0 {
+		if score > highest {
 			highest = score
 			best = sortMap[i].Account
 		}
@@ -266,9 +266,9 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 	return rank, true
 }
 
-func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[*big.Int]*masternode.Masternode {
+func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[int64]*masternode.Masternode {
 
-	masternodeScores := make(map[*big.Int]*masternode.Masternode)
+	masternodeScores := make(map[int64]*masternode.Masternode)
 
 	for _, m := range mm.masternodes.EnableNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m

@@ -25,18 +25,18 @@ var (
 
 // vote for the winning payment
 type MasternodePaymentVote struct {
-	Number     *big.Int //blockHeight
+	Number            *big.Int //blockHeight
 	MasternodeAccount common.Address
-	KeySize int
+	KeySize           int
 }
 
 //Voted block number,activeMasternode
 func NewMasternodePaymentVote(blockHeight *big.Int, account common.Address) *MasternodePaymentVote {
 
 	vote := MasternodePaymentVote{
-		Number:     blockHeight,
+		Number:            blockHeight,
 		MasternodeAccount: account,
-		KeySize:    0,
+		KeySize:           0,
 	}
 
 	return &vote
@@ -118,6 +118,7 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 }
 
 func (v *MasternodePaymentVote) IsVerified() bool {
+
 	return true
 }
 
