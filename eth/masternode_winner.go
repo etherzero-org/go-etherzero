@@ -77,29 +77,29 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 }
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
-func (mp *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodePaymentVote) bool {
+func (self *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodePaymentVote) bool {
 
-	if mp.HasVerifiedVote(hash) {
+	if self.HasVerifiedVote(hash) {
 		return false
 	}
-	mp.votes[hash] = vote
+	self.votes[hash] = vote
 
-	if payee := mp.blocks[vote.Number.Uint64()]; payee == nil {
+	if payee := self.blocks[vote.Number.Uint64()]; payee == nil {
 		blockPayees := NewMasternodeBlockPayees(vote.Number)
 		blockPayees.Add(vote)
-		mp.blocks[vote.Number.Uint64()] = blockPayees
+		self.blocks[vote.Number.Uint64()] = blockPayees
 	} else {
-		mp.blocks[vote.Number.Uint64()].Add(vote)
+		self.blocks[vote.Number.Uint64()].Add(vote)
 	}
 	return true
 }
 
-func (mp *MasternodePayments) VoteCount() int {
-	return len(mp.votes)
+func (self *MasternodePayments) VoteCount() int {
+	return len(self.votes)
 }
 
-func (mp *MasternodePayments) BlockCount() int {
-	return len(mp.blocks)
+func (self *MasternodePayments) BlockCount() int {
+	return len(self.blocks)
 }
 
 //vote hash
@@ -122,18 +122,18 @@ func (self *MasternodePayments) Clear() {
 
 }
 
-func (mp *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool {
+func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool {
 
 	if rank > MNPAYMENTS_SIGNATURES_TOTAL {
 		log.Info("Masternode not in the top ", MNPAYMENTS_SIGNATURES_TOTAL, "( ", rank, ")")
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", mp.active.ID)
+	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", self.active.ID)
 
-	vote := masternode.NewMasternodePaymentVote(block.Number(), mp.active.Account)
+	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.Account)
 	// vote constructed sucessfully, let's store and relay it
-	mp.Add(block.Hash(), vote)
+	self.Add(block.Hash(), vote)
 
 	return true
 }
@@ -158,11 +158,11 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", self.cachedBlockNumber.String())
 		return false
 	}
-
-	if !vote.IsVerified() {
-		log.Trace("ERROR: invalid message, error: Verified false")
-		return false
-	}
+	// TODO:Verification work is handled in the MasternodeManager
+	//if !vote.CheckValid(self.cachedBlockNumber) {
+	//	log.Trace("ERROR: invalid message, error: Verified false")
+	//	return false
+	//}
 
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
@@ -194,10 +194,10 @@ func (is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVo
 
 // Find an entry in the masternode list that is next to be paid
 // height is blockNumber , address is masternode account
-func (mp *MasternodePayments) BlockWinner(height *big.Int) (common.Address, bool) {
+func (self *MasternodePayments) BlockWinner(height *big.Int) (common.Address, bool) {
 
-	if mp.blocks[height.Uint64()] != nil {
-		return mp.blocks[height.Uint64()].Best()
+	if self.blocks[height.Uint64()] != nil {
+		return self.blocks[height.Uint64()].Best()
 	}
 	return common.Address{}, false
 }
@@ -251,15 +251,17 @@ func NewMasternodePayee(account common.Address, vote *masternode.MasternodePayme
 func (self *MasternodePayee) Add(vote *masternode.MasternodePaymentVote) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
+
 	self.votes = append(self.votes, vote)
 }
 
-func (mp *MasternodePayee) Count() int {
-	return len(mp.votes)
+func (self *MasternodePayee) Count() int {
+	return len(self.votes)
 }
 
-func (mp *MasternodePayee) Votes() []*masternode.MasternodePaymentVote {
-	return mp.votes
+func (self *MasternodePayee) Votes() []*masternode.MasternodePaymentVote {
+
+	return self.votes
 }
 
 type MasternodeBlockPayees struct {
