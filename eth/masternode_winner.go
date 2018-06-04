@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
+	"sync"
 )
 
 const (
@@ -59,9 +60,11 @@ type MasternodePayments struct {
 	lastVoted  map[common.Address]*big.Int // masternodeID <- height
 
 	winnerFeed event.Feed
+	mu sync.Mutex
 }
 
 func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *MasternodePayments {
+
 	payments := &MasternodePayments{
 		cachedBlockNumber: number,
 		minBlocksToStore:  big.NewInt(1),
@@ -77,7 +80,7 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
 func (mp *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodePaymentVote) bool {
 
-	if mp.Has(hash) {
+	if mp.HasVerifiedVote(hash) {
 		return false
 	}
 	mp.votes[hash] = vote
@@ -100,18 +103,23 @@ func (mp *MasternodePayments) BlockCount() int {
 	return len(mp.blocks)
 }
 
-func (mp *MasternodePayments) Has(hash common.Hash) bool {
+//vote hash
+func (self *MasternodePayments) HasVerifiedVote(hash common.Hash) bool {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
-	if vote := mp.votes[hash]; vote != nil {
+	if vote := self.votes[hash]; vote != nil {
 		return vote.IsVerified()
 	}
 	return false
 }
 
-func (mp *MasternodePayments) Clear() {
+func (self *MasternodePayments) Clear() {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
-	mp.blocks = make(map[uint64]*MasternodeBlockPayees)
-	mp.votes = make(map[common.Hash]*masternode.MasternodePaymentVote)
+	self.blocks = make(map[uint64]*MasternodeBlockPayees)
+	self.votes = make(map[common.Hash]*masternode.MasternodePaymentVote)
 
 }
 
@@ -138,6 +146,9 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())
 		return false
 	}
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
 	self.votes[vote.Hash()] = vote
 	// but first mark vote as non-verified,
 	// AddPaymentVote() below should take care of it if vote is actually ok
@@ -150,7 +161,7 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	}
 
 	if !vote.IsVerified() {
-		log.Trace("ERROR: invalid message, error:")
+		log.Trace("ERROR: invalid message, error: Verified false")
 		return false
 	}
 
@@ -182,6 +193,7 @@ func (is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVo
 	is.winnerFeed.Send(core.PaymentVoteEvent{vote})
 }
 
+// Find an entry in the masternode list that is next to be paid
 // height is blockNumber , address is masternode account
 func (mp *MasternodePayments) BlockWinner(height *big.Int) (common.Address, bool) {
 
@@ -193,6 +205,8 @@ func (mp *MasternodePayments) BlockWinner(height *big.Int) (common.Address, bool
 
 //Detect whether the current masternode can vote
 func (self *MasternodePayments) CanVote(height *big.Int, address common.Address) bool {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
 	if self.lastVoted[address] != nil && self.lastVoted[address].Cmp(height) == 0 {
 		return false
@@ -214,9 +228,16 @@ func (self *MasternodePayments) CheckAndRemove(limit *big.Int){
 
 }
 
+func (self *MasternodePayments) CheckPreviousBlockVotes(preBlockHash common.Hash) bool{
+
+	return true
+}
+
 type MasternodePayee struct {
 	masternodeAccount common.Address
 	votes             []*masternode.MasternodePaymentVote
+
+	mu sync.Mutex
 }
 
 func NewMasternodePayee(account common.Address, vote *masternode.MasternodePaymentVote) *MasternodePayee {
@@ -228,9 +249,10 @@ func NewMasternodePayee(account common.Address, vote *masternode.MasternodePayme
 	return mp
 }
 
-func (mp *MasternodePayee) Add(vote *masternode.MasternodePaymentVote) {
-
-	mp.votes = append(mp.votes, vote)
+func (self *MasternodePayee) Add(vote *masternode.MasternodePaymentVote) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+	self.votes = append(self.votes, vote)
 }
 
 func (mp *MasternodePayee) Count() int {
@@ -244,6 +266,7 @@ func (mp *MasternodePayee) Votes() []*masternode.MasternodePaymentVote {
 type MasternodeBlockPayees struct {
 	number *big.Int //blockHeight
 	payees []*MasternodePayee
+	mu sync.Mutex
 	//payees *set.Set
 }
 
@@ -256,32 +279,36 @@ func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 }
 
 //vote
-func (mbp *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {
+func (self *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {
 
+	self.mu.Lock()
+	defer self.mu.Unlock()
 	//When the masternode has been voted
 	//info := vote.masternode.MasternodeInfo()
-	for _, mp := range mbp.payees {
+	for _, mp := range self.payees {
 		if mp.masternodeAccount == vote.MasternodeAccount {
 			mp.Add(vote)
 			return
 		}
 	}
 	payee := NewMasternodePayee(vote.MasternodeAccount, vote)
-	mbp.payees = append(mbp.payees, payee)
+	self.payees = append(self.payees, payee)
 
 }
 
 //select the Masternode that has been voted the most
-func (mbp *MasternodeBlockPayees) Best() (common.Address, bool) {
+func (self *MasternodeBlockPayees) Best() (common.Address, bool) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
-	if len(mbp.payees) < 1 {
+	if len(self.payees) < 1 {
 		log.Info("ERROR: ", "couldn't find any payee!")
 	}
 	var (
 		votes             = -1
 		masternodeAccount common.Address
 	)
-	for _, payee := range mbp.payees {
+	for _, payee := range self.payees {
 		if votes < payee.Count() {
 			masternodeAccount = payee.masternodeAccount
 			votes = payee.Count()
@@ -292,11 +319,15 @@ func (mbp *MasternodeBlockPayees) Best() (common.Address, bool) {
 
 //Used to record the last winning block of the masternode. At least 2 votes need to be satisfied
 // Has(2,masternode.account)
-func (mbp *MasternodeBlockPayees) Has(num int, account common.Address) bool {
-	if len(mbp.payees) < 1 {
+func (self *MasternodeBlockPayees) Has(num int, account common.Address) bool {
+
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if len(self.payees) < 1 {
 		log.Info("ERROR: ", "couldn't find any payee!")
 	}
-	for _, payee := range mbp.payees {
+	for _, payee := range self.payees {
 		if payee.Count() >= num && payee.masternodeAccount == account {
 			return true
 		}

@@ -142,7 +142,8 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 		return
 	}
 
-	txlockRequest := condidate.TxLockRequest()
+	txlockRequest := condidate.TxLockRequest
+
 	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
 		log.Info("nonce error")
@@ -204,15 +205,21 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 		return false
 	}
 	txhash := request.Hash()
+	var txlockcondidate *masternode.TxLockCondidate
 
 	if is.Candidates == nil {
 		log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
-		txlockcondidate := masternode.NewTxLockCondidate(request)
+		txlockcondidate = masternode.NewTxLockCondidate(request)
 		is.Candidates[txhash] = txlockcondidate
-	} else {
+	} else if is.Candidates[request.Hash()] == nil {
+		txlockcondidate.TxLockRequest = request
 		log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
+		if txlockcondidate.IsTimeout() {
+			log.Info("InstantSend::CreateTxLockCandidate -- timed out, txid=%s\n", txhash.String())
+			return false
+		}
+		log.Info("InstantSend::CreateTxLockCandidate -- update empty, txid=%s\n", txhash.String())
 	}
-
 	return true
 }
 
@@ -352,12 +359,19 @@ func (self *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool {
 }
 
 func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
-	txLockRequest := condidate.TxLockRequest()
+
+	txLockRequest := condidate.TxLockRequest
 
 	txHash := txLockRequest.Hash()
 	if condidate.IsReady() {
 		is.lockedTxs[txHash] = txLockRequest
 	}
+}
+
+//we have enough votes now
+func (is *InstantSend) ResolveConflicts(condidate masternode.TxLockCondidate) bool {
+
+	return true
 }
 
 func (is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote) {

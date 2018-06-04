@@ -168,21 +168,18 @@ func (tq *TxLockRequest) Tx() *types.Transaction {
 type TxLockCondidate struct {
 	confirmedHeight *big.Int
 	createdTime     time.Time
-	txLockRequest   *types.Transaction
+	TxLockRequest   *types.Transaction
 	masternodeVotes map[string]*TxLockVote
 	attacked        bool
 }
 
-func (tc *TxLockCondidate) TxLockRequest() *types.Transaction {
-	return tc.txLockRequest
-}
 
 func NewTxLockCondidate(request *types.Transaction) *TxLockCondidate {
 
 	txLockCondidate := &TxLockCondidate{
 		confirmedHeight: big.NewInt(-1),
 		createdTime:     time.Now(),
-		txLockRequest:   request,
+		TxLockRequest:   request,
 		masternodeVotes: make(map[string]*TxLockVote),
 		attacked:        false,
 	}
@@ -192,7 +189,7 @@ func NewTxLockCondidate(request *types.Transaction) *TxLockCondidate {
 
 func (tc *TxLockCondidate) Hash() common.Hash {
 
-	return tc.txLockRequest.Hash()
+	return tc.TxLockRequest.Hash()
 }
 
 func (tc *TxLockCondidate) AddVote(vote *TxLockVote) bool {
@@ -223,6 +220,14 @@ func (self *TxLockCondidate) IsExpired(height *big.Int) bool {
 	return (self.confirmedHeight.Cmp(big.NewInt(-1)) > 0) && (new(big.Int).Sub(height, self.confirmedHeight).Cmp(InstantSendKeepLock) > 0)
 }
 
+func (self *TxLockCondidate) IsTimeout() bool{
+
+	if uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds {
+		return false
+	}
+	return true
+}
+
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
 
 	return tc.masternodeVotes[id] != nil
@@ -230,6 +235,6 @@ func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
 
 func (tc *TxLockCondidate) MaxSignatures() int {
 
-	return int(tc.txLockRequest.Size()) * SIGNATURES_TOTAL
+	return int(tc.TxLockRequest.Size()) * SIGNATURES_TOTAL
 
 }

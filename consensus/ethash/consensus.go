@@ -636,7 +636,8 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		blockReward = EthzeroBlockReward
 	}
 
-	if config.IsEthzeroMasternode(header.Number) && len(masternode) > 1 {
+	if config.IsEthzeroMasternode(header.Number) && masternode != (common.Address{}) {
+
 		blockReward := MasternodeReward
 		state.AddBalance(masternode, blockReward)
 		state.AddBalance(params.MainnetGovernanceAddress, GovernanceReward)
