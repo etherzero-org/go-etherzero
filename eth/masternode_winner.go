@@ -128,10 +128,19 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", self.active.ID)
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(),self.active.ID, self.active.Account)
-	// vote constructed sucessfully, let's store and relay it
-	self.Add(block.Hash(), vote)
 
-	return true
+	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
+	hash:=vote.Hash()
+
+	if sig,err:=vote.Sign(hash[:],self.active.PrivateKey);err==nil{
+		// vote constructed sucessfully, let's store and relay it
+		log.Info("MasternodePayments:: sign value:",string(sig))
+		self.Add(block.Hash(), vote)
+		return true
+	}else{
+		log.Error("MasternodePayments::processBlock -- Signing vote failed")
+		return false
+	}
 }
 
 //Handle the voting of other masternodes

@@ -1,4 +1,5 @@
 // Copyright 2015 The go-ethereum Authors
+// Copyright 2018 The go-etherzero Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -194,7 +195,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	}
 
 	vote := func(block *types.Block) bool {
-		rank, _ := manager.mnManager.GetMasternodeRank(manager.mnManager.active.ID)
+		rank := manager.mnManager.GetMasternodeRank(manager.mnManager.active.ID)
 		return manager.winner.ProcessBlock(block, rank)
 	}
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)

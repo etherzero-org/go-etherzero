@@ -32,6 +32,7 @@ import (
 	"github.com/ethzero/go-ethzero/rlp"
 
 	"time"
+	"github.com/ethzero/go-ethzero/crypto"
 )
 
 const (
@@ -131,11 +132,11 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
 	return true
 }
 
-func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
+func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool{
 
 	txHash := condidate.Hash()
 	if _, ok := is.accepted[txHash]; !ok {
-		return
+		return false
 	}
 
 	txlockRequest := condidate.TxLockRequest
@@ -143,7 +144,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
 		log.Info("nonce error")
-		return
+		return false
 	}
 
 	var alreadyVoted bool = false
@@ -153,25 +154,26 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 			if txLockCondidate.HasMasternodeVoted(is.Active.ID) {
 				alreadyVoted = true
 				log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.Active.ID)
-				return
+				return false
 			}
 		}
 	}
-
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
 	if alreadyVoted {
-		return
+		return false
 	}
-	signByte, err := vote.Sign(vote.Hash(), is.Active.PrivateKey)
 
+	hash:=vote.Hash()
+	signByte, err := vote.Sign(hash[:], is.Active.PrivateKey)
 	if err != nil {
-		return
+		return false
 	}
 
-	sigErr := vote.Verify(vote.Hash().Bytes(), signByte, is.Active.PrivateKey.Public())
-
-	if sigErr != nil {
-		return
+	publicKey:=crypto.FromECDSAPub(&is.Active.PrivateKey.PublicKey)
+	ok := vote.Verify(vote.Hash().Bytes(), signByte, publicKey)
+	if !ok {
+		log.Error("InstantSend sign Verify error ")
+		return false
 	}
 
 	// vote constructed sucessfully, let's store and relay it
@@ -185,7 +187,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 		log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
 		is.all[txHash] = 1
 	}
-
+	return true
 }
 
 func (is *InstantSend) Vote(hash common.Hash) {
