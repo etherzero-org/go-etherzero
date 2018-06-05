@@ -45,10 +45,9 @@ var (
 type TxLockVote struct {
 	txHash          common.Hash
 	masternodeId    string
-	sig             []byte
+	Sig             []byte
 	ConfirmedHeight *big.Int
 	createdTime     time.Time
-	KeySize         int
 }
 
 func (tlv *TxLockVote) MasternodeId() string {
@@ -61,13 +60,17 @@ func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
 		masternodeId:    id,
 		createdTime:     time.Now(),
 		ConfirmedHeight: big.NewInt(-1),
-		KeySize:         32, //TODO
 	}
 }
 
 func (v *TxLockVote) Hash() common.Hash {
-	h := rlpHash(v)
-	return h
+
+	return rlpHash([]interface{}{
+		v.txHash,
+		v.masternodeId,
+		v.ConfirmedHeight,
+		v.createdTime,
+	})
 }
 
 func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
@@ -78,7 +81,7 @@ func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
 // Implements the Verify method from SigningMethod
 // For this verify method, key must be an ecdsa.PublicKey struct
 func (m *TxLockVote) Verify(pubkey, hash, signature []byte) bool {
-	return crypto.VerifySignature(pubkey,hash,signature)
+	return crypto.VerifySignature(pubkey, hash, signature)
 
 }
 
@@ -90,7 +93,7 @@ func (m *TxLockVote) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err e
 	if err != nil {
 		return nil, err
 	}
-	return sig,nil
+	return sig, nil
 
 }
 
@@ -109,7 +112,6 @@ func (self *TxLockVote) IsFailed() bool {
 func (self *TxLockVote) IsTimeOut() bool {
 	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds
 }
-
 
 type TxLockRequest struct {
 	tx *types.Transaction

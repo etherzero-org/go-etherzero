@@ -165,6 +165,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool{
 
 	hash:=vote.Hash()
 	signByte, err := vote.Sign(hash[:], is.Active.PrivateKey)
+	vote.Sig=signByte
 	if err != nil {
 		return false
 	}

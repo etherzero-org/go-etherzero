@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 )
@@ -127,20 +128,24 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", self.active.ID)
 
-	vote := masternode.NewMasternodePaymentVote(block.Number(),self.active.ID, self.active.Account)
+	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
 
 	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
-	hash:=vote.Hash()
-
-	if sig,err:=vote.Sign(hash[:],self.active.PrivateKey);err==nil{
-		// vote constructed sucessfully, let's store and relay it
-		log.Info("MasternodePayments:: sign value:",string(sig))
-		self.Add(block.Hash(), vote)
-		return true
-	}else{
-		log.Error("MasternodePayments::processBlock -- Signing vote failed")
-		return false
+	hash := vote.Hash()
+	sig, err := vote.Sign(hash[:], self.active.PrivateKey)
+	vote.Sig = sig
+	if err == nil {
+		pubkey := crypto.FromECDSAPub(&self.active.PrivateKey.PublicKey)
+		if vote.Verify(hash[:], sig, pubkey) {
+			// vote constructed sucessfully, let's store and relay it
+			log.Info("MasternodePayments:: sign value:", string(sig))
+			self.Add(block.Hash(), vote)
+			return true
+		}
 	}
+	log.Error("MasternodePayments::processBlock -- Signing vote failed")
+	return false
+
 }
 
 //Handle the voting of other masternodes

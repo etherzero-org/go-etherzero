@@ -20,9 +20,11 @@ package masternode
 import (
 	"crypto/ecdsa"
 	"errors"
+	"math/big"
+	"time"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
-	"math/big"
 )
 
 const (
@@ -43,18 +45,19 @@ var (
 type MasternodePaymentVote struct {
 	Number            *big.Int //blockHeight
 	MasternodeId      string
-	MasternodeAccount 		  common.Address
-	KeySize           int
+	MasternodeAccount common.Address
+	createTime        time.Time
+	Sig               []byte
 }
 
 //Voted block number,activeMasternode
-func NewMasternodePaymentVote(blockHeight *big.Int, id string,account common.Address) *MasternodePaymentVote {
+func NewMasternodePaymentVote(blockHeight *big.Int, id string, account common.Address) *MasternodePaymentVote {
 
 	vote := MasternodePaymentVote{
 		Number:            blockHeight,
-		MasternodeId: id,
-		MasternodeAccount:account,
-		KeySize:           0,
+		MasternodeId:      id,
+		MasternodeAccount: account,
+		createTime:        time.Now(),
 	}
 
 	return &vote
@@ -62,8 +65,12 @@ func NewMasternodePaymentVote(blockHeight *big.Int, id string,account common.Add
 
 func (pv *MasternodePaymentVote) Hash() common.Hash {
 
-	h := rlpHash(pv)
-	return h
+	return rlpHash([]interface{}{
+		pv.Number,
+		pv.MasternodeId,
+		pv.MasternodeAccount,
+		pv.createTime,
+	})
 }
 
 // Implements the Verify method from SigningMethod
@@ -81,5 +88,5 @@ func (m *MasternodePaymentVote) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []
 	if err != nil {
 		return nil, err
 	}
-	return sig,nil
+	return sig, nil
 }
