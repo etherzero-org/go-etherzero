@@ -21,13 +21,14 @@ import (
 	"errors"
 	"math/big"
 
+	"sync"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
-	"sync"
 )
 
 const (
@@ -60,8 +61,7 @@ type MasternodePayments struct {
 }
 
 func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *MasternodePayments {
-
-	payments := &MasternodePayments{
+	return &MasternodePayments{
 		cachedBlockNumber: number,
 		minBlocksToStore:  big.NewInt(1),
 		storageCoeff:      big.NewInt(1),
@@ -70,7 +70,6 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 		lastVoted:         make(map[common.Address]*big.Int),
 		didNotVote:        make(map[common.Hash]*big.Int),
 	}
-	return payments
 }
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
