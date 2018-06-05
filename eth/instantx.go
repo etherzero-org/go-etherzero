@@ -211,7 +211,9 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 		log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
 		txlockcondidate = masternode.NewTxLockCondidate(request)
 		is.Candidates[txhash] = txlockcondidate
+
 	} else if is.Candidates[request.Hash()] == nil {
+
 		txlockcondidate.TxLockRequest = request
 		log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
 		if txlockcondidate.IsTimeout() {

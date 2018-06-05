@@ -26,16 +26,18 @@ var (
 // vote for the winning payment
 type MasternodePaymentVote struct {
 	Number            *big.Int //blockHeight
-	MasternodeAccount common.Address
+	MasternodeId      string
+	MasternodeAccount 		  common.Address
 	KeySize           int
 }
 
 //Voted block number,activeMasternode
-func NewMasternodePaymentVote(blockHeight *big.Int, account common.Address) *MasternodePaymentVote {
+func NewMasternodePaymentVote(blockHeight *big.Int, id string,account common.Address) *MasternodePaymentVote {
 
 	vote := MasternodePaymentVote{
 		Number:            blockHeight,
-		MasternodeAccount: account,
+		MasternodeId: id,
+		MasternodeAccount:account,
 		KeySize:           0,
 	}
 
@@ -115,41 +117,4 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 	} else {
 		return "", err
 	}
-}
-
-func (v *MasternodePaymentVote) IsVerified() bool {
-
-	return true
-}
-
-//TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting masternode
-//height is CachedHeight
-// TODO:Verification work is handled in the MasternodeManager
-func (v *MasternodePaymentVote) CheckValid(height *big.Int) bool{
-
-	// info := v.masternode.MasternodeInfo()
-
-	//var minRequiredProtocal uint = 0
-
-	//if v.Number.Cmp(height) > 0 {
-	//	minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
-	//} else {
-	//	minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
-	//}
-
-	//if v.Masternode.ProtocolVersion < minRequiredProtocal {
-	//	return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", v.Masternode.ProtocolVersion, minRequiredProtocal)
-	//}
-
-	if v.Number.Cmp(height) < 0 {
-		return true
-	}
-	//v.number
-
-	//TODO:Voting validity check is not judged here
-
-	// Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
-	// Regular clients (miners included) need to verify masternode rank for future block votes only.
-
-	return true
 }

@@ -33,9 +33,6 @@ import (
 const (
 	MNPAYMENTS_SIGNATURES_REQUIRED = 6
 	MNPAYMENTS_SIGNATURES_TOTAL    = 10
-
-	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206
-	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70208
 )
 
 var (
@@ -131,7 +128,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", self.active.ID)
 
-	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.Account)
+	vote := masternode.NewMasternodePaymentVote(block.Number(),self.active.ID, self.active.Account)
 	// vote constructed sucessfully, let's store and relay it
 	self.Add(block.Hash(), vote)
 
@@ -158,11 +155,6 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", self.cachedBlockNumber.String())
 		return false
 	}
-	// TODO:Verification work is handled in the MasternodeManager
-	//if !vote.CheckValid(self.cachedBlockNumber) {
-	//	log.Trace("ERROR: invalid message, error: Verified false")
-	//	return false
-	//}
 
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
@@ -307,7 +299,7 @@ func (self *MasternodeBlockPayees) Best() (common.Address, bool) {
 	}
 	var (
 		votes             = -1
-		masternodeAccount common.Address
+		masternodeAccount = common.Address{}
 	)
 	for _, payee := range self.payees {
 		if votes < payee.Count() {
