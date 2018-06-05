@@ -45,7 +45,7 @@ func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
 		masternodeId:    id,
 		createdTime:     time.Now(),
 		ConfirmedHeight: big.NewInt(-1),
-		KeySize:         256,
+		KeySize:         32, //TODO
 	}
 }
 
@@ -74,7 +74,6 @@ func (m *TxLockVote) Verify(sighash []byte, signature string, key interface{}) e
 	default:
 		return ErrInvalidKeyType
 	}
-
 	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
 	s := big.NewInt(0).SetBytes(sighash[m.KeySize:])
 
@@ -97,6 +96,7 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 	default:
 		return "", ErrInvalidKeyType
 	}
+
 	// Sign the string and return r, s
 	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey, signingString[:]); err == nil {
 		curveBits := ecdsaKey.Curve.Params().BitSize
@@ -117,9 +117,9 @@ func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, e
 		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
 
 		out := append(rBytesPadded, sBytesPadded...)
-
 		return string(out[:]), nil
 	} else {
+
 		return "", err
 	}
 }
@@ -173,9 +173,7 @@ type TxLockCondidate struct {
 	attacked        bool
 }
 
-
 func NewTxLockCondidate(request *types.Transaction) *TxLockCondidate {
-
 	txLockCondidate := &TxLockCondidate{
 		confirmedHeight: big.NewInt(-1),
 		createdTime:     time.Now(),
@@ -183,7 +181,6 @@ func NewTxLockCondidate(request *types.Transaction) *TxLockCondidate {
 		masternodeVotes: make(map[string]*TxLockVote),
 		attacked:        false,
 	}
-
 	return txLockCondidate
 }
 
@@ -220,7 +217,7 @@ func (self *TxLockCondidate) IsExpired(height *big.Int) bool {
 	return (self.confirmedHeight.Cmp(big.NewInt(-1)) > 0) && (new(big.Int).Sub(height, self.confirmedHeight).Cmp(InstantSendKeepLock) > 0)
 }
 
-func (self *TxLockCondidate) IsTimeout() bool{
+func (self *TxLockCondidate) IsTimeout() bool {
 
 	if uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds {
 		return false

@@ -1,3 +1,18 @@
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
+//
+// The go-etherzero library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-eth library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 package eth
 
 import (
@@ -38,15 +53,6 @@ func genKeys(N int) (keys []*ecdsa.PrivateKey) {
 func genNodeID() discover.NodeID {
 	key, _ := crypto.GenerateKey()
 	return discover.PubkeyID(&key.PublicKey)
-}
-
-func newTestBackend() *backends.SimulatedBackend {
-	val := new(big.Int).Mul(big.NewInt(200000), big.NewInt(1e+18))
-	return backends.NewSimulatedBackend(core.GenesisAlloc{
-		addr0: {Balance: val},
-		addr1: {Balance: val},
-		addr2: {Balance: val},
-	})
 }
 
 func newTestBackendAndKeys(N int) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {

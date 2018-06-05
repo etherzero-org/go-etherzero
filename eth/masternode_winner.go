@@ -21,13 +21,14 @@ import (
 	"errors"
 	"math/big"
 
+	"sync"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
-	"sync"
 )
 
 const (
@@ -47,7 +48,6 @@ var (
 // Masternode Payments Class
 // Keeps track of who should get paid for which blocks
 type MasternodePayments struct {
-
 	cachedBlockNumber *big.Int // Keep track of current block height
 	minBlocksToStore  *big.Int // ... but at least nMinBlocksToStore (payments blocks) dash default value:5000
 	storageCoeff      *big.Int //masternode count times nStorageCoeff payments blocks should be stored ... default value:1.25
@@ -60,12 +60,11 @@ type MasternodePayments struct {
 	lastVoted  map[common.Address]*big.Int // masternodeID <- height
 
 	winnerFeed event.Feed
-	mu sync.Mutex
+	mu         sync.Mutex
 }
 
 func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *MasternodePayments {
-
-	payments := &MasternodePayments{
+	return &MasternodePayments{
 		cachedBlockNumber: number,
 		minBlocksToStore:  big.NewInt(1),
 		storageCoeff:      big.NewInt(1),
@@ -74,7 +73,6 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 		lastVoted:         make(map[common.Address]*big.Int),
 		didNotVote:        make(map[common.Hash]*big.Int),
 	}
-	return payments
 }
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
@@ -216,19 +214,19 @@ func (self *MasternodePayments) CanVote(height *big.Int, address common.Address)
 }
 
 // Must be called at startup or init
-func (self *MasternodePayments) CheckAndRemove(limit *big.Int){
+func (self *MasternodePayments) CheckAndRemove(limit *big.Int) {
 
-	for hash,vote := range self.votes {
-		if new(big.Int).Sub(self.cachedBlockNumber,vote.Number).Cmp(limit)>0 {
-			log.Info("CheckAndRemove -- Removing old Masternode payment: BlockHeight=",vote.Number.String())
+	for hash, vote := range self.votes {
+		if new(big.Int).Sub(self.cachedBlockNumber, vote.Number).Cmp(limit) > 0 {
+			log.Info("CheckAndRemove -- Removing old Masternode payment: BlockHeight=", vote.Number.String())
 			delete(self.votes, hash)
-			delete(self.blocks,vote.Number.Uint64())
+			delete(self.blocks, vote.Number.Uint64())
 		}
 	}
 
 }
 
-func (self *MasternodePayments) CheckPreviousBlockVotes(preBlockHash common.Hash) bool{
+func (self *MasternodePayments) CheckPreviousBlockVotes(preBlockHash common.Hash) bool {
 
 	return true
 }
@@ -266,7 +264,7 @@ func (mp *MasternodePayee) Votes() []*masternode.MasternodePaymentVote {
 type MasternodeBlockPayees struct {
 	number *big.Int //blockHeight
 	payees []*MasternodePayee
-	mu sync.Mutex
+	mu     sync.Mutex
 	//payees *set.Set
 }
 

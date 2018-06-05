@@ -1,18 +1,19 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-eth library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+
 package eth
 
 import (
@@ -26,11 +27,9 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 )
 
-// TestMasternodeManager_BestMasternode
-// Test function for choose BestMasternode
-func TestMasternodeManager_BestMasternode(t *testing.T) {
+func returnMasternodeManager() *MasternodeManager {
 	//// initial the parameter may needed during this test function
-	manager := &MasternodeManager{
+	return &MasternodeManager{
 		networkId:   uint64(0),
 		eventMux:    nil,
 		txpool:      nil,
@@ -41,8 +40,15 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 		masternodes: &masternode.MasternodeSet{},
+		is:          NewInstantx(),
 	}
-	manager.is = NewInstantx()
+}
+
+// TestMasternodeManager_BestMasternode
+// Test function for choose BestMasternode
+func TestMasternodeManager_BestMasternode(t *testing.T) {
+	//// initial the parameter may needed during this test function
+	manager := returnMasternodeManager()
 	manager.winner = NewMasternodePayments(manager, big.NewInt(10))
 
 	// init new hash
