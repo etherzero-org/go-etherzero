@@ -224,11 +224,12 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 
 	txHash := vote.Hash()
+	// TODO:Verification work is handled in the MasternodeManager
+	//if !vote.IsValid() {
+	//	log.Error("CInstantSend::ProcessTxLockVote -- Vote is invalid, txid=", txHash.String())
+	//	return false
+	//}
 
-	if !vote.IsValid() {
-		log.Error("CInstantSend::ProcessTxLockVote -- Vote is invalid, txid=", txHash.String())
-		return false
-	}
 	self.voteFeed.Send(vote)
 	txLockCondidate := self.Candidates[txHash]
 

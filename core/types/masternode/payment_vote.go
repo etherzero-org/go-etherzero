@@ -25,18 +25,18 @@ var (
 
 // vote for the winning payment
 type MasternodePaymentVote struct {
-	Number     *big.Int //blockHeight
+	Number            *big.Int //blockHeight
 	MasternodeAccount common.Address
-	KeySize int
+	KeySize           int
 }
 
 //Voted block number,activeMasternode
 func NewMasternodePaymentVote(blockHeight *big.Int, account common.Address) *MasternodePaymentVote {
 
 	vote := MasternodePaymentVote{
-		Number:     blockHeight,
+		Number:            blockHeight,
 		MasternodeAccount: account,
-		KeySize:    0,
+		KeySize:           0,
 	}
 
 	return &vote
@@ -118,11 +118,14 @@ func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{})
 }
 
 func (v *MasternodePaymentVote) IsVerified() bool {
+
 	return true
 }
 
-//TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting master node
-func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
+//TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting masternode
+//height is CachedHeight
+// TODO:Verification work is handled in the MasternodeManager
+func (v *MasternodePaymentVote) CheckValid(height *big.Int) bool{
 
 	// info := v.masternode.MasternodeInfo()
 
@@ -139,7 +142,7 @@ func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
 	//}
 
 	if v.Number.Cmp(height) < 0 {
-		return true, nil
+		return true
 	}
 	//v.number
 
@@ -148,5 +151,5 @@ func (v *MasternodePaymentVote) CheckValid(height *big.Int) (bool, error) {
 	// Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
 	// Regular clients (miners included) need to verify masternode rank for future block votes only.
 
-	return true, nil
+	return true
 }

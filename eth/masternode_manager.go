@@ -195,7 +195,7 @@ func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address,
 		paids                 []int
 		tenthNetWork          = len(enableMasternodeNodes) / 10 // TODO: when len < 10
 		countTenth            = 0
-		highest               = big.NewInt(0)
+		highest               int64
 		best                  common.Address
 	)
 
@@ -219,7 +219,7 @@ func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address,
 	for _, i := range paids {
 		//fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block.Hash())
-		if score.Cmp(highest) > 0 {
+		if score > highest {
 			highest = score
 			best = sortMap[i].Account
 		}
@@ -234,6 +234,9 @@ func (mm *MasternodeManager) BestMasternode(block *types.Block) (common.Address,
 func (mm *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
 
 	for i, vote := range votes {
+		if !mm.CheckPaymentVote(vote){
+			return false
+		}
 		if !mm.winner.Vote(vote,mm.StorageLimit()) {
 			log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String(), "i:%s", i)
 			return false
@@ -266,9 +269,9 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) (int, bool) {
 	return rank, true
 }
 
-func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[*big.Int]*masternode.Masternode {
+func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[int64]*masternode.Masternode {
 
-	masternodeScores := make(map[*big.Int]*masternode.Masternode)
+	masternodeScores := make(map[int64]*masternode.Masternode)
 
 	for _, m := range mm.masternodes.EnableNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
@@ -302,8 +305,13 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
 
 	for i := range votes {
+		if !mm.CheckTxVote(votes[i]){
+			log.Info("processTxLockVotes vote veified failed ,vote Hash:", votes[i].Hash())
+			continue
+		}
 		if !mm.is.ProcessTxLockVote(votes[i]) {
 			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
+			continue
 		} else {
 			//Vote valid, let us forward it
 			mm.winner.winnerFeed.Send(core.VoteEvent{votes[i]})
@@ -313,6 +321,16 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	return mm.is.ProcessTxLockVotes(votes)
 }
 
+
+func (self *MasternodeManager) CheckPaymentVote(vote *masternode.MasternodePaymentVote) bool{
+
+	return false
+}
+
+func (self *MasternodeManager) CheckTxVote(vote *masternode.TxLockVote) bool{
+
+	return false
+}
 
 
 func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {

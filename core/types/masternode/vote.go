@@ -140,9 +140,6 @@ func (self *TxLockVote) IsTimeOut() bool {
 	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds
 }
 
-func (self *TxLockVote) IsValid() bool {
-	return true
-}
 
 type TxLockRequest struct {
 	tx *types.Transaction
@@ -156,7 +153,8 @@ func (tq *TxLockRequest) MaxSignatures() int {
 	return int(tq.tx.Size()) * SIGNATURES_TOTAL
 }
 
-func (tq *TxLockRequest) IsValid() bool {
+// TODO:Verification work is handled in the MasternodeManager
+func (tq *TxLockRequest) IsVeified() bool {
 
 	return tq.tx.CheckNonce()
 }
