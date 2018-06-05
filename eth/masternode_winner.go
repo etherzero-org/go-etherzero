@@ -104,7 +104,7 @@ func (self *MasternodePayments) HasVerifiedVote(hash common.Hash) bool {
 	defer self.mu.Unlock()
 
 	if vote := self.votes[hash]; vote != nil {
-		return vote.IsVerified()
+		return true
 	}
 	return false
 }
