@@ -82,6 +82,7 @@ type Masternode struct {
 }
 
 func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
+
 	id := GetMasternodeID(nodeId)
 	n := discover.NewNode(nodeId, ip, 0, port)
 	return &Masternode{

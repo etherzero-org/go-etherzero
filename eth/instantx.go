@@ -173,7 +173,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool{
 	publicKey:=crypto.FromECDSAPub(&is.Active.PrivateKey.PublicKey)
 	ok := vote.Verify(vote.Hash().Bytes(), signByte, publicKey)
 	if !ok {
-		log.Error("InstantSend sign Verify error ")
+		log.Error("InstantSend Failed to sign consensus vote ")
 		return false
 	}
 
