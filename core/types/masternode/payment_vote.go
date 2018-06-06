@@ -18,6 +18,7 @@
 package masternode
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
@@ -74,10 +75,20 @@ func (pv *MasternodePaymentVote) Hash() common.Hash {
 }
 
 // Implements the Verify method from SigningMethod
-// For this verify method, key must be an ecdsa.PublicKey struct
-func (m *MasternodePaymentVote) Verify(pubkey, hash, signature []byte) bool {
+/*
+func (tlv *TxLockVote) Verify(pub *ecdsa.PublicKey) bool {
+	recoveredPub1, _ := crypto.Ecrecover(tlv.Hash().Bytes(), tlv.Sig)
+	recoveredPubBytes := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recoveredPub1, recoveredPubBytes)
+}
 
-	return crypto.VerifySignature(pubkey, hash, signature)
+
+*/
+// For this verify method, key must be an ecdsa.PublicKey struct
+func (m *MasternodePaymentVote) Verify(hash, sig []byte, pub *ecdsa.PublicKey) bool {
+	recoveredPub1, _ := crypto.Ecrecover(hash, sig)
+	recoveredPubBytes := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recoveredPub1, recoveredPubBytes)
 }
 
 // Implements the Sign method from SigningMethod

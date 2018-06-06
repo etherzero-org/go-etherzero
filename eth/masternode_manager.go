@@ -29,6 +29,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"time"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
@@ -44,7 +46,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
-	"time"
 )
 
 const (
@@ -374,14 +375,17 @@ func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool,
 	return true, nil
 }
 
+// ProcessTxVote process the vote procedure
 func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
-
-	mm.is.ProcessTxLockRequest(tx)
-	log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mm.active.ID)
-	mm.is.Accept(tx)
-	mm.is.Vote(tx.Hash())
-
-	return true
+	if mm.is.ProcessTxLockRequest(tx) {
+		log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mm.active.ID)
+		mm.is.Accept(tx)
+		if mm.is.Vote(tx.Hash()) {
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 // If server is masternode, connect one masternode at least

@@ -18,6 +18,7 @@
 package masternode
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
@@ -80,21 +81,16 @@ func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
 
 // Implements the Verify method from SigningMethod
 // For this verify method, key must be an ecdsa.PublicKey struct
-func (m *TxLockVote) Verify(pubkey, hash, signature []byte) bool {
-	return crypto.VerifySignature(pubkey, hash, signature)
-
+func (tlv *TxLockVote) Verify(pub *ecdsa.PublicKey) bool {
+	recRubKey, _ := crypto.Ecrecover(tlv.Hash().Bytes(), tlv.Sig)
+	recPubKeyRecord := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recRubKey, recPubKeyRecord)
 }
 
 // Implements the Sign method from SigningMethod
 // For this signing method, key must be an ecdsa.PrivateKey struct
 func (m *TxLockVote) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
-
-	sig, err = crypto.Sign(hash[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
-
+	return crypto.Sign(hash, prv)
 }
 
 // Locks and votes expire nInstantSendKeepLock blocks after the block

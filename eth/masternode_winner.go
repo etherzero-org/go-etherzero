@@ -27,7 +27,6 @@ import (
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
-	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 )
@@ -135,8 +134,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	sig, err := vote.Sign(hash[:], self.active.PrivateKey)
 	vote.Sig = sig
 	if err == nil {
-		pubkey := crypto.FromECDSAPub(&self.active.PrivateKey.PublicKey)
-		if vote.Verify(hash[:], sig, pubkey) {
+		if vote.Verify(hash[:], sig, &self.active.PrivateKey.PublicKey) {
 			// vote constructed sucessfully, let's store and relay it
 			log.Info("MasternodePayments:: sign value:", string(sig))
 			self.Add(block.Hash(), vote)

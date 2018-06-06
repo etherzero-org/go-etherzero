@@ -32,7 +32,6 @@ import (
 	"github.com/ethzero/go-ethzero/rlp"
 
 	"time"
-	"github.com/ethzero/go-ethzero/crypto"
 )
 
 const (
@@ -132,7 +131,7 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
 	return true
 }
 
-func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool{
+func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 
 	txHash := condidate.Hash()
 	if _, ok := is.accepted[txHash]; !ok {
@@ -158,47 +157,53 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool{
 			}
 		}
 	}
-	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
 	if alreadyVoted {
 		return false
 	}
 
-	hash:=vote.Hash()
+	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
+	hash := vote.Hash()
 	signByte, err := vote.Sign(hash[:], is.Active.PrivateKey)
-	vote.Sig=signByte
+	//signByte, err := vote.Sign(is.Active.PrivateKey)
+	vote.Sig = signByte
 	if err != nil {
 		return false
 	}
+	if vote.Verify(&is.Active.PrivateKey.PublicKey) {
+		log.Info("InstantSend sign Verify valid")
+		// vote constructed sucessfully, let's store and relay it
+		is.voteFeed.Send(vote)
 
-	publicKey:=crypto.FromECDSAPub(&is.Active.PrivateKey.PublicKey)
-	ok := vote.Verify(vote.Hash().Bytes(), signByte, publicKey)
-	if !ok {
-		log.Error("InstantSend sign Verify error ")
+		// add to txLockedVotes
+		_, ok1 := is.txLockedVotes[hash]
+		if !ok1 {
+			is.txLockedVotes[hash] = vote
+		} else {
+			return false
+		}
+
+		txLock := is.Candidates[txHash]
+		if txLock.AddVote(vote) {
+			log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", hash.String())
+			is.all[txHash] = 1
+			return true
+		}
 		return false
 	}
 
-	// vote constructed sucessfully, let's store and relay it
-	tvHash := vote.Hash()
-	is.voteFeed.Send(vote)
-
-	is.txLockedVotes[tvHash] = vote
-	txLock := is.Candidates[txHash]
-
-	if txLock.AddVote(vote) {
-		log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
-		is.all[txHash] = 1
-	}
-	return true
+	return false
 }
 
-func (is *InstantSend) Vote(hash common.Hash) {
+func (is *InstantSend) Vote(hash common.Hash) bool {
 
 	txLockCondidate, ok := is.Candidates[hash]
 	if !ok {
-		return
+		return false
 	}
-	is.vote(txLockCondidate)
-	is.TryToFinalizeLockCandidate(txLockCondidate)
+	if is.vote(txLockCondidate) {
+		return is.TryToFinalizeLockCandidate(txLockCondidate)
+	}
+	return false
 }
 
 func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
@@ -362,12 +367,13 @@ func (self *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool {
 	return false
 }
 
-func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
+func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) bool {
 	txLockRequest := condidate.TxLockRequest
 	txHash := txLockRequest.Hash()
 	if condidate.IsReady() {
 		is.lockedTxs[txHash] = txLockRequest
 	}
+	return true
 }
 
 //we have enough votes now
