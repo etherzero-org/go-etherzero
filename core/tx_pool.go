@@ -102,8 +102,8 @@ var (
 	contractTxMaxGasSize  = uint64(500000)  //The maximum amount of gas consumed per contract transaction
 	txMaxGasSize = big.NewInt(90000) //The maximum amount of gas consumed per transaction
 	DefaultCurrentMaxNonce = big.NewInt(500) //Prevent ddos att
-	MasterNodeCheck = bool(true)
-	MasterNodeAddr =string("")
+	MasternodeCheck = bool(true)
+	MasternodeAddr =string("")
 )
 
 var (
@@ -281,15 +281,15 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.wg.Add(1)
 	go pool.loop()
 
-	addr:= common.HexToAddress(MasterNodeAddr)
+	addr:= common.HexToAddress(MasternodeAddr)
 	accountvalue:= pool.currentState.GetBalance(addr)
 	accountvalue.Div(accountvalue,big.NewInt(1000000000000000000))
 	log.Debug("Masternode balance  ", "accountvalue  ",accountvalue)
 	// change to 20000 for released;
 	if accountvalue.Int64() >20{
-		MasterNodeCheck = true
+		MasternodeCheck = true
 	}
-	println(MasterNodeCheck)
+	println(MasternodeCheck)
 
 	return pool
 }

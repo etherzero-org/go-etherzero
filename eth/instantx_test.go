@@ -82,8 +82,8 @@ func TestInstantSend_Vote(t *testing.T) {
 
 	can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 	hash1 := can1.Hash()
-	can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
-	hash0 := can0.Hash()
+	//can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
+	//hash0 := can0.Hash()
 	tests := []struct {
 		is         *InstantSend
 		hash       common.Hash
@@ -92,27 +92,27 @@ func TestInstantSend_Vote(t *testing.T) {
 		hasCan     bool
 		isVoted    bool
 	}{
-		{NewInstantx(),
-			txHash,
-			nil,
-			false,
-			false,
-			false,
-		},
-		{NewInstantx(),
-			txHash,
-			can0,
-			false,
-			false,
-			false,
-		},
-		{NewInstantx(),
-			hash0,
-			can0,
-			true,
-			false,
-			false,
-		},
+		//{NewInstantx(),
+		//	txHash,
+		//	nil,
+		//	false,
+		//	false,
+		//	false,
+		//},
+		//{NewInstantx(),
+		//	txHash,
+		//	can0,
+		//	false,
+		//	false,
+		//	false,
+		//},
+		//{NewInstantx(),
+		//	hash0,
+		//	can0,
+		//	true,
+		//	false,
+		//	false,
+		//},
 		{
 			NewInstantx(),
 			hash1,
@@ -134,7 +134,7 @@ func TestInstantSend_Vote(t *testing.T) {
 			v.is.Active = returnNewActinveNode()
 			v.is.Active.PrivateKey = testAccount
 			v.is.Candidates[v.hash] = v.can
-			v.is.Active.ID=fmt.Sprintf("%v",0xc5d24601)
+			v.is.Active.ID = fmt.Sprintf("%v", 0xc5d24601)
 		}
 		v.is.Vote(v.hash)
 	}

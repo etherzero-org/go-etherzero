@@ -75,8 +75,9 @@ func (v *TxLockVote) Hash() common.Hash {
 }
 
 func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
-	return crypto.VerifySignature(pubkey, tlv.Hash().Bytes(), signature)
 
+	hash := tlv.Hash()
+	return crypto.VerifySignature(pubkey, hash[:], signature)
 }
 
 // Implements the Verify method from SigningMethod
@@ -192,12 +193,13 @@ func (self *TxLockCondidate) IsTimeout() bool {
 }
 
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
-
 	return tc.masternodeVotes[id] != nil
 }
 
 func (tc *TxLockCondidate) MaxSignatures() int {
-
 	return int(tc.TxLockRequest.Size()) * SIGNATURES_TOTAL
+}
 
+func (self *TxLockCondidate) MarkAsAttacked() {
+	self.attacked = true
 }
