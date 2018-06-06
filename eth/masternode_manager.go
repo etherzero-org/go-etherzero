@@ -270,7 +270,6 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) int {
 func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[int64]*masternode.Masternode {
 
 	masternodeScores := make(map[int64]*masternode.Masternode)
-
 	for _, m := range mm.masternodes.EnableNodes() {
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
@@ -352,6 +351,10 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 		// Still invalid however
 		return false, fmt.Errorf("MasternodeManager::IsValid --Error: Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
 	}
+
+	if !self.CheckPaymentVoteSignature(vote) {
+		return false, fmt.Errorf("MasternodeManager  CheckPaymentVote signature Failed ")
+	}
 	return true, nil
 }
 
@@ -372,10 +375,46 @@ func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool,
 		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SIGNATURES_TOTAL, rank, vote.Hash())
 	}
 
+	if self.CheckTxVoteSignature(vote) {
+		log.Info("MasternodeManager CheckTxVoteSignature Failed")
+		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- CheckSignature Failed")
+	}
+
 	return true, nil
 }
 
 // ProcessTxVote process the vote procedure
+func (self *MasternodeManager) CheckTxVoteSignature(vote *masternode.TxLockVote) bool {
+	masternode := self.masternodes.Node(vote.MasternodeId())
+
+	if masternode == nil {
+		log.Info("check tx vote signature Failed ,masternode not found ", "masternodeId:", vote.MasternodeId())
+		return false
+	}
+	pubkey, err := masternode.Node.ID.Pubkey()
+	if err != nil {
+		log.Info("check tx vote signature Failed , pubkey not fund")
+		return false
+	}
+	return vote.Verify(pubkey)
+}
+
+func (self *MasternodeManager) CheckPaymentVoteSignature(vote *masternode.MasternodePaymentVote) bool {
+
+	masternode := self.masternodes.Node(vote.MasternodeId)
+	if masternode == nil {
+		log.Info("check payment vote signature fial,masternode not found ", "masternodeId:", vote.MasternodeId)
+		return false
+	}
+	pubkey, err := masternode.Node.ID.Pubkey()
+	if err != nil {
+		log.Info("check Payment vote signature Failed,pubkey not found")
+		return false
+	}
+	return vote.Verify(vote.Hash().Bytes(), vote.Sig,pubkey)
+}
+
+
 func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 	if mm.is.ProcessTxLockRequest(tx) {
 		log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mm.active.ID)
@@ -439,6 +478,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 		fmt.Println("masternodeCheck true")
 		mm.checkPeers()
 	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
+
 		var misc [32]byte
 		misc[0] = 1
 		copy(misc[1:17], mm.srvr.Config.MasternodeAddr.IP)

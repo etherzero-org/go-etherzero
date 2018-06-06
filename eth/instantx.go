@@ -173,7 +173,6 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		log.Info("InstantSend sign Verify valid")
 		// vote constructed sucessfully, let's store and relay it
 		is.voteFeed.Send(vote)
-
 		// add to txLockedVotes
 		_, ok1 := is.txLockedVotes[hash]
 		if !ok1 {
@@ -190,7 +189,6 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		}
 		return false
 	}
-
 	return false
 }
 

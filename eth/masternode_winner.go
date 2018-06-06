@@ -141,7 +141,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 			return true
 		}
 	}
-	log.Error("MasternodePayments::processBlock -- Signing vote failed")
+	log.Error("MasternodePayments::processBlock -- Failed to sign consensus vote")
 	return false
 
 }
