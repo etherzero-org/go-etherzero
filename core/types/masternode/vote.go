@@ -203,3 +203,7 @@ func (tc *TxLockCondidate) MaxSignatures() int {
 func (self *TxLockCondidate) MarkAsAttacked() {
 	self.attacked = true
 }
+
+func (self *TxLockCondidate) SetConfirmedHeight(height *big.Int){
+		self.confirmedHeight=height
+}

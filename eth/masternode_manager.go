@@ -67,19 +67,12 @@ type MasternodeManager struct {
 	peers   *peerSet
 
 	masternodes *masternode.MasternodeSet
-
 	enableds map[string]*masternode.Masternode //id -> masternode
-
 	is *InstantSend
-
 	winner *MasternodePayments
-
 	active *masternode.ActiveMasternode
-
 	scope event.SubscriptionScope
-
 	voteFeed event.Feed
-
 	winnerFeed event.Feed
 
 	SubProtocols []p2p.Protocol
@@ -125,7 +118,7 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		masternodes: &masternode.MasternodeSet{},
 	}
 
-	manager.is = NewInstantx()
+	manager.is = NewInstantx(config,blockchain)
 	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number())
 
 	return manager, nil

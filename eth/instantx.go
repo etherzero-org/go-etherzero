@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"errors"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
@@ -31,6 +32,8 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/ethzero/go-ethzero/core/state"
+	"github.com/ethzero/go-ethzero/params"
 )
 
 const (
@@ -42,14 +45,33 @@ const (
 	   ### getting 5 of 10 signatures w/ 1000 nodes of 2900
 	   (1000/2900.0)**5 = 0.004875397277841433
 	*/
-	INSTANTSEND_CONFIRMATIONS_REQUIRED = 6
+	InstantSendConfirmationsRequired = 6
 
-	DEFAULT_INSTANTSEND_DEPTH = 5
+	DefaultInstantSendDepth = 5
 
-	MIN_INSTANTSEND_PROTO_VERSION = 70208
-
-	SIGNATURES_REQUIRED = 6
+	SignaturesRequired = 6
 )
+
+var(
+	// ErrInvalidSender is returned if the transaction contains an invalid signature.
+	ErrInvalidSender = errors.New("invalid sender")
+
+	// ErrInsufficientFunds is returned if the total cost of executing a transaction
+	// is higher than the balance of the user's account.
+	ErrInsufficientFundsMin = errors.New("keeping 0.01 etz at least on your wallet")
+	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
+	// one present in the local chain.
+	ErrNonceTooLow = errors.New("nonce too low")
+
+)
+// blockChain provides the state of blockchain and current gas limit to do
+// some pre checks in tx pool and event subscribers.
+type blockChain interface {
+	CurrentBlock() *types.Block
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error)
+
+}
 
 type InstantSend struct {
 	// maps for AlreadyHave
@@ -60,12 +82,11 @@ type InstantSend struct {
 
 	Candidates map[common.Hash]*masternode.TxLockCondidate // tx hash - lock candidate
 
+	all       map[common.Hash]int                // All votes to allow lookups
+	lockedTxs map[common.Hash]*types.Transaction //Store all transactions that have completed voting
 	//std::map<COutPoint, std::set<uint256> > mapVotedOutpoints; // utxo - tx hash set
 	//std::map<COutPoint, uint256> mapLockedOutpoints; // utxo - tx hash
-	all       map[common.Hash]int                // All votes to allow lookups
-	lockedTxs map[common.Hash]*types.Transaction //
 	mu        sync.Mutex
-
 	//track masternodes who voted with no txreq (for DOS protection)
 	masternodeOrphanVotes map[string]uint64 //masternodeID - Orphan time
 	votesOrphan           map[common.Hash]*masternode.TxLockVote
@@ -85,21 +106,29 @@ type InstantSend struct {
 	scope        event.SubscriptionScope
 
 	Active *masternode.ActiveMasternode
+	chain        blockChain
+	currentState  *state.StateDB      // Current state in the blockchain head
+	signer       types.Signer
 }
 
 // NewInstantx new an InstantSend
-func NewInstantx() *InstantSend {
-	return &InstantSend{
+func NewInstantx(chainconfig *params.ChainConfig,chain blockChain) *InstantSend {
+	instantSend := &InstantSend{
 		accepted:              make(map[common.Hash]*types.Transaction),
 		rejected:              make(map[common.Hash]*types.Transaction),
 		txLockedVotes:         make(map[common.Hash]*masternode.TxLockVote),
 		txLockVotesOrphan:     make(map[common.Hash]*masternode.TxLockVote),
 		Candidates:            make(map[common.Hash]*masternode.TxLockCondidate),
 		all:                   make(map[common.Hash]int),
+		chain:                 chain,
+		signer:                types.NewEIP155Signer(chainconfig.ChainId),
 		lockedTxs:             make(map[common.Hash]*types.Transaction),
 		masternodeOrphanVotes: make(map[string]uint64),
 		votesOrphan:           make(map[common.Hash]*masternode.TxLockVote),
+
 	}
+	instantSend.reset()
+	return instantSend
 }
 
 //received a consensus TxLockRequest
@@ -138,7 +167,6 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 	}
 
 	txlockRequest := condidate.TxLockRequest
-
 	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
 		log.Info("nonce error")
@@ -159,7 +187,6 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 	if alreadyVoted {
 		return false
 	}
-
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
 	hash := vote.Hash()
 	signByte, err := vote.Sign(hash[:], is.Active.PrivateKey)
@@ -184,14 +211,12 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 
 		txLock := is.Candidates[txHash]
 		if txLock.AddVote(vote) {
-			fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 			log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", hash.String())
 			is.all[txHash] = 1
 			return true
 		}
-		return false
 	} else {
-		fmt.Println("vote failed**********")
+		log.Info("vote Sign verify failed vote hash:",vote.Hash().String())
 	}
 	return false
 }
@@ -255,7 +280,6 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 			log.Info("CInstantSend::ProcessTxLockVote -- Orphan vote: txid=", txHash.String(), " masternodeId=", vote.MasternodeId())
 
 			var tx *types.Transaction
-
 			if tx = self.accepted[txHash]; tx != nil {
 				if tx = self.rejected[txHash]; tx != nil {
 					reProcess = false
@@ -293,11 +317,9 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	if _, ok := self.all[txHash]; !ok {
 		self.all[txHash]++
 	}
-
 	if txLockCondidate.TxLockRequest.CheckNonce(){
 		txLockCondidate.MarkAsAttacked()
 	}
-
 	if txLockCondidate.AddVote(vote) {
 		return false
 	}
@@ -305,13 +327,13 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	signatures := txLockCondidate.CountVotes()
 	signaturesMax := txLockCondidate.MaxSignatures()
 	log.Info("ProcessTxLockVote Transaction Lock signatures count:", signatures, "/", signaturesMax, ",vote Hash:", vote.Hash().String())
-
 	self.TryToFinalizeLockCandidate(txLockCondidate)
 
 	return true
 }
 
 func (self *InstantSend) GetAverageMasternodeOrphanVoteTime() uint64 {
+
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	// NOTE: should never actually call this function when masternodeOrphanVotes is empty
@@ -367,7 +389,7 @@ func (self *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool {
 	for txHash := range self.votesOrphan {
 		if txHash == hash {
 			countVotes++
-			if countVotes >= SIGNATURES_REQUIRED {
+			if countVotes >= SignaturesRequired {
 				return true
 			}
 		}
@@ -381,9 +403,16 @@ func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCo
 
 	txLockRequest := condidate.TxLockRequest
 	txHash := txLockRequest.Hash()
-	if condidate.IsReady() && is.IsLockedInstantSendTransaction(txHash){
+	if condidate.IsReady() && !is.IsLockedInstantSendTransaction(txHash){
+		//we have enough votes now
+		log.Info("InstantSend ::TryToFinalizeLockCandidate -- Transaction Lock is ready to comply ,txid =",txHash.String())
 		//dash LockTransactionInputs
-		is.lockedTxs[txHash] = txLockRequest
+
+		if is.ResolveConflicts(condidate){
+			is.lockedTxs[txHash] = txLockRequest
+			//do something
+			//UpdateLockedTransaction
+		}
 	}
 	return true
 }
@@ -393,11 +422,63 @@ func (is *InstantSend) ResolveConflicts(condidate *masternode.TxLockCondidate) b
 
 	// make sure the lock is ready
 	if !condidate.IsReady(){	return false }
-	//is.mu.Lock()
-	//defer is.mu.Unlock()
+	is.mu.Lock()
+	defer is.mu.Unlock()
+	tx:=condidate.TxLockRequest
 
+	from,err:=is.signer.Sender(tx)
+	if err != nil{
+		log.Error("ResolveConflicts error,",ErrInvalidSender.Error())
+		return false
+	}
+	// Transactor should have enough funds to cover the costs
+	// cost == V + GP * GL
+	if is.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+		log.Error("ResolveConflicts error,",ErrInsufficientFundsMin.Error())
+		return false
+	}
+
+	// Ensure the transaction adheres to nonce ordering
+	if is.currentState.GetNonce(from) > tx.Nonce() {
+		log.Error("ResolveConflicts error,",ErrNonceTooLow.Error())
+		return false
+	}
+
+	txs:=is.GetLockedTxListByAccount(from)
+	sum := big.NewInt(0)
+
+	for _,tx:= range txs{
+		sum = new(big.Int).Add(sum,tx.Cost())
+	}
+	if is.currentState.GetBalance(from).Cmp(sum)<0{
+		log.Error("ResolveConflicts error")
+		for _,tx := range txs{
+			candidate:=is.Candidates[tx.Hash()]
+			candidate.SetConfirmedHeight(big.NewInt(0))
+			is.Reject(tx)
+			log.Info("ResolveConflicts :: Found conflicting completed Transaction Lock, dropping both txid ",tx.Hash().String())
+		}
+		is.CheckAndRemove()
+		log.Info("ResolveConflicts :: Found conflicting completed Transaction Lock, dropping both ")
+		return false
+	}
+
+	log.Info("ResolveConflicts -- Done, txid=", tx.Hash().String())
 	return true
 }
+
+func (is *InstantSend) GetLockedTxListByAccount(address common.Address) []*types.Transaction{
+
+	txs := make([]*types.Transaction,0,len(is.Candidates))
+	for _,candidate := range is.Candidates{
+		tx:=candidate.TxLockRequest
+		if from,err :=is.signer.Sender(tx); err== nil && from == address{
+			txs=append(txs, tx)
+		}
+	}
+	return txs
+}
+
 
 func (is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote) {
 
@@ -416,7 +497,6 @@ func (self *InstantSend) CheckAndRemove() {
 	defer self.mu.Unlock()
 
 	for txHash, lockCondidate := range self.Candidates {
-
 		if lockCondidate.IsExpired(self.cachedHeight) {
 			log.Info("InstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid= \n", txHash.String())
 			delete(self.rejected, txHash)
@@ -426,7 +506,6 @@ func (self *InstantSend) CheckAndRemove() {
 	}
 
 	for txHash, lockVote := range self.txLockedVotes {
-
 		if lockVote.IsExpired(self.cachedHeight) {
 			log.Info("InstantSend::CheckAndRemove -- Removing expired vote: txid=", txHash.String(), "  masternode= ", lockVote.MasternodeId())
 			delete(self.txLockedVotes, txHash)
@@ -434,20 +513,27 @@ func (self *InstantSend) CheckAndRemove() {
 	}
 
 	for txHash, lockVote := range self.txLockedVotes {
-
 		if lockVote.IsFailed() {
 			log.Info("InstantSend::CheckAndRemove -- Removing Failed vote: txid=", txHash.String(), "Masternode= ", lockVote.MasternodeId())
 		}
 	}
-
 }
 
 func (is *InstantSend) GetConfirmations(hash common.Hash) int {
-
 	if is.IsLockedInstantSendTransaction(hash) {
-		return DEFAULT_INSTANTSEND_DEPTH
+		return DefaultInstantSendDepth
 	}
 	return 0
+}
+
+func (is *InstantSend) reset(){
+	newHead := is.chain.CurrentBlock().Header() // Special case during testing
+	statedb,err:=is.chain.StateAt(newHead.Root)
+	if err != nil {
+		log.Error("Failed to reset instantSend state", "err", err)
+		return
+	}
+	is.currentState=statedb
 }
 
 func (is *InstantSend) Have(hash common.Hash) bool {
@@ -455,7 +541,6 @@ func (is *InstantSend) Have(hash common.Hash) bool {
 }
 
 func (is *InstantSend) String() string {
-
 	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.all))
 	return str
 }
