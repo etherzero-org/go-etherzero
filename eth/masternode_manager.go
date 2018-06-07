@@ -67,13 +67,13 @@ type MasternodeManager struct {
 	peers   *peerSet
 
 	masternodes *masternode.MasternodeSet
-	enableds map[string]*masternode.Masternode //id -> masternode
-	is *InstantSend
-	winner *MasternodePayments
-	active *masternode.ActiveMasternode
-	scope event.SubscriptionScope
-	voteFeed event.Feed
-	winnerFeed event.Feed
+	enableds    map[string]*masternode.Masternode //id -> masternode
+	is          *InstantSend
+	winner      *MasternodePayments
+	active      *masternode.ActiveMasternode
+	scope       event.SubscriptionScope
+	voteFeed    event.Feed
+	winnerFeed  event.Feed
 
 	SubProtocols []p2p.Protocol
 
@@ -94,6 +94,7 @@ type MasternodeManager struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+	mu sync.Mutex
 
 	log log.Logger
 
@@ -118,8 +119,11 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		masternodes: &masternode.MasternodeSet{},
 	}
 
-	manager.is = NewInstantx(config,blockchain)
-	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number())
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.is = NewInstantx(config, blockchain)
+	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number(), ranksFn)
 
 	return manager, nil
 }
@@ -241,7 +245,6 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) int {
 	var rank int = 0
 	mm.syncer()
 	block := mm.blockchain.CurrentBlock()
-
 	if block == nil {
 		log.Error("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
 		return rank
@@ -258,6 +261,24 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) int {
 		}
 	}
 	return rank
+}
+
+func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*masternode.Masternode {
+
+	block := self.blockchain.GetBlockByNumber(height.Uint64())
+	hash := block.Hash()
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	scores := self.GetMasternodeScores(hash, 0)
+	var rank int64 = 0
+	ranks := make(map[int64]*masternode.Masternode)
+
+	for _, node := range scores {
+		rank++
+		ranks[rank] = node
+	}
+	return scores
 }
 
 func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[int64]*masternode.Masternode {
@@ -404,9 +425,8 @@ func (self *MasternodeManager) CheckPaymentVoteSignature(vote *masternode.Master
 		log.Info("check Payment vote signature Failed,pubkey not found")
 		return false
 	}
-	return vote.Verify(vote.Hash().Bytes(), vote.Sig,pubkey)
+	return vote.Verify(vote.Hash().Bytes(), vote.Sig, pubkey)
 }
-
 
 func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
 	if mm.is.ProcessTxLockRequest(tx) {

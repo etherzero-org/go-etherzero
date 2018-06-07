@@ -23,12 +23,14 @@ import (
 
 	"sync"
 
+	"fmt"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
+	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -42,6 +44,9 @@ var (
 	errECDSAVerification = errors.New("crypto/ecdsa: verification error")
 )
 
+// is a callback type for vote when new block arrives
+type masternodeRanksFn func(height *big.Int) map[int64]*masternode.Masternode
+
 // Masternode Payments Class
 // Keeps track of who should get paid for which blocks
 type MasternodePayments struct {
@@ -51,16 +56,17 @@ type MasternodePayments struct {
 
 	votes      map[common.Hash]*masternode.MasternodePaymentVote
 	blocks     map[uint64]*MasternodeBlockPayees
-	didNotVote map[common.Hash]*big.Int
+	didNotVote map[string]int64
 	scope      event.SubscriptionScope
 	active     *masternode.ActiveMasternode
 	lastVoted  map[common.Address]*big.Int // masternodeID <- height
 
+	ranksFn    masternodeRanksFn //The callback function used to get the current position of the Masternodes
 	winnerFeed event.Feed
 	mu         sync.Mutex
 }
 
-func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *MasternodePayments {
+func NewMasternodePayments(manager *MasternodeManager, number *big.Int, fn masternodeRanksFn) *MasternodePayments {
 	return &MasternodePayments{
 		cachedBlockNumber: number,
 		minBlocksToStore:  big.NewInt(1),
@@ -68,7 +74,8 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 		votes:             make(map[common.Hash]*masternode.MasternodePaymentVote),
 		blocks:            make(map[uint64]*MasternodeBlockPayees),
 		lastVoted:         make(map[common.Address]*big.Int),
-		didNotVote:        make(map[common.Hash]*big.Int),
+		didNotVote:        make(map[string]int64),
+		ranksFn:           fn,
 	}
 }
 
@@ -233,9 +240,43 @@ func (self *MasternodePayments) CheckAndRemove(limit *big.Int) {
 
 }
 
-func (self *MasternodePayments) CheckPreviousBlockVotes(preBlockHash common.Hash) bool {
+func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 
-	return true
+	ranks := self.ranksFn(height)
+
+	var (
+		debugStr = ""
+		found    = false
+		account  = common.Address{}
+	)
+	for i := 0; i < MNPAYMENTS_SIGNATURES_TOTAL && i < len(ranks); i++ {
+		node := ranks[int64(i)]
+		if payees := self.blocks[height.Uint64()]; payees != nil {
+			for i = 0; i < payees.hashs.Size(); i++ {
+				hash := payees.hashs.Pop()
+				voteHash := hash.(common.Hash)
+				var vote *masternode.MasternodePaymentVote
+				if vote = self.votes[voteHash]; vote == nil {
+					continue
+				}
+				if vote.MasternodeId == node.ID {
+					found = true
+					account = node.Account
+					break
+				}
+			}
+		}
+		if !found {
+			debugStr = fmt.Sprintf("CheckPreviousBlockVotes --   %s - no vote received", node.ID)
+			self.didNotVote[node.ID]++
+		}
+		debugStr += fmt.Sprintf("CheckPreviousBlockVotes --   %s - voted for %s \n", node.ID, account.String())
+	}
+	debugStr += fmt.Sprintf("CheckPreviousBlockVotes -- Masternodes which missed a vote in the past:\n")
+	for it, i := range self.didNotVote {
+		debugStr += fmt.Sprintf("CheckPreviousBlockVotes --   %s: %d\n", it, i)
+	}
+	log.Info("MasternodePayments CheckPreviousBlockVotes", debugStr)
 }
 
 type MasternodePayee struct {
@@ -274,7 +315,7 @@ type MasternodeBlockPayees struct {
 	number *big.Int //blockHeight
 	payees []*MasternodePayee
 	mu     sync.Mutex
-	//payees *set.Set
+	hashs  *set.Set
 }
 
 func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
@@ -340,4 +381,12 @@ func (self *MasternodeBlockPayees) Has(num int, account common.Address) bool {
 		}
 	}
 	return false
+}
+
+func (self *MasternodeBlockPayees) AddVoteHash(hash common.Hash) {
+	self.hashs.Add(hash)
+}
+
+func (self *MasternodeBlockPayees) AllVoteHash() *set.Set {
+	return self.hashs
 }
