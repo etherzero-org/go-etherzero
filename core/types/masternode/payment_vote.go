@@ -1,12 +1,31 @@
+// Copyright 2015 The go-ethereum Authors
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package masternode
 
 import (
+	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"errors"
+	"math/big"
+	"time"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
-	"math/big"
 )
 
 const (
@@ -26,130 +45,59 @@ var (
 // vote for the winning payment
 type MasternodePaymentVote struct {
 	Number            *big.Int //blockHeight
+	MasternodeId      string
 	MasternodeAccount common.Address
-	KeySize           int
+	createTime        time.Time
+	Sig               []byte
 }
 
 //Voted block number,activeMasternode
-func NewMasternodePaymentVote(blockHeight *big.Int, account common.Address) *MasternodePaymentVote {
+func NewMasternodePaymentVote(blockHeight *big.Int, id string, account common.Address) *MasternodePaymentVote {
 
 	vote := MasternodePaymentVote{
 		Number:            blockHeight,
+		MasternodeId:      id,
 		MasternodeAccount: account,
-		KeySize:           0,
+		createTime:        time.Now(),
 	}
 
 	return &vote
 }
 
-func (mpv *MasternodePaymentVote) Hash() common.Hash {
+func (pv *MasternodePaymentVote) Hash() common.Hash {
 
-	tlvHash := rlpHash([]interface{}{
-		mpv.Number,
-		mpv.MasternodeAccount,
+	return rlpHash([]interface{}{
+		pv.Number,
+		pv.MasternodeId,
+		pv.MasternodeAccount,
+		pv.createTime,
 	})
-	return tlvHash
-}
-
-func (mpv *MasternodePaymentVote) CheckSignature(pubkey, signature []byte) bool {
-	return crypto.VerifySignature(pubkey, mpv.Hash().Bytes(), signature)
 }
 
 // Implements the Verify method from SigningMethod
+/*
+func (tlv *TxLockVote) Verify(pub *ecdsa.PublicKey) bool {
+	recoveredPub1, _ := crypto.Ecrecover(tlv.Hash().Bytes(), tlv.Sig)
+	recoveredPubBytes := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recoveredPub1, recoveredPubBytes)
+}
+
+
+*/
 // For this verify method, key must be an ecdsa.PublicKey struct
-func (m *MasternodePaymentVote) Verify(sighash []byte, signature string, key interface{}) error {
-
-	// Get the key
-	var ecdsaKey *ecdsa.PublicKey
-	switch k := key.(type) {
-	case *ecdsa.PublicKey:
-		ecdsaKey = k
-	default:
-		return errInvalidKeyType
-	}
-
-	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
-	s := big.NewInt(0).SetBytes(sighash[m.KeySize:])
-
-	// Verify the signature
-	if verifystatus := ecdsa.Verify(ecdsaKey, sighash, r, s); verifystatus == true {
-		return nil
-	} else {
-		return errECDSAVerification
-	}
+func (m *MasternodePaymentVote) Verify(hash, sig []byte, pub *ecdsa.PublicKey) bool {
+	recoveredPub1, _ := crypto.Ecrecover(hash, sig)
+	recoveredPubBytes := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recoveredPub1, recoveredPubBytes)
 }
 
 // Implements the Sign method from SigningMethod
 // For this signing method, key must be an ecdsa.PrivateKey struct
-func (m *MasternodePaymentVote) Sign(signingString common.Hash, key interface{}) (string, error) {
-	// Get the key
-	var ecdsaKey *ecdsa.PrivateKey
-	switch k := key.(type) {
-	case *ecdsa.PrivateKey:
-		ecdsaKey = k
-	default:
-		return "", errInvalidKeyType
+func (m *MasternodePaymentVote) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
+
+	sig, err = crypto.Sign(hash[:], prv)
+	if err != nil {
+		return nil, err
 	}
-	// Sign the string and return r, s
-	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey, signingString[:]); err == nil {
-		curveBits := ecdsaKey.Curve.Params().BitSize
-		keyBytes := curveBits / 8
-		if curveBits%8 > 0 {
-			keyBytes += 1
-		}
-
-		// We serialize the outpus (r and s) into big-endian byte arrays and pad
-		// them with zeros on the left to make sure the sizes work out. Both arrays
-		// must be keyBytes long, and the output must be 2*keyBytes long.
-		rBytes := r.Bytes()
-		rBytesPadded := make([]byte, keyBytes)
-		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
-		sBytes := s.Bytes()
-		sBytesPadded := make([]byte, keyBytes)
-		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-		out := append(rBytesPadded, sBytesPadded...)
-
-		return string(out[:]), nil
-	} else {
-		return "", err
-	}
-}
-
-func (v *MasternodePaymentVote) IsVerified() bool {
-
-	return true
-}
-
-//TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting masternode
-//height is CachedHeight
-// TODO:Verification work is handled in the MasternodeManager
-func (v *MasternodePaymentVote) CheckValid(height *big.Int) bool{
-
-	// info := v.masternode.MasternodeInfo()
-
-	//var minRequiredProtocal uint = 0
-
-	//if v.Number.Cmp(height) > 0 {
-	//	minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1
-	//} else {
-	//	minRequiredProtocal = MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
-	//}
-
-	//if v.Masternode.ProtocolVersion < minRequiredProtocal {
-	//	return false, fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", v.Masternode.ProtocolVersion, minRequiredProtocal)
-	//}
-
-	if v.Number.Cmp(height) < 0 {
-		return true
-	}
-	//v.number
-
-	//TODO:Voting validity check is not judged here
-
-	// Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
-	// Regular clients (miners included) need to verify masternode rank for future block votes only.
-
-	return true
+	return sig, nil
 }

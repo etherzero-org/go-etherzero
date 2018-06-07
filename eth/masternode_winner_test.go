@@ -47,6 +47,7 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 	}
 	for _, v := range tests {
 		manager.winner.active = returnNewActinveNode()
+		manager.winner.active.PrivateKey = key0
 		manager.winner.ProcessBlock(genesis, v.rank)
 	}
 }
@@ -68,7 +69,7 @@ func TestMasternodePayments_PostVoteEvent(t *testing.T) {
 	manager := returnMasternodeManager()
 	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
 	manager.active = returnNewActinveNode()
-	vote := masternode.NewMasternodePaymentVote(genesis.Number(), manager.active.Account)
+	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.PostVoteEvent(vote)
 }
 
@@ -81,7 +82,7 @@ func TestMasternodePayments_Vote(t *testing.T) {
 	manager := returnMasternodeManager()
 	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
 	manager.active = returnNewActinveNode()
-	vote := masternode.NewMasternodePaymentVote(genesis.Number(), manager.active.Account)
+	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.PostVoteEvent(vote)
 }
 
@@ -107,7 +108,7 @@ func TestMasternodePayments_Add(t *testing.T) {
 		hash[i] = byte(i)
 	}
 	manager.active = returnNewActinveNode()
-	vote := masternode.NewMasternodePaymentVote(genesis.Number(), manager.active.Account)
+	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.Add(hash, vote)
 }
 

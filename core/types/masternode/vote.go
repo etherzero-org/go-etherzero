@@ -1,8 +1,25 @@
+// Copyright 2015 The go-ethereum Authors
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package masternode
 
 import (
+	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"errors"
 	"math/big"
 	"time"
@@ -29,10 +46,9 @@ var (
 type TxLockVote struct {
 	txHash          common.Hash
 	masternodeId    string
-	sig             []byte
+	Sig             []byte
 	ConfirmedHeight *big.Int
 	createdTime     time.Time
-	KeySize         int
 }
 
 func (tlv *TxLockVote) MasternodeId() string {
@@ -45,83 +61,37 @@ func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
 		masternodeId:    id,
 		createdTime:     time.Now(),
 		ConfirmedHeight: big.NewInt(-1),
-		KeySize:         32, //TODO
 	}
 }
 
-func (tlv *TxLockVote) Hash() common.Hash {
+func (v *TxLockVote) Hash() common.Hash {
 
-	tlvHash := rlpHash([]interface{}{
-		tlv.txHash,
-		tlv.masternodeId,
+	return rlpHash([]interface{}{
+		v.txHash,
+		v.masternodeId,
+		v.ConfirmedHeight,
+		v.createdTime,
 	})
-	return tlvHash
 }
 
 func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
-	return crypto.VerifySignature(pubkey, tlv.Hash().Bytes(), signature)
+
+	hash := tlv.Hash()
+	return crypto.VerifySignature(pubkey, hash[:], signature)
 }
 
 // Implements the Verify method from SigningMethod
 // For this verify method, key must be an ecdsa.PublicKey struct
-func (m *TxLockVote) Verify(sighash []byte, signature string, key interface{}) error {
-
-	// Get the key
-	var ecdsaKey *ecdsa.PublicKey
-	switch k := key.(type) {
-	case *ecdsa.PublicKey:
-		ecdsaKey = k
-	default:
-		return ErrInvalidKeyType
-	}
-	r := big.NewInt(0).SetBytes(sighash[:m.KeySize])
-	s := big.NewInt(0).SetBytes(sighash[m.KeySize:])
-
-	// Verify the signature
-	if verifystatus := ecdsa.Verify(ecdsaKey, sighash, r, s); verifystatus == true {
-		return nil
-	} else {
-		return ErrECDSAVerification
-	}
+func (tlv *TxLockVote) Verify(pub *ecdsa.PublicKey) bool {
+	recRubKey, _ := crypto.Ecrecover(tlv.Hash().Bytes(), tlv.Sig)
+	recPubKeyRecord := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recRubKey, recPubKeyRecord)
 }
 
 // Implements the Sign method from SigningMethod
 // For this signing method, key must be an ecdsa.PrivateKey struct
-func (m *TxLockVote) Sign(signingString common.Hash, key interface{}) (string, error) {
-	// Get the key
-	var ecdsaKey *ecdsa.PrivateKey
-	switch k := key.(type) {
-	case *ecdsa.PrivateKey:
-		ecdsaKey = k
-	default:
-		return "", ErrInvalidKeyType
-	}
-
-	// Sign the string and return r, s
-	if r, s, err := ecdsa.Sign(rand.Reader, ecdsaKey, signingString[:]); err == nil {
-		curveBits := ecdsaKey.Curve.Params().BitSize
-		keyBytes := curveBits / 8
-		if curveBits%8 > 0 {
-			keyBytes += 1
-		}
-
-		// We serialize the outpus (r and s) into big-endian byte arrays and pad
-		// them with zeros on the left to make sure the sizes work out. Both arrays
-		// must be keyBytes long, and the output must be 2*keyBytes long.
-		rBytes := r.Bytes()
-		rBytesPadded := make([]byte, keyBytes)
-		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
-		sBytes := s.Bytes()
-		sBytesPadded := make([]byte, keyBytes)
-		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-		out := append(rBytesPadded, sBytesPadded...)
-		return string(out[:]), nil
-	} else {
-
-		return "", err
-	}
+func (m *TxLockVote) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
+	return crypto.Sign(hash, prv)
 }
 
 // Locks and votes expire nInstantSendKeepLock blocks after the block
@@ -139,7 +109,6 @@ func (self *TxLockVote) IsFailed() bool {
 func (self *TxLockVote) IsTimeOut() bool {
 	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds
 }
-
 
 type TxLockRequest struct {
 	tx *types.Transaction
@@ -224,12 +193,13 @@ func (self *TxLockCondidate) IsTimeout() bool {
 }
 
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
-
 	return tc.masternodeVotes[id] != nil
 }
 
 func (tc *TxLockCondidate) MaxSignatures() int {
-
 	return int(tc.TxLockRequest.Size()) * SIGNATURES_TOTAL
+}
 
+func (self *TxLockCondidate) MarkAsAttacked() {
+	self.attacked = true
 }

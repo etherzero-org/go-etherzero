@@ -34,9 +34,6 @@ import (
 const (
 	MNPAYMENTS_SIGNATURES_REQUIRED = 6
 	MNPAYMENTS_SIGNATURES_TOTAL    = 10
-
-	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206
-	MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70208
 )
 
 var (
@@ -107,7 +104,7 @@ func (self *MasternodePayments) HasVerifiedVote(hash common.Hash) bool {
 	defer self.mu.Unlock()
 
 	if vote := self.votes[hash]; vote != nil {
-		return vote.IsVerified()
+		return true
 	}
 	return false
 }
@@ -130,11 +127,23 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", self.active.ID)
 
-	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.Account)
-	// vote constructed sucessfully, let's store and relay it
-	self.Add(block.Hash(), vote)
+	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
 
-	return true
+	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
+	hash := vote.Hash()
+	sig, err := vote.Sign(hash[:], self.active.PrivateKey)
+	vote.Sig = sig
+	if err == nil {
+		if vote.Verify(hash[:], sig, &self.active.PrivateKey.PublicKey) {
+			// vote constructed sucessfully, let's store and relay it
+			log.Info("MasternodePayments:: sign value:", string(sig))
+			self.Add(block.Hash(), vote)
+			return true
+		}
+	}
+	log.Error("MasternodePayments::processBlock -- Failed to sign consensus vote")
+	return false
+
 }
 
 //Handle the voting of other masternodes
@@ -157,11 +166,6 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", self.cachedBlockNumber.String())
 		return false
 	}
-	// TODO:Verification work is handled in the MasternodeManager
-	//if !vote.CheckValid(self.cachedBlockNumber) {
-	//	log.Trace("ERROR: invalid message, error: Verified false")
-	//	return false
-	//}
 
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
@@ -306,7 +310,7 @@ func (self *MasternodeBlockPayees) Best() (common.Address, bool) {
 	}
 	var (
 		votes             = -1
-		masternodeAccount common.Address
+		masternodeAccount = common.Address{}
 	)
 	for _, payee := range self.payees {
 		if votes < payee.Count() {

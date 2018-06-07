@@ -82,8 +82,8 @@ func TestInstantSend_Vote(t *testing.T) {
 
 	can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 	hash1 := can1.Hash()
-	can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
-	hash0 := can0.Hash()
+	//can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
+	//hash0 := can0.Hash()
 	tests := []struct {
 		is         *InstantSend
 		hash       common.Hash
@@ -92,28 +92,29 @@ func TestInstantSend_Vote(t *testing.T) {
 		hasCan     bool
 		isVoted    bool
 	}{
-		{NewInstantx(),
-			txHash,
-			nil,
-			false,
-			false,
-			false,
-		},
-		{NewInstantx(),
-			txHash,
-			can0,
-			false,
-			false,
-			false,
-		},
-		{NewInstantx(),
-			hash0,
-			can0,
-			true,
-			false,
-			false,
-		},
-		{NewInstantx(),
+		//{NewInstantx(),
+		//	txHash,
+		//	nil,
+		//	false,
+		//	false,
+		//	false,
+		//},
+		//{NewInstantx(),
+		//	txHash,
+		//	can0,
+		//	false,
+		//	false,
+		//	false,
+		//},
+		//{NewInstantx(),
+		//	hash0,
+		//	can0,
+		//	true,
+		//	false,
+		//	false,
+		//},
+		{
+			NewInstantx(),
 			hash1,
 			can1,
 			true,
@@ -124,20 +125,18 @@ func TestInstantSend_Vote(t *testing.T) {
 
 	for _, v := range tests {
 		if v.can != nil {
-			v.is.Candidates[txHash] = v.can
+			v.is.Candidates[v.hash] = v.can
 		}
 		if v.acceptHash && v.can != nil {
-			hashTmp := v.can.Hash()
-			v.is.accepted[hashTmp] = newTestTransaction(testAccount, 0, 0)
-
+			v.is.accepted[v.hash] = newTestTransaction(testAccount, 0, 0)
 		}
 		if v.hasCan && v.isVoted {
 			v.is.Active = returnNewActinveNode()
-			v.is.Active.PrivateKey = key0
+			v.is.Active.PrivateKey = testAccount
 			v.is.Candidates[v.hash] = v.can
+			v.is.Active.ID = fmt.Sprintf("%v", 0xc5d24601)
 		}
-
-		v.is.Vote(txHash)
+		v.is.Vote(v.hash)
 	}
 }
 
@@ -145,7 +144,6 @@ func returnNewActinveNode() *masternode.ActiveMasternode {
 	srvr := &p2p.Server{}
 	mns := newMasternodeSet(true)
 	return masternode.NewActiveMasternode(srvr, mns)
-
 }
 
 // 当收到一笔交易投票时,对该笔投票进行处理,会出现当投票先于交易到达主节点时需要进行Orphan处理

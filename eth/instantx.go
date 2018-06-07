@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
@@ -30,8 +31,6 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/rlp"
-
-	"time"
 )
 
 const (
@@ -131,11 +130,11 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
 	return true
 }
 
-func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
+func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 
 	txHash := condidate.Hash()
 	if _, ok := is.accepted[txHash]; !ok {
-		return
+		return false
 	}
 
 	txlockRequest := condidate.TxLockRequest
@@ -143,7 +142,7 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
 		log.Info("nonce error")
-		return
+		return false
 	}
 
 	var alreadyVoted bool = false
@@ -153,49 +152,60 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) {
 			if txLockCondidate.HasMasternodeVoted(is.Active.ID) {
 				alreadyVoted = true
 				log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.Active.ID)
-				return
+				return false
 			}
 		}
 	}
+	if alreadyVoted {
+		return false
+	}
 
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
-	if alreadyVoted {
-		return
-	}
-	signByte, err := vote.Sign(vote.Hash(), is.Active.PrivateKey)
-
+	hash := vote.Hash()
+	signByte, err := vote.Sign(hash[:], is.Active.PrivateKey)
+	//signByte, err := vote.Sign(is.Active.PrivateKey)
+	vote.Sig = signByte
 	if err != nil {
-		return
+		return false
 	}
+	//publicKey:=crypto.FromECDSAPub(&is.Active.PrivateKey.PublicKey)
+	if vote.Verify(&is.Active.PrivateKey.PublicKey) {
+		//if vote.CheckSignature(publicKey,vote.Sig){
+		log.Info("InstantSend sign Verify valid")
+		// vote constructed sucessfully, let's store and relay it
+		is.voteFeed.Send(vote)
+		// add to txLockedVotes
+		_, ok1 := is.txLockedVotes[hash]
+		if !ok1 {
+			is.txLockedVotes[hash] = vote
+		} else {
+			return false
+		}
 
-	sigErr := vote.Verify(vote.Hash().Bytes(), signByte, is.Active.PrivateKey.Public())
-
-	if sigErr != nil {
-		return
+		txLock := is.Candidates[txHash]
+		if txLock.AddVote(vote) {
+			fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+			log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", hash.String())
+			is.all[txHash] = 1
+			return true
+		}
+		return false
+	} else {
+		fmt.Println("vote failed**********")
 	}
-
-	// vote constructed sucessfully, let's store and relay it
-	tvHash := vote.Hash()
-	is.voteFeed.Send(vote)
-
-	is.txLockedVotes[tvHash] = vote
-	txLock := is.Candidates[txHash]
-
-	if txLock.AddVote(vote) {
-		log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", tvHash.String())
-		is.all[txHash] = 1
-	}
-
+	return false
 }
 
-func (is *InstantSend) Vote(hash common.Hash) {
+func (is *InstantSend) Vote(hash common.Hash) bool {
 
 	txLockCondidate, ok := is.Candidates[hash]
 	if !ok {
-		return
+		return false
 	}
-	is.vote(txLockCondidate)
-	is.TryToFinalizeLockCandidate(txLockCondidate)
+	if is.vote(txLockCondidate) {
+		return is.TryToFinalizeLockCandidate(txLockCondidate)
+	}
+	return false
 }
 
 func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
@@ -209,7 +219,9 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 	if is.Candidates == nil {
 		log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
 		is.Candidates[txhash] = txlockcondidate
+
 	} else if is.Candidates[request.Hash()] == nil {
+
 		txlockcondidate.TxLockRequest = request
 		log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
 		if txlockcondidate.IsTimeout() {
@@ -281,6 +293,11 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	if _, ok := self.all[txHash]; !ok {
 		self.all[txHash]++
 	}
+
+	if txLockCondidate.TxLockRequest.CheckNonce(){
+		txLockCondidate.MarkAsAttacked()
+	}
+
 	if txLockCondidate.AddVote(vote) {
 		return false
 	}
@@ -335,10 +352,11 @@ func (is *InstantSend) Reject(tx *types.Transaction) {
 
 func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
 
-	_, ok := is.Candidates[hash]
-	if !ok {
+	// there must be a lock candidate
+	if _,ok := is.Candidates[hash];!ok{
 		return false
 	}
+	// and all of these outputs must be included in mapLockedOutpoints with correct hash
 	return is.lockedTxs[hash] != nil
 
 }
@@ -357,16 +375,26 @@ func (self *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool {
 	return false
 }
 
-func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) {
+func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCondidate) bool {
+	is.mu.Lock()
+	defer is.mu.Unlock()
+
 	txLockRequest := condidate.TxLockRequest
 	txHash := txLockRequest.Hash()
-	if condidate.IsReady() {
+	if condidate.IsReady() && is.IsLockedInstantSendTransaction(txHash){
+		//dash LockTransactionInputs
 		is.lockedTxs[txHash] = txLockRequest
 	}
+	return true
 }
 
 //we have enough votes now
-func (is *InstantSend) ResolveConflicts(condidate masternode.TxLockCondidate) bool {
+func (is *InstantSend) ResolveConflicts(condidate *masternode.TxLockCondidate) bool {
+
+	// make sure the lock is ready
+	if !condidate.IsReady(){	return false }
+	//is.mu.Lock()
+	//defer is.mu.Unlock()
 
 	return true
 }
