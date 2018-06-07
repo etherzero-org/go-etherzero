@@ -25,6 +25,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
+	"fmt"
 )
 
 var (
@@ -284,6 +285,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
+
+	fmt.Println("st.gasUsed()", st.gasUsed(), "intrinsicGas", intrinsicGas, "st.gas", st.gas, "st.evm.BlockNumber", st.evm.BlockNumber.String())
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
@@ -300,10 +303,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	} else {
 		st.refundEtzGas()
 	}
+	if evm.ChainConfig().IsEthzeroMasternode(st.evm.BlockNumber) {
+		return ret, st.gasUsed(), vmerr != nil, err
+	}
 	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
 		return ret, 0, vmerr != nil, err
 	}
-
 	return ret, st.gasUsed(), vmerr != nil, err
 }
 
@@ -327,18 +332,12 @@ func (st *StateTransition) refundGas() {
 }
 
 func (st *StateTransition) refundEtzGas() {
-	// Return eth for remaining gas to the sender account,
-	// exchanged at the original rate.
-	//sender := st.from() // err already checked
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-
 	// Apply refund counter, capped to half of the used gas.
-	uhalf := remaining.Div(new(big.Int).SetUint64(st.gasUsed()), common.Big2)
-	refund := math.BigMin(uhalf, new(big.Int).SetUint64(st.state.GetRefund()))
-	st.gas += refund.Uint64()
-
-	// Also return remaining gas to the block gas counter so it is
-	// available for the next transaction.
+	refund := st.gasUsed() / 2
+	if refund > st.state.GetRefund() {
+		refund = st.state.GetRefund()
+	}
+	st.gas += refund
 	st.gp.AddGas(st.gas)
 }
 
