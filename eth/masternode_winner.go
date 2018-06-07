@@ -74,12 +74,13 @@ func NewMasternodePayments(manager *MasternodeManager, number *big.Int) *Mastern
 
 //hash is blockHash,(!GetBlockHash(blockHash, vote.nBlockHeight - 101))
 func (self *MasternodePayments) Add(hash common.Hash, vote *masternode.MasternodePaymentVote) bool {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
-	if self.HasVerifiedVote(hash) {
+	if vote := self.votes[hash]; vote != nil {
 		return false
 	}
 	self.votes[hash] = vote
-
 	if payee := self.blocks[vote.Number.Uint64()]; payee == nil {
 		blockPayees := NewMasternodeBlockPayees(vote.Number)
 		blockPayees.Add(vote)
@@ -146,27 +147,31 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 
 }
 
-//Handle the voting of other masternodes
-func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, storageLimit *big.Int) bool {
-
+func (self *MasternodePayments) AddVotes_(vote *masternode.MasternodePaymentVote) bool {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 	if self.votes[vote.Hash()] != nil {
 		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())
 		return false
 	}
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
 	self.votes[vote.Hash()] = vote
+	return true
+}
+
+//Handle the voting of other masternodes
+func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, storageLimit *big.Int) bool {
+
 	// but first mark vote as non-verified,
 	// AddPaymentVote() below should take care of it if vote is actually ok
-
+	if !self.AddVotes_(vote) {
+		return false
+	}
 	//vote out of range
 	firstBlock := self.cachedBlockNumber.Sub(self.cachedBlockNumber, storageLimit)
 	if vote.Number.Cmp(firstBlock) > 0 || vote.Number.Cmp(self.cachedBlockNumber.Add(self.cachedBlockNumber, big.NewInt(20))) > 0 {
 		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", self.cachedBlockNumber.String())
 		return false
 	}
-
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
 		log.Info("masternode already voted, masternode account:", vote.MasternodeAccount.String())
@@ -176,7 +181,6 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	//if vote.CheckSignature(vote.masternode.MasternodeInfo().ID)
 
 	log.Info("masternode_winner vote: ", "blockHeight:", vote.Number, "cacheHeight:", self.cachedBlockNumber.String(), "Hash:", vote.Hash().String())
-
 	if self.Add(vote.Hash(), vote) {
 		//Relay
 		self.winnerFeed.Send(vote)
@@ -209,7 +213,6 @@ func (self *MasternodePayments) BlockWinner(height *big.Int) (common.Address, bo
 func (self *MasternodePayments) CanVote(height *big.Int, address common.Address) bool {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-
 	if self.lastVoted[address] != nil && self.lastVoted[address].Cmp(height) == 0 {
 		return false
 	}

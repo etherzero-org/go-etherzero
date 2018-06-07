@@ -48,6 +48,7 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 	for _, v := range tests {
 		manager.winner.active = returnNewActinveNode()
 		manager.winner.active.PrivateKey = key0
+
 		manager.winner.ProcessBlock(genesis, v.rank)
 	}
 }
@@ -58,7 +59,9 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 func TestMasternodePayments_BlockWinner(t *testing.T) {
 	manager := returnMasternodeManager()
 	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
-	manager.winner.BlockWinner(big.NewInt(0))
+	number := big.NewInt(31415926)
+	manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
+	manager.winner.BlockWinner(big.NewInt(31415926))
 }
 
 // 对本地主节点或者是收到其它主节点发起的一笔有效投票进行转发
@@ -80,10 +83,10 @@ func TestMasternodePayments_PostVoteEvent(t *testing.T) {
 // for the current blocks may be abandoned
 func TestMasternodePayments_Vote(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
+	manager.winner = NewMasternodePayments(manager, big.NewInt(1))
 	manager.active = returnNewActinveNode()
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
-	manager.winner.PostVoteEvent(vote)
+	manager.winner.Vote(vote, big.NewInt(1))
 }
 
 // 当区块已经超过了一次的数量时,需要对已经过时的区块投票进行清理
