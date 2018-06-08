@@ -237,7 +237,6 @@ func (self *MasternodePayments) CheckAndRemove(limit *big.Int) {
 			delete(self.blocks, vote.Number.Uint64())
 		}
 	}
-
 }
 
 func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
@@ -252,9 +251,9 @@ func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 	for i := 0; i < MNPaymentsSignaturesTotal && i < len(ranks); i++ {
 		node := ranks[int64(i)]
 		if payees := self.blocks[height.Uint64()]; payees != nil {
+			hashs:=payees.hashs.List()
 			for i = 0; i < payees.hashs.Size(); i++ {
-				hash := payees.hashs.Pop()
-				voteHash := hash.(common.Hash)
+				voteHash := hashs[i].(common.Hash)
 				var vote *masternode.MasternodePaymentVote
 				if vote = self.votes[voteHash]; vote == nil {
 					continue
@@ -387,6 +386,6 @@ func (self *MasternodeBlockPayees) AddVoteHash(hash common.Hash) {
 	self.hashs.Add(hash)
 }
 
-func (self *MasternodeBlockPayees) AllVoteHash() *set.Set {
-	return self.hashs
+func (self *MasternodeBlockPayees) AllVoteHash() []interface{} {
+	return self.hashs.List()
 }
