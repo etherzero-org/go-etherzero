@@ -77,6 +77,11 @@ func (s *PublicEthereumAPI) Masternodes() map[string]*masternode.Masternode {
 	return s.ms.AllNodes()
 }
 
+// Winners return the masternodewinner info
+func (s *PublicEthereumAPI) Winners() string {
+	return ""
+}
+
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
 // - startingBlock: block number this node started to synchronise from
@@ -234,10 +239,14 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 }
 
 // Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) List()  map[string]*masternode.Masternode {
+func (s *PrivateAccountAPI) List() map[string]*masternode.Masternode {
 	return s.b.Masternodes()
 }
 
+// Winners will Print list of masternode winners
+func (s *PrivateAccountAPI) Winners() string {
+	return s.b.Winners()
+}
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.

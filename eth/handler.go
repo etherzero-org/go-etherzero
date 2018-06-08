@@ -127,6 +127,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		winner:      NewMasternodePayments(big.NewInt(0), nil),
 	}
 
 	// Figure out whether to allow fast sync or not
@@ -368,7 +369,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Status messages should never arrive after the handshake
 		return errResp(ErrExtraStatusMsg, "uncontrolled status message")
 
-	// Block header query, collect the requested headers and reply
+		// Block header query, collect the requested headers and reply
 	case msg.Code == GetBlockHeadersMsg:
 		// Decode the complex header query
 		var query getBlockHeadersData
@@ -841,7 +842,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 		case event := <-self.txCh:
 			self.BroadcastTx(event.Tx.Hash(), event.Tx)
 
-		// Err() channel will be closed when unsubscribing.
+			// Err() channel will be closed when unsubscribing.
 		case <-self.txSub.Err():
 			return
 		}
@@ -854,7 +855,7 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 		case event := <-self.voteCh:
 			self.BroadcastVote(event.Vote.Hash(), event.Vote)
 
-		// Err() channel will be closed when unsubscribing.
+			// Err() channel will be closed when unsubscribing.
 		case <-self.voteSub.Err():
 			return
 		}

@@ -123,7 +123,7 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.is = NewInstantx(config, blockchain)
-	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number(), ranksFn)
+	manager.winner = NewMasternodePayments( blockchain.CurrentBlock().Number(), ranksFn)
 
 	return manager, nil
 }

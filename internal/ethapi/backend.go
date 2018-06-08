@@ -46,7 +46,7 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
 	Masternodes() map[string]*masternode.Masternode // masternodes info
-
+	Winners() string                                // return the list of the masternode winner info
 	// BlockChain API
 	SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)

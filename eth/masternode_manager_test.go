@@ -52,7 +52,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(10),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(10),ranksFn)
 
 	// init new hash
 	var hash common.Hash

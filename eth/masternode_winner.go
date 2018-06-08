@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"fmt"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
@@ -66,7 +67,22 @@ type MasternodePayments struct {
 	mu         sync.Mutex
 }
 
-func NewMasternodePayments(manager *MasternodeManager, number *big.Int, fn masternodeRanksFn) *MasternodePayments {
+func (self *MasternodePayments) winners() string {
+	self.mu.Lock()
+	nHeigh := self.cachedBlockNumber.Uint64()
+	maxnHeight := nHeigh + 21
+	str := ``
+	for i := nHeigh; i < maxnHeight; i++ {
+		v, ok := self.blocks[i]
+		if ok {
+			str = fmt.Sprintf(`%v %v %v %v`, str, v.number, v.payees, v.hashs.String())
+		}
+	}
+	self.mu.Unlock()
+	return str
+}
+
+func NewMasternodePayments(number *big.Int, fn masternodeRanksFn) *MasternodePayments {
 	return &MasternodePayments{
 		cachedBlockNumber: number,
 		minBlocksToStore:  big.NewInt(1),
@@ -247,7 +263,7 @@ func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 	for i := 0; i < MNPaymentsSignaturesTotal && i < len(ranks); i++ {
 		node := ranks[int64(i)]
 		if payees := self.blocks[height.Uint64()]; payees != nil {
-			hashs:=payees.hashs.List()
+			hashs := payees.hashs.List()
 			for i = 0; i < payees.hashs.Size(); i++ {
 				voteHash := hashs[i].(common.Hash)
 				var vote *masternode.MasternodePaymentVote
@@ -317,6 +333,8 @@ func NewMasternodeBlockPayees(number *big.Int) *MasternodeBlockPayees {
 
 	payee := &MasternodeBlockPayees{
 		number: number,
+		payees: make([]*MasternodePayee, 0),
+		hashs:  set.New(),
 	}
 	return payee
 }

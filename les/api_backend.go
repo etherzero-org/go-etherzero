@@ -168,6 +168,11 @@ func (b *LesApiBackend) Masternodes() map[string]*masternode.Masternode {
 	return nil
 }
 
+// Winners return the masternodewinner info
+func (s *LesApiBackend) Winners() string {
+	return ""
+}
+
 func (b *LesApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
