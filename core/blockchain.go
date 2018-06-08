@@ -165,13 +165,13 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
-	bc.genesisBlock = bc.GetBlockByNumber(0)
-
-	if bc.genesisBlock == nil {
-		return nil, ErrNoGenesis
-	}
 	if err != nil {
 		return nil, err
+	}
+
+	bc.genesisBlock = bc.GetBlockByNumber(0)
+	if bc.genesisBlock == nil {
+		return nil, ErrNoGenesis
 	}
 
 	if err := bc.loadLastState(); err != nil {

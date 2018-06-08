@@ -154,25 +154,21 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 
 }
 
-func (self *MasternodePayments) AddVotes(vote *masternode.MasternodePaymentVote) bool {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	if self.votes[vote.Hash()] != nil {
-		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())
-		return false
-	}
-	self.votes[vote.Hash()] = vote
-	return true
-}
-
 //Handle the voting of other masternodes
 func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, storageLimit *big.Int) bool {
 
 	// but first mark vote as non-verified,
 	// AddPaymentVote() below should take care of it if vote is actually ok
-	if !self.AddVotes(vote) {
+	//if !self.AddVotes(vote) {
+	//	return false
+	//}
+	self.mu.Lock()
+	if self.votes[vote.Hash()] != nil {
+		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())
 		return false
 	}
+	self.votes[vote.Hash()] = vote
+	self.mu.Unlock()
 	//vote out of range
 	firstBlock := self.cachedBlockNumber.Sub(self.cachedBlockNumber, storageLimit)
 	if vote.Number.Cmp(firstBlock) > 0 || vote.Number.Cmp(self.cachedBlockNumber.Add(self.cachedBlockNumber, big.NewInt(20))) > 0 {
