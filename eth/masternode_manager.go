@@ -49,7 +49,7 @@ import (
 )
 
 const (
-	SIGNATURES_TOTAL = 10
+	SignaturesTotal = 10
 )
 
 type MasternodeManager struct {
@@ -309,11 +309,11 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	if rank != 0 {
 		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.active.ID, " rank: ", rank)
 		return false
-	} else if rank > SIGNATURES_TOTAL {
-		log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
+	} else if rank > SignaturesTotal {
+		log.Info("InstantSend::Vote -- Masternode not in the top ", SignaturesTotal, " (", rank, ")")
 		return false
 	}
-	log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
+	log.Info("InstantSend::Vote -- In the top ", SignaturesTotal, " (", rank, ")")
 
 	for i := range votes {
 		if ok, err := mm.IsValidTxVote(votes[i]); !ok {
@@ -354,16 +354,16 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 		err := fmt.Errorf("MasternodeManager::IsValidPaymentVote -- Can't calculate rank for masternode,MasternodeId: %s", masternodeId)
 		return false, err
 	}
-	if rank > MNPAYMENTS_SIGNATURES_TOTAL {
+	if rank > MNPaymentsSignaturesTotal {
 		// It's common to have masternodes mistakenly think they are in the top 10
 		// We don't want to print all of these messages in normal mode, debug mode should print though
-		fmt.Printf("Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
+		fmt.Printf("Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
 		// Only ban for new mnw which is out of bounds, for old mnw MN list itself might be way too much off
-		if rank > MNPAYMENTS_SIGNATURES_TOTAL*2 && vote.Number.Cmp(height) > 0 {
-			fmt.Printf("Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
+		if rank > MNPaymentsSignaturesTotal*2 && vote.Number.Cmp(height) > 0 {
+			fmt.Printf("Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
 		}
 		// Still invalid however
-		return false, fmt.Errorf("MasternodeManager::IsValid --Error: Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
+		return false, fmt.Errorf("MasternodeManager::IsValid --Error: Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
 	}
 
 	if !self.CheckPaymentVoteSignature(vote) {
@@ -385,8 +385,8 @@ func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool,
 	}
 	log.Info("MasternodeManager IsValidTxVote -- masternode ", masternodeId, " Rank:", rank)
 
-	if rank > SIGNATURES_TOTAL {
-		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SIGNATURES_TOTAL, rank, vote.Hash())
+	if rank > SignaturesTotal {
+		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SignaturesTotal, rank, vote.Hash())
 	}
 
 	if self.CheckTxVoteSignature(vote) {

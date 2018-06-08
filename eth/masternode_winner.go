@@ -35,7 +35,7 @@ import (
 
 const (
 	MNPAYMENTS_SIGNATURES_REQUIRED = 6
-	MNPAYMENTS_SIGNATURES_TOTAL    = 10
+	MNPaymentsSignaturesTotal      = 10
 )
 
 var (
@@ -128,8 +128,8 @@ func (self *MasternodePayments) Clear() {
 
 func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool {
 
-	if rank > MNPAYMENTS_SIGNATURES_TOTAL {
-		log.Info("Masternode not in the top ", MNPAYMENTS_SIGNATURES_TOTAL, "( ", rank, ")")
+	if rank > MNPaymentsSignaturesTotal {
+		log.Info("Masternode not in the top ", MNPaymentsSignaturesTotal, "( ", rank, ")")
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
@@ -249,7 +249,7 @@ func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 		found    = false
 		account  = common.Address{}
 	)
-	for i := 0; i < MNPAYMENTS_SIGNATURES_TOTAL && i < len(ranks); i++ {
+	for i := 0; i < MNPaymentsSignaturesTotal && i < len(ranks); i++ {
 		node := ranks[int64(i)]
 		if payees := self.blocks[height.Uint64()]; payees != nil {
 			for i = 0; i < payees.hashs.Size(); i++ {
