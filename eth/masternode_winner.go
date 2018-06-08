@@ -98,13 +98,9 @@ func (self *MasternodePayments) Add(hash common.Hash, vote *masternode.Masternod
 	return true
 }
 
-func (self *MasternodePayments) VoteCount() int {
-	return len(self.votes)
-}
+func (self *MasternodePayments) VoteCount() int { return len(self.votes) }
 
-func (self *MasternodePayments) BlockCount() int {
-	return len(self.blocks)
-}
+func (self *MasternodePayments) BlockCount() int { return len(self.blocks) }
 
 //vote hash
 func (self *MasternodePayments) HasVerifiedVote(hash common.Hash) bool {
@@ -238,7 +234,6 @@ func (self *MasternodePayments) CheckAndRemove(limit *big.Int) {
 func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 
 	ranks := self.ranksFn(height)
-
 	var (
 		debugStr = ""
 		found    = false
@@ -247,7 +242,7 @@ func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 	for i := 0; i < MNPaymentsSignaturesTotal && i < len(ranks); i++ {
 		node := ranks[int64(i)]
 		if payees := self.blocks[height.Uint64()]; payees != nil {
-			hashs:=payees.hashs.List()
+			hashs := payees.hashs.List()
 			for i = 0; i < payees.hashs.Size(); i++ {
 				voteHash := hashs[i].(common.Hash)
 				var vote *masternode.MasternodePaymentVote

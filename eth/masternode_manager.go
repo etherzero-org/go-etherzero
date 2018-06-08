@@ -26,10 +26,9 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
-
-	"time"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
@@ -52,13 +51,19 @@ const (
 	SignaturesTotal = 10
 )
 
+// Backend wraps all methods required for mining.
+type Backend interface {
+	TxPool() *core.TxPool
+	BlockChain() *core.BlockChain
+}
+
 type MasternodeManager struct {
 	networkId uint64
 
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
-	txpool      txPool
+	eth      Backend
 	blockchain  *core.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
@@ -104,12 +109,13 @@ type MasternodeManager struct {
 
 // NewProtocolManager returns a new Masternode sub protocol manager. The Masternode sub protocol manages peers capable
 // with the ETZ-Masternode network.
-func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
+func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, eth Backend, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
 		networkId:   networkId,
 		eventMux:    mux,
-		txpool:      txpool,
+		eth:      eth,
+		txCh:           make(chan core.TxPreEvent, txChanSize),
 		blockchain:  blockchain,
 		chainconfig: config,
 		newPeerCh:   make(chan *peer),
@@ -117,14 +123,14 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 		masternodes: &masternode.MasternodeSet{},
+		is:NewInstantx(config,eth),
 	}
 
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.is = NewInstantx(config, blockchain)
+	manager.txSub=eth.TxPool().SubscribeTxPreEvent(manager.txCh)
 	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number(), ranksFn)
-
 	return manager, nil
 }
 
@@ -595,3 +601,4 @@ func (mm *MasternodeManager) DealPingMsg(pm *masternode.PingMsg) error {
 	mm.masternodes.RecvPingMsg(id, pm.Time)
 	return nil
 }
+

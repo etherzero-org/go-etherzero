@@ -83,22 +83,22 @@ func (self *MasternodeManager) txBroadcastLoop() {
 }
 
 
-
-// syncTransactions starts sending all currently pending transactions to the given peer.
-func (mm *MasternodeManager) syncTransactions(p *peer) {
-	var txs types.Transactions
-	pending, _ := mm.txpool.Pending()
-	for _, batch := range pending {
-		txs = append(txs, batch...)
-	}
-	if len(txs) == 0 {
-		return
-	}
-	select {
-	case mm.txsyncCh <- &txsync{p, txs}:
-	case <-mm.quitSync:
-	}
-}
+//
+//// syncTransactions starts sending all currently pending transactions to the given peer.
+//func (mm *MasternodeManager) syncTransactions(p *peer) {
+//	var txs types.Transactions
+//	pending, _ := mm.txpool.Pending()
+//	for _, batch := range pending {
+//		txs = append(txs, batch...)
+//	}
+//	if len(txs) == 0 {
+//		return
+//	}
+//	select {
+//	case mm.txsyncCh <- &txsync{p, txs}:
+//	case <-mm.quitSync:
+//	}
+//}
 
 // txsyncLoop takes care of the initial transaction sync for each new
 // connection. When a new peer appears, we relay all currently pending
