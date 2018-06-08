@@ -25,6 +25,8 @@ import (
 	mrand "math/rand"
 	"time"
 
+	"sync/atomic"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/core/types"
@@ -32,7 +34,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/hashicorp/golang-lru"
-	"sync/atomic"
 )
 
 const (

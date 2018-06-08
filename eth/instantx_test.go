@@ -17,19 +17,69 @@
 package eth
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/consensus/ethash"
+	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/ethdb"
 	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/ethzero/go-ethzero/params"
 )
+
+func genNewgspec() core.Genesis {
+	return core.Genesis{
+		Config: params.TestChainConfig,
+		Alloc:  core.GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}},
+	}
+}
+
+func newBlockChain() *core.BlockChain {
+	db, _ := ethdb.NewMemDatabase()
+	fmt.Println("etherzero", genNewgspec().Config)
+	//bc, _ := core.NewBlockChain(db, nil, oldcustomg.Config, ethash.NewFullFaker(), vm.Config{})
+	cacheConfig := &core.CacheConfig{
+		Disabled:      true, // Whether to disable trie write caching (archive node)
+		TrieNodeLimit: 1,    // Memory limit (MB) at which to flush the current in-memory trie to disk
+		TrieTimeLimit: time.Duration(10),
+	}
+	vmConfig := vm.Config{
+		Debug:     true,
+		EnableJit: true,
+		ForceJit:  true,
+
+		NoRecursion:             true,
+		EnablePreimageRecording: true,
+	}
+	a := genNewgspec()
+	core.SetupGenesisBlock(db, &a)
+	chainman, _ := core.NewBlockChain(db, cacheConfig, a.Config, ethash.NewFaker(), vmConfig)
+	hash, number := common.Hash{0: 0xff}, uint64(314)
+	core.WriteCanonicalHash(db, hash, number)
+	return chainman
+}
+
+// 获得交易的确认数,当一笔交易完成了投票锁定,则一次性返回五个确认
+// TestInstantSend_GetConfirmations
+// when a transaction is voted_locked ,return five confirmations once
+func TestInstantSend_GetConfirmations(t *testing.T) {
+	var txHash common.Hash
+	for i := range txHash {
+		txHash[i] = byte(i)
+	}
+	is := NewInstantx(newChainConfig(), newBlockChain())
+	is.Active = returnNewActinveNode()
+
+	is.GetConfirmations(txHash)
+}
 
 func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Transaction {
 	return pricedTransaction(nonce, gaslimit, big.NewInt(1), key)
@@ -40,18 +90,11 @@ func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ec
 	return tx
 }
 
-func decodeTx(data []byte) (*types.Transaction, error) {
-	var tx types.Transaction
-	t, err := &tx, rlp.Decode(bytes.NewReader(data), &tx)
-
-	return t, err
-}
-
 // TestInstantSend_ProcessTxLockRequest
 // test for ProcessTxLockRequest
 // lock the transaction then creare an instance when start an payable
 func TestInstantSend_ProcessTxLockRequest(t *testing.T) {
-	is := NewInstantx()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	key, _ := crypto.GenerateKey()
 	tx0 := transaction(0, 100000, key)
 	fmt.Printf("key %v\n,tx0 %v", key, tx0)
@@ -82,8 +125,9 @@ func TestInstantSend_Vote(t *testing.T) {
 
 	can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 	hash1 := can1.Hash()
-	//can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
-	//hash0 := can0.Hash()
+	can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
+	hash0 := can0.Hash()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	tests := []struct {
 		is         *InstantSend
 		hash       common.Hash
@@ -92,29 +136,29 @@ func TestInstantSend_Vote(t *testing.T) {
 		hasCan     bool
 		isVoted    bool
 	}{
-		//{NewInstantx(),
-		//	txHash,
-		//	nil,
-		//	false,
-		//	false,
-		//	false,
-		//},
-		//{NewInstantx(),
-		//	txHash,
-		//	can0,
-		//	false,
-		//	false,
-		//	false,
-		//},
-		//{NewInstantx(),
-		//	hash0,
-		//	can0,
-		//	true,
-		//	false,
-		//	false,
-		//},
+		{is,
+			txHash,
+			nil,
+			false,
+			false,
+			false,
+		},
+		{is,
+			txHash,
+			can0,
+			false,
+			false,
+			false,
+		},
+		{is,
+			hash0,
+			can0,
+			true,
+			false,
+			false,
+		},
 		{
-			NewInstantx(),
+			is,
 			hash1,
 			can1,
 			true,
@@ -156,12 +200,9 @@ func TestInstantSend_ProcessTxLockVote(t *testing.T) {
 		txHash[i] = byte(i)
 	}
 
-	//can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
-	//hash1 := can1.Hash()
-	is := NewInstantx()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	is.Active = returnNewActinveNode()
 
-	//can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
 
 	is.ProcessTxLockVote(vote)
@@ -175,7 +216,7 @@ func TestInstantSend_CreateTxLockCandidate(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	request := newTestTransaction(testAccount, 1, 0)
 	is.CreateTxLockCandidate(request)
 }
@@ -188,7 +229,7 @@ func TestInstantSend_PostVoteEvent(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	is.Active = returnNewActinveNode()
 
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
@@ -196,18 +237,10 @@ func TestInstantSend_PostVoteEvent(t *testing.T) {
 
 }
 
-// 获得交易的确认数,当一笔交易完成了投票锁定,则一次性返回五个确认
-// TestInstantSend_GetConfirmations
-// when a transaction is voted_locked ,return five confirmations once
-func TestInstantSend_GetConfirmations(t *testing.T) {
-	var txHash common.Hash
-	for i := range txHash {
-		txHash[i] = byte(i)
+func newChainConfig() *params.ChainConfig {
+	return &params.ChainConfig{
+		ChainId: big.NewInt(0),
 	}
-	is := NewInstantx()
-	is.Active = returnNewActinveNode()
-
-	is.GetConfirmations(txHash)
 }
 
 // 当处理一笔交易投票时,需要判断该笔交易的投票是否有满足六个投票,如果满足则要进行该方法的调用,结束交易锁定
@@ -219,7 +252,7 @@ func TestInstantSend_TryToFinalizeLockCandidate(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	is.Active = returnNewActinveNode()
 	can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 
@@ -234,7 +267,7 @@ func TestInstantSend_CheckAndRemove(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx()
+	is := NewInstantx(newChainConfig(), newBlockChain())
 	is.Active = returnNewActinveNode()
 
 	is.CheckAndRemove()

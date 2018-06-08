@@ -40,7 +40,7 @@ func returnMasternodeManager() *MasternodeManager {
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 		masternodes: &masternode.MasternodeSet{},
-		is:          NewInstantx(),
+		is:          NewInstantx(newChainConfig(), newBlockChain()),
 	}
 }
 
@@ -49,7 +49,10 @@ func returnMasternodeManager() *MasternodeManager {
 func TestMasternodeManager_BestMasternode(t *testing.T) {
 	//// initial the parameter may needed during this test function
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(10))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(manager, big.NewInt(10),ranksFn)
 
 	// init new hash
 	var hash common.Hash

@@ -154,7 +154,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 
 }
 
-func (self *MasternodePayments) AddVotes_(vote *masternode.MasternodePaymentVote) bool {
+func (self *MasternodePayments) AddVotes(vote *masternode.MasternodePaymentVote) bool {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	if self.votes[vote.Hash()] != nil {
@@ -170,7 +170,7 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 
 	// but first mark vote as non-verified,
 	// AddPaymentVote() below should take care of it if vote is actually ok
-	if !self.AddVotes_(vote) {
+	if !self.AddVotes(vote) {
 		return false
 	}
 	//vote out of range
