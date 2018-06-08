@@ -130,7 +130,7 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.txSub=eth.TxPool().SubscribeTxPreEvent(manager.txCh)
-	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number(), ranksFn)
+	manager.winner = NewMasternodePayments( blockchain.CurrentBlock().Number(), ranksFn)
 	return manager, nil
 }
 

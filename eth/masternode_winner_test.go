@@ -16,6 +16,7 @@
 package eth
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(10),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(10), ranksFn)
 	tests := []struct {
 		rank int
 	}{
@@ -56,6 +57,25 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 	}
 }
 
+func TestMasternodePayments_winners(t *testing.T) {
+	manager := returnMasternodeManager()
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(10), ranksFn)
+	number := big.NewInt(31415926)
+	a := NewMasternodeBlockPayees(number)
+	var hash common.Hash
+	for i := range hash {
+		hash[i] = byte(i)
+	}
+	a.AddVoteHash(hash)
+
+	manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
+	manager.winner.cachedBlockNumber = big.NewInt(31415926)
+	fmt.Println("winners is ", manager.winner.winners())
+}
+
 // 获取指定区块的获胜主节点
 // TestMasternodePayments_BlockWinner
 // get the winner masternode
@@ -64,7 +84,7 @@ func TestMasternodePayments_BlockWinner(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	number := big.NewInt(31415926)
 	manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
 	manager.winner.BlockWinner(big.NewInt(31415926))
@@ -79,7 +99,7 @@ func TestMasternodePayments_PostVoteEvent(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.active = returnNewActinveNode()
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.PostVoteEvent(vote)
@@ -93,7 +113,7 @@ func TestMasternodePayments_Vote(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(1),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(1), ranksFn)
 	manager.active = returnNewActinveNode()
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.Vote(vote, big.NewInt(1))
@@ -107,7 +127,7 @@ func TestMasternodePayments_Clear(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.active = returnNewActinveNode()
 	manager.winner.Clear()
 }
@@ -120,7 +140,7 @@ func TestMasternodePayments_Add(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.active = returnNewActinveNode()
 	var hash common.Hash
 	for i := range hash {
@@ -139,7 +159,7 @@ func TestMasternodePayments_Add(t *testing.T) {
 //	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 //		return manager.GetMasternodeRanks(height)
 //	}
-//	manager.winner = NewMasternodePayments(manager, big.NewInt(0),ranksFn)
+//	manager.winner = NewMasternodePayments(big.NewInt(0),ranksFn)
 //	manager.active = returnNewActinveNode()
 //	var hash common.Hash
 //	for i := range hash {

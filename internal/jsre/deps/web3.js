@@ -6639,6 +6639,10 @@ module.exports = Settings;
                 new Property({
                     name: 'list',
                     getter: 'masternode_list'
+                }),
+                new Property({
+                    name: 'winners',
+                    getter: 'masternode_winners'
                 })
             ];
         };

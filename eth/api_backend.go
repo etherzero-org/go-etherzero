@@ -193,13 +193,15 @@ func (b *EthApiBackend) ProtocolVersion() int {
 	return b.eth.EthVersion()
 }
 
-
-
 // Masternodes return masternode info
 func (b *EthApiBackend) Masternodes() map[string]*masternode.Masternode {
 	return b.eth.masternodeManager.masternodes.AllNodes()
 }
 
+// Winners return winners masternode info
+func (b *EthApiBackend) Winners() string {
+	return b.eth.protocolManager.winner.winners()
+}
 
 func (b *EthApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
