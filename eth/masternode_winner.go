@@ -18,6 +18,7 @@
 package eth
 
 import (
+	"encoding/json"
 	"errors"
 	"math/big"
 
@@ -75,7 +76,8 @@ func (self *MasternodePayments) winners() string {
 	for i := nHeigh; i < maxnHeight; i++ {
 		v, ok := self.blocks[i]
 		if ok {
-			str = fmt.Sprintf(`%v %v %v %v`, str, v.number, v.payees, v.hashs.String())
+			strJson, _ := json.Marshal(v)
+			str = fmt.Sprintf("%v %v \n", str, string(strJson))
 		}
 	}
 	self.mu.Unlock()
