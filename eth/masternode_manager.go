@@ -26,10 +26,9 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
-
-	"time"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
@@ -49,8 +48,14 @@ import (
 )
 
 const (
-	SIGNATURES_TOTAL = 10
+	SignaturesTotal = 10
 )
+
+// Backend wraps all methods required for mining.
+type Backend interface {
+	TxPool() *core.TxPool
+	BlockChain() *core.BlockChain
+}
 
 type MasternodeManager struct {
 	networkId uint64
@@ -58,7 +63,7 @@ type MasternodeManager struct {
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
-	txpool      txPool
+	eth      Backend
 	blockchain  *core.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
@@ -67,20 +72,13 @@ type MasternodeManager struct {
 	peers   *peerSet
 
 	masternodes *masternode.MasternodeSet
-
-	enableds map[string]*masternode.Masternode //id -> masternode
-
-	is *InstantSend
-
-	winner *MasternodePayments
-
-	active *masternode.ActiveMasternode
-
-	scope event.SubscriptionScope
-
-	voteFeed event.Feed
-
-	winnerFeed event.Feed
+	enableds    map[string]*masternode.Masternode //id -> masternode
+	is          *InstantSend
+	winner      *MasternodePayments
+	active      *masternode.ActiveMasternode
+	scope       event.SubscriptionScope
+	voteFeed    event.Feed
+	winnerFeed  event.Feed
 
 	SubProtocols []p2p.Protocol
 
@@ -101,6 +99,7 @@ type MasternodeManager struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+	mu sync.Mutex
 
 	log log.Logger
 
@@ -110,12 +109,13 @@ type MasternodeManager struct {
 
 // NewProtocolManager returns a new Masternode sub protocol manager. The Masternode sub protocol manages peers capable
 // with the ETZ-Masternode network.
-func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
+func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, eth Backend, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
 		networkId:   networkId,
 		eventMux:    mux,
-		txpool:      txpool,
+		eth:      eth,
+		txCh:           make(chan core.TxPreEvent, txChanSize),
 		blockchain:  blockchain,
 		chainconfig: config,
 		newPeerCh:   make(chan *peer),
@@ -123,11 +123,14 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 		masternodes: &masternode.MasternodeSet{},
+		is:NewInstantx(config,eth),
 	}
 
-	manager.is = NewInstantx()
-	manager.winner = NewMasternodePayments(manager, blockchain.CurrentBlock().Number())
-
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.txSub=eth.TxPool().SubscribeTxPreEvent(manager.txCh)
+	manager.winner = NewMasternodePayments( blockchain.CurrentBlock().Number(), ranksFn)
 	return manager, nil
 }
 
@@ -149,11 +152,14 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 	mm.is.Active = mm.active
 	mm.winner.active = mm.active
 
+	go mm.is.Start()
 	go mm.masternodeLoop()
 }
 
 func (mm *MasternodeManager) Stop() {
-
+	mm.is.Stop()
+	mm.is.CheckAndRemove()
+	mm.winner.CheckAndRemove(big.NewInt(0))
 }
 
 // SubscribeTxPreEvent registers a subscription of VoteEvent and
@@ -248,7 +254,6 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) int {
 	var rank int = 0
 	mm.syncer()
 	block := mm.blockchain.CurrentBlock()
-
 	if block == nil {
 		log.Error("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
 		return rank
@@ -265,6 +270,24 @@ func (mm *MasternodeManager) GetMasternodeRank(id string) int {
 		}
 	}
 	return rank
+}
+
+func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*masternode.Masternode {
+
+	block := self.blockchain.GetBlockByNumber(height.Uint64())
+	hash := block.Hash()
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	scores := self.GetMasternodeScores(hash, 0)
+	var rank int64 = 0
+	ranks := make(map[int64]*masternode.Masternode)
+
+	for _, node := range scores {
+		rank++
+		ranks[rank] = node
+	}
+	return scores
 }
 
 func (mm *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[int64]*masternode.Masternode {
@@ -295,11 +318,11 @@ func (mm *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) 
 	if rank != 0 {
 		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", mm.active.ID, " rank: ", rank)
 		return false
-	} else if rank > SIGNATURES_TOTAL {
-		log.Info("InstantSend::Vote -- Masternode not in the top ", SIGNATURES_TOTAL, " (", rank, ")")
+	} else if rank > SignaturesTotal {
+		log.Info("InstantSend::Vote -- Masternode not in the top ", SignaturesTotal, " (", rank, ")")
 		return false
 	}
-	log.Info("InstantSend::Vote -- In the top ", SIGNATURES_TOTAL, " (", rank, ")")
+	log.Info("InstantSend::Vote -- In the top ", SignaturesTotal, " (", rank, ")")
 
 	for i := range votes {
 		if ok, err := mm.IsValidTxVote(votes[i]); !ok {
@@ -340,16 +363,16 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 		err := fmt.Errorf("MasternodeManager::IsValidPaymentVote -- Can't calculate rank for masternode,MasternodeId: %s", masternodeId)
 		return false, err
 	}
-	if rank > MNPAYMENTS_SIGNATURES_TOTAL {
+	if rank > MNPaymentsSignaturesTotal {
 		// It's common to have masternodes mistakenly think they are in the top 10
 		// We don't want to print all of these messages in normal mode, debug mode should print though
-		fmt.Printf("Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
+		fmt.Printf("Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
 		// Only ban for new mnw which is out of bounds, for old mnw MN list itself might be way too much off
-		if rank > MNPAYMENTS_SIGNATURES_TOTAL*2 && vote.Number.Cmp(height) > 0 {
-			fmt.Printf("Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
+		if rank > MNPaymentsSignaturesTotal*2 && vote.Number.Cmp(height) > 0 {
+			fmt.Printf("Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
 		}
 		// Still invalid however
-		return false, fmt.Errorf("MasternodeManager::IsValid --Error: Masternode is not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, rank)
+		return false, fmt.Errorf("MasternodeManager::IsValid --Error: Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
 	}
 
 	if !self.CheckPaymentVoteSignature(vote) {
@@ -371,8 +394,8 @@ func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool,
 	}
 	log.Info("MasternodeManager IsValidTxVote -- masternode ", masternodeId, " Rank:", rank)
 
-	if rank > SIGNATURES_TOTAL {
-		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SIGNATURES_TOTAL, rank, vote.Hash())
+	if rank > SignaturesTotal {
+		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SignaturesTotal, rank, vote.Hash())
 	}
 
 	if self.CheckTxVoteSignature(vote) {
@@ -411,20 +434,7 @@ func (self *MasternodeManager) CheckPaymentVoteSignature(vote *masternode.Master
 		log.Info("check Payment vote signature Failed,pubkey not found")
 		return false
 	}
-	return vote.Verify(vote.Hash().Bytes(), vote.Sig,pubkey)
-}
-
-
-func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
-	if mm.is.ProcessTxLockRequest(tx) {
-		log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mm.active.ID)
-		mm.is.Accept(tx)
-		if mm.is.Vote(tx.Hash()) {
-			return true
-		}
-		return false
-	}
-	return false
+	return vote.Verify(vote.Hash().Bytes(), vote.Sig, pubkey)
 }
 
 // If server is masternode, connect one masternode at least
@@ -582,3 +592,4 @@ func (mm *MasternodeManager) DealPingMsg(pm *masternode.PingMsg) error {
 	mm.masternodes.RecvPingMsg(id, pm.Time)
 	return nil
 }
+

@@ -16,6 +16,7 @@
 package eth
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -38,7 +39,10 @@ var (
 // a masternode need voting for transaction when it is arrived
 func TestMasternodePayments_ProcessBlock(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(10))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(10), ranksFn)
 	tests := []struct {
 		rank int
 	}{
@@ -48,8 +52,28 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 	for _, v := range tests {
 		manager.winner.active = returnNewActinveNode()
 		manager.winner.active.PrivateKey = key0
+
 		manager.winner.ProcessBlock(genesis, v.rank)
 	}
+}
+
+func TestMasternodePayments_winners(t *testing.T) {
+	manager := returnMasternodeManager()
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(10), ranksFn)
+	number := big.NewInt(31415926)
+	a := NewMasternodeBlockPayees(number)
+	var hash common.Hash
+	for i := range hash {
+		hash[i] = byte(i)
+	}
+	a.AddVoteHash(hash)
+
+	manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
+	manager.winner.cachedBlockNumber = big.NewInt(31415926)
+	fmt.Println("winners is ", manager.winner.winners())
 }
 
 // 获取指定区块的获胜主节点
@@ -57,8 +81,13 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 // get the winner masternode
 func TestMasternodePayments_BlockWinner(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
-	manager.winner.BlockWinner(big.NewInt(0))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
+	number := big.NewInt(31415926)
+	manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
+	manager.winner.BlockWinner(big.NewInt(31415926))
 }
 
 // 对本地主节点或者是收到其它主节点发起的一笔有效投票进行转发
@@ -67,23 +96,27 @@ func TestMasternodePayments_BlockWinner(t *testing.T) {
 // TODO verify the transaction before retransport the transaction
 func TestMasternodePayments_PostVoteEvent(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.active = returnNewActinveNode()
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.PostVoteEvent(vote)
 }
 
-// 进行投票的主要方法,目前都是调用当前区块的前100个区块的Hash值,
-// 而不是当前的区块Hash值,因为该区块有可能被抛弃.
 // TestMasternodePayments_Vote
 // when voting , the block number is not currently but the 100th blocks previous
 // for the current blocks may be abandoned
 func TestMasternodePayments_Vote(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(1), ranksFn)
 	manager.active = returnNewActinveNode()
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
-	manager.winner.PostVoteEvent(vote)
+	manager.winner.Vote(vote, big.NewInt(1))
 }
 
 // 当区块已经超过了一次的数量时,需要对已经过时的区块投票进行清理
@@ -91,7 +124,10 @@ func TestMasternodePayments_Vote(t *testing.T) {
 // need to clear the posted votting when the blocks has already been over limited
 func TestMasternodePayments_Clear(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.active = returnNewActinveNode()
 	manager.winner.Clear()
 }
@@ -101,7 +137,10 @@ func TestMasternodePayments_Clear(t *testing.T) {
 // when receiveing a voting from other masternodes
 func TestMasternodePayments_Add(t *testing.T) {
 	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.active = returnNewActinveNode()
 	var hash common.Hash
 	for i := range hash {
@@ -115,13 +154,16 @@ func TestMasternodePayments_Add(t *testing.T) {
 // 验证上一个区块的投票是否正确
 // TestMasternodePayments_CheckPreviousBlockVotes
 // verify an vote for a certain block is valid or not
-func TestMasternodePayments_CheckPreviousBlockVotes(t *testing.T) {
-	manager := returnMasternodeManager()
-	manager.winner = NewMasternodePayments(manager, big.NewInt(0))
-	manager.active = returnNewActinveNode()
-	var hash common.Hash
-	for i := range hash {
-		hash[i] = byte(i)
-	}
-	manager.winner.CheckPreviousBlockVotes(hash)
-}
+//func TestMasternodePayments_CheckPreviousBlockVotes(t *testing.T) {
+//	manager := returnMasternodeManager()
+//	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+//		return manager.GetMasternodeRanks(height)
+//	}
+//	manager.winner = NewMasternodePayments(big.NewInt(0),ranksFn)
+//	manager.active = returnNewActinveNode()
+//	var hash common.Hash
+//	for i := range hash {
+//		hash[i] = byte(i)
+//	}
+//	manager.winner.CheckPreviousBlockVotes(hash)
+//}
