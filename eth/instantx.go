@@ -63,6 +63,7 @@ var (
 	// one present in the local chain.
 	ErrNonceTooLow = errors.New("nonce too low")
 )
+
 // blockChain provides the state of blockchain and current gas limit to do
 // some pre checks in tx pool and event subscribers.
 type blockChain interface {
@@ -107,10 +108,11 @@ type InstantSend struct {
 	chain        blockChain
 	currentState *state.StateDB // Current state in the blockchain head
 	signer       types.Signer
+	eth          Backend
 }
 
 // NewInstantx new an InstantSend
-func NewInstantx(chainconfig *params.ChainConfig, chain blockChain) *InstantSend {
+func NewInstantx(chainconfig *params.ChainConfig, eth Backend) *InstantSend {
 	instantSend := &InstantSend{
 		accepted:              make(map[common.Hash]*types.Transaction),
 		rejected:              make(map[common.Hash]*types.Transaction),
@@ -118,7 +120,8 @@ func NewInstantx(chainconfig *params.ChainConfig, chain blockChain) *InstantSend
 		txLockVotesOrphan:     make(map[common.Hash]*masternode.TxLockVote),
 		Candidates:            make(map[common.Hash]*masternode.TxLockCondidate),
 		all:                   make(map[common.Hash]int),
-		chain:                 chain,
+		eth:                   eth,
+		chain:                 eth.BlockChain(),
 		signer:                types.NewEIP155Signer(chainconfig.ChainId),
 		lockedTxs:             make(map[common.Hash]*types.Transaction),
 		masternodeOrphanVotes: make(map[string]uint64),
@@ -370,18 +373,15 @@ func (is *InstantSend) Reject(tx *types.Transaction) {
 }
 
 func (is *InstantSend) IsLockedInstantSendTransaction(hash common.Hash) bool {
-
 	// there must be a lock candidate
 	if _, ok := is.Candidates[hash]; !ok {
 		return false
 	}
 	// and all of these outputs must be included in mapLockedOutpoints with correct hash
 	return is.lockedTxs[hash] != nil
-
 }
 
 func (self *InstantSend) IsEnoughOrphanVotesForTx(hash common.Hash) bool {
-
 	var countVotes int = 0
 	for txHash := range self.votesOrphan {
 		if txHash == hash {
@@ -416,7 +416,6 @@ func (is *InstantSend) TryToFinalizeLockCandidate(condidate *masternode.TxLockCo
 
 //we have enough votes now
 func (is *InstantSend) ResolveConflicts(condidate *masternode.TxLockCondidate) bool {
-
 	// make sure the lock is ready
 	if !condidate.IsReady() {
 		return false
@@ -467,7 +466,6 @@ func (is *InstantSend) ResolveConflicts(condidate *masternode.TxLockCondidate) b
 }
 
 func (is *InstantSend) GetLockedTxListByAccount(address common.Address) []*types.Transaction {
-
 	txs := make([]*types.Transaction, 0, len(is.Candidates))
 	for _, candidate := range is.Candidates {
 		tx := candidate.TxLockRequest
@@ -479,7 +477,6 @@ func (is *InstantSend) GetLockedTxListByAccount(address common.Address) []*types
 }
 
 func (is *InstantSend) PostVoteEvent(vote *masternode.TxLockVote) {
-
 	is.voteFeed.Send(core.VoteEvent{vote})
 }
 
@@ -490,7 +487,6 @@ func (self *InstantSend) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subs
 }
 
 func (self *InstantSend) CheckAndRemove() {
-
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -541,6 +537,24 @@ func (is *InstantSend) Have(hash common.Hash) bool {
 func (is *InstantSend) String() string {
 	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.all))
 	return str
+}
+
+func (self *InstantSend) commitNewWork() {
+
+	pending, err := self.eth.TxPool().Pending()
+	if err != nil {
+		log.Error("Failed to fetch pending transactions", "err", err)
+		return
+	}
+	txs := types.NewTransactionsByPriceAndNonce(self.signer, pending)
+
+	for {
+		tx := txs.Peek()
+		if tx == nil {
+			break
+		}
+		self.ProcessTxLockRequest(tx)
+	}
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
