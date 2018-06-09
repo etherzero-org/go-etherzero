@@ -542,9 +542,6 @@ func (is *InstantSend) reset() {
 	is.currentState = statedb
 }
 
-func (is *InstantSend) Have(hash common.Hash) bool {
-	return is.lockedTxs[hash] != nil
-}
 
 func (is *InstantSend) String() string {
 	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.all))
@@ -628,7 +625,6 @@ func (self *InstantSend) commitTransactions(txs *types.TransactionsByPriceAndNon
 			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
-
 	}
 }
 
@@ -656,8 +652,8 @@ func (self *InstantSend) Start(){
 	if !atomic.CompareAndSwapInt32(&self.atWork,0,1) {
 		return //InstantSend sever already started
 	}
+	atomic.StoreInt32(&self.atWork,1)
 	go self.update()
-
 }
 
 func (self *InstantSend) Stop(){
@@ -667,7 +663,8 @@ func (self *InstantSend) Stop(){
 	if !atomic.CompareAndSwapInt32(&self.atWork,1,0) {
 		return //InstantSend sever already stopped
 	}
-
+	atomic.StoreInt32(&self.atWork,0)
+	self.CheckAndRemove()
 }
 
 func rlpHash(x interface{}) (h common.Hash) {

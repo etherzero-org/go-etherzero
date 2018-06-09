@@ -212,7 +212,6 @@ func (self *MasternodePayments) SubscribeWinnerVoteEvent(ch chan<- core.PaymentV
 }
 
 func (is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVote) {
-
 	is.winnerFeed.Send(core.PaymentVoteEvent{vote})
 }
 
@@ -315,7 +314,6 @@ func (self *MasternodePayee) Count() int {
 }
 
 func (self *MasternodePayee) Votes() []*masternode.MasternodePaymentVote {
-
 	return self.votes
 }
 
@@ -378,7 +376,6 @@ func (self *MasternodeBlockPayees) Best() (common.Address, bool) {
 //Used to record the last winning block of the masternode. At least 2 votes need to be satisfied
 // Has(2,masternode.account)
 func (self *MasternodeBlockPayees) Has(num int, account common.Address) bool {
-
 	self.mu.Lock()
 	defer self.mu.Unlock()
 

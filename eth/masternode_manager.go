@@ -152,11 +152,14 @@ func (mm *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract
 	mm.is.Active = mm.active
 	mm.winner.active = mm.active
 
+	go mm.is.Start()
 	go mm.masternodeLoop()
 }
 
 func (mm *MasternodeManager) Stop() {
-
+	mm.is.Stop()
+	mm.is.CheckAndRemove()
+	mm.winner.CheckAndRemove(big.NewInt(0))
 }
 
 // SubscribeTxPreEvent registers a subscription of VoteEvent and
@@ -432,18 +435,6 @@ func (self *MasternodeManager) CheckPaymentVoteSignature(vote *masternode.Master
 		return false
 	}
 	return vote.Verify(vote.Hash().Bytes(), vote.Sig, pubkey)
-}
-
-func (mm *MasternodeManager) ProcessTxVote(tx *types.Transaction) bool {
-	if mm.is.ProcessTxLockRequest(tx) {
-		log.Info("Transaction Lock Request accepted,", "txHash:", tx.Hash().String(), "MasternodeId", mm.active.ID)
-		mm.is.Accept(tx)
-		if mm.is.Vote(tx.Hash()) {
-			return true
-		}
-		return false
-	}
-	return false
 }
 
 // If server is masternode, connect one masternode at least
