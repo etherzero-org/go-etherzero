@@ -34,6 +34,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
+	"sync/atomic"
 )
 
 const (
@@ -99,10 +100,10 @@ type InstantSend struct {
 	   ### getting 5 of 10 signatures w/ 1000 nodes of 2900
 	   (1000/2900.0)**5 = 0.004875397277841433
 	*/
-	//std::map<COutPoint, int64_t> mapMasternodeOrphanVotes; // mn outpoint - time
 	cachedHeight *big.Int
 	voteFeed     event.Feed
 	scope        event.SubscriptionScope
+	atWork       int32 // atWork indicates wether the InstantSend is currently working
 
 	Active       *masternode.ActiveMasternode
 	chain        blockChain
@@ -592,6 +593,7 @@ func (self *InstantSend) commitNewWork() {
 }
 
 func (self *InstantSend) commitTransactions(txs *types.TransactionsByPriceAndNonce) {
+
 	for {
 		tx := txs.Peek()
 		// Retrieve the next transaction and abort if all done
@@ -647,6 +649,25 @@ func (self *InstantSend) update() {
 			return
 		}
 	}
+}
+
+func (self *InstantSend) Start(){
+
+	if !atomic.CompareAndSwapInt32(&self.atWork,0,1) {
+		return //InstantSend sever already started
+	}
+	go self.update()
+
+}
+
+func (self *InstantSend) Stop(){
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if !atomic.CompareAndSwapInt32(&self.atWork,1,0) {
+		return //InstantSend sever already stopped
+	}
+
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
