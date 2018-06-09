@@ -34,6 +34,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
+	"sync/atomic"
 )
 
 const (
@@ -59,9 +60,9 @@ var (
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFundsMin = errors.New("keeping 0.01 etz at least on your wallet")
-	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
-	// one present in the local chain.
-	ErrNonceTooLow = errors.New("nonce too low")
+
+	//ErrCreateCandidate is returned if the transaction Create TxLockCandidate Failed
+	ErrCreateCandidate = errors.New("create Tx Candidate failed")
 )
 
 // blockChain provides the state of blockchain and current gas limit to do
@@ -106,6 +107,8 @@ type InstantSend struct {
 
 	Active       *masternode.ActiveMasternode
 	chain        blockChain
+	txCh         chan core.TxPreEvent
+	txSub        event.Subscription
 	currentState *state.StateDB // Current state in the blockchain head
 	signer       types.Signer
 	eth          Backend
@@ -127,12 +130,17 @@ func NewInstantx(chainconfig *params.ChainConfig, eth Backend) *InstantSend {
 		masternodeOrphanVotes: make(map[string]uint64),
 		votesOrphan:           make(map[common.Hash]*masternode.TxLockVote),
 	}
+	instantSend.txSub = eth.TxPool().SubscribeTxPreEvent(instantSend.txCh)
 	instantSend.reset()
+
+	go instantSend.update()
+	instantSend.commitNewWork()
+
 	return instantSend
 }
 
 //received a consensus TxLockRequest
-func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
+func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) error {
 
 	txHash := request.Hash()
 
@@ -147,16 +155,28 @@ func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) bool {
 		log.Info("WARNING:Double spend attempt!", "InstantSend txid=", txHash, "Voted txid count :", is.all[txHash])
 	}
 
+	sender, err := is.signer.Sender(request)
+	if err == nil {
+		return core.ErrInvalidSender
+	}
+	nonce := is.currentState.GetNonce(sender)
+
+	if nonce < request.Nonce() {
+		return core.ErrNonceTooHigh
+	}
+	if nonce > request.Nonce() {
+		return core.ErrNonceTooLow
+	}
 	if !is.CreateTxLockCandidate(request) {
 		log.Info("CreateTxLockCandidate failed, txid=", txHash)
-		return false
+		return ErrCreateCandidate
 	}
 	// Masternodes will sometimes propagate votes before the transaction is known to the client.
 	// If this just happened - lock inputs, resolve conflicting locks, update transaction status
 	// forcing external script notification.
 	is.TryToFinalizeLockCandidate(is.Candidates[txHash])
 
-	return true
+	return nil
 }
 
 func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
@@ -240,13 +260,11 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 	}
 	txhash := request.Hash()
 	txlockcondidate := masternode.NewTxLockCondidate(request)
-
 	if is.Candidates == nil {
 		log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
 		is.Candidates[txhash] = txlockcondidate
 
 	} else if is.Candidates[request.Hash()] == nil {
-
 		txlockcondidate.TxLockRequest = request
 		log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
 		if txlockcondidate.IsTimeout() {
@@ -436,12 +454,6 @@ func (is *InstantSend) ResolveConflicts(condidate *masternode.TxLockCondidate) b
 		return false
 	}
 
-	// Ensure the transaction adheres to nonce ordering
-	if is.currentState.GetNonce(from) > tx.Nonce() {
-		log.Error("ResolveConflicts error,", ErrNonceTooLow.Error())
-		return false
-	}
-
 	txs := is.GetLockedTxListByAccount(from)
 	sum := big.NewInt(0)
 
@@ -553,7 +565,88 @@ func (self *InstantSend) commitNewWork() {
 		if tx == nil {
 			break
 		}
-		self.ProcessTxLockRequest(tx)
+		from, _ := self.signer.Sender(tx)
+		err := self.ProcessTxLockRequest(tx)
+		switch err {
+		case core.ErrNonceTooLow:
+			// New head notification data race between the transaction pool and miner, shift
+			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Shift()
+
+		case core.ErrNonceTooHigh:
+			// Reorg notification data race between the transaction pool and miner, skip account =
+			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Pop()
+
+		case nil:
+			// Everything ok, collect the logs and shift in the next transaction from the same account
+			log.Info("Everything ok, collect the logs and shift in the next transaction from the same account")
+			txs.Shift()
+
+		default:
+			// Strange error, discard the transaction and get the next in line (note, the
+			// nonce-too-high clause will prevent us from executing in vain).
+			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			txs.Shift()
+		}
+	}
+}
+
+func (self *InstantSend) commitTransactions(txs *types.TransactionsByPriceAndNonce) {
+	for {
+		tx := txs.Peek()
+		// Retrieve the next transaction and abort if all done
+		if tx == nil {
+			break
+		}
+		// Error may be ignored here. The error has already been checked
+		// during transaction acceptance is the transaction pool.
+		//
+		// We use the eip155 signer regardless of the current hf.
+		from, _ := types.Sender(self.signer, tx)
+		err := self.ProcessTxLockRequest(tx)
+		switch err {
+		case core.ErrNonceTooLow:
+			// New head notification data race between the transaction pool and miner, shift
+			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Shift()
+
+		case core.ErrNonceTooHigh:
+			// Reorg notification data race between the transaction pool and miner, skip account =
+			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Pop()
+
+		case nil:
+			// Everything ok, collect the logs and shift in the next transaction from the same account
+			log.Info("Everything ok, collect the logs and shift in the next transaction from the same account")
+			txs.Shift()
+
+		default:
+			// Strange error, discard the transaction and get the next in line (note, the
+			// nonce-too-high clause will prevent us from executing in vain).
+			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			txs.Shift()
+		}
+
+	}
+}
+
+func (self *InstantSend) update() {
+	defer self.txSub.Unsubscribe()
+
+	for {
+		// A real event arrived, process interesting content
+		select {
+		case ev := <-self.txCh:
+			// Apply transaction to the pending state if we're not mining
+			acc, _ := types.Sender(self.signer, ev.Tx)
+			txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
+			txset := types.NewTransactionsByPriceAndNonce(self.signer, txs)
+			self.commitTransactions(txset)
+		//system stoped
+		case <-self.txSub.Err():
+			return
+		}
 	}
 }
 
