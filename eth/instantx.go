@@ -34,7 +34,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
-	"sync/atomic"
 )
 
 const (
