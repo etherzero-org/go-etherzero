@@ -100,10 +100,10 @@ type InstantSend struct {
 	   ### getting 5 of 10 signatures w/ 1000 nodes of 2900
 	   (1000/2900.0)**5 = 0.004875397277841433
 	*/
-	cachedHeight *big.Int
-	voteFeed     event.Feed
-	scope        event.SubscriptionScope
-	atWork       int32 // atWork indicates wether the InstantSend is currently working
+	cachedBlockHeight *big.Int // Keep track of current block height
+	voteFeed          event.Feed
+	scope             event.SubscriptionScope
+	atWork            int32 // atWork indicates wether the InstantSend is currently working
 
 	Active       *masternode.ActiveMasternode
 	chain        blockChain
@@ -125,6 +125,7 @@ func NewInstantx(chainconfig *params.ChainConfig, eth Backend) *InstantSend {
 		all:                   make(map[common.Hash]int),
 		eth:                   eth,
 		chain:                 eth.BlockChain(),
+		cachedBlockHeight:     eth.BlockChain().CurrentBlock().Number(),
 		signer:                types.NewEIP155Signer(chainconfig.ChainId),
 		lockedTxs:             make(map[common.Hash]*types.Transaction),
 		masternodeOrphanVotes: make(map[string]uint64),
@@ -503,7 +504,7 @@ func (self *InstantSend) CheckAndRemove() {
 	defer self.mu.Unlock()
 
 	for txHash, lockCondidate := range self.Candidates {
-		if lockCondidate.IsExpired(self.cachedHeight) {
+		if lockCondidate.IsExpired(self.cachedBlockHeight) {
 			log.Info("InstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid= \n", txHash.String())
 			delete(self.rejected, txHash)
 			delete(self.accepted, txHash)
@@ -512,7 +513,7 @@ func (self *InstantSend) CheckAndRemove() {
 	}
 
 	for txHash, lockVote := range self.txLockedVotes {
-		if lockVote.IsExpired(self.cachedHeight) {
+		if lockVote.IsExpired(self.cachedBlockHeight) {
 			log.Info("InstantSend::CheckAndRemove -- Removing expired vote: txid=", txHash.String(), "  masternode= ", lockVote.MasternodeId())
 			delete(self.txLockedVotes, txHash)
 		}
@@ -541,7 +542,6 @@ func (is *InstantSend) reset() {
 	}
 	is.currentState = statedb
 }
-
 
 func (is *InstantSend) String() string {
 	str := fmt.Sprintf("InstantSend Lock Candidates :", len(is.Candidates), ", Votes :", len(is.all))
@@ -647,23 +647,23 @@ func (self *InstantSend) update() {
 	}
 }
 
-func (self *InstantSend) Start(){
+func (self *InstantSend) Start() {
 
-	if !atomic.CompareAndSwapInt32(&self.atWork,0,1) {
+	if !atomic.CompareAndSwapInt32(&self.atWork, 0, 1) {
 		return //InstantSend sever already started
 	}
-	atomic.StoreInt32(&self.atWork,1)
+	atomic.StoreInt32(&self.atWork, 1)
 	go self.update()
 }
 
-func (self *InstantSend) Stop(){
+func (self *InstantSend) Stop() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	if !atomic.CompareAndSwapInt32(&self.atWork,1,0) {
+	if !atomic.CompareAndSwapInt32(&self.atWork, 1, 0) {
 		return //InstantSend sever already stopped
 	}
-	atomic.StoreInt32(&self.atWork,0)
+	atomic.StoreInt32(&self.atWork, 0)
 	self.CheckAndRemove()
 }
 
