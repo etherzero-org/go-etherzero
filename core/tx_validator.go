@@ -6,6 +6,7 @@ import (
 	//"fmt"
 	"fmt"
 	"math/big"
+	"github.com/ethzero/go-ethzero/log"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -49,6 +50,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFundsMin
+	}
+
+	assignedGas := pool.chain.GetAssignedGas(from)
+	gasAcc := pool.GetAccountGasAcc(from)
+
+	if (tx.Gas() + gasAcc) > assignedGas {
+		log.Error("Out of gas: ", "assignedGas", assignedGas, "gasAcc", gasAcc, "txGas", tx.Gas())
+		// TODO: uncomment for enable gas limit
+		// return ErrOutOfGas
 	}
 
 	// Drop non-local transactions under our own minimal accepted gas price

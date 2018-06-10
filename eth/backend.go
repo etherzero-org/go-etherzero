@@ -51,7 +51,6 @@ import (
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
 	"github.com/ethzero/go-ethzero/rpc"
-	"github.com/ethzero/go-ethzero/antidote"
 )
 
 type LesServer interface {
@@ -103,7 +102,6 @@ type Ethereum struct {
 	masternodeContract *contract.Contract
 	masternodes        *masternode.MasternodeSet
 
-	antidoteDB *antidote.AntidoteDB
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -177,8 +175,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, eth.chainConfig, eth.blockchain)
-
-	eth.antidoteDB, _ = antidote.NewAntidoteDB(ctx.ResolvePath("antidote"), 1, eth.blockchain, chainDb)
 
 	eth.ContractBackend = NewContractBackend(eth)
 

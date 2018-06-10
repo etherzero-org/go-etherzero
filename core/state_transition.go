@@ -25,7 +25,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/vm"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
-	"fmt"
 )
 
 var (
@@ -257,7 +256,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
-	// TODO convert to uint64
 	intrinsicGas, err := IntrinsicGas(st.data, contractCreation, homestead)
 	if err != nil {
 		return nil, 0, false, err
@@ -286,7 +284,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
 
-	fmt.Println("st.gasUsed()", st.gasUsed(), "intrinsicGas", intrinsicGas, "st.gas", st.gas, "st.evm.BlockNumber", st.evm.BlockNumber.String())
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't

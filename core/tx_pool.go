@@ -91,6 +91,8 @@ var (
 
 	//Refused to accept the original Ethereum transaction into the pool
 	ErrInvalidChainId = errors.New("invalid chain id for tx")
+
+	ErrOutOfGas = errors.New("out of gas")
 )
 
 var (
@@ -141,6 +143,7 @@ type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
+	GetAssignedGas(address common.Address) uint64
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 }
@@ -532,6 +535,21 @@ func (pool *TxPool) GetTransactionCountByFrom(address common.Address) int {
 		count += list.Len()
 	}
 	return count
+}
+
+func (pool *TxPool) GetAccountGasAcc(address common.Address) uint64 {
+	var gas uint64
+	if list := pool.queue[address]; list != nil {
+		for _, tx := range list.txs.items {
+			gas += tx.Gas()
+		}
+	}
+	if list := pool.pending[address]; list != nil {
+		for _, tx := range list.txs.items {
+			gas += tx.Gas()
+		}
+	}
+	return gas
 }
 
 // State returns the virtual managed state of the transaction pool.
