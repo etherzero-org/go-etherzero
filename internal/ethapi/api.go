@@ -1051,8 +1051,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionGas(ctx context.Context, addres
 	if state == nil || err != nil {
 		return nil, err
 	}
-	number := uint64(0)
-	return (*hexutil.Uint64)(&number), state.Error()
+	gas := s.b.GetAssignedGas(ctx, address)
+	return (*hexutil.Uint64)(&gas), state.Error()
 }
 
 // GetTransactionByHash returns the transaction for the given hash

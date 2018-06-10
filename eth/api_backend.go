@@ -105,6 +105,10 @@ func (b *EthApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) 
 	return core.GetBlockReceipts(b.eth.chainDb, blockHash, core.GetBlockNumber(b.eth.chainDb, blockHash)), nil
 }
 
+func (b *EthApiBackend) GetAssignedGas(ctx context.Context, address common.Address) (uint64) {
+	return b.eth.blockchain.GetAssignedGas(address)
+}
+
 func (b *EthApiBackend) GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error) {
 	receipts := core.GetBlockReceipts(b.eth.chainDb, blockHash, core.GetBlockNumber(b.eth.chainDb, blockHash))
 	if receipts == nil {

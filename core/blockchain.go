@@ -43,6 +43,7 @@ import (
 	"github.com/ethzero/go-ethzero/trie"
 	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"math"
 )
 
 var (
@@ -597,6 +598,32 @@ func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
 	return GetBlockReceipts(bc.db, hash, GetBlockNumber(bc.db, hash))
 }
 
+func (bc *BlockChain) GetAssignedGas(account common.Address) (uint64) {
+	lastNonce, lastBlock, lastGasUsed := GetAssignedGas(bc.db, account)
+	stateDB, _ := bc.State()
+	nonce := stateDB.GetNonce(account)
+	balance := stateDB.GetBalance(account)
+	if (lastNonce+1) != nonce {
+		log.Error("Get account gas", "last nonce", lastNonce, "current nonce", nonce)
+		return 0
+	}
+	return bc.getAssignedGas(bc.CurrentBlock().NumberU64(), lastBlock, lastGasUsed, balance)
+}
+
+func (bc *BlockChain) getAssignedGas(currentBlock uint64, lastBlock uint64, lastGasUsed uint64, balance *big.Int) uint64 {
+	blockGap := float64(currentBlock - lastBlock)
+	etz := float64(new(big.Int).Div(balance, new(big.Int).SetUint64(1e+18)).Uint64())
+	gasPerBlock := float64(21000.0 * math.Exp(-(float64(lastGasUsed)/21000.0)*0.1))+etz
+
+	maxGas := float64(9000000 * math.Exp(-1/etz*80))
+	maxGas = math.Max(maxGas, 100000)
+
+	gas := (blockGap + 1) * gasPerBlock
+	gas = math.Min(maxGas, gas)
+	//fmt.Printf("gasPerBlock: %f, blockGap: %f, etz: %f, gas: %f, maxGas: %f\n", gasPerBlock, blockGap, etz, gas, maxGas)
+	return uint64(gas)
+}
+
 // GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
 // [deprecated by eth/62]
 func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*types.Block) {
@@ -806,6 +833,10 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		if err := WriteTxLookupEntries(batch, block); err != nil {
 			return i, fmt.Errorf("failed to write lookup metadata: %v", err)
 		}
+		if err := WriteLastGasUseds(batch, block.NumberU64(), block.Body().Transactions, receipts); err != nil {
+			return i, fmt.Errorf("failed to write last gas used: %v", err)
+		}
+
 		stats.processed++
 
 		if batch.ValueSize() >= ethdb.IdealBatchSize {
@@ -949,6 +980,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		}
 	}
 	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
+		return NonStatTy, err
+	}
+	if err := WriteLastGasUseds(batch, block.NumberU64(), block.Body().Transactions, receipts); err != nil {
 		return NonStatTy, err
 	}
 	// If the total difficulty is higher than our known, add it to the canonical chain

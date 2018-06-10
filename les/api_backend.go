@@ -88,6 +88,10 @@ func (b *LesApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) 
 	return light.GetBlockReceipts(ctx, b.eth.odr, blockHash, core.GetBlockNumber(b.eth.chainDb, blockHash))
 }
 
+func (b *LesApiBackend) GetAssignedGas(ctx context.Context, address common.Address) (uint64) {
+	return 0
+}
+
 func (b *LesApiBackend) GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error) {
 	return light.GetBlockLogs(ctx, b.eth.odr, blockHash, core.GetBlockNumber(b.eth.chainDb, blockHash))
 }
