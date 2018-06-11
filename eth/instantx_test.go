@@ -72,10 +72,11 @@ func newBlockChain() *core.BlockChain {
 // when a transaction is voted_locked ,return five confirmations once
 func TestInstantSend_GetConfirmations(t *testing.T) {
 	var txHash common.Hash
+	eth := newEtherrum()
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	is := NewInstantx(newChainConfig(), eth)
 	is.Active = returnNewActinveNode()
 
 	is.GetConfirmations(txHash)
@@ -94,7 +95,8 @@ func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ec
 // test for ProcessTxLockRequest
 // lock the transaction then creare an instance when start an payable
 func TestInstantSend_ProcessTxLockRequest(t *testing.T) {
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	key, _ := crypto.GenerateKey()
 	tx0 := transaction(0, 100000, key)
 	fmt.Printf("key %v\n,tx0 %v", key, tx0)
@@ -127,7 +129,8 @@ func TestInstantSend_Vote(t *testing.T) {
 	hash1 := can1.Hash()
 	can0 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 0, 0))
 	hash0 := can0.Hash()
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	tests := []struct {
 		is         *InstantSend
 		hash       common.Hash
@@ -199,8 +202,8 @@ func TestInstantSend_ProcessTxLockVote(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	is.Active = returnNewActinveNode()
 
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
@@ -216,7 +219,8 @@ func TestInstantSend_CreateTxLockCandidate(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	request := newTestTransaction(testAccount, 1, 0)
 	is.CreateTxLockCandidate(request)
 }
@@ -229,7 +233,8 @@ func TestInstantSend_PostVoteEvent(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	is.Active = returnNewActinveNode()
 
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
@@ -252,7 +257,8 @@ func TestInstantSend_TryToFinalizeLockCandidate(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	is.Active = returnNewActinveNode()
 	can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 
@@ -267,7 +273,8 @@ func TestInstantSend_CheckAndRemove(t *testing.T) {
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
-	is := NewInstantx(newChainConfig(), newBlockChain())
+	eth := newEtherrum()
+	is := NewInstantx(newChainConfig(), eth)
 	is.Active = returnNewActinveNode()
 
 	is.CheckAndRemove()

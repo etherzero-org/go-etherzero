@@ -25,6 +25,8 @@ import (
 	"time"
 	"sync/atomic"
 
+	"sync/atomic"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/state"
@@ -640,7 +642,7 @@ func (self *InstantSend) update() {
 			txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
 			txset := types.NewTransactionsByPriceAndNonce(self.signer, txs)
 			self.commitTransactions(txset)
-		//system stoped
+			//system stoped
 		case <-self.txSub.Err():
 			return
 		}

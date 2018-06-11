@@ -18,21 +18,73 @@ package eth
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
 
 	"github.com/ethzero/go-ethzero/common"
+	"github.com/ethzero/go-ethzero/consensus/ethash"
+	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
+	"github.com/ethzero/go-ethzero/node"
 )
 
+const (
+	testInstance = "console-tester"
+	testAddress1 = "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
+)
+
+func newEtherrum() *Ethereum {
+	// Create a temporary storage for the node keys and initialize it
+	workspace, err := ioutil.TempDir("", "console-tester-")
+	if err != nil {
+		fmt.Printf("failed to create temporary keystore: %v", err)
+	}
+
+	// Create a networkless protocol stack and start an Ethereum service within
+	stack, err := node.New(&node.Config{DataDir: workspace, UseLightweightKDF: true, Name: testInstance})
+	if err != nil {
+		fmt.Printf("failed to create node: %v", err)
+	}
+	ethConf := &Config{
+		Genesis:   core.DeveloperGenesisBlock(15, common.Address{}),
+		Etherbase: common.HexToAddress(testAddress1),
+		Ethash: ethash.Config{
+			PowMode: ethash.ModeTest,
+		},
+	}
+
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return New(ctx, ethConf) }); err != nil {
+		fmt.Printf("failed to register Ethereum protocol: %v", err)
+	}
+	// Start the node and assemble the JavaScript console around it
+	if err = stack.Start(); err != nil {
+		fmt.Printf("failed to start test stack: %v", err)
+	}
+	_, err = stack.Attach()
+	if err != nil {
+		fmt.Printf("failed to attach to node: %v", err)
+	}
+
+	// Create the final tester and return
+	var ethereum *Ethereum
+	err = stack.Service(&ethereum)
+	if err != nil {
+		fmt.Printf("failed to as a service: %v", err)
+	}
+
+	ethereum.blockchain = newBlockChain()
+	return ethereum
+}
 func returnMasternodeManager() *MasternodeManager {
 	//// initial the parameter may needed during this test function
+	eth := newEtherrum()
 	return &MasternodeManager{
 		networkId:   uint64(0),
 		eventMux:    nil,
-		txpool:      nil,
 		blockchain:  nil,
 		chainconfig: nil,
 		newPeerCh:   make(chan *peer),
@@ -40,7 +92,7 @@ func returnMasternodeManager() *MasternodeManager {
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 		masternodes: &masternode.MasternodeSet{},
-		is:          NewInstantx(newChainConfig(), newBlockChain()),
+		is:          NewInstantx(newChainConfig(), eth),
 	}
 }
 
@@ -52,7 +104,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(big.NewInt(10),ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(10), ranksFn)
 
 	// init new hash
 	var hash common.Hash

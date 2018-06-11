@@ -101,7 +101,6 @@ type Ethereum struct {
 
 	masternodeContract *contract.Contract
 	masternodes        *masternode.MasternodeSet
-
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -169,7 +168,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	//	core.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	//}
 	eth.bloomIndexer.Start(eth.blockchain)
-
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)

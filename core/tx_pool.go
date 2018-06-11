@@ -62,7 +62,7 @@ var (
 
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
-	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
+	ErrInsufficientFunds    = errors.New("insufficient funds for gas * price + value")
 	ErrInsufficientFundsMin = errors.New("keeping 0.01 etz at least on your wallet")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
@@ -99,13 +99,13 @@ var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
-	TradeTimesCount = big.NewInt(1e+17) // one etz Trade times count in current high number
-	DefaultCurrentMaxGas = uint64(45000000) //A single block consumes the maximum amount of gas, which is equivalent to about 428 trades
-	contractTxMaxGasSize  = uint64(500000)  //The maximum amount of gas consumed per contract transaction
-	txMaxGasSize = big.NewInt(90000) //The maximum amount of gas consumed per transaction
-	DefaultCurrentMaxNonce = big.NewInt(500) //Prevent ddos att
-	MasternodeCheck = bool(true)
-	MasternodeAddr =string("")
+	TradeTimesCount        = big.NewInt(1e+17) // one etz Trade times count in current high number
+	DefaultCurrentMaxGas   = uint64(45000000)  //A single block consumes the maximum amount of gas, which is equivalent to about 428 trades
+	contractTxMaxGasSize   = uint64(500000)    //The maximum amount of gas consumed per contract transaction
+	txMaxGasSize           = big.NewInt(90000) //The maximum amount of gas consumed per transaction
+	DefaultCurrentMaxNonce = big.NewInt(500)   //Prevent ddos att
+	MasternodeCheck        = bool(true)
+	MasternodeAddr         = string("")
 )
 
 var (
@@ -122,8 +122,8 @@ var (
 	queuedNofundsCounter   = metrics.NewRegisteredCounter("txpool/queued/nofunds", nil)   // Dropped due to out-of-funds
 
 	// General tx metrics
-	invalidTxCounter     = metrics.NewRegisteredCounter("txpool/invalid", nil)
-	underpricedTxCounter = metrics.NewRegisteredCounter("txpool/underpriced", nil)
+	invalidTxCounter      = metrics.NewRegisteredCounter("txpool/invalid", nil)
+	underpricedTxCounter  = metrics.NewRegisteredCounter("txpool/underpriced", nil)
 	underbalanceTxCounter = metrics.NewRegisteredCounter("txpool/underbalance", nil)
 )
 
@@ -131,7 +131,7 @@ var (
 type TxStatus uint
 
 const (
-	TxStatusUnknown TxStatus = iota
+	TxStatusUnknown  TxStatus = iota
 	TxStatusQueued
 	TxStatusPending
 	TxStatusIncluded
@@ -209,17 +209,17 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 // current state) and future transactions. Transactions move between those
 // two states over time as they are received and processed.
 type TxPool struct {
-	config       TxPoolConfig
-	chainconfig  *params.ChainConfig
-	chain        blockChain
-	gasPrice     *big.Int
+	config        TxPoolConfig
+	chainconfig   *params.ChainConfig
+	chain         blockChain
+	gasPrice      *big.Int
 	txFrombalance *big.Int
-	txFeed       event.Feed
-	scope        event.SubscriptionScope
-	chainHeadCh  chan ChainHeadEvent
-	chainHeadSub event.Subscription
-	signer       types.Signer
-	mu           sync.RWMutex
+	txFeed        event.Feed
+	scope         event.SubscriptionScope
+	chainHeadCh   chan ChainHeadEvent
+	chainHeadSub  event.Subscription
+	signer        types.Signer
+	mu            sync.RWMutex
 
 	currentState  *state.StateDB      // Current state in the blockchain head
 	pendingState  *state.ManagedState // Pending state tracking virtual nonces
@@ -284,12 +284,12 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.wg.Add(1)
 	go pool.loop()
 
-	addr:= common.HexToAddress(MasternodeAddr)
-	accountvalue:= pool.currentState.GetBalance(addr)
-	accountvalue.Div(accountvalue,big.NewInt(1000000000000000000))
-	log.Debug("Masternode balance  ", "accountvalue  ",accountvalue)
+	addr := common.HexToAddress(MasternodeAddr)
+	accountvalue := pool.currentState.GetBalance(addr)
+	accountvalue.Div(accountvalue, big.NewInt(1000000000000000000))
+	log.Debug("Masternode balance  ", "accountvalue  ", accountvalue)
 	// change to 20000 for released;
-	if accountvalue.Int64() >20{
+	if accountvalue.Int64() > 20 {
 		MasternodeCheck = true
 	}
 	println(MasternodeCheck)
@@ -333,11 +333,11 @@ func (pool *TxPool) loop() {
 
 				pool.mu.Unlock()
 			}
-		// Be unsubscribed due to system stopped
+			// Be unsubscribed due to system stopped
 		case <-pool.chainHeadSub.Err():
 			return
 
-		// Handle stats reporting ticks
+			// Handle stats reporting ticks
 		case <-report.C:
 			pool.mu.RLock()
 			pending, queued := pool.stats()
@@ -349,7 +349,7 @@ func (pool *TxPool) loop() {
 				prevPending, prevQueued, prevStales = pending, queued, stales
 			}
 
-		// Handle inactive account transaction eviction
+			// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
 			for addr := range pool.queue {
@@ -366,7 +366,7 @@ func (pool *TxPool) loop() {
 			}
 			pool.mu.Unlock()
 
-		// Handle local transaction journal rotation
+			// Handle local transaction journal rotation
 		case <-journal.C:
 			if pool.journal != nil {
 				pool.mu.Lock()
@@ -629,7 +629,6 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 	}
 	return txs
 }
-
 
 // add validates a transaction and inserts it into the non-executable queue for
 // later pending promotion and execution. If the transaction is a replacement for
