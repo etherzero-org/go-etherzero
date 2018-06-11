@@ -25,8 +25,6 @@ import (
 	"time"
 	"sync/atomic"
 
-	"sync/atomic"
-
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/state"

@@ -27,7 +27,6 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"fmt"
 )
 
 const (
@@ -285,9 +284,10 @@ func (f *Fetcher) FilterBodies(peer string, transactions [][]*types.Transaction,
 // events.
 func (f *Fetcher) loop() {
 	// Iterate the block fetching until a quit is requested
+	fetchTimer := time.NewTimer(0)
+	completeTimer := time.NewTimer(0)
+
 	for {
-		fmt.Printf("Fetcher fetcher value:%s",f)
-		fmt.Printf("Fetcher fetching value :%s",f.fetching)
 
 		// Clean up any expired block fetches
 		for hash, announce := range f.fetching {
