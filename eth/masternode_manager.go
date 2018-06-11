@@ -63,7 +63,7 @@ type MasternodeManager struct {
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
-	eth      Backend
+	eth         Backend
 	blockchain  *core.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
@@ -114,8 +114,8 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 	manager := &MasternodeManager{
 		networkId:   networkId,
 		eventMux:    mux,
-		eth:      eth,
-		txCh:           make(chan core.TxPreEvent, txChanSize),
+		eth:         eth,
+		txCh:        make(chan core.TxPreEvent, txChanSize),
 		blockchain:  blockchain,
 		chainconfig: config,
 		newPeerCh:   make(chan *peer),
@@ -123,14 +123,14 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 		masternodes: &masternode.MasternodeSet{},
-		is:NewInstantx(config,eth),
+		is:          NewInstantx(config, eth),
 	}
 
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.txSub=eth.TxPool().SubscribeTxPreEvent(manager.txCh)
-	manager.winner = NewMasternodePayments( blockchain.CurrentBlock().Number(), ranksFn)
+	manager.txSub = eth.TxPool().SubscribeTxPreEvent(manager.txCh)
+	manager.winner = NewMasternodePayments(blockchain.CurrentBlock().Number(), ranksFn)
 	return manager, nil
 }
 
@@ -592,4 +592,3 @@ func (mm *MasternodeManager) DealPingMsg(pm *masternode.PingMsg) error {
 	mm.masternodes.RecvPingMsg(id, pm.Time)
 	return nil
 }
-

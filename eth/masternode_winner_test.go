@@ -72,7 +72,7 @@ func TestMasternodePayments_winners(t *testing.T) {
 	a.AddVoteHash(hash)
 
 	manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
-	manager.winner.cachedBlockNumber = big.NewInt(31415926)
+	//manager.winner.cachedBlockNumber = big.NewInt(31415926)
 	fmt.Println("winners is ", manager.winner.winners())
 }
 
