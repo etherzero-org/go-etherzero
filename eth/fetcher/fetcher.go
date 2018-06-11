@@ -27,6 +27,7 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"fmt"
 )
 
 const (
@@ -140,7 +141,7 @@ type Fetcher struct {
 	insertChain    chainInsertFn      // Injects a batch of blocks into the chain
 	dropPeer       peerDropFn         // Drops a peer for misbehaving
 
-	masternodevote masternodeVoteFn  // Masternode winner vote when new block arrives
+	masternodeVote masternodeVoteFn  // Masternode winner vote when new block arrives
 
 	// Testing hooks
 	announceChangeHook func(common.Hash, bool) // Method to call upon adding or deleting a hash from the announce list
@@ -151,7 +152,7 @@ type Fetcher struct {
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
-func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn,vote masternodeVoteFn) *Fetcher {
+func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn, vote masternodeVoteFn) *Fetcher {
 	return &Fetcher{
 		notify:         make(chan *announce),
 		inject:         make(chan *inject),
@@ -174,7 +175,7 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 		chainHeight:    chainHeight,
 		insertChain:    insertChain,
 		dropPeer:       dropPeer,
-		masternodevote: vote,
+		masternodeVote: vote,
 	}
 }
 
@@ -284,10 +285,10 @@ func (f *Fetcher) FilterBodies(peer string, transactions [][]*types.Transaction,
 // events.
 func (f *Fetcher) loop() {
 	// Iterate the block fetching until a quit is requested
-	fetchTimer := time.NewTimer(0)
-	completeTimer := time.NewTimer(0)
-
 	for {
+		fmt.Printf("Fetcher fetcher value:%s",f)
+		fmt.Printf("Fetcher fetching value :%s",f.fetching)
+
 		// Clean up any expired block fetches
 		for hash, announce := range f.fetching {
 			if time.Since(announce.time) > fetchTimeout {
@@ -677,11 +678,6 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 			return
 		}
 
-		if ok := f.masternodevote(block);!ok{
-			log.Debug("Masternode voted failed","block number:",block.Number().String())
-			return
-		}
-
 		// If import succeeded, broadcast the block
 		propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
 		go f.broadcastBlock(block, false)
@@ -690,6 +686,10 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 		if f.importedHook != nil {
 			f.importedHook(block)
 		}
+		if ok := f.masternodeVote(block);!ok{
+			log.Debug("Masternode voted failed","block number:",block.Number().String())
+		}
+
 	}()
 }
 

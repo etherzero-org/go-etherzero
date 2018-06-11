@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"sync/atomic"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
@@ -34,7 +35,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/params"
 	"github.com/ethzero/go-ethzero/rlp"
-	"sync/atomic"
 )
 
 const (

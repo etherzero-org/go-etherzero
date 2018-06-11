@@ -127,7 +127,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
-		winner:      NewMasternodePayments(big.NewInt(0), nil),
 	}
 
 	// Figure out whether to allow fast sync or not
@@ -194,9 +193,16 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
+	ranks:=func(height *big.Int) map[int64]*masternode.Masternode{
+		return manager.mnManager.GetMasternodeRanks(height)
+	}
+	manager.winner=NewMasternodePayments(blockchain.CurrentBlock().Number(), ranks)
 
 	vote := func(block *types.Block) bool {
 		rank := manager.mnManager.GetMasternodeRank(manager.mnManager.active.ID)
+		if rank <1 {
+			return false
+		}
 		return manager.winner.ProcessBlock(block, rank)
 	}
 	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
