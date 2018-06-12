@@ -131,6 +131,7 @@ func NewInstantx(chainconfig *params.ChainConfig, eth Backend) *InstantSend {
 		masternodeOrphanVotes: make(map[string]uint64),
 		votesOrphan:           make(map[common.Hash]*masternode.TxLockVote),
 	}
+	instantSend.txCh =make(chan core.TxPreEvent, txChanSize)
 	instantSend.txSub = eth.TxPool().SubscribeTxPreEvent(instantSend.txCh)
 	instantSend.reset()
 
@@ -549,14 +550,15 @@ func (is *InstantSend) String() string {
 }
 
 func (self *InstantSend) commitNewWork() {
-
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+
 	txs := types.NewTransactionsByPriceAndNonce(self.signer, pending)
 
+	log.Info("InstantSend commitNewWork,received txs","size:",txs.Size())
 	for {
 		tx := txs.Peek()
 		if tx == nil {
@@ -631,13 +633,16 @@ func (self *InstantSend) commitTransactions(txs *types.TransactionsByPriceAndNon
 func (self *InstantSend) update() {
 	defer self.txSub.Unsubscribe()
 
+	log.Info("InstantSend update begin ******** ")
 	for {
 		// A real event arrived, process interesting content
 		select {
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
+
 			acc, _ := types.Sender(self.signer, ev.Tx)
 			txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
+			log.Info("InstantSend receive tx ","size:",len(txs))
 			txset := types.NewTransactionsByPriceAndNonce(self.signer, txs)
 			self.commitTransactions(txset)
 			//system stoped
@@ -648,7 +653,7 @@ func (self *InstantSend) update() {
 }
 
 func (self *InstantSend) Start() {
-
+	log.Info("InstantSend server start begin **********")
 	if !atomic.CompareAndSwapInt32(&self.atWork, 0, 1) {
 		return //InstantSend sever already started
 	}
