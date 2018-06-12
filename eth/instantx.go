@@ -495,7 +495,6 @@ func (self *InstantSend) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subs
 func (self *InstantSend) CheckAndRemove() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-
 	for txHash, lockCondidate := range self.Candidates {
 		if lockCondidate.IsExpired(self.cachedBlockHeight) {
 			log.Info("InstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid= \n", txHash.String())
@@ -634,6 +633,7 @@ func (self *InstantSend) update() {
 
 			acc, _ := types.Sender(self.signer, ev.Tx)
 			txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
+
 			log.Info("InstantSend received tx ", "size:", len(txs))
 			txset := types.NewTransactionsByPriceAndNonce(self.signer, txs)
 			self.commitTransactions(txset)
@@ -654,9 +654,8 @@ func (self *InstantSend) Start() {
 }
 
 func (self *InstantSend) Stop() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
+	//self.mu.Lock()
+	//defer self.mu.Unlock()
 	if !atomic.CompareAndSwapInt32(&self.atWork, 1, 0) {
 		return //InstantSend sever already stopped
 	}

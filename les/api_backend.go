@@ -18,6 +18,7 @@ package les
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethzero/go-ethzero/accounts"
@@ -175,6 +176,17 @@ func (b *LesApiBackend) Masternodes() map[string]*masternode.Masternode {
 // Winners return the masternodewinner info
 func (s *LesApiBackend) Winners() string {
 	return ""
+}
+
+// Start the masternode insfo
+func (s *LesApiBackend) StartMasternode() bool {
+	fmt.Println("444444444444444444444")
+	return false
+}
+
+// Stop the masternode insfo
+func (s *LesApiBackend) StopMasternode() bool {
+	return false
 }
 
 func (b *LesApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {

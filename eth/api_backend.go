@@ -207,6 +207,19 @@ func (b *EthApiBackend) Winners() string {
 	return b.eth.protocolManager.mnManager.Winners()
 }
 
+// StartMasternode just call the start function of instantx
+// TODO ,send 20 ether to the contract address
+func (b *EthApiBackend) StartMasternode() bool {
+	b.eth.masternodeManager.is.Start()
+	return true
+}
+
+// Stop
+func (b *EthApiBackend) StopMasternode() bool {
+	b.eth.masternodeManager.is.Stop()
+	return true
+}
+
 func (b *EthApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }

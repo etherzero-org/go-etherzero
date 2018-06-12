@@ -42,8 +42,8 @@ var (
 	addr2   = crypto.PubkeyToAddress(key2.PublicKey)
 )
 
-func genKeys(N int) (keys []*ecdsa.PrivateKey) {
-	for ; N > 0; N-- {
+func genKeys(n int) (keys []*ecdsa.PrivateKey) {
+	for ; n > 0; n-- {
 		key, _ := crypto.GenerateKey()
 		keys = append(keys, key)
 	}
@@ -55,10 +55,10 @@ func genNodeID() discover.NodeID {
 	return discover.PubkeyID(&key.PublicKey)
 }
 
-func newTestBackendAndKeys(N int) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+func newTestBackendAndKeys(n int) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	val := new(big.Int).Mul(big.NewInt(200000), big.NewInt(1e+18))
 	genesis := core.GenesisAlloc{}
-	keys := genKeys(N)
+	keys := genKeys(n)
 	for _, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		genesis[addr] = core.GenesisAccount{Balance: val}
