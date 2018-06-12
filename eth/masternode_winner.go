@@ -147,7 +147,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: nBlockHeight=", block.String(), " masternodeId=", self.active.ID)
+	log.Info("ProcessBlock -- Start: ","nBlockHeight", block.String(), " masternodeId", self.active.ID)
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
 	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
@@ -170,6 +170,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 //Handle the voting of other masternodes
 func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, storageLimit *big.Int) bool {
 
+	log.Info("MasternodePayments vote begin ")
 	self.mu.Lock()
 	if self.votes[vote.Hash()] != nil {
 		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())

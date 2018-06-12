@@ -176,11 +176,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	eth.ContractBackend = NewContractBackend(eth)
 
-	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
-		return nil, err
-	}
+
 
 	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth, eth.engine, eth.blockchain, chainDb); err != nil {
+		return nil, err
+	}
+	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mnManager = eth.masternodeManager

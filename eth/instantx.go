@@ -213,8 +213,8 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 
 		self.voteFeed.Send(core.VoteEvent{vote})
 		// add to txLockedVotes
-		_, ok1 := self.txLockedVotes[hash]
-		if !ok1 {
+		_, ok := self.txLockedVotes[hash]
+		if !ok {
 			self.txLockedVotes[hash] = vote
 		} else {
 			return false

@@ -204,7 +204,7 @@ func (b *EthApiBackend) Masternodes() map[string]*masternode.Masternode {
 
 // Winners return winners masternode info
 func (b *EthApiBackend) Winners() string {
-	return b.eth.protocolManager.winner.winners()
+	return b.eth.protocolManager.mnManager.Winners()
 }
 
 func (b *EthApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {

@@ -141,7 +141,7 @@ type Fetcher struct {
 	insertChain    chainInsertFn      // Injects a batch of blocks into the chain
 	dropPeer       peerDropFn         // Drops a peer for misbehaving
 
-	masternodeVote masternodeVoteFn  // Masternode winner vote when new block arrives
+	processBlockVote masternodeVoteFn  // Masternode winner vote when new block arrives
 
 	// Testing hooks
 	announceChangeHook func(common.Hash, bool) // Method to call upon adding or deleting a hash from the announce list
@@ -152,7 +152,7 @@ type Fetcher struct {
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
-func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn, vote masternodeVoteFn) *Fetcher {
+func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn, blockVote masternodeVoteFn) *Fetcher {
 	return &Fetcher{
 		notify:         make(chan *announce),
 		inject:         make(chan *inject),
@@ -175,7 +175,7 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 		chainHeight:    chainHeight,
 		insertChain:    insertChain,
 		dropPeer:       dropPeer,
-		masternodeVote: vote,
+		processBlockVote: blockVote,
 	}
 }
 
@@ -687,7 +687,7 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 		if f.importedHook != nil {
 			f.importedHook(block)
 		}
-		if ok := f.masternodeVote(block);!ok{
+		if ok := f.processBlockVote(block);!ok{
 			log.Debug("Masternode voted failed","block number:",block.Number().String())
 		}
 
