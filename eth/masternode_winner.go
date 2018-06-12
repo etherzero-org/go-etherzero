@@ -147,7 +147,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: ","nBlockHeight", block.String(), " masternodeId", self.active.ID)
+	log.Info("ProcessBlock -- Start: ","nBlockHeight", block.Number().String(), " masternodeId", self.active.ID)
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
 	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
@@ -157,8 +157,8 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	if err == nil {
 		if vote.Verify(hash[:], sig, &self.active.PrivateKey.PublicKey) {
 			// vote constructed sucessfully, let's store and relay it
-			log.Info("MasternodePayments:: sign value:", string(sig))
 			self.Add(block.Hash(), vote)
+			log.Info("MasternodePayments:: ProcessBlock vote successed!")
 			return true
 		}
 	}

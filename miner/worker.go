@@ -488,7 +488,7 @@ func (self *worker) commitNewWork() {
 	for _, hash := range badUncles {
 		delete(self.possibleUncles, hash)
 	}
-	fmt.Printf("worker.go \n Header.Number:%v,IsEthzeroMasternode:%v \n ", header.Number, self.chain.Config().IsEthzeroMasternode(header.Number))
+	log.Debug("worker commitNewWork","Header.Number", header.Number, " IsEthzeroMasternode ",self.chain.Config().IsEthzeroMasternode(header.Number))
 
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		account, err := self.eth.BestMasternode()
