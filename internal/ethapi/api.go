@@ -82,6 +82,16 @@ func (s *PublicEthereumAPI) Winners() string {
 	return ""
 }
 
+// Start return the masternodewinner info
+func (s *PublicEthereumAPI) StartMasternode() bool {
+	return false
+}
+
+// Stop return the masternodewinner info
+func (s *PublicEthereumAPI) StopMasternode() bool {
+	return false
+}
+
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
 // - startingBlock: block number this node started to synchronise from
@@ -246,6 +256,16 @@ func (s *PrivateAccountAPI) List() map[string]*masternode.Masternode {
 // Winners will Print list of masternode winners
 func (s *PrivateAccountAPI) Winners() string {
 	return s.b.Winners()
+}
+
+// Start  the masternodewinner info
+func (s *PrivateAccountAPI) StartMasternode() bool {
+	return s.b.StartMasternode()
+}
+
+// Stop return the masternodewinner info
+func (s *PrivateAccountAPI) StopMasternode() bool {
+	return s.b.StopMasternode()
 }
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its

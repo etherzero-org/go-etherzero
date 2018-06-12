@@ -6637,9 +6637,19 @@ module.exports = Settings;
                 params: 2,
                 inputFormatter: [formatters.inputAddressFormatter,null]
             });
+            var startMasternode = new Method({
+                name: 'startMasternode',
+                call: 'masternode_startMasternode',
+            });
+            var stopMasternode = new Method({
+                name: 'stopMasternode',
+                call: 'masternode_stopMasternode',
+            });
             return [
                 newMasternode,
-                getPrivateKey
+                getPrivateKey,
+                startMasternode,
+                stopMasternode
             ];
         };
 

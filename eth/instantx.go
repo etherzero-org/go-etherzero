@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
 	"sync/atomic"
+	"time"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
@@ -131,7 +131,7 @@ func NewInstantx(chainconfig *params.ChainConfig, eth Backend) *InstantSend {
 		masternodeOrphanVotes: make(map[string]uint64),
 		votesOrphan:           make(map[common.Hash]*masternode.TxLockVote),
 	}
-	instantSend.txCh =make(chan core.TxPreEvent, txChanSize)
+	instantSend.txCh = make(chan core.TxPreEvent, txChanSize)
 	instantSend.txSub = eth.TxPool().SubscribeTxPreEvent(instantSend.txCh)
 	instantSend.reset()
 
@@ -503,7 +503,6 @@ func (self *InstantSend) SubscribeVoteEvent(ch chan<- core.VoteEvent) event.Subs
 func (self *InstantSend) CheckAndRemove() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-
 	for txHash, lockCondidate := range self.Candidates {
 		if lockCondidate.IsExpired(self.cachedBlockHeight) {
 			log.Info("InstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid= \n", txHash.String())
@@ -558,7 +557,7 @@ func (self *InstantSend) commitNewWork() {
 
 	txs := types.NewTransactionsByPriceAndNonce(self.signer, pending)
 
-	log.Info("InstantSend commitNewWork,received txs","size:",txs.Size())
+	log.Info("InstantSend commitNewWork,received txs", "size:", txs.Size())
 	for {
 		tx := txs.Peek()
 		if tx == nil {
@@ -642,7 +641,7 @@ func (self *InstantSend) update() {
 
 			acc, _ := types.Sender(self.signer, ev.Tx)
 			txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
-			log.Info("InstantSend receive tx ","size:",len(txs))
+			log.Info("InstantSend receive tx ", "size:", len(txs))
 			txset := types.NewTransactionsByPriceAndNonce(self.signer, txs)
 			self.commitTransactions(txset)
 			//system stoped
@@ -662,9 +661,8 @@ func (self *InstantSend) Start() {
 }
 
 func (self *InstantSend) Stop() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
+	//self.mu.Lock()
+	//defer self.mu.Unlock()
 	if !atomic.CompareAndSwapInt32(&self.atWork, 1, 0) {
 		return //InstantSend sever already stopped
 	}
