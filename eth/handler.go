@@ -99,7 +99,6 @@ type ProtocolManager struct {
 	noMorePeers chan struct{}
 
 	// etherzero masternode
-	winner    *MasternodePayments
 	voteCh    chan core.VoteEvent
 	voteSub   event.Subscription
 	winnerCh  chan core.PaymentVoteEvent
@@ -193,19 +192,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
-	ranks:=func(height *big.Int) map[int64]*masternode.Masternode{
-		return manager.mnManager.GetMasternodeRanks(height)
+	processBlockVote := func(block *types.Block) bool {
+		return manager.mnManager.ProcessBlock(block)
 	}
-	manager.winner=NewMasternodePayments(blockchain.CurrentBlock().Number(), ranks)
-
-	vote := func(block *types.Block) bool {
-		rank := manager.mnManager.GetMasternodeRank(manager.mnManager.active.ID)
-		if rank <1 {
-			return false
-		}
-		return manager.winner.ProcessBlock(block, rank)
-	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, vote)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, processBlockVote)
 
 	return manager, nil
 }

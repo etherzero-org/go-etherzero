@@ -187,12 +187,15 @@ func (self *TxLockCondidate) IsExpired(height *big.Int) bool {
 func (self *TxLockCondidate) IsTimeout() bool {
 
 	if uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds {
-		return false
+		return true
 	}
-	return true
+	return false
 }
 
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
+	if tc.masternodeVotes == nil{
+		return false
+	}
 	return tc.masternodeVotes[id] != nil
 }
 

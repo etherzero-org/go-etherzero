@@ -272,6 +272,7 @@ func (self *MasternodeManager) GetMasternodeRank(id string) int {
 	return rank
 }
 
+
 func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*masternode.Masternode {
 
 	block := self.blockchain.GetBlockByNumber(height.Uint64())
@@ -297,6 +298,11 @@ func (self *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minPro
 		masternodeScores[m.CalculateScore(blockHash)] = m
 	}
 	return masternodeScores
+}
+
+func (self *MasternodeManager) Winners() string{
+
+	return self.winner.winners()
 }
 
 func (self *MasternodeManager) StorageLimit() *big.Int {
@@ -379,6 +385,13 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 		return false, fmt.Errorf("MasternodeManager  CheckPaymentVote signature Failed ")
 	}
 	return true, nil
+}
+
+func (self *MasternodeManager) ProcessBlock(block *types.Block) bool {
+
+	rank := self.GetMasternodeRank(self.active.ID)
+	return self.winner.ProcessBlock(block,rank)
+
 }
 
 func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool, error) {

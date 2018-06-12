@@ -135,59 +135,49 @@ func NewInstantx(chainconfig *params.ChainConfig, eth Backend) *InstantSend {
 	instantSend.txSub = eth.TxPool().SubscribeTxPreEvent(instantSend.txCh)
 	instantSend.reset()
 
-	go instantSend.update()
-	instantSend.commitNewWork()
+	//go instantSend.update()
+	//instantSend.commitNewWork()
 
 	return instantSend
 }
 
 //received a consensus TxLockRequest
-func (is *InstantSend) ProcessTxLockRequest(request *types.Transaction) error {
+func (self *InstantSend) ProcessTxLockRequest(request *types.Transaction) error {
 
 	txHash := request.Hash()
 
 	// check to see if we conflict with existing completed lock
-	if _, ok := is.lockedTxs[txHash]; !ok {
+	if _, ok := self.lockedTxs[txHash]; ok {
 		// Conflicting with complete lock, proceed to see if we should cancel them both
-		log.Info("WARNING: Found conflicting completed Transaction Lock", "InstantSend  txid=", txHash, "completed lock txid=", is.lockedTxs[txHash])
+		log.Info("WARNING: Found conflicting completed Transaction Lock", "InstantSend  txid=", txHash, "completed lock txid=", self.lockedTxs[txHash])
 	}
 	// Check to see if there are votes for conflicting request,
 	// if so - do not fail, just warn user
-	if _, ok := is.all[txHash]; !ok {
-		log.Info("WARNING:Double spend attempt!", "InstantSend txid=", txHash, "Voted txid count :", is.all[txHash])
+	if _, ok := self.all[txHash]; ok {
+		log.Info("WARNING:Double spend attempt!", "InstantSend txid=", txHash, "Voted txid count :", self.all[txHash])
 	}
+	self.Accept(request)
 
-	sender, err := is.signer.Sender(request)
-	if err == nil {
-		return core.ErrInvalidSender
-	}
-	nonce := is.currentState.GetNonce(sender)
-
-	if nonce < request.Nonce() {
-		return core.ErrNonceTooHigh
-	}
-	if nonce > request.Nonce() {
-		return core.ErrNonceTooLow
-	}
-	if !is.CreateTxLockCandidate(request) {
+	if !self.CreateTxLockCandidate(request) {
 		log.Info("CreateTxLockCandidate failed, txid=", txHash)
 		return ErrCreateCandidate
 	}
+
 	// Masternodes will sometimes propagate votes before the transaction is known to the client.
 	// If this just happened - lock inputs, resolve conflicting locks, update transaction status
 	// forcing external script notification.
-	is.TryToFinalizeLockCandidate(is.Candidates[txHash])
+	self.TryToFinalizeLockCandidate(self.Candidates[txHash])
 
 	return nil
 }
 
-func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
+func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
+	log.Info("InstantSend vote begin ")
+	txHash := condidate.TxLockRequest.Hash()
 
-	txHash := condidate.Hash()
-	if _, ok := is.accepted[txHash]; !ok {
+	if _, ok := self.accepted[txHash]; !ok {
 		return false
 	}
-
 	txlockRequest := condidate.TxLockRequest
 	nonce := txlockRequest.Nonce()
 	if nonce < 1 {
@@ -195,50 +185,49 @@ func (is *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		return false
 	}
 
-	var alreadyVoted bool = false
-	if _, ok := is.all[txHash]; !ok {
-		txLockCondidate := is.Candidates[txHash]
+	//var alreadyVoted bool = false
+	if _, ok := self.all[txHash]; !ok {
+		txLockCondidate := self.Candidates[txHash]
 		if txLockCondidate != nil {
-			if txLockCondidate.HasMasternodeVoted(is.Active.ID) {
-				alreadyVoted = true
-				log.Info("CInstantSend::Vote -- WARNING: We already voted for this outpoint, skipping: txHash=", txHash, ", masternodeid=", is.Active.ID)
+			if txLockCondidate.HasMasternodeVoted(self.Active.ID) {
+				//		alreadyVoted = true
+				log.Info("CInstantSend::Vote -- WARNING: We already voted for this tx, skipping: txHash=", txHash, ", masternodeid=", self.Active.ID)
 				return false
 			}
 		}
 	}
-	if alreadyVoted {
-		return false
-	}
-	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
+	vote := masternode.NewTxLockVote(txHash, self.Active.ID)
 	hash := vote.Hash()
-	signByte, err := vote.Sign(hash[:], is.Active.PrivateKey)
+	log.Info("InstantSend new vote hash: ", "hashId:", hash)
+	signByte, err := vote.Sign(hash[:], self.Active.PrivateKey)
 	//signByte, err := vote.Sign(is.Active.PrivateKey)
 	vote.Sig = signByte
 	if err != nil {
 		return false
 	}
 	//publicKey:=crypto.FromECDSAPub(&is.Active.PrivateKey.PublicKey)
-	if vote.Verify(&is.Active.PrivateKey.PublicKey) {
+	if vote.Verify(&self.Active.PrivateKey.PublicKey) {
 		//if vote.CheckSignature(publicKey,vote.Sig){
 		log.Info("InstantSend sign Verify valid")
 		// vote constructed sucessfully, let's store and relay it
-		is.voteFeed.Send(vote)
+
+		self.voteFeed.Send(core.VoteEvent{vote})
 		// add to txLockedVotes
-		_, ok1 := is.txLockedVotes[hash]
-		if !ok1 {
-			is.txLockedVotes[hash] = vote
+		_, ok := self.txLockedVotes[hash]
+		if !ok {
+			self.txLockedVotes[hash] = vote
 		} else {
 			return false
 		}
 
-		txLock := is.Candidates[txHash]
+		txLock := self.Candidates[txHash]
 		if txLock.AddVote(vote) {
-			log.Info("Vote created successfully, relaying: txHash=", txHash.String(), ", vote=", hash.String())
-			is.all[txHash] = 1
+			log.Info("Vote created successfully, relaying: ", "txHash ", txHash, ", vote ", hash)
+			self.all[txHash] = 1
 			return true
 		}
 	} else {
-		log.Info("vote Sign verify failed vote hash:", vote.Hash().String())
+		log.Info("vote Sign verify failed :","vote hash:", vote.Hash())
 	}
 	return false
 }
@@ -261,20 +250,23 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 		return false
 	}
 	txhash := request.Hash()
-	txlockcondidate := masternode.NewTxLockCondidate(request)
+	txLockcondidate := masternode.NewTxLockCondidate(request)
 	if is.Candidates == nil {
-		log.Info("CreateTxLockCandidate -- new,txid=", txhash.String())
-		is.Candidates[txhash] = txlockcondidate
+		log.Info("CreateTxLockCandidate -- new,", "txid=", txhash)
+		is.Candidates[txhash] = txLockcondidate
 
-	} else if is.Candidates[request.Hash()] == nil {
-		txlockcondidate.TxLockRequest = request
-		log.Info("CreateTxLockCandidate -- seen, txid", txhash.String())
-		if txlockcondidate.IsTimeout() {
-			log.Info("InstantSend::CreateTxLockCandidate -- timed out, txid=%s\n", txhash.String())
+	} else if is.Candidates[txhash] == nil {
+		txLockcondidate.TxLockRequest = request
+		log.Info("CreateTxLockCandidate -- seen,", "txid=", txhash)
+		if txLockcondidate.IsTimeout() {
+			log.Info("InstantSend::CreateTxLockCandidate -- timed out,", "txid=", txhash)
 			return false
 		}
-		log.Info("InstantSend::CreateTxLockCandidate -- update empty, txid=%s\n", txhash.String())
+		log.Info("InstantSend::CreateTxLockCandidate -- update empty,", "txid=", txhash)
+		is.Candidates[txhash] = txLockcondidate
 	}
+
+	is.vote(txLockcondidate)
 	return true
 }
 
@@ -377,7 +369,7 @@ func (is *InstantSend) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 }
 
 func (is *InstantSend) Accept(tx *types.Transaction) {
-	if is.accepted[tx.Hash()] != nil {
+	if is.accepted[tx.Hash()] == nil {
 		is.accepted[tx.Hash()] = tx
 	} else {
 		log.Info("transaction already exists in the Accept Map", "tx hash:", tx.Hash().String())
@@ -641,7 +633,8 @@ func (self *InstantSend) update() {
 
 			acc, _ := types.Sender(self.signer, ev.Tx)
 			txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
-			log.Info("InstantSend receive tx ", "size:", len(txs))
+
+			log.Info("InstantSend received tx ", "size:", len(txs))
 			txset := types.NewTransactionsByPriceAndNonce(self.signer, txs)
 			self.commitTransactions(txset)
 			//system stoped
