@@ -493,7 +493,7 @@ func (self *worker) commitNewWork() {
 	if self.chain.Config().IsEthzeroMasternode(header.Number) {
 		account, err := self.eth.BestMasternode()
 		if err == nil {
-			fmt.Printf("BestMasternode successed,Account:%v \n", account.String())
+			log.Info("BestMasternode successed,Masternode ","Account", account.String())
 			masternode = account
 		} else {
 			log.Error("BestMasternode error:\n", "err", err)

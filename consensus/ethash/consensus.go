@@ -641,7 +641,7 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		blockReward := MasternodeReward
 		state.AddBalance(masternode, blockReward)
 		state.AddBalance(params.MainnetGovernanceAddress, GovernanceReward)
-		fmt.Printf("accumulateRewards successed,Account:%v\n", masternode.String())
+		log.Trace("Masternode Reward ", "account ", masternode, "GovernanceAddress", GovernanceReward)
 	}
 
 	// Accumulate the rewards for the miner and any included uncles
