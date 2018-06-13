@@ -184,34 +184,38 @@ func (self *MasternodeManager) newPeer(p *peer) {
 // Dash is the Hash passed to the first 100 blocks.
 // If use the current block Hash, there is a risk that the current block will be discarded.
 func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Address, error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
 	if account, ok := self.winner.BlockWinner(block.Number()); ok {
+		log.Info("masternode block voted successed ","blockNumber",block.Number(),"winner account",account)
 		return account, nil
 	}
 	// masternodes is nil
 	if self.masternodes == nil {
 		return common.Address{}, errors.New("no masternode detected")
 	}
-
+	tenthNetWork:=10
 	var (
-		enableMasternodeNodes = self.masternodes.EnableNodes()
+		enables = self.masternodes.EnableNodes()
 		paids                 []int
-		tenthNetWork          = len(enableMasternodeNodes) / 10 // TODO: when len < 10
 		countTenth            = 0
 		highest               int64
 		best                  common.Address
 	)
-
+	if len(enables) >= 100 {
+		tenthNetWork=len(enables) / 10
+	}
 	sortMap := make(map[int]*masternode.Masternode)
-	if enableMasternodeNodes == nil {
+	if enables == nil {
 		return common.Address{}, errors.New("no masternode detected")
 	}
-	log.Trace(" The number of local cached masternode ", "EnablesMasternodes", len(enableMasternodeNodes))
-	if len(enableMasternodeNodes) < 1 {
+	log.Trace(" The number of local cached masternode ", "EnablesMasternodes", len(enables))
+	if len(enables) < 1 {
 		return common.Address{}, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
 	}
 
-	for _, node := range enableMasternodeNodes {
+	for _, node := range enables {
 		i := int(node.Height.Int64())
 		paids = append(paids, i)
 		sortMap[i] = node
@@ -222,6 +226,7 @@ func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Addres
 	for _, i := range paids {
 		//fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
 		score := sortMap[i].CalculateScore(block.Hash())
+		//fmt.Printf("MasternodeManager debug score:%d,masternode:%s \n",score,sortMap[i].Account.Hex())
 		if score > highest {
 			highest = score
 			best = sortMap[i].Account
