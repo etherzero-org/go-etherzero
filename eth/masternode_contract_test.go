@@ -79,7 +79,7 @@ func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.Simulat
 
 //newMasternodeSet generate a new MasternodeSet
 func newMasternodeSet(emptyFlag bool) (*masternode.MasternodeSet) {
-	backend, keys := newTestBackendAndKeys(10)
+	backend, keys := newTestBackendAndKeys(1000)
 
 	addr1, err := deploy(keys[0], big.NewInt(0), backend)
 	if err != nil {

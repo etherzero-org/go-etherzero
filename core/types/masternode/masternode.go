@@ -32,6 +32,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/ethzero/go-ethzero/core/types"
 )
 
 const (
@@ -93,6 +94,7 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 		State:           MasternodeInit,
 		Height:          big.NewInt(-1),
 		ProtocolVersion: 64,
+		CollateralMinConfBlockHash:common.Hash{},
 	}
 }
 
@@ -100,9 +102,12 @@ func (n *Masternode) String() string {
 	return fmt.Sprintf("Account: %s\nNode: %s\n", n.Account.String(), n.Node)
 }
 
-func (n *Masternode) CalculateScore(hash common.Hash) int64 {
+func (n *Masternode) CalculateScore(block *types.Block) int64 {
 	blockHash := rlpHash([]interface{}{
-		hash,
+		block.Hash(),
+		n.ID,
+		n.Node,
+		block.Number(),
 		n.Account,
 		n.CollateralMinConfBlockHash,
 	})

@@ -222,10 +222,9 @@ func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Addres
 	}
 	// Sort them low to high
 	sort.Sort(sort.IntSlice(paids))
-
 	for _, i := range paids {
 		//fmt.Printf("CalculateScore result index: %d \t  Score :%d \n", i, sortMap[i].CalculateScore(block))
-		score := sortMap[i].CalculateScore(block.Hash())
+		score := sortMap[i].CalculateScore(block)
 		//fmt.Printf("MasternodeManager debug score:%d,masternode:%s \n",score,sortMap[i].Account.Hex())
 		if score > highest {
 			highest = score
@@ -263,7 +262,7 @@ func (self *MasternodeManager) GetMasternodeRank(id string) int {
 		log.Error("ERROR: GetBlockHash() failed at BlockHeight:%d ", block.Number())
 		return rank
 	}
-	masternodeScores := self.GetMasternodeScores(block.Hash(), 1)
+	masternodeScores := self.GetMasternodeScores(block, 1)
 
 	tRank := 0
 	for _, masternode := range masternodeScores {
@@ -281,11 +280,11 @@ func (self *MasternodeManager) GetMasternodeRank(id string) int {
 func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*masternode.Masternode {
 
 	block := self.blockchain.GetBlockByNumber(height.Uint64())
-	hash := block.Hash()
+
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	scores := self.GetMasternodeScores(hash, 0)
+	scores := self.GetMasternodeScores(block, 0)
 	var rank int64 = 0
 	ranks := make(map[int64]*masternode.Masternode)
 
@@ -296,11 +295,11 @@ func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*ma
 	return scores
 }
 
-func (self *MasternodeManager) GetMasternodeScores(blockHash common.Hash, minProtocol int) map[int64]*masternode.Masternode {
+func (self *MasternodeManager) GetMasternodeScores(block *types.Block, minProtocol int) map[int64]*masternode.Masternode {
 
 	masternodeScores := make(map[int64]*masternode.Masternode)
 	for _, m := range self.masternodes.EnableNodes() {
-		masternodeScores[m.CalculateScore(blockHash)] = m
+		masternodeScores[m.CalculateScore(block)] = m
 	}
 	return masternodeScores
 }

@@ -105,7 +105,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
 		return manager.GetMasternodeRanks(height)
 	}
-	manager.winner = NewMasternodePayments(big.NewInt(10), ranksFn)
+	manager.winner = NewMasternodePayments(big.NewInt(100), ranksFn)
 
 	// init new hash
 	var hash common.Hash
@@ -118,7 +118,6 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		rand.Read(seed)
 		accounts = append(accounts, crypto.CreateAddress(common.BytesToAddress(seed), uint64(rand.Int63())))
-		fmt.Printf("account value:%s", accounts[i].Hex())
 	}
 
 	// generate a new block data
@@ -180,21 +179,22 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 
 		manager.masternodes = v.ms
 		i:=0
-		for key, node := range manager.masternodes.AllNodes() {
+		for _, node := range manager.masternodes.AllNodes() {
 			//node.Height=big.NewInt(int64(3141591+rand.Intn(10)))
 			node.Height=big.NewInt(int64(3141591+i))
-			fmt.Printf("AllNodes ,key:%s,node.accounts:%s\n", key, node.Account.Hex())
+			node.CollateralMinConfBlockHash=common.HexToHash(node.Height.String())
+			//fmt.Printf("AllNodes ,key:%s,node.accounts:%s,CollateralMinConfBlockHash %s\n", key, node.Account.Hex(),node.CollateralMinConfBlockHash.String())
 			i++
 		}
 
 		for i := 0; i < 10; i++ {
-			height := int64(31415921)
+			height := int64(3141592+i)
 			block := types.NewBlock(&types.Header{Number: big.NewInt(height)}, txs, nil, nil)
 			addr, err := manager.BestMasternode(block)
 			if err != nil{
 				fmt.Printf("\n Masternode_Manager_test err %s\n", addr.String(), err.Error())
 			}else {
-				fmt.Printf("\n Masternode_Manager_test addr.string()%s\n", addr.String())
+				fmt.Printf("\n Masternode_Manager_test height:%d, addr.string()%s",height, addr.String())
 			}
 		}
 
