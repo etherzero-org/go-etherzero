@@ -21,16 +21,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
-	"testing"
 	"math/rand"
+	"strings"
+	"testing"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus/ethash"
 	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/node"
 )
 
 const (
@@ -129,7 +130,8 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 
 	// generate a new masternode set and deploy the new nodeset
 	ms := newMasternodeSet(true)
-
+	failedCount := uint32(0)
+	successcount := uint32(0)
 	//// begin to test
 	testsbody := []struct {
 		ms                  *masternode.MasternodeSet // input ms, MasternodeSet
@@ -165,50 +167,49 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	}
 	number := big.NewInt(31415926)
 	// show the test process
-	for _, v := range testsbody {
-		// first two line test
-		if v.voteNum != nil {
-			manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
-			masternodePayee := NewMasternodePayee(*(new(common.Address)), nil)
-			manager.winner.blocks[31415926].payees = append(manager.winner.blocks[31415926].payees, masternodePayee)
-		}
-		//if v.numberofmasternodes == 0 {
-		//	fmt.Printf("numberofmasternodes %s",v.numberofmasternodes)
-		//	v.ms = newMasternodeSet(false)
-		//}
 
-		manager.masternodes = v.ms
-		i:=0
-		for _, node := range manager.masternodes.AllNodes() {
-			//node.Height=big.NewInt(int64(3141591+rand.Intn(10)))
-			node.Height=big.NewInt(int64(3141591+i))
-			node.CollateralMinConfBlockHash=common.HexToHash(node.Height.String())
-			//fmt.Printf("AllNodes ,key:%s,node.accounts:%s,CollateralMinConfBlockHash %s\n", key, node.Account.Hex(),node.CollateralMinConfBlockHash.String())
-			i++
-		}
+	for i := 0; i < 10; i++ {
+		for _, v := range testsbody {
+			// first two line test
+			if v.voteNum != nil {
+				manager.winner.blocks[31415926] = NewMasternodeBlockPayees(number)
+				masternodePayee := NewMasternodePayee(*(new(common.Address)), nil)
+				manager.winner.blocks[31415926].payees = append(manager.winner.blocks[31415926].payees, masternodePayee)
+			}
+			//if v.numberofmasternodes == 0 {
+			//	fmt.Printf("numberofmasternodes %s",v.numberofmasternodes)
+			//	v.ms = newMasternodeSet(false)
+			//}
 
-		for i := 0; i < 10; i++ {
-			height := int64(3141592+i)
-			block := types.NewBlock(&types.Header{Number: big.NewInt(height)}, txs, nil, nil)
-			addr, err := manager.BestMasternode(block)
-			if err != nil{
-				fmt.Printf("\n Masternode_Manager_test err %s\n", addr.String(), err.Error())
-			}else {
-				fmt.Printf("\n Masternode_Manager_test height:%d, addr.string()%s",height, addr.String())
+			manager.masternodes = v.ms
+			i := 0
+			for _, node := range manager.masternodes.AllNodes() {
+				//node.Height=big.NewInt(int64(3141591+rand.Intn(10)))
+				node.Height = big.NewInt(int64(3141591 + i))
+				node.CollateralMinConfBlockHash = common.HexToHash(node.Height.String())
+				//fmt.Printf("AllNodes ,key:%s,node.accounts:%s,CollateralMinConfBlockHash %s\n", key, node.Account.Hex(),node.CollateralMinConfBlockHash.String())
+				i++
+			}
+
+			for i := 0; i < 10; i++ {
+				height := int64(3141592 + i)
+				block := types.NewBlock(&types.Header{Number: big.NewInt(height)}, txs, nil, nil)
+				addr, err := manager.BestMasternode(block)
+				if err != nil {
+				} else {
+				}
+				initAddr := new(common.Address)
+				if strings.EqualFold(addr.String(), initAddr.String()) {
+					failedCount++
+					fmt.Printf("\n Masternode_Manager_test %s\n", addr.String(), )
+				} else {
+					successcount++
+					fmt.Printf("\n Masternode_Manager_test height:%d,addr.string()%s", height, addr.String())
+				}
 			}
 		}
-
-		//if err != nil {
-		//	fmt.Println("Masternode_Manager_test addr.string()",addr.String())
-		//	if !strings.EqualFold(err.Error(), v.err.Error()) {
-		//		t.Errorf("test failed %v", err)
-		//	}
-		//}
-
-		//if addr != *(new(common.Address)) {
-		//	t.Logf("winnerid is %v", addr.String())
-		//}
 	}
+	fmt.Printf("\nsuccess %v,failed %v\n", successcount, failedCount)
 }
 
 func TestMasternodeManager_GetMasternodeScores(t *testing.T) {
