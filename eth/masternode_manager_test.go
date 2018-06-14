@@ -21,16 +21,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
-	"testing"
 	"math/rand"
+	"testing"
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus/ethash"
 	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/node"
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/node"
+	"time"
 )
 
 const (
@@ -100,6 +101,8 @@ func returnMasternodeManager() *MasternodeManager {
 // TestMasternodeManager_BestMasternode
 // Test function for choose BestMasternode
 func TestMasternodeManager_BestMasternode(t *testing.T) {
+
+	fmt.Printf("TestMasternodeManager_BestMasternode begin %s \n", time.Now())
 	//// initial the parameter may needed during this test function
 	manager := returnMasternodeManager()
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
@@ -129,6 +132,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 
 	// generate a new masternode set and deploy the new nodeset
 	ms := newMasternodeSet(true)
+	fmt.Printf("newMasternodeSet end %s \n", time.Now())
 
 	//// begin to test
 	testsbody := []struct {
@@ -165,6 +169,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	}
 	number := big.NewInt(31415926)
 	// show the test process
+
 	for _, v := range testsbody {
 		// first two line test
 		if v.voteNum != nil {
@@ -178,26 +183,29 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 		//}
 
 		manager.masternodes = v.ms
-		i:=0
+		i := 0
 		for _, node := range manager.masternodes.AllNodes() {
 			//node.Height=big.NewInt(int64(3141591+rand.Intn(10)))
-			node.Height=big.NewInt(int64(3141591+i))
-			node.CollateralMinConfBlockHash=common.HexToHash(node.Height.String())
+			node.Height = big.NewInt(int64(3141591 + i))
+			node.CollateralMinConfBlockHash = common.HexToHash(node.Height.String())
 			//fmt.Printf("AllNodes ,key:%s,node.accounts:%s,CollateralMinConfBlockHash %s\n", key, node.Account.Hex(),node.CollateralMinConfBlockHash.String())
 			i++
 		}
 
+		fmt.Printf("masternodes.AllNodes end %s \n", time.Now())
 		for i := 0; i < 10; i++ {
-			height := int64(3141592+i)
+			height := int64(3141592 + i)
 			block := types.NewBlock(&types.Header{Number: big.NewInt(height)}, txs, nil, nil)
+
 			addr, err := manager.BestMasternode(block)
-			if err != nil{
+
+			if err != nil {
 				fmt.Printf("\n Masternode_Manager_test err %s\n", addr.String(), err.Error())
-			}else {
-				fmt.Printf("\n Masternode_Manager_test height:%d, addr.string()%s",height, addr.String())
+			} else {
+				fmt.Printf("\n Masternode_Manager_test height:%d, addr.string()%s\n", height, addr.String())
 			}
 		}
-
+		fmt.Printf("newTestBackendAndKeys end %s \n", time.Now())
 		//if err != nil {
 		//	fmt.Println("Masternode_Manager_test addr.string()",addr.String())
 		//	if !strings.EqualFold(err.Error(), v.err.Error()) {
@@ -209,12 +217,5 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 		//	t.Logf("winnerid is %v", addr.String())
 		//}
 	}
-}
-
-func TestMasternodeManager_GetMasternodeScores(t *testing.T) {
-
-}
-
-func TestMasternodeManager_GetMasternodeRank(t *testing.T) {
 
 }

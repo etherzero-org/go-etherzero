@@ -79,8 +79,8 @@ func deploy(prvKey *ecdsa.PrivateKey, amount *big.Int, backend *backends.Simulat
 
 //newMasternodeSet generate a new MasternodeSet
 func newMasternodeSet(emptyFlag bool) (*masternode.MasternodeSet) {
-	backend, keys := newTestBackendAndKeys(1000)
 
+	backend, keys := newTestBackendAndKeys(10000)
 	addr1, err := deploy(keys[0], big.NewInt(0), backend)
 	if err != nil {
 		fmt.Errorf("deploy contract: expected no error, got %v", err)
@@ -122,8 +122,8 @@ func newMasternodeSet(emptyFlag bool) (*masternode.MasternodeSet) {
 		}
 
 	}
-	masternodes, _ := masternode.NewMasternodeSet(contract)
 
+	masternodes, _ := masternode.NewMasternodeSet(contract)
 	count, err2 := contract.ContractCaller.Count(nil)
 	fmt.Println("Masternode _contract count", count.String(), err2)
 	return masternodes
