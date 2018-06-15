@@ -80,12 +80,14 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	id := p.ID()
 
 	return &peer{
-		Peer:        p,
-		rw:          rw,
-		version:     version,
-		id:          fmt.Sprintf("%x", id[:8]),
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
+		Peer:             p,
+		rw:               rw,
+		version:          version,
+		id:               fmt.Sprintf("%x", id[:8]),
+		knownTxs:         set.New(),
+		knownBlocks:      set.New(),
+		knownVotes:       set.New(),
+		knownWinnerVotes: set.New(),
 	}
 }
 

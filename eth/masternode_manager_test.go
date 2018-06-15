@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"math/rand"
 	"strings"
+
 	"testing"
 
 	"github.com/ethzero/go-ethzero/common"
@@ -32,6 +33,8 @@ import (
 	"github.com/ethzero/go-ethzero/core/types/masternode"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/node"
+
+	"time"
 )
 
 const (
@@ -101,6 +104,8 @@ func returnMasternodeManager() *MasternodeManager {
 // TestMasternodeManager_BestMasternode
 // Test function for choose BestMasternode
 func TestMasternodeManager_BestMasternode(t *testing.T) {
+
+	fmt.Printf("TestMasternodeManager_BestMasternode begin %s \n", time.Now())
 	//// initial the parameter may needed during this test function
 	manager := returnMasternodeManager()
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
@@ -132,6 +137,8 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	ms := newMasternodeSet(true)
 	failedCount := uint32(0)
 	successcount := uint32(0)
+	fmt.Printf("newMasternodeSet end %s \n", time.Now())
+
 	//// begin to test
 	testsbody := []struct {
 		ms                  *masternode.MasternodeSet // input ms, MasternodeSet
@@ -190,6 +197,27 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 				//fmt.Printf("AllNodes ,key:%s,node.accounts:%s,CollateralMinConfBlockHash %s\n", key, node.Account.Hex(),node.CollateralMinConfBlockHash.String())
 				i++
 			}
+
+			fmt.Printf("masternodes.AllNodes end %s \n", time.Now())
+			for i := 0; i < 10; i++ {
+				height := int64(3141592 + i)
+				block := types.NewBlock(&types.Header{Number: big.NewInt(height)}, txs, nil, nil)
+
+				addr, err := manager.BestMasternode(block)
+
+				if err != nil {
+					fmt.Printf("\n Masternode_Manager_test err %s\n", addr.String(), err.Error())
+				} else {
+					fmt.Printf("\n Masternode_Manager_test height:%d, addr.string()%s\n", height, addr.String())
+				}
+			}
+			fmt.Printf("newTestBackendAndKeys end %s \n", time.Now())
+			//if err != nil {
+			//	fmt.Println("Masternode_Manager_test addr.string()",addr.String())
+			//	if !strings.EqualFold(err.Error(), v.err.Error()) {
+			//		t.Errorf("test failed %v", err)
+			//	}
+			//}
 
 			for i := 0; i < 10; i++ {
 				height := int64(3141592 + i)
