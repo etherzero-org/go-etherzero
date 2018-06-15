@@ -730,7 +730,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			p.MarkWinnerVote(vote.Hash())
 		}
 		pm.mnManager.ProcessPaymentVotes(votes)
-
 	case msg.Code == MasternodePingMsg:
 		var ping = &masternode.PingMsg{}
 		msg.Decode(ping)

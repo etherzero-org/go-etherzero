@@ -215,7 +215,9 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		// add to txLockedVotes
 		_, ok := self.txLockedVotes[hash]
 		if !ok {
+			self.mu.Lock()
 			self.txLockedVotes[hash] = vote
+			self.mu.Unlock()
 		} else {
 			return false
 		}
@@ -223,11 +225,13 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		txLock := self.Candidates[txHash]
 		if txLock.AddVote(vote) {
 			log.Info("Vote created successfully, relaying: ", "txHash ", txHash, ", vote ", hash)
+			self.mu.Lock()
 			self.all[txHash] = 1
+			self.mu.Unlock()
 			return true
 		}
 	} else {
-		log.Info("vote Sign verify failed :","vote hash:", vote.Hash())
+		log.Info("vote Sign verify failed :", "vote hash:", vote.Hash())
 	}
 	return false
 }
@@ -369,6 +373,8 @@ func (is *InstantSend) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 }
 
 func (is *InstantSend) Accept(tx *types.Transaction) {
+	is.mu.Lock()
+	defer is.mu.Unlock()
 	if is.accepted[tx.Hash()] == nil {
 		is.accepted[tx.Hash()] = tx
 	} else {
