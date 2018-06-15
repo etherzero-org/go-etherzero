@@ -300,11 +300,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	} else {
 		st.refundEtzGas()
 	}
-	if evm.ChainConfig().IsEthzeroMasternode(st.evm.BlockNumber) {
-		return ret, st.gasUsed(), vmerr != nil, err
-	}
 	if evm.ChainConfig().IsEthzero(st.evm.BlockNumber) {
 		return ret, 0, vmerr != nil, err
+	}
+	if evm.ChainConfig().IsEthzeroMasternode(st.evm.BlockNumber) {
+		return ret, st.gasUsed(), vmerr != nil, err
 	}
 	return ret, st.gasUsed(), vmerr != nil, err
 }
