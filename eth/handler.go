@@ -232,6 +232,9 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
+	if pm.mnManager.active.State()==masternode.ACTIVE_MASTERNODE_STARTED{
+		atomic.StoreUint32(&pm.acceptTxs, 1) // Mark initial sync done on any masternode import
+	}
 	// broadcast votes
 	pm.voteCh = make(chan core.VoteEvent, voteChanSize)
 	pm.voteSub = pm.mnManager.SubscribeVoteEvent(pm.voteCh)
@@ -688,10 +691,16 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
+		fmt.Printf("handler.go Transactions arrived ")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
+		if atomic.LoadUint32(&pm.mnManager.IsMasternode) == 1{
+			atomic.StoreUint32(&pm.acceptTxs,1)
+		}
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
 		}
+		fmt.Printf("handler.go Transactions arrived size:%d",&pm.acceptTxs)
+
 		// Transactions can be processed, parse all of them and deliver to the pool
 		var txs []*types.Transaction
 		if err := msg.Decode(&txs); err != nil {
@@ -704,6 +713,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
+		fmt.Printf("handler.go Transactions AddRemotes ")
 		pm.txpool.AddRemotes(txs)
 
 	case p.version >= etz64 && msg.Code == NewTxLockVoteMsg:
