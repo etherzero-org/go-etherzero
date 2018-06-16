@@ -77,9 +77,10 @@ func TestInstantSend_GetConfirmations(t *testing.T) {
 		txHash[i] = byte(i)
 	}
 	is := NewInstantx(newChainConfig(), eth)
-	is.Active = returnNewActinveNode()
+	is.Active, _ = returnNewActinveNode(1)
 
-	is.GetConfirmations(txHash)
+	confirmations := is.GetConfirmations(txHash)
+	fmt.Println("confirmations is ", confirmations)
 }
 
 func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Transaction {
@@ -178,7 +179,7 @@ func TestInstantSend_Vote(t *testing.T) {
 			v.is.accepted[v.hash] = newTestTransaction(testAccount, 0, 0)
 		}
 		if v.hasCan && v.isVoted {
-			v.is.Active = returnNewActinveNode()
+			v.is.Active, _ = returnNewActinveNode(1)
 			v.is.Active.PrivateKey = testAccount
 			v.is.Candidates[v.hash] = v.can
 			v.is.Active.ID = fmt.Sprintf("%v", 0xc5d24601)
@@ -187,10 +188,10 @@ func TestInstantSend_Vote(t *testing.T) {
 	}
 }
 
-func returnNewActinveNode() *masternode.ActiveMasternode {
+func returnNewActinveNode(n int) (*masternode.ActiveMasternode, *masternode.MasternodeSet) {
 	srvr := &p2p.Server{}
-	mns := newMasternodeSet(true)
-	return masternode.NewActiveMasternode(srvr, mns)
+	mns := newMasternodeSet(n, true)
+	return masternode.NewActiveMasternode(srvr, mns), mns
 }
 
 // 当收到一笔交易投票时,对该笔投票进行处理,会出现当投票先于交易到达主节点时需要进行Orphan处理
@@ -198,17 +199,20 @@ func returnNewActinveNode() *masternode.ActiveMasternode {
 // if the vote is earlier reached the masternode than its transaction ,
 // Orphan processing is needed
 func TestInstantSend_ProcessTxLockVote(t *testing.T) {
+	is, txHash := genNewInstantx()
+	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
+	is.ProcessTxLockVote(vote)
+}
+
+func genNewInstantx() (*InstantSend, common.Hash) {
 	var txHash common.Hash
 	for i := range txHash {
 		txHash[i] = byte(i)
 	}
 	eth := newEtherrum()
 	is := NewInstantx(newChainConfig(), eth)
-	is.Active = returnNewActinveNode()
-
-	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
-
-	is.ProcessTxLockVote(vote)
+	is.Active, _ = returnNewActinveNode(1)
+	return is, txHash
 }
 
 // TestInstantSend_CreateTxLockCandidate
@@ -235,7 +239,7 @@ func TestInstantSend_PostVoteEvent(t *testing.T) {
 	}
 	eth := newEtherrum()
 	is := NewInstantx(newChainConfig(), eth)
-	is.Active = returnNewActinveNode()
+	is.Active, _ = returnNewActinveNode(1)
 
 	vote := masternode.NewTxLockVote(txHash, is.Active.ID)
 	is.PostVoteEvent(vote)
@@ -259,7 +263,7 @@ func TestInstantSend_TryToFinalizeLockCandidate(t *testing.T) {
 	}
 	eth := newEtherrum()
 	is := NewInstantx(newChainConfig(), eth)
-	is.Active = returnNewActinveNode()
+	is.Active, _ = returnNewActinveNode(1)
 	can1 := masternode.NewTxLockCondidate(newTestTransaction(testAccount, 1, 0))
 
 	is.TryToFinalizeLockCandidate(can1)
@@ -275,7 +279,7 @@ func TestInstantSend_CheckAndRemove(t *testing.T) {
 	}
 	eth := newEtherrum()
 	is := NewInstantx(newChainConfig(), eth)
-	is.Active = returnNewActinveNode()
+	is.Active, _ = returnNewActinveNode(1)
 
 	is.CheckAndRemove()
 }

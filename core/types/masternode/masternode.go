@@ -28,11 +28,11 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
+	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto/sha3"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
 	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/core/types"
 )
 
 const (
@@ -87,14 +87,14 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 	id := GetMasternodeID(nodeId)
 	n := discover.NewNode(nodeId, ip, 0, port)
 	return &Masternode{
-		ID:              id,
-		Node:            n,
-		Account:         account,
-		OriginBlock:     block,
-		State:           MasternodeInit,
-		Height:          big.NewInt(-1),
-		ProtocolVersion: 64,
-		CollateralMinConfBlockHash:common.Hash{},
+		ID:                         id,
+		Node:                       n,
+		Account:                    account,
+		OriginBlock:                block,
+		State:                      MasternodeInit,
+		Height:                     big.NewInt(-1),
+		ProtocolVersion:            64,
+		CollateralMinConfBlockHash: common.Hash{},
 	}
 }
 
@@ -186,7 +186,6 @@ func (ns *MasternodeSet) CheckNodeID(nodeId discover.NodeID) bool {
 func (ns *MasternodeSet) Node(id string) *Masternode {
 	ns.lock.RLock()
 	defer ns.lock.RUnlock()
-
 	return ns.nodes[id]
 }
 

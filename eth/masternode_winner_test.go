@@ -50,7 +50,7 @@ func TestMasternodePayments_ProcessBlock(t *testing.T) {
 		{1},
 	}
 	for _, v := range tests {
-		manager.winner.active = returnNewActinveNode()
+		manager.winner.active, _ = returnNewActinveNode(1)
 		manager.winner.active.PrivateKey = key0
 
 		manager.winner.ProcessBlock(genesis, v.rank)
@@ -100,7 +100,7 @@ func TestMasternodePayments_PostVoteEvent(t *testing.T) {
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
-	manager.active = returnNewActinveNode()
+	manager.active, _ = returnNewActinveNode(1)
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.PostVoteEvent(vote)
 }
@@ -114,7 +114,7 @@ func TestMasternodePayments_Vote(t *testing.T) {
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.winner = NewMasternodePayments(big.NewInt(1), ranksFn)
-	manager.active = returnNewActinveNode()
+	manager.active, _ = returnNewActinveNode(1)
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.Vote(vote, big.NewInt(1))
 }
@@ -128,7 +128,7 @@ func TestMasternodePayments_Clear(t *testing.T) {
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
-	manager.active = returnNewActinveNode()
+	manager.active, _ = returnNewActinveNode(1)
 	manager.winner.Clear()
 }
 
@@ -141,29 +141,11 @@ func TestMasternodePayments_Add(t *testing.T) {
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
-	manager.active = returnNewActinveNode()
+	manager.active, _ = returnNewActinveNode(1)
 	var hash common.Hash
 	for i := range hash {
 		hash[i] = byte(i)
 	}
-	manager.active = returnNewActinveNode()
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
 	manager.winner.Add(hash, vote)
 }
-
-// 验证上一个区块的投票是否正确
-// TestMasternodePayments_CheckPreviousBlockVotes
-// verify an vote for a certain block is valid or not
-//func TestMasternodePayments_CheckPreviousBlockVotes(t *testing.T) {
-//	manager := returnMasternodeManager()
-//	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
-//		return manager.GetMasternodeRanks(height)
-//	}
-//	manager.winner = NewMasternodePayments(big.NewInt(0),ranksFn)
-//	manager.active = returnNewActinveNode()
-//	var hash common.Hash
-//	for i := range hash {
-//		hash[i] = byte(i)
-//	}
-//	manager.winner.CheckPreviousBlockVotes(hash)
-//}

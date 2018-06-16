@@ -188,23 +188,23 @@ func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Addres
 	defer self.mu.Unlock()
 
 	if account, ok := self.winner.BlockWinner(block.Number()); ok {
-		log.Info("masternode block voted successed ","blockNumber",block.Number(),"winner account",account)
+		log.Info("masternode block voted successed ", "blockNumber", block.Number(), "winner account", account)
 		return account, nil
 	}
 	// masternodes is nil
 	if self.masternodes == nil {
 		return common.Address{}, errors.New("no masternode detected")
 	}
-	tenthNetWork:=10
+	tenthNetWork := 10
 	var (
-		enables = self.masternodes.EnableNodes()
-		paids                 []int
-		countTenth            = 0
-		highest               int64
-		best                  common.Address
+		enables    = self.masternodes.EnableNodes()
+		paids      []int
+		countTenth = 0
+		highest    int64
+		best       common.Address
 	)
 	if len(enables) >= 100 {
-		tenthNetWork=len(enables) / 10
+		tenthNetWork = len(enables) / 10
 	}
 	sortMap := make(map[int]*masternode.Masternode)
 	if enables == nil {
@@ -239,7 +239,6 @@ func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Addres
 }
 
 func (self *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
-
 	for i, vote := range votes {
 		if ok, err := self.IsValidPaymentVote(vote, self.blockchain.CurrentBlock().Number()); !ok {
 			log.Error("CheckPaymentVote valid error:", err)
@@ -276,7 +275,6 @@ func (self *MasternodeManager) GetMasternodeRank(id string) int {
 	return rank
 }
 
-
 func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*masternode.Masternode {
 
 	block := self.blockchain.GetBlockByNumber(height.Uint64())
@@ -304,8 +302,7 @@ func (self *MasternodeManager) GetMasternodeScores(block *types.Block, minProtoc
 	return masternodeScores
 }
 
-func (self *MasternodeManager) Winners() string{
-
+func (self *MasternodeManager) Winners() string {
 	return self.winner.winners()
 }
 
@@ -325,7 +322,7 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 func (self *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 
 	rank := self.GetMasternodeRank(self.active.ID)
-	if rank != 0 {
+	if rank == 0 {
 		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", self.active.ID, " rank: ", rank)
 		return false
 	} else if rank > SignaturesTotal {
@@ -347,7 +344,6 @@ func (self *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote
 			self.winner.winnerFeed.Send(core.VoteEvent{votes[i]})
 		}
 	}
-
 	return self.is.ProcessTxLockVotes(votes)
 }
 
@@ -358,6 +354,9 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	var masternodeId = vote.MasternodeId
 
 	masternode := self.masternodes.Node(masternodeId)
+	if masternode == nil {
+		return false, errors.New("masternode is nil")
+	}
 	if masternode.ProtocolVersion < etz64 {
 		err := fmt.Errorf("Masternode protocol is too old: ProtocolVersion=%d, MinRequiredProtocol=%d", masternode.ProtocolVersion, etz64)
 		return false, err
@@ -394,7 +393,7 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 func (self *MasternodeManager) ProcessBlock(block *types.Block) bool {
 
 	rank := self.GetMasternodeRank(self.active.ID)
-	return self.winner.ProcessBlock(block,rank)
+	return self.winner.ProcessBlock(block, rank)
 
 }
 

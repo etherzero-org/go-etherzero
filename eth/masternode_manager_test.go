@@ -101,6 +101,8 @@ func returnMasternodeManager() *MasternodeManager {
 	}
 }
 
+// when the number of masternode is 10,100,1000,19,99,999,9999,and the number of block is 10 or 20,
+// show the height of the masternode paid
 // TestMasternodeManager_BestMasternode
 // Test function for choose BestMasternode
 func TestMasternodeManager_BestMasternode(t *testing.T) {
@@ -134,7 +136,7 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	//block := types.NewBlock(&types.Header{Number: big.NewInt(31415926)}, txs, nil, nil)
 
 	// generate a new masternode set and deploy the new nodeset
-	ms := newMasternodeSet(true)
+	ms := newMasternodeSet(1,true)
 	failedCount := uint32(0)
 	successcount := uint32(0)
 	fmt.Printf("newMasternodeSet end %s \n", time.Now())
@@ -240,10 +242,83 @@ func TestMasternodeManager_BestMasternode(t *testing.T) {
 	fmt.Printf("\nsuccess %v,failed %v\n", successcount, failedCount)
 }
 
-func TestMasternodeManager_GetMasternodeScores(t *testing.T) {
+//3、测试当主节点同步到一个区块时，进行投票并转发功能
+//4、测试当一个区块拥有六个投票时的情形
+//5、测试当一个主节点收到一笔交易时，进行投票并转发功能
+//6、测试当一笔交易满足六个投票时的情形
+
+func TestMasternodeManager_ProcessTxLockVotes(t *testing.T) {
+	manager := returnMasternodeManager()
+	var mns *masternode.MasternodeSet
+	manager.active, mns = returnNewActinveNode(1)
+	_, txHash := genNewInstantx()
+
+	manager.blockchain = newBlockChain()
+	manager.masternodes = mns
+	// only one acvtivenodes
+	nodes := manager.masternodes.AllNodes()
+	id := ""
+	for i, _ := range nodes {
+		id = i
+	}
+	manager.active.ID = id
+	vote := masternode.NewTxLockVote(txHash, id)
+	var votes []*masternode.TxLockVote
+	votes = append(votes, vote)
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
+	manager.ProcessTxLockVotes(votes)
 
 }
 
-func TestMasternodeManager_GetMasternodeRank(t *testing.T) {
+// process an vite for massternode manager
+func TestMasternodeManager_ProcessPaymentVotes(t *testing.T) {
+	manager := returnMasternodeManager()
+	var mns *masternode.MasternodeSet
+	manager.active, mns = returnNewActinveNode(1)
+	//_, txHash := genNewInstantx()
+	manager.masternodes = mns
+	nodes := manager.masternodes.AllNodes()
+	id := ""
+	for _, v := range nodes {
+		id = v.ID
+	}
+	fmt.Println("lenlenlenlenlenl", len(nodes))
+	vote := masternode.NewMasternodePaymentVote(genesis.Number(), id, manager.active.Account)
+	var votes []*masternode.MasternodePaymentVote
+	votes = append(votes, vote)
+	manager.blockchain = newBlockChain()
+	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
+		return manager.GetMasternodeRanks(height)
+	}
+	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
+	manager.storageCoeff = big.NewInt(0)
+	manager.minBlocksToStore = big.NewInt(0)
+	manager.ProcessPaymentVotes(votes)
+}
+
+// TestMasternodeManager_VoteAndTransferForOneBlocks
+// one masternode receive a transaction and then vote for it and transfer it from to other nodes
+func TestMasternodeManager_VoteAndTransferForOneBlocks(t *testing.T) {
+
+}
+
+// TestMasternodeManager_OneTransactionHasSixVotes
+// one transaction has six votes
+func TestMasternodeManager_OneTransactionHasSixVotes(t *testing.T) {
+
+}
+
+// TestNewMasternodeManager_OneTransactionSatisfySixVoytes
+// one transaction satisfy six votes
+func TestNewMasternodeManager_OneTransactionSatisfySixVoytes(t *testing.T) {
+
+}
+
+// TestNewMasternodeManager_SynOneTransactionThenVoteAndTransfer
+// one maternode synchrosize a transaction then vote for transfer it from itself to other msaternodes
+func TestNewMasternodeManager_SynOneTransactionThenVoteAndTransfer(t *testing.T) {
 
 }
