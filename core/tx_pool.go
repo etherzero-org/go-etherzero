@@ -830,6 +830,7 @@ func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
+	fmt.Printf("txpool addRemotes,txs size:",len(txs))
 	return pool.addTxs(txs, false)
 }
 

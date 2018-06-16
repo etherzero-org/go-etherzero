@@ -45,6 +45,7 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
+	"sync/atomic"
 )
 
 const (
@@ -81,6 +82,7 @@ type MasternodeManager struct {
 	winnerFeed  event.Feed
 
 	SubProtocols []p2p.Protocol
+	IsMasternode uint32
 
 	eventMux      *event.TypeMux
 	txCh          chan core.TxPreEvent
@@ -151,6 +153,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	self.active = masternode.NewActiveMasternode(srvr, mns)
 	self.is.Active = self.active
 	self.winner.active = self.active
+
 
 	go self.is.Start()
 	go self.masternodeLoop()
@@ -502,6 +505,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	mm.updateActiveMasternode()
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternodeCheck true")
+		atomic.StoreUint32(&mm.IsMasternode,1)
 		mm.checkPeers()
 	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
 

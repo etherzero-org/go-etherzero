@@ -156,7 +156,7 @@ func (b *ContractBackend) CallContract(ctx context.Context, call ethereum.CallMs
 	if err != nil {
 		return nil, err
 	}
-	rval,_, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), state)
+	rval, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), state)
 	return rval, err
 }
 
@@ -166,7 +166,7 @@ func (b *ContractBackend) PendingCallContract(ctx context.Context, call ethereum
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
 
-	rval,_, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+	rval,_, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
 	return rval, err
 }
 
@@ -209,7 +209,7 @@ func (b *ContractBackend) EstimateGas(ctx context.Context, call ethereum.CallMsg
 		call.Gas = gas
 
 		snapshot := b.pendingState.Snapshot()
-		_,_, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+		_, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
 		b.pendingState.RevertToSnapshot(snapshot)
 
 		if err != nil || failed {
@@ -237,7 +237,7 @@ func (b *ContractBackend) EstimateGas(ctx context.Context, call ethereum.CallMsg
 
 // callContract implements common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *ContractBackend) callContract(ctx context.Context, call ethereum.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte,uint64, uint64, bool, error) {
+func (b *ContractBackend) callContract(ctx context.Context, call ethereum.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)

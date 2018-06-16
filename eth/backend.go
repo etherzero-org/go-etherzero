@@ -161,6 +161,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// Rewind the chain in case of an incompatible config upgrade.
 	//if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 	//	log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -175,8 +176,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	eth.txPool = core.NewTxPool(config.TxPool, eth.chainConfig, eth.blockchain)
 
 	eth.ContractBackend = NewContractBackend(eth)
-
-
 
 	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
@@ -483,12 +482,6 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 		maxPeers -= s.config.LightPeers
 	}
 
-	// Start the networking layer and the light server if requested
-	s.protocolManager.Start(maxPeers)
-	if s.lesServer != nil {
-		s.lesServer.Start(srvr)
-	}
-
 	contractBackend := NewContractBackend(s)
 	contract, err := contract.NewContract(srvr.MasternodeContract, contractBackend)
 	if err != nil {
@@ -496,6 +489,12 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 
 	s.masternodeManager.Start(srvr, contract, s.protocolManager.peers)
+
+	// Start the networking layer and the light server if requested
+	s.protocolManager.Start(maxPeers)
+	if s.lesServer != nil {
+		s.lesServer.Start(srvr)
+	}
 
 	return nil
 }

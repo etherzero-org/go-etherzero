@@ -26,6 +26,7 @@ import (
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
+	"fmt"
 )
 
 const (
@@ -46,8 +47,10 @@ type txsync struct {
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pm *ProtocolManager) syncTransactions(p *peer) {
+
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
+	fmt.Printf("sync.go syncTransactions begin pending size:%d",len(pending))
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
@@ -89,6 +92,7 @@ func (pm *ProtocolManager) txsyncLoop() {
 		}
 		// Send the pack in the background.
 		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
+		fmt.Printf("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
 		go func() { done <- pack.p.SendTransactions(pack.txs) }()
 	}

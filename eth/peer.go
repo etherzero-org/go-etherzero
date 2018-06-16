@@ -299,13 +299,16 @@ func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 	}()
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
+
 	for i := 0; i < 2; i++ {
 		select {
 		case err := <-errc:
 			if err != nil {
+				fmt.Printf("handshake err != nil %v",err.Error())
 				return err
 			}
 		case <-timeout.C:
+			fmt.Printf("handshake timeout  %v",p2p.DiscReadTimeout)
 			return p2p.DiscReadTimeout
 		}
 	}
