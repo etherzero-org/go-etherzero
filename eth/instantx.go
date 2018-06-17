@@ -173,6 +173,7 @@ func (self *InstantSend) ProcessTxLockRequest(request *types.Transaction) error 
 
 func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 	log.Info("InstantSend vote begin ")
+
 	txHash := condidate.TxLockRequest.Hash()
 
 	if _, ok := self.accepted[txHash]; !ok {
@@ -198,7 +199,7 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 	}
 	vote := masternode.NewTxLockVote(txHash, self.Active.ID)
 	hash := vote.Hash()
-	log.Info("InstantSend new vote hash: ", "hashId:", hash)
+	log.Info("InstantSend new vote hash: ", "hashId:", hash, "MasternodeId ", vote.MasternodeId())
 	signByte, err := vote.Sign(hash[:], self.Active.PrivateKey)
 	//signByte, err := vote.Sign(is.Active.PrivateKey)
 	vote.Sig = signByte
@@ -211,7 +212,9 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		log.Info("InstantSend sign Verify valid")
 		// vote constructed sucessfully, let's store and relay it
 
-		self.voteFeed.Send(core.VoteEvent{vote})
+		// we're created Vote ,notify subsystems
+		go self.voteFeed.Send(core.VoteEvent{vote})
+
 		// add to txLockedVotes
 		_, ok := self.txLockedVotes[hash]
 		if !ok {
@@ -275,15 +278,20 @@ func (is *InstantSend) CreateTxLockCandidate(request *types.Transaction) bool {
 }
 
 func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
-
+	fmt.Printf("InstantSend ProcessTxLockVote begin\n")
 	txHash := vote.Hash()
 	// TODO:Verification work is handled in the MasternodeManager
 	//if !vote.IsValid() {
-	//	log.Error("CInstantSend::ProcessTxLockVote -- Vote is invalid, txid=", txHash.String())
+	//	log.Error("InstantSend::ProcessTxLockVote -- Vote is invalid, txid=", txHash.String())
 	//	return false
 	//}
+	//if vote.CheckSignature(vote.MasternodeId(),vote.Sig) {
+	//	log.Error("InstantSend::ProcessTxlockVote -- Vote is invalid ,txid=",txHash.String())
+	//}
 
-	self.voteFeed.Send(vote)
+	// We've received vote, notify subsystems
+	go self.PostVoteEvent(vote)
+
 	txLockCondidate := self.Candidates[txHash]
 
 	// Masternodes will sometimes propagate votes before the transaction is known to the client,
@@ -293,7 +301,7 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 			//createEmptyCondidate
 			self.votesOrphan[txHash] = vote
 			reProcess := true
-			log.Info("CInstantSend::ProcessTxLockVote -- Orphan vote: txid=", txHash.String(), " masternodeId=", vote.MasternodeId())
+			log.Info("InstantSend::ProcessTxLockVote -- Orphan vote: txid=", txHash, " masternodeId ", vote.MasternodeId())
 
 			var tx *types.Transaction
 			if tx = self.accepted[txHash]; tx != nil {
@@ -326,6 +334,7 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 			// not spamming, refresh
 			self.masternodeOrphanVotes[vote.MasternodeId()] = MasternodeOrphanExpireTime
 		}
+
 		return true
 	}
 
@@ -344,7 +353,7 @@ func (self *InstantSend) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 	signaturesMax := txLockCondidate.MaxSignatures()
 	log.Info("ProcessTxLockVote Transaction Lock signatures count:", signatures, "/", signaturesMax, ",vote Hash:", vote.Hash().String())
 	self.TryToFinalizeLockCandidate(txLockCondidate)
-
+	fmt.Printf("InstantSend ProcessTxLockVote end\n")
 	return true
 }
 
@@ -366,7 +375,7 @@ func (self *InstantSend) GetAverageMasternodeOrphanVoteTime() uint64 {
 func (is *InstantSend) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
 	for i := range votes {
 		if !is.ProcessTxLockVote(votes[i]) {
-			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash())
+			log.Info("processTxLockVotes vote failed vote Hash", "Hash",votes[i].Hash())
 		}
 	}
 	return true

@@ -92,6 +92,7 @@ type MsgReadWriter interface {
 func Send(w MsgWriter, msgcode uint64, data interface{}) error {
 	size, r, err := rlp.EncodeToReader(data)
 	if err != nil {
+		fmt.Printf("&&&&&&&&&&&&&   message.go send err :%s&&&&&&&&&&&&&&\n",err.Error())
 		return err
 	}
 	return w.WriteMsg(Msg{Code: msgcode, Size: uint32(size), Payload: r})

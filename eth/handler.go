@@ -232,7 +232,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
-	if pm.mnManager.active.State()==masternode.ACTIVE_MASTERNODE_STARTED{
+	if pm.mnManager.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		atomic.StoreUint32(&pm.acceptTxs, 1) // Mark initial sync done on any masternode import
 	}
 	// broadcast votes
@@ -691,15 +691,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		fmt.Printf("handler.go Transactions arrived ")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
-		if atomic.LoadUint32(&pm.mnManager.IsMasternode) == 1{
-			atomic.StoreUint32(&pm.acceptTxs,1)
+		if atomic.LoadUint32(&pm.mnManager.IsMasternode) == 1 {
+			atomic.StoreUint32(&pm.acceptTxs, 1)
 		}
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break
 		}
-		fmt.Printf("handler.go Transactions arrived size:%d",&pm.acceptTxs)
 
 		// Transactions can be processed, parse all of them and deliver to the pool
 		var txs []*types.Transaction
@@ -713,33 +711,30 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
-		fmt.Printf("handler.go Transactions AddRemotes ")
 		pm.txpool.AddRemotes(txs)
 
-	case p.version >= etz64 && msg.Code == NewTxLockVoteMsg:
+	case msg.Code == NewTxLockVoteMsg:
+		fmt.Printf("Handler.go NewTxLovkVoteMsg arrived ,Vote Hash\n")
 		// A batch of vote arrived to one of our previous requests
-		var votes []*masternode.TxLockVote
-		if err := msg.Decode(&votes); err != nil {
+		var vote *masternode.TxLockVote
+		if err := msg.Decode(&vote); err != nil {
+			fmt.Printf("msg %v: %v \n", msg, err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		for i, vote := range votes {
-			if vote == nil {
-				return errResp(ErrDecode, "vote %d is nil", i)
-			}
-			p.MarkVote(vote.Hash())
-		}
-		pm.mnManager.ProcessTxLockVotes(votes)
 
-	case p.version >= etz64 && msg.Code == NewWinnerVoteMsg:
+		p.MarkVote(vote.Hash())
+		pm.mnManager.ProcessTxLockVote(vote)
+
+	case msg.Code == NewWinnerVoteMsg:
+		fmt.Printf("Handler.go NewWinnerVoteMsg arrived \n")
 		// A batch of PaymentVote arrived to one of our previous requests
-		var votes []*masternode.MasternodePaymentVote
-		if err := msg.Decode(&votes); err != nil {
+		var vote *masternode.MasternodePaymentVote
+		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		for _, vote := range votes {
-			p.MarkWinnerVote(vote.Hash())
-		}
-		pm.mnManager.ProcessPaymentVotes(votes)
+		p.MarkWinnerVote(vote.Hash())
+		pm.mnManager.ProcessPaymentVote(vote)
+
 	case msg.Code == MasternodePingMsg:
 		var ping = &masternode.PingMsg{}
 		msg.Decode(ping)
@@ -814,8 +809,9 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 // BroadcastVote will propagate a txVote to all Masternodes which are not known to
 // already have the given txVote
 func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *masternode.TxLockVote) {
-	peers := self.peers.PeersWithoutVote(hash)
 
+	peers := self.peers.PeersWithoutVote(hash)
+	fmt.Printf("BroadcastVote peers size:%d\n", len(peers))
 	for _, peer := range peers {
 		peer.SendNewTxLockVote(vote)
 	}
@@ -850,6 +846,7 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.voteCh:
+			fmt.Printf("self vote broadcastLoop begin &&&&&&&&&&\n")
 			self.BroadcastVote(event.Vote.Hash(), event.Vote)
 
 			// Err() channel will be closed when unsubscribing.

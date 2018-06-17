@@ -131,18 +131,15 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 
 	f.once.Do(f.init)
 	<-f.sendLock
-
 	// Add new cases from the inbox after taking the send lock.
 	f.mu.Lock()
 	f.sendCases = append(f.sendCases, f.inbox...)
 	f.inbox = nil
-
 	if !f.typecheck(rvalue.Type()) {
 		f.sendLock <- struct{}{}
 		panic(feedTypeError{op: "Send", got: rvalue.Type(), want: f.etype})
 	}
 	f.mu.Unlock()
-
 	// Set the sent value on all channels.
 	for i := firstSubSendCase; i < len(f.sendCases); i++ {
 		f.sendCases[i].Send = rvalue

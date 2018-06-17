@@ -151,9 +151,9 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
+	fmt.Printf("MasternodeManager start active MasternodeId:\n",self.active.ID)
 	self.is.Active = self.active
 	self.winner.active = self.active
-
 
 	go self.is.Start()
 	go self.masternodeLoop()
@@ -241,17 +241,17 @@ func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Addres
 	return best, nil
 }
 
-func (self *MasternodeManager) ProcessPaymentVotes(votes []*masternode.MasternodePaymentVote) bool {
-	for i, vote := range votes {
-		if ok, err := self.IsValidPaymentVote(vote, self.blockchain.CurrentBlock().Number()); !ok {
-			log.Error("CheckPaymentVote valid error:", err)
-			return false
-		}
-		if !self.winner.Vote(vote, self.StorageLimit()) {
-			log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String(), "i:%s", i)
-			return false
-		}
+func (self *MasternodeManager) ProcessPaymentVote(vote *masternode.MasternodePaymentVote) bool {
+
+	if ok, err := self.IsValidPaymentVote(vote, self.blockchain.CurrentBlock().Number()); !ok {
+		log.Error("CheckPaymentVote valid error:", err)
+		return false
 	}
+	if !self.winner.Vote(vote, self.StorageLimit()) {
+		log.Info("Payment Winner vote :: Block Payment winner vote failed ", "vote hash:", vote.Hash().String())
+		return false
+	}
+
 	return true
 }
 
@@ -322,8 +322,8 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 	return self.minBlocksToStore
 }
 
-func (self *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote) bool {
-
+func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVotes begin \n")
 	rank := self.GetMasternodeRank(self.active.ID)
 	if rank == 0 {
 		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", self.active.ID, " rank: ", rank)
@@ -334,20 +334,19 @@ func (self *MasternodeManager) ProcessTxLockVotes(votes []*masternode.TxLockVote
 	}
 	log.Info("InstantSend::Vote -- In the top ", SignaturesTotal, " (", rank, ")")
 
-	for i := range votes {
-		if ok, err := self.IsValidTxVote(votes[i]); !ok {
-			log.Error("processTxLockVotes vote veified failed ,vote Hash:", votes[i].Hash().String(), "error:", err.Error())
-			continue
-		}
-		if !self.is.ProcessTxLockVote(votes[i]) {
-			log.Info("processTxLockVotes vote failed vote Hash:", votes[i].Hash().String())
-			continue
-		} else {
-			//Vote valid, let us forward it
-			self.winner.winnerFeed.Send(core.VoteEvent{votes[i]})
-		}
+	if ok, err := self.IsValidTxVote(vote); !ok {
+		log.Error("ProcessTxLockVote vote veified failed ,vote Hash:", "voteHash",vote.Hash(), "error:", err.Error())
 	}
-	return self.is.ProcessTxLockVotes(votes)
+
+	if !self.is.ProcessTxLockVote(vote) {
+		log.Info("ProcessTxLockVote vote failed vote Hash:", "voteHash",vote.Hash())
+	} else {
+		//Vote valid, let us forward it
+		self.is.voteFeed.Send(core.VoteEvent{vote})
+	}
+
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote end %d\n")
+	return true
 }
 
 //TODO:Need to improve the judgment of vote validity in MasternodePayments and increase the validity of the voting masternode
@@ -378,10 +377,10 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	if rank > MNPaymentsSignaturesTotal {
 		// It's common to have masternodes mistakenly think they are in the top 10
 		// We don't want to print all of these messages in normal mode, debug mode should print though
-		fmt.Printf("Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
+		fmt.Printf("Masternode is not in the top %d (%d)\n", MNPaymentsSignaturesTotal, rank)
 		// Only ban for new mnw which is out of bounds, for old mnw MN list itself might be way too much off
 		if rank > MNPaymentsSignaturesTotal*2 && vote.Number.Cmp(height) > 0 {
-			fmt.Printf("Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
+			fmt.Printf("Masternode is not in the top %d (%d)\n", MNPaymentsSignaturesTotal, rank)
 		}
 		// Still invalid however
 		return false, fmt.Errorf("MasternodeManager::IsValid --Error: Masternode is not in the top %d (%d)", MNPaymentsSignaturesTotal, rank)
@@ -505,7 +504,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	mm.updateActiveMasternode()
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternodeCheck true")
-		atomic.StoreUint32(&mm.IsMasternode,1)
+		atomic.StoreUint32(&mm.IsMasternode, 1)
 		mm.checkPeers()
 	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
 

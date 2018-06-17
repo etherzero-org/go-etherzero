@@ -51,8 +51,8 @@ type TxLockVote struct {
 	createdTime     time.Time
 }
 
-func (tlv *TxLockVote) MasternodeId() string {
-	return tlv.masternodeId
+func (self *TxLockVote) MasternodeId() string {
+	return self.masternodeId
 }
 
 func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
@@ -60,7 +60,7 @@ func NewTxLockVote(hash common.Hash, id string) *TxLockVote {
 		txHash:          hash,
 		masternodeId:    id,
 		createdTime:     time.Now(),
-		ConfirmedHeight: big.NewInt(-1),
+		ConfirmedHeight: big.NewInt(0),
 	}
 }
 
