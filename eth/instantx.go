@@ -214,7 +214,7 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 		// vote constructed sucessfully, let's store and relay it
 
 		// we're created Vote ,notify subsystems
-		go self.voteFeed.Send(core.VoteEvent{vote})
+		go self.PostVoteEvent(vote)
 
 		// add to txLockedVotes
 		_, ok := self.txLockedVotes[hash]

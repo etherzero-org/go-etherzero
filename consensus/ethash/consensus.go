@@ -635,14 +635,14 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	if config.IsEthzeroTOSBlock(header.Number) {
 		blockReward = EthzeroBlockReward
 	}
-
-	if config.IsEthzeroMasternode(header.Number) && masternode != (common.Address{}) {
-
-		blockReward := MasternodeReward
-		state.AddBalance(masternode, blockReward)
-		state.AddBalance(params.MainnetGovernanceAddress, GovernanceReward)
-		log.Trace("Masternode Reward ", "account ", masternode, "GovernanceAddress", GovernanceReward)
-	}
+	//
+	//if config.IsEthzeroMasternode(header.Number) && masternode != (common.Address{}) {
+	//
+	//	blockReward := MasternodeReward
+	//	state.AddBalance(masternode, blockReward)
+	//	state.AddBalance(params.MainnetGovernanceAddress, GovernanceReward)
+	//	log.Trace("Masternode Reward ", "account ", masternode, "GovernanceAddress", GovernanceReward)
+	//}
 
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)

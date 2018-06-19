@@ -147,7 +147,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: ","nBlockHeight", block.Number().String(), " masternodeId", self.active.ID)
+	log.Info("ProcessBlock -- Start: ","BlockHeight", block.Number().String(), " masternodeId", self.active.ID)
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
 	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
@@ -157,6 +157,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	if err == nil {
 		if vote.Verify(hash[:], sig, &self.active.PrivateKey.PublicKey) {
 			// vote constructed sucessfully, let's store and relay it
+			go self.PostVoteEvent(vote)
 			self.Add(block.Hash(), vote)
 			log.Info("MasternodePayments:: ProcessBlock vote successed!")
 			return true
@@ -173,26 +174,29 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	log.Info("MasternodePayments vote begin ")
 	self.mu.Lock()
 	if self.votes[vote.Hash()] != nil {
-		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash().String(), " , Height:", vote.Number.String())
+		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash(), " , Height:", vote.Number)
+		fmt.Printf("ERROR:Avoid processing same vote multiple times , Height:%d,voteHash:%x", vote.Number,vote.Hash())
 		return false
 	}
 	self.votes[vote.Hash()] = vote
 	self.mu.Unlock()
 	//vote out of range
-	firstBlock := self.cachedBlockHeight.Sub(self.cachedBlockHeight, storageLimit)
-	if vote.Number.Cmp(firstBlock) > 0 || vote.Number.Cmp(self.cachedBlockHeight.Add(self.cachedBlockHeight, big.NewInt(20))) > 0 {
-		log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", self.cachedBlockHeight.String())
-		return false
-	}
+	//firstBlock := self.cachedBlockHeight.Sub(self.cachedBlockHeight, storageLimit)
+	//if vote.Number.Cmp(firstBlock) > 0 || vote.Number.Cmp(self.cachedBlockHeight.Add(self.cachedBlockHeight, big.NewInt(20))) > 0 {
+	//	log.Trace("ERROR:vote out of range: ", "FirstBlock=", firstBlock.String(), ", BlockHeight=", vote.Number, " CacheHeight=", self.cachedBlockHeight.String())
+	//	fmt.Printf("ERROR:vote out of range , FirstBlock=%d, BlockHeight=%d,CacheHeight=%d",  firstBlock, vote.Number, self.cachedBlockHeight)
+	//	return false
+	//}
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
-		log.Info("masternode already voted, masternode account:", vote.MasternodeAccount.String())
+		log.Info("masternode already voted, masternode account:", "masternodeAccount",vote.MasternodeAccount)
+		fmt.Printf("masternode already voted, masternode account:%x", vote.MasternodeAccount)
 		return false
 	}
 	log.Info("masternode_winner vote: ", "blockHeight:", vote.Number, "cacheHeight:", self.cachedBlockHeight.String(), "Hash:", vote.Hash().String())
 	if self.Add(vote.Hash(), vote) {
 		//Relay
-		self.winnerFeed.Send(vote)
+		go self.PostVoteEvent(vote)
 	}
 	return true
 }

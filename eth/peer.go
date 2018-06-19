@@ -181,12 +181,12 @@ func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
 
 // SendNewTxLockVote propagates an TxLockVote to a remote masternode.
 func (p *peer) SendNewTxLockVote(vote *masternode.TxLockVote) error {
-	fmt.Printf("peer.go SendNewTxLovkVote begin \n")
 	return p2p.Send(p.rw, NewTxLockVoteMsg, vote)
 }
 
 // SendNewWinnerVote propagates an winner vote to a remote masternode.
 func (p *peer) SendNewWinnerVote(winner *masternode.MasternodePaymentVote) error {
+	fmt.Printf("peer.go SendNewTxLovkVote begin \n")
 	return p2p.Send(p.rw, NewWinnerVoteMsg, winner)
 }
 

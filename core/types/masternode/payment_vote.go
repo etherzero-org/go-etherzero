@@ -26,6 +26,8 @@ import (
 
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/ethzero/go-ethzero/rlp"
+	"io"
 )
 
 const (
@@ -51,6 +53,14 @@ type MasternodePaymentVote struct {
 	Sig               []byte
 }
 
+type extBlockVote struct {
+	Number       *big.Int
+	MasternodeId string
+	Account      common.Address
+	CreateTime   time.Time
+	Sig          []byte
+}
+
 //Voted block number,activeMasternode
 func NewMasternodePaymentVote(blockHeight *big.Int, id string, account common.Address) *MasternodePaymentVote {
 
@@ -71,6 +81,29 @@ func (pv *MasternodePaymentVote) Hash() common.Hash {
 		pv.MasternodeId,
 		pv.MasternodeAccount,
 		pv.createTime,
+	})
+}
+
+// DecodeRLP implements rlp.DecodeRLP
+func (self *MasternodePaymentVote) DecodeRLP(s *rlp.Stream) error {
+
+	var extbv extBlockVote
+
+	if err := s.Decode(&extbv); err != nil {
+		return err
+	}
+	self.Number, self.MasternodeId, self.MasternodeAccount, self.createTime, self.Sig = extbv.Number, extbv.MasternodeId, extbv.Account, extbv.CreateTime, extbv.Sig
+	return nil
+}
+
+// EncodeRLP implements rlp.EncodeRLP
+func (self *MasternodePaymentVote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, extBlockVote{
+		Number:       self.Number,
+		MasternodeId: self.MasternodeId,
+		Account:      self.MasternodeAccount,
+		CreateTime:   self.createTime,
+		Sig:          self.Sig,
 	})
 }
 

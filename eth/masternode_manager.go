@@ -120,6 +120,8 @@ func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, 
 		txCh:        make(chan core.TxPreEvent, txChanSize),
 		blockchain:  blockchain,
 		chainconfig: config,
+		storageCoeff: big.NewInt(1),
+		minBlocksToStore:big.NewInt(1),
 		newPeerCh:   make(chan *peer),
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
@@ -314,7 +316,7 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 
 	if self.masternodes != nil {
 		count := self.masternodes.Len()
-		size := big.NewInt(1).Mul(self.storageCoeff, big.NewInt(int64(count)))
+		size := new(big.Int).Mul(self.storageCoeff, big.NewInt(int64(count)))
 
 		if size.Cmp(self.minBlocksToStore) > 0 {
 			return size
@@ -324,7 +326,7 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 }
 
 func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
-	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVotes begin ,vote hash:%s,masternodeId:%s\n",vote.Hash(),vote.MasternodeId())
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote begin ,vote hash:%s,masternodeId:%s\n",vote.Hash().String(),vote.MasternodeId())
 
 	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {

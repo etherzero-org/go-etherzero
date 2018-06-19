@@ -811,7 +811,7 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *masternode.TxLockVote) {
 
 	peers := self.peers.PeersWithoutVote(hash)
-	fmt.Printf("BroadcastVote peers size:%d\n", len(peers))
+
 	for _, peer := range peers {
 		peer.SendNewTxLockVote(vote)
 	}
@@ -822,7 +822,7 @@ func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *masternode.Tx
 // already have the given WinnerVote
 func (self *ProtocolManager) BroadcastPaymentVote(hash common.Hash, paymentvote *masternode.MasternodePaymentVote) {
 	peers := self.peers.PeersWithoutWinnerVote(hash)
-
+	fmt.Printf("BroadcastPaymentVote peers size:%d\n", len(peers))
 	for _, peer := range peers {
 		peer.SendNewWinnerVote(paymentvote)
 	}
@@ -846,7 +846,6 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.voteCh:
-			fmt.Printf("self vote broadcastLoop begin &&&&&&&&&&\n")
 			self.BroadcastVote(event.Vote.Hash(), event.Vote)
 
 			// Err() channel will be closed when unsubscribing.
@@ -860,6 +859,7 @@ func (self *ProtocolManager) winnerVoteBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.winnerCh:
+			fmt.Printf("self vote winnerVoteBroadcastLoop begin &&&&&&&&&&\n")
 			self.BroadcastPaymentVote(event.PaymentVote.Hash(), event.PaymentVote)
 
 		case <-self.winnerSub.Err():
