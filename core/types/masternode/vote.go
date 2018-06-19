@@ -28,6 +28,8 @@ import (
 	"github.com/ethzero/go-ethzero/core/types"
 	"github.com/ethzero/go-ethzero/crypto"
 	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/rlp"
+	"io"
 )
 
 const (
@@ -49,6 +51,14 @@ type TxLockVote struct {
 	Sig             []byte
 	ConfirmedHeight *big.Int
 	createdTime     time.Time
+}
+
+type extTxLockVote struct {
+	Hash            common.Hash
+	MasternodeId    string
+	Sig             []byte
+	ConfirmedHeight *big.Int
+	CreateTime      time.Time
 }
 
 func (self *TxLockVote) MasternodeId() string {
@@ -108,6 +118,28 @@ func (self *TxLockVote) IsFailed() bool {
 
 func (self *TxLockVote) IsTimeOut() bool {
 	return uint64(time.Now().Sub(self.createdTime)) > params.InstantSendLockTimeoutSeconds
+}
+
+// EncodeRLP implements rlp.EncodeRLP
+func (self *TxLockVote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, extTxLockVote{
+		Hash:            self.txHash,
+		MasternodeId:    self.masternodeId,
+		ConfirmedHeight: self.ConfirmedHeight,
+		CreateTime:      self.createdTime,
+	})
+}
+
+// DecodeRLp implements rlp.DecodeRlp
+func (self *TxLockVote) DecodeRLP(s *rlp.Stream) error {
+
+	var extVote extTxLockVote
+	if err := s.Decode(&extVote); err != nil {
+		return err
+	}
+	self.txHash, self.masternodeId, self.ConfirmedHeight, self.createdTime = extVote.Hash, extVote.MasternodeId, extVote.ConfirmedHeight, extVote.CreateTime
+
+	return nil
 }
 
 type TxLockRequest struct {
@@ -193,7 +225,7 @@ func (self *TxLockCondidate) IsTimeout() bool {
 }
 
 func (tc *TxLockCondidate) HasMasternodeVoted(id string) bool {
-	if tc.masternodeVotes == nil{
+	if tc.masternodeVotes == nil {
 		return false
 	}
 	return tc.masternodeVotes[id] != nil
@@ -207,6 +239,6 @@ func (self *TxLockCondidate) MarkAsAttacked() {
 	self.attacked = true
 }
 
-func (self *TxLockCondidate) SetConfirmedHeight(height *big.Int){
-		self.confirmedHeight=height
+func (self *TxLockCondidate) SetConfirmedHeight(height *big.Int) {
+	self.confirmedHeight = height
 }

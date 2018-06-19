@@ -299,6 +299,7 @@ func (self *MasternodeManager) GetMasternodeRanks(height *big.Int) map[int64]*ma
 func (self *MasternodeManager) GetMasternodeScores(block *types.Block, minProtocol int) map[int64]*masternode.Masternode {
 
 	masternodeScores := make(map[int64]*masternode.Masternode)
+
 	for _, m := range self.masternodes.EnableNodes() {
 		masternodeScores[m.CalculateScore(block)] = m
 	}
@@ -323,10 +324,11 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 }
 
 func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
-	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVotes begin \n")
-	rank := self.GetMasternodeRank(self.active.ID)
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVotes begin ,vote hash:%s,masternodeId:%s\n",vote.Hash(),vote.MasternodeId())
+
+	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {
-		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", self.active.ID, " rank: ", rank)
+		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", vote.MasternodeId(), " rank: ", rank)
 		return false
 	} else if rank > SignaturesTotal {
 		log.Info("InstantSend::Vote -- Masternode not in the top ", SignaturesTotal, " (", rank, ")")
@@ -403,6 +405,7 @@ func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool,
 
 	masternodeId := vote.MasternodeId()
 	if self.masternodes.Node(masternodeId) == nil {
+		fmt.Printf("MasternodeManager IsValidTxVote --Unknow masternode %s \n", masternodeId)
 		return false, fmt.Errorf("MasternodeManager IsValidTxVote --Unknow masternode %s \n", masternodeId)
 	}
 	rank := self.GetMasternodeRank(masternodeId)

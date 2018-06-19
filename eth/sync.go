@@ -26,7 +26,6 @@ import (
 	"github.com/ethzero/go-ethzero/eth/downloader"
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p/discover"
-	"fmt"
 )
 
 const (
@@ -43,14 +42,11 @@ type txsync struct {
 	txs []*types.Transaction
 }
 
-
-
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pm *ProtocolManager) syncTransactions(p *peer) {
 
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
-	fmt.Printf("sync.go syncTransactions begin pending size:%d",len(pending))
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
@@ -92,7 +88,6 @@ func (pm *ProtocolManager) txsyncLoop() {
 		}
 		// Send the pack in the background.
 		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
-		fmt.Printf("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
 		go func() { done <- pack.p.SendTransactions(pack.txs) }()
 	}
@@ -193,10 +188,10 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// however it's safe to reenable fast sync.
 		atomic.StoreUint32(&pm.fastSync, 1)
 		mode = downloader.FastSync
-	//} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() == 0 && pm.networkId == 88 {
-	//	log.Info("Force fast sync until EthzeroBlock")
-	//	atomic.StoreUint32(&pm.fastSync, 1)
-	//	mode = downloader.FastSync
+		//} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() == 0 && pm.networkId == 88 {
+		//	log.Info("Force fast sync until EthzeroBlock")
+		//	atomic.StoreUint32(&pm.fastSync, 1)
+		//	mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
 	if err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode); err != nil {

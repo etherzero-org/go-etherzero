@@ -285,6 +285,7 @@ func (self *MasternodePool) add(ctx context.Context, tx *types.Transaction) erro
 		if nonce > self.nonce[addr] {
 			self.nonce[addr] = nonce
 		}
+
 		vote := masternode.NewTxLockVote(hash, self.active.ID)
 		self.addVote(ctx, vote)
 

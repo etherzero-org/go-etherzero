@@ -197,6 +197,7 @@ func (self *InstantSend) vote(condidate *masternode.TxLockCondidate) bool {
 			}
 		}
 	}
+
 	vote := masternode.NewTxLockVote(txHash, self.Active.ID)
 	hash := vote.Hash()
 	log.Info("InstantSend new vote hash: ", "hashId:", hash, "MasternodeId ", vote.MasternodeId())

@@ -714,14 +714,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == NewTxLockVoteMsg:
-		fmt.Printf("Handler.go NewTxLovkVoteMsg arrived ,Vote Hash\n")
+
 		// A batch of vote arrived to one of our previous requests
 		var vote *masternode.TxLockVote
 		if err := msg.Decode(&vote); err != nil {
 			fmt.Printf("msg %v: %v \n", msg, err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
+		fmt.Printf("Handler.go NewTxLovkVoteMsg arrived ,Vote Hash:%s,vote 's masternodeId %s\n", vote.Hash().String(), vote.MasternodeId())
 		p.MarkVote(vote.Hash())
 		pm.mnManager.ProcessTxLockVote(vote)
 
