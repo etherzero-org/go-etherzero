@@ -30,6 +30,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"sync/atomic"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/consensus"
 	"github.com/ethzero/go-ethzero/contracts/masternode/contract"
@@ -45,7 +47,6 @@ import (
 	"github.com/ethzero/go-ethzero/log"
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
-	"sync/atomic"
 )
 
 const (
@@ -114,20 +115,20 @@ type MasternodeManager struct {
 func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, eth Backend, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
-		networkId:   networkId,
-		eventMux:    mux,
-		eth:         eth,
-		txCh:        make(chan core.TxPreEvent, txChanSize),
-		blockchain:  blockchain,
-		chainconfig: config,
-		storageCoeff: big.NewInt(1),
-		minBlocksToStore:big.NewInt(1),
-		newPeerCh:   make(chan *peer),
-		noMorePeers: make(chan struct{}),
-		txsyncCh:    make(chan *txsync),
-		quitSync:    make(chan struct{}),
-		masternodes: &masternode.MasternodeSet{},
-		is:          NewInstantx(config, eth),
+		networkId:        networkId,
+		eventMux:         mux,
+		eth:              eth,
+		txCh:             make(chan core.TxPreEvent, txChanSize),
+		blockchain:       blockchain,
+		chainconfig:      config,
+		storageCoeff:     big.NewInt(1),
+		minBlocksToStore: big.NewInt(1),
+		newPeerCh:        make(chan *peer),
+		noMorePeers:      make(chan struct{}),
+		txsyncCh:         make(chan *txsync),
+		quitSync:         make(chan struct{}),
+		masternodes:      &masternode.MasternodeSet{},
+		is:               NewInstantx(config, eth),
 	}
 
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
@@ -153,7 +154,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
-	fmt.Printf("MasternodeManager start active MasternodeId:\n",self.active.ID)
+	fmt.Printf("MasternodeManager start active MasternodeId:%v \n", self.active.ID)
 	self.is.Active = self.active
 	self.winner.active = self.active
 
@@ -326,30 +327,32 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 }
 
 func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
-	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote begin ,vote hash:%s,masternodeId:%s\n",vote.Hash().String(),vote.MasternodeId())
+
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote begin ,vote hash:%x,masternodeId:%s\n", vote.Hash(), vote.MasternodeId())
 
 	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {
-		log.Info("InstantSend::Vote -- Can't calculate rank for masternode ", vote.MasternodeId(), " rank: ", rank)
+		log.Info("MasternodeManager -- Can't calculate rank for masternode ", vote.MasternodeId(), " rank: ", rank)
 		return false
 	} else if rank > SignaturesTotal {
-		log.Info("InstantSend::Vote -- Masternode not in the top ", SignaturesTotal, " (", rank, ")")
+		log.Info("InstantSend::Vote -- Masternode not in the top ", "Total", SignaturesTotal, "Rank", rank, )
 		return false
 	}
-	log.Info("InstantSend::Vote -- In the top ", SignaturesTotal, " (", rank, ")")
+	log.Info("InstantSend::Vote -- In the top ", "Total", SignaturesTotal, "rank", rank)
 
 	if ok, err := self.IsValidTxVote(vote); !ok {
-		log.Error("ProcessTxLockVote vote veified failed ,vote Hash:", "voteHash",vote.Hash(), "error:", err.Error())
+
+		log.Error("ProcessTxLockVote vote veified failed ,vote Hash:", "voteHash", vote.Hash(), "error:", err.Error())
 	}
 
 	if !self.is.ProcessTxLockVote(vote) {
-		log.Info("ProcessTxLockVote vote failed vote Hash:", "voteHash",vote.Hash())
+		log.Info("ProcessTxLockVote vote failed vote Hash:", "voteHash", vote.Hash())
 	} else {
 		//Vote valid, let us forward it
 		self.is.voteFeed.Send(core.VoteEvent{vote})
 	}
 
-	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote end %d\n")
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote end\n")
 	return true
 }
 
@@ -405,17 +408,18 @@ func (self *MasternodeManager) ProcessBlock(block *types.Block) bool {
 
 func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool, error) {
 
+	var rank = 0
 	masternodeId := vote.MasternodeId()
 	if self.masternodes.Node(masternodeId) == nil {
 		fmt.Printf("MasternodeManager IsValidTxVote --Unknow masternode %s \n", masternodeId)
 		return false, fmt.Errorf("MasternodeManager IsValidTxVote --Unknow masternode %s \n", masternodeId)
 	}
-	rank := self.GetMasternodeRank(masternodeId)
+	rank = self.GetMasternodeRank(masternodeId)
 	// can be caused by past versions trying to vote with an invalid protocol
 	if rank < 1 {
 		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Can't calculate rank for masternode %s \n", masternodeId)
 	}
-	log.Info("MasternodeManager IsValidTxVote -- masternode ", masternodeId, " Rank:", rank)
+	fmt.Printf("MasternodeManager IsValidTxVote -- masternode ", masternodeId, " Rank ", rank)
 
 	if rank > SignaturesTotal {
 		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SignaturesTotal, rank, vote.Hash())

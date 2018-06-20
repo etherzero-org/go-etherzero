@@ -269,7 +269,7 @@ func TestMasternodeManager_ProcessTxLockVotes(t *testing.T) {
 		return manager.GetMasternodeRanks(height)
 	}
 	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
-	manager.ProcessTxLockVotes(votes)
+	manager.ProcessTxLockVote(vote)
 
 }
 
@@ -296,7 +296,7 @@ func TestMasternodeManager_ProcessPaymentVotes(t *testing.T) {
 	manager.winner = NewMasternodePayments(big.NewInt(0), ranksFn)
 	manager.storageCoeff = big.NewInt(0)
 	manager.minBlocksToStore = big.NewInt(0)
-	manager.ProcessPaymentVotes(votes)
+	manager.ProcessPaymentVote(vote)
 }
 
 // TestMasternodeManager_VoteAndTransferForOneBlocks
