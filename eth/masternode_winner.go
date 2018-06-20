@@ -52,7 +52,7 @@ type masternodeRanksFn func(height *big.Int) map[int64]*masternode.Masternode
 // Masternode Payments Class
 // Keeps track of who should get paid for which blocks
 type MasternodePayments struct {
-	cachedBlockHeight *big.Int // Keep track of current block height
+	cachedBlockHeight *big.Int // keep track of current block height
 	minBlocksToStore  *big.Int // ... but at least nMinBlocksToStore (payments blocks) dash default value:5000
 	storageCoeff      *big.Int //masternode count times nStorageCoeff payments blocks should be stored ... default value:1.25
 
