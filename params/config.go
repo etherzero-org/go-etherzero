@@ -33,24 +33,57 @@ var (
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
+	//MainnetChainConfig = &ChainConfig{
+	//	ChainId:             big.NewInt(88),
+	//	HomesteadBlock:      big.NewInt(1150000),
+	//	DAOForkBlock:        big.NewInt(1920000),
+	//	DAOForkSupport:      true,
+	//	EIP150Block:         big.NewInt(2463),
+	//	EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+	//	EIP155Block:         big.NewInt(2675),
+	//	EIP158Block:         big.NewInt(2675),
+	//	ByzantiumBlock:      big.NewInt(4370),
+	//	EthzeroGenesisBlock: big.NewInt(192365),
+	//	EthzeroTOSBlock:     big.NewInt(192366),
+	//	EthzeroBlock:        big.NewInt(192367),
+	//	EthzeroMasternodeBlock: big.NewInt(192368),
+	//	ConstantinopleBlock: nil,
+	//	Ethash:              new(EthashConfig),
+	//}
+	//MainnetChainConfig = &ChainConfig{
+	//	ChainId:                big.NewInt(88),
+	//	HomesteadBlock:         big.NewInt(714921),
+	//	DAOForkBlock:           big.NewInt(1714922),
+	//	DAOForkSupport:         true,
+	//	EIP150Block:            big.NewInt(714923),
+	//	EIP150Hash:             common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+	//	EIP155Block:            big.NewInt(714924),
+	//	EIP158Block:            big.NewInt(714925),
+	//	ByzantiumBlock:         big.NewInt(714926),
+	//	EthzeroGenesisBlock:    big.NewInt(714927),
+	//	EthzeroTOSBlock:        big.NewInt(714928),
+	//	EthzeroBlock:           big.NewInt(714929),
+	//	EthzeroMasternodeBlock: big.NewInt(714930),
+	//	ConstantinopleBlock:    nil,
+	//	Ethash:                 new(EthashConfig),
+	//}
 	MainnetChainConfig = &ChainConfig{
-		ChainId:             big.NewInt(88),
-		HomesteadBlock:      big.NewInt(1150000),
-		DAOForkBlock:        big.NewInt(1920000),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(2463000),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(2675000),
-		EIP158Block:         big.NewInt(2675000),
-		ByzantiumBlock:      big.NewInt(4370000),
-		EthzeroTOSBlock:     big.NewInt(4936272),
-		EthzeroBlock:        big.NewInt(5025000),
-		EthzeroGenesisBlock: big.NewInt(4936271),
-		EthzeroMasternodeBlock: big.NewInt(6000000),
-		ConstantinopleBlock: nil,
-		Ethash:              new(EthashConfig),
+		ChainId:                big.NewInt(88),
+		HomesteadBlock:         big.NewInt(714921),
+		DAOForkBlock:           big.NewInt(1714922),
+		DAOForkSupport:         true,
+		EIP150Block:            big.NewInt(714923),
+		EIP150Hash:             common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		EIP155Block:            big.NewInt(714924),
+		EIP158Block:            big.NewInt(714925),
+		ByzantiumBlock:         big.NewInt(714926),
+		EthzeroGenesisBlock:    big.NewInt(714927),
+		EthzeroTOSBlock:        big.NewInt(714928),
+		EthzeroBlock:           big.NewInt(714929),
+		EthzeroMasternodeBlock: big.NewInt(714930),
+		ConstantinopleBlock:    nil,
+		Ethash:                 new(EthashConfig),
 	}
-
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
 		ChainId:             big.NewInt(89),
@@ -93,7 +126,7 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	//AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0),new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
@@ -101,11 +134,11 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	//AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0),nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
 	//TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
-	TestChainConfig = &ChainConfig{big.NewInt(89), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),big.NewInt(0), big.NewInt(0),new(EthashConfig), nil}
-	TestRules = TestChainConfig.Rules(new(big.Int))
+	TestChainConfig = &ChainConfig{big.NewInt(89), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil}
+	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -128,11 +161,11 @@ type ChainConfig struct {
 	EIP155Block *big.Int `json:"eip155Block,omitempty"` // EIP155 HF block
 	EIP158Block *big.Int `json:"eip158Block,omitempty"` // EIP158 HF block
 
-	ByzantiumBlock      *big.Int `json:"byzantiumBlock,omitempty"`      // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
 
-	EthzeroTOSBlock *big.Int `json:"ethzeroBlock,omitempty"` // Ethzero trial operation stage switch block (nil = no fork, 0 = already on ethzero)
-	EthzeroBlock *big.Int `json:"ethzeroBlock,omitempty"` // Ethzero switch block (nil = no fork, 0 = already on ethzero)
-	EthzeroGenesisBlock *big.Int `json:"ethzeroGenesisBlock,omitempty"` // Ethzero switch block (nil = no fork, 0 = already on ethzero)
+	EthzeroTOSBlock        *big.Int `json:"ethzeroBlock,omitempty"`           // Ethzero trial operation stage switch block (nil = no fork, 0 = already on ethzero)
+	EthzeroBlock           *big.Int `json:"ethzeroBlock,omitempty"`           // Ethzero switch block (nil = no fork, 0 = already on ethzero)
+	EthzeroGenesisBlock    *big.Int `json:"ethzeroGenesisBlock,omitempty"`    // Ethzero switch block (nil = no fork, 0 = already on ethzero)
 	EthzeroMasternodeBlock *big.Int `json:"ethzeroMasternodeBlock,omitempty"` // Ethzero switch block (nil = no fork, 0 = already on ethzero)
 
 	ConstantinopleBlock *big.Int `json:"constantinopleBlock,omitempty"` // Constantinople switch block (nil = no fork, 0 = already activated)
@@ -140,7 +173,6 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
-
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
