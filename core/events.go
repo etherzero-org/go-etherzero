@@ -29,7 +29,7 @@ type TxPreEvent struct{ Tx *types.Transaction }
 type VoteEvent struct{ Vote *masternode.TxLockVote}
 
 // PaymentVoteEvent is posted when a PaymentVote enters the Masternode transaction pool.
-type PaymentVoteEvent struct{PaymentVote *masternode.MasternodePaymentVote}
+type BlockVoteEvent struct{BlockVote *masternode.MasternodePaymentVote}
 
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.

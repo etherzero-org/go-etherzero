@@ -114,20 +114,20 @@ type MasternodeManager struct {
 func NewMasternodeManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, eth Backend, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*MasternodeManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &MasternodeManager{
-		networkId:   networkId,
-		eventMux:    mux,
-		eth:         eth,
-		txCh:        make(chan core.TxPreEvent, txChanSize),
-		blockchain:  blockchain,
-		chainconfig: config,
-		storageCoeff: big.NewInt(1),
-		minBlocksToStore:big.NewInt(1),
-		newPeerCh:   make(chan *peer),
-		noMorePeers: make(chan struct{}),
-		txsyncCh:    make(chan *txsync),
-		quitSync:    make(chan struct{}),
-		masternodes: &masternode.MasternodeSet{},
-		is:          NewInstantx(config, eth),
+		networkId:        networkId,
+		eventMux:         mux,
+		eth:              eth,
+		txCh:             make(chan core.TxPreEvent, txChanSize),
+		blockchain:       blockchain,
+		chainconfig:      config,
+		storageCoeff:     big.NewInt(1),
+		minBlocksToStore: big.NewInt(1),
+		newPeerCh:        make(chan *peer),
+		noMorePeers:      make(chan struct{}),
+		txsyncCh:         make(chan *txsync),
+		quitSync:         make(chan struct{}),
+		masternodes:      &masternode.MasternodeSet{},
+		is:               NewInstantx(config, eth),
 	}
 
 	ranksFn := func(height *big.Int) map[int64]*masternode.Masternode {
@@ -153,7 +153,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
-	fmt.Printf("MasternodeManager start active MasternodeId:\n",self.active.ID)
+	fmt.Printf("MasternodeManager start active MasternodeId:\n", self.active.ID)
 	self.is.Active = self.active
 	self.winner.active = self.active
 
@@ -175,7 +175,7 @@ func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.VoteEvent) even
 
 // SubscribeWinnerVoteEvent registers a subscription of PaymentVoteEvent and
 // starts sending event to the given channel.
-func (self *MasternodeManager) SubscribeWinnerVoteEvent(ch chan<- core.PaymentVoteEvent) event.Subscription {
+func (self *MasternodeManager) SubscribeWinnerVoteEvent(ch chan<- core.BlockVoteEvent) event.Subscription {
 	return self.winner.SubscribeWinnerVoteEvent(ch)
 }
 
@@ -215,7 +215,7 @@ func (self *MasternodeManager) BestMasternode(block *types.Block) (common.Addres
 	if enables == nil {
 		return common.Address{}, errors.New("no masternode detected")
 	}
-	log.Trace(" The number of local cached masternode ", "EnablesMasternodes", len(enables))
+	log.Trace(" the number of local cached masternode ", "EnablesMasternodes", len(enables))
 	if len(enables) < 1 {
 		return common.Address{}, fmt.Errorf("The number of local masternodes is too less to obtain the best Masternode")
 	}
@@ -327,24 +327,24 @@ func (self *MasternodeManager) StorageLimit() *big.Int {
 
 func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bool {
 
-	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote begin ,vote hash:%x,masternodeId:%s\n",vote.Hash(),vote.MasternodeId())
+	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote begin ,vote hash:%x,masternodeId:%s\n", vote.Hash(), vote.MasternodeId())
 
 	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {
 		log.Info("MasternodeManager -- Can't calculate rank for masternode ", vote.MasternodeId(), " rank: ", rank)
 		return false
 	} else if rank > SignaturesTotal {
-		log.Info("InstantSend::Vote -- Masternode not in the top ","Total", SignaturesTotal,"Rank", rank,)
+		log.Info("InstantSend::Vote -- Masternode not in the top ", "Total", SignaturesTotal, "Rank", rank)
 		return false
 	}
-	log.Info("InstantSend::Vote -- In the top ", "Total",SignaturesTotal, "rank", rank)
+	log.Info("InstantSend::Vote -- In the top ", "Total", SignaturesTotal, "rank", rank)
 
 	if ok, err := self.IsValidTxVote(vote); !ok {
-		log.Error("ProcessTxLockVote vote veified failed ,vote Hash:", "voteid",vote.Hash(), "error:", err.Error())
+		log.Error("ProcessTxLockVote vote veified failed ,vote Hash:", "voteid", vote.Hash(), "error:", err.Error())
 	}
 
 	if !self.is.ProcessTxLockVote(vote) {
-		log.Info("ProcessTxLockVote vote failed vote Hash:", "voteid",vote.Hash())
+		log.Info("ProcessTxLockVote vote failed vote Hash:", "voteid", vote.Hash())
 	} else {
 		//Vote valid, let us forward it
 		self.is.voteFeed.Send(core.VoteEvent{vote})
@@ -392,7 +392,7 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	}
 
 	if !self.CheckPaymentVoteSignature(vote) {
-		return false, fmt.Errorf("MasternodeManager  CheckPaymentVote signature Failed ")
+		return false, fmt.Errorf("MasternodeManager::CheckPaymentVote signature Failed ")
 	}
 	return true, nil
 }

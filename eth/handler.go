@@ -101,7 +101,7 @@ type ProtocolManager struct {
 	// etherzero masternode
 	voteCh    chan core.VoteEvent
 	voteSub   event.Subscription
-	winnerCh  chan core.PaymentVoteEvent
+	winnerCh  chan core.BlockVoteEvent
 	winnerSub event.Subscription
 
 	mnManager *MasternodeManager
@@ -241,7 +241,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	go pm.voteBroadcastLoop()
 
 	// broadcast payment votes
-	pm.winnerCh = make(chan core.PaymentVoteEvent, winnerChanSize)
+	pm.winnerCh = make(chan core.BlockVoteEvent, winnerChanSize)
 	pm.winnerSub = pm.mnManager.SubscribeWinnerVoteEvent(pm.winnerCh)
 	go pm.winnerVoteBroadcastLoop()
 
@@ -820,11 +820,11 @@ func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *masternode.Tx
 
 // BroadcastPaymentVote will propagate a WinnerVote to all Masternodes which are not known to
 // already have the given WinnerVote
-func (self *ProtocolManager) BroadcastPaymentVote(hash common.Hash, paymentvote *masternode.MasternodePaymentVote) {
-	peers := self.peers.PeersWithoutWinnerVote(hash)
+func (self *ProtocolManager) BroadcastBlockVote(hash common.Hash, paymentvote *masternode.MasternodePaymentVote) {
+	peers := self.peers.PeersWithoutBlockVote(hash)
 	fmt.Printf("BroadcastPaymentVote peers size:%d\n", len(peers))
 	for _, peer := range peers {
-		peer.SendNewWinnerVote(paymentvote)
+		peer.SendNewBlockVote(paymentvote)
 	}
 	log.Trace("Broadcast Winner vote", "hash", hash.String(), "recipients", len(peers))
 }
@@ -859,8 +859,7 @@ func (self *ProtocolManager) winnerVoteBroadcastLoop() {
 	for {
 		select {
 		case event := <-self.winnerCh:
-			fmt.Printf("self vote winnerVoteBroadcastLoop begin &&&&&&&&&&\n")
-			self.BroadcastPaymentVote(event.PaymentVote.Hash(), event.PaymentVote)
+			self.BroadcastBlockVote(event.BlockVote.Hash(), event.BlockVote)
 
 		case <-self.winnerSub.Err():
 			return

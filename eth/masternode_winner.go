@@ -33,6 +33,7 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"gopkg.in/fatih/set.v0"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -66,6 +67,24 @@ type MasternodePayments struct {
 	ranksFn    masternodeRanksFn //The callback function used to get the current position of the Masternodes
 	winnerFeed event.Feed
 	mu         sync.Mutex
+}
+
+// SignerFn is a signer function callback when a contract requires a method to
+// sign the transaction before submission.
+type SignerFn func(types.Signer, common.Address, *types.Transaction) (*types.Transaction, error)
+
+// TransactOpts is the collection of authorization data required to create a
+// valid Ethereum transaction.
+type TransactOpts struct {
+	From   common.Address // Ethereum account to send the transaction from
+	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
+	Signer SignerFn       // Method to use for signing the transaction (mandatory)
+
+	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
+	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
+	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
+
+	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
 
 func (self *MasternodePayments) winners() string {
@@ -142,12 +161,16 @@ func (self *MasternodePayments) Clear() {
 
 func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool {
 
+	if self.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
+		log.Info("Masternode not active")
+		return false
+	}
 	if rank > MNPaymentsSignaturesTotal {
-		log.Info("Masternode not in the top ", MNPaymentsSignaturesTotal, "( ", rank, ")")
+		log.Info("Masternode not in the top ", "Total", MNPaymentsSignaturesTotal, "rank ", rank)
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: ","BlockHeight", block.Number().String(), " masternodeId", self.active.ID)
+	log.Info("ProcessBlock -- Start: ", "BlockHeight", block.Number().String(), " masternodeId", self.active.ID)
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
 	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
@@ -168,6 +191,32 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 
 }
 
+func (self *MasternodePayments) transact(opts *TransactOpts, contract common.Address, input []byte) (*types.Transaction,error){
+
+	value := opts.Value
+	if value == nil {
+		value = new(big.Int)
+	}
+	var nonce uint64
+
+	nonce = opts.Nonce.Uint64()
+	// Figure out the gas allowance and gas price values
+	gasPrice := opts.GasPrice
+	gasLimit := opts.GasLimit
+	// Create the transaction, sign it and schedule it for execution
+	var rawTx *types.Transaction
+
+	rawTx = types.NewTransaction(nonce, contract, value, gasLimit, gasPrice, input)
+	if opts.Signer == nil {
+		return nil, errors.New("no signer to authorize the transaction with")
+	}
+	signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
+	if err != nil {
+		return nil, err
+	}
+	return signedTx, nil
+}
+
 //Handle the voting of other masternodes
 func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, storageLimit *big.Int) bool {
 
@@ -175,7 +224,7 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	self.mu.Lock()
 	if self.votes[vote.Hash()] != nil {
 		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash(), " , Height:", vote.Number)
-		fmt.Printf("ERROR:Avoid processing same vote multiple times , Height:%d,voteHash:%x", vote.Number,vote.Hash())
+		fmt.Printf("ERROR:Avoid processing same vote multiple times , Height:%d,voteHash:%x", vote.Number, vote.Hash())
 		return false
 	}
 	self.votes[vote.Hash()] = vote
@@ -189,7 +238,7 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	//}
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
-		log.Info("masternode already voted, masternode account:", "masternodeAccount",vote.MasternodeAccount)
+		log.Info("masternode already voted, masternode account:", "masternodeAccount", vote.MasternodeAccount)
 		fmt.Printf("masternode already voted, masternode account:%x", vote.MasternodeAccount)
 		return false
 	}
@@ -203,12 +252,12 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 
 // SubscribeWinnerVoteEvent registers a subscription of PaymentVoteEvent and
 // starts sending event to the given channel.
-func (self *MasternodePayments) SubscribeWinnerVoteEvent(ch chan<- core.PaymentVoteEvent) event.Subscription {
+func (self *MasternodePayments) SubscribeWinnerVoteEvent(ch chan<- core.BlockVoteEvent) event.Subscription {
 	return self.scope.Track(self.winnerFeed.Subscribe(ch))
 }
 
 func (is *MasternodePayments) PostVoteEvent(vote *masternode.MasternodePaymentVote) {
-	is.winnerFeed.Send(core.PaymentVoteEvent{vote})
+	is.winnerFeed.Send(core.BlockVoteEvent{vote})
 }
 
 // Find an entry in the masternode list that is next to be paid
@@ -279,7 +328,7 @@ func (self *MasternodePayments) CheckPreviousBlockVotes(height *big.Int) {
 	for it, i := range self.didNotVote {
 		debugStr += fmt.Sprintf("CheckPreviousBlockVotes --   %s: %d\n", it, i)
 	}
-	log.Info("MasternodePayments CheckPreviousBlockVotes", debugStr)
+	log.Info("MasternodePayments CheckPreviousBlockVotes", "debug info", debugStr)
 }
 
 type MasternodePayee struct {

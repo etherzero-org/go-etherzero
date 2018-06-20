@@ -73,7 +73,7 @@ type peer struct {
 
 	isMasternode     bool
 	knownVotes       *set.Set // Set of vote hashes known to be known by this peer
-	knownWinnerVotes *set.Set // Set of winner vote hashes known to be known by this peer
+	knownBlockVotes *set.Set // Set of winner vote hashes known to be known by this peer
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -87,7 +87,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		knownTxs:         set.New(),
 		knownBlocks:      set.New(),
 		knownVotes:       set.New(),
-		knownWinnerVotes: set.New(),
+		knownBlockVotes: set.New(),
 	}
 }
 
@@ -160,10 +160,10 @@ func (p *peer) MarkVote(hash common.Hash) {
 // MarkWinnerVote marks a Winner vote as knows for the peer,ensuring that it
 // will never be propagated to this particular peer.
 func (p *peer) MarkWinnerVote(hash common.Hash) {
-	for p.knownWinnerVotes.Size() >= maxKnownWinnerVotes {
-		p.knownWinnerVotes.Pop()
+	for p.knownBlockVotes.Size() >= maxKnownWinnerVotes {
+		p.knownBlockVotes.Pop()
 	}
-	p.knownWinnerVotes.Add(hash)
+	p.knownBlockVotes.Add(hash)
 }
 
 // SendTransactions sends transactions to the peer and includes the hashes
@@ -184,9 +184,8 @@ func (p *peer) SendNewTxLockVote(vote *masternode.TxLockVote) error {
 	return p2p.Send(p.rw, NewTxLockVoteMsg, vote)
 }
 
-// SendNewWinnerVote propagates an winner vote to a remote masternode.
-func (p *peer) SendNewWinnerVote(winner *masternode.MasternodePaymentVote) error {
-	fmt.Printf("peer.go SendNewTxLovkVote begin \n")
+// SendNewBlockVote propagates an winner vote to a remote masternode.
+func (p *peer) SendNewBlockVote(winner *masternode.MasternodePaymentVote) error {
 	return p2p.Send(p.rw, NewWinnerVoteMsg, winner)
 }
 
@@ -458,13 +457,13 @@ func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
 
 // PeersWithoutWinnerVote retrieves a list of Masternodes that do not have a given Winner Vote
 // in their set of knows hashes.
-func (ps *peerSet) PeersWithoutWinnerVote(hash common.Hash) []*peer {
+func (ps *peerSet) PeersWithoutBlockVote(hash common.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.knownWinnerVotes.Has(hash) {
+		if !p.knownBlockVotes.Has(hash) {
 			list = append(list, p)
 		}
 	}
