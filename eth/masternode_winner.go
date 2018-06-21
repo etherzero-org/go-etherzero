@@ -20,10 +20,11 @@ package eth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
-	"fmt"
 
+	"encoding/json"
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/core"
 	"github.com/ethzero/go-ethzero/core/types"
@@ -31,7 +32,6 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"gopkg.in/fatih/set.v0"
-	"encoding/json"
 )
 
 const (
@@ -120,17 +120,22 @@ func (self *MasternodePayments) Add(vote *masternode.MasternodePaymentVote) bool
 	defer self.mu.Unlock()
 
 	hash := vote.Hash()
-	if vote := self.votes[hash]; vote != nil {
+	log.Info("MasternodePayments Add vote ", " Height ",vote.Number," masternode", vote.MasternodeId," Hash", hash)
+	if temp := self.votes[hash]; temp != nil {
 		return false
 	}
 	self.votes[hash] = vote
+	var len int
 	if payee := self.blocks[vote.Number.Uint64()]; payee == nil {
 		blockPayees := NewMasternodeBlockPayees(vote.Number)
 		blockPayees.Add(vote)
 		self.blocks[vote.Number.Uint64()] = blockPayees
+		len = self.blocks[vote.Number.Uint64()].Count()
 	} else {
 		self.blocks[vote.Number.Uint64()].Add(vote)
+		len = self.blocks[vote.Number.Uint64()].Count()
 	}
+	log.Info("masternode block vote successed", "count", len)
 	return true
 }
 
@@ -170,7 +175,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 		log.Info("Masternode not in the top ", "Total", MNPaymentsSignaturesTotal, "rank ", rank)
 		return false
 	}
-	height=new(big.Int).Add(block.Number(),big.NewInt(1))
+	height = new(big.Int).Add(block.Number(), big.NewInt(1))
 
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
 	log.Info("ProcessBlock -- Start: ", "vote blockheight", height, " masternodeId", self.active.ID)
@@ -183,8 +188,8 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 	if err == nil {
 		if vote.Verify(hash[:], sig, &self.active.PrivateKey.PublicKey) {
 			// vote constructed sucessfully, let's store and relay it
-			go self.PostVoteEvent(vote)
 			self.Add(vote)
+			go self.PostVoteEvent(vote)
 			log.Info("MasternodePayments:: ProcessBlock vote successed!")
 			return true
 		}
@@ -194,7 +199,7 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 
 }
 
-func (self *MasternodePayments) transact(opts *TransactOpts, contract common.Address, input []byte) (*types.Transaction,error){
+func (self *MasternodePayments) transact(opts *TransactOpts, contract common.Address, input []byte) (*types.Transaction, error) {
 
 	value := opts.Value
 	if value == nil {
@@ -227,10 +232,8 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	self.mu.Lock()
 	if self.votes[vote.Hash()] != nil {
 		log.Trace("ERROR:Avoid processing same vote multiple times", "hash=", vote.Hash(), " , Height:", vote.Number)
-		fmt.Printf("ERROR:Avoid processing same vote multiple times , Height:%d,voteHash:%x", vote.Number, vote.Hash())
 		return false
 	}
-	self.votes[vote.Hash()] = vote
 	self.mu.Unlock()
 	//vote out of range
 	//firstBlock := self.cachedBlockHeight.Sub(self.cachedBlockHeight, storageLimit)
@@ -242,7 +245,6 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 	//canvote
 	if !self.CanVote(vote.Number, vote.MasternodeAccount) {
 		log.Info("masternode already voted, masternode account:", "masternodeAccount", vote.MasternodeAccount)
-		fmt.Printf("masternode already voted, masternode account:%x", vote.MasternodeAccount)
 		return false
 	}
 	log.Info("masternode_winner vote: ", "blockHeight:", vote.Number, "cacheHeight:", self.cachedBlockHeight, "Hash:", vote.Hash().String())
@@ -397,6 +399,11 @@ func (self *MasternodeBlockPayees) Add(vote *masternode.MasternodePaymentVote) {
 	payee := NewMasternodePayee(vote.MasternodeAccount, vote)
 	self.payees = append(self.payees, payee)
 
+}
+
+func (self *MasternodeBlockPayees) Count() int {
+
+	return len(self.payees)
 }
 
 //select the Masternode that has been voted the most
