@@ -27,7 +27,6 @@ import (
 	"github.com/ethzero/go-ethzero/crypto/bn256"
 	"github.com/ethzero/go-ethzero/params"
 	"golang.org/x/crypto/ripemd160"
-	"fmt"
 	"github.com/ethzero/go-ethzero/crypto/secp256k1"
 	"github.com/ethzero/go-ethzero/log"
 )
@@ -373,9 +372,6 @@ func (c *peeridrecover) Run(input []byte) ([]byte, error) {
 	if len(input) < 97 {
 		return nil, nil
 	}
-	//input = common.RightPadBytes(input, 128)
-	fmt.Println("input: ", common.Bytes2Hex(input[:]))
-
 	key, err := secp256k1.RecoverPubkey(input[:32], input[32:97])
 	if err != nil || len(key) != 65 {
 		log.Error("peeridrecover", "error", err)
