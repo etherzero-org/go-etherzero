@@ -153,7 +153,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
-	fmt.Printf("MasternodeManager start active MasternodeId:\n", self.active.ID)
+	fmt.Printf("MasternodeManager start active MasternodeId: %v\n", self.active.ID)
 	self.is.Active = self.active
 	self.winner.active = self.active
 
