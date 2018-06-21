@@ -180,11 +180,16 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.masternodeManager, err = NewMasternodeManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mnManager = eth.masternodeManager
 
+	processBlockVote := func(blocks types.Blocks) bool {
+		return eth.masternodeManager.ProcessBlock(blocks)
+	}
+	eth.blockchain.ProcessBlockVote = processBlockVote
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 

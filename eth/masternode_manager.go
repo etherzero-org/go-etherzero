@@ -153,7 +153,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
-	fmt.Printf("MasternodeManager start active MasternodeId:\n", self.active.ID)
+	fmt.Printf("MasternodeManager start active MasternodeId: %v\n", self.active.ID)
 	self.is.Active = self.active
 	self.winner.active = self.active
 
@@ -331,7 +331,7 @@ func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bo
 
 	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {
-		log.Info("MasternodeManager -- Can't calculate rank for masternode ", vote.MasternodeId(), " rank: ", rank)
+		log.Info("MasternodeManager -- Can't calculate rank for masternode ","MasternodeId", vote.MasternodeId(), " rank ", rank)
 		return false
 	} else if rank > SignaturesTotal {
 		log.Info("InstantSend::Vote -- Masternode not in the top ", "Total", SignaturesTotal, "Rank", rank)
@@ -376,7 +376,7 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	}
 	rank := self.GetMasternodeRank(masternodeId)
 	if rank < 1 {
-		err := fmt.Errorf("MasternodeManager::IsValidPaymentVote -- Can't calculate rank for masternode,MasternodeId: %s", masternodeId)
+		err := fmt.Errorf("MasternodeManager::IsValidPaymentVote -- Can't calculate rank for masternode MasternodeId: %s", masternodeId)
 		return false, err
 	}
 	if rank > MNPaymentsSignaturesTotal {
@@ -397,11 +397,15 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	return true, nil
 }
 
-func (self *MasternodeManager) ProcessBlock(block *types.Block) bool {
+func (self *MasternodeManager) ProcessBlock(blocks types.Blocks) bool {
 
-	rank := self.GetMasternodeRank(self.active.ID)
-	return self.winner.ProcessBlock(block, rank)
-
+	for i := 0; i < len(blocks); i++ {
+		rank := self.GetMasternodeRank(self.active.ID)
+		if self.winner.ProcessBlock(blocks[i], rank) {
+			return false
+		}
+	}
+	return true
 }
 
 func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool, error) {

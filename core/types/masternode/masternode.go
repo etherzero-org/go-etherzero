@@ -92,7 +92,7 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 		Account:                    account,
 		OriginBlock:                block,
 		State:                      MasternodeInit,
-		Height:                     big.NewInt(-1),
+		Height:                     big.NewInt(0),
 		ProtocolVersion:            64,
 		CollateralMinConfBlockHash: common.Hash{},
 	}

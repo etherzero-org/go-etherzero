@@ -192,10 +192,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
-	processBlockVote := func(block *types.Block) bool {
-		return manager.mnManager.ProcessBlock(block)
-	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer, processBlockVote)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	return manager, nil
 }
@@ -868,7 +865,6 @@ func (self *ProtocolManager) winnerVoteBroadcastLoop() {
 }
 
 func (self *ProtocolManager) MasternodeManager(manager *MasternodeManager) {
-
 	self.mnManager = manager
 }
 
