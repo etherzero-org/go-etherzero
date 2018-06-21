@@ -1217,8 +1217,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			events = append(events, ChainSideEvent{block})
 		}
 
+		log.Info("blockchain processBlockVote begin ","blocknumber",block.Number())
 		if ok := bc.ProcessBlockVote(types.Blocks{block});!ok{
-			log.Debug("Masternode voted failed","block number:",block.Number().String())
+			log.Debug("Masternode voted failed"," block number:",block.Number())
+			fmt.Printf("Masternode voted failed,block number:%d,",block.Number())
 		}
 		stats.processed++
 		stats.usedGas += usedGas

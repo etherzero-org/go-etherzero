@@ -331,7 +331,7 @@ func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bo
 
 	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {
-		log.Info("MasternodeManager -- Can't calculate rank for masternode ", vote.MasternodeId(), " rank: ", rank)
+		log.Info("MasternodeManager -- Can't calculate rank for masternode ","MasternodeId", vote.MasternodeId(), " rank ", rank)
 		return false
 	} else if rank > SignaturesTotal {
 		log.Info("InstantSend::Vote -- Masternode not in the top ", "Total", SignaturesTotal, "Rank", rank)
@@ -376,7 +376,7 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	}
 	rank := self.GetMasternodeRank(masternodeId)
 	if rank < 1 {
-		err := fmt.Errorf("MasternodeManager::IsValidPaymentVote -- Can't calculate rank for masternode,MasternodeId: %s", masternodeId)
+		err := fmt.Errorf("MasternodeManager::IsValidPaymentVote -- Can't calculate rank for masternode MasternodeId: %s", masternodeId)
 		return false, err
 	}
 	if rank > MNPaymentsSignaturesTotal {
@@ -399,7 +399,7 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 
 func (self *MasternodeManager) ProcessBlock(blocks types.Blocks) bool {
 
-	for i := 1; i < len(blocks); i++ {
+	for i := 0; i < len(blocks); i++ {
 		rank := self.GetMasternodeRank(self.active.ID)
 		if self.winner.ProcessBlock(blocks[i], rank) {
 			return false
