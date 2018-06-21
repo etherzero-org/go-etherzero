@@ -27,62 +27,29 @@ var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 
-	MainnetGovernanceAddress = common.HexToAddress("0x21376c417ca502aaa650770185c0d5a2a40e740e")
-	TestnetGovernanceAddress = common.HexToAddress("0x21376c417ca502aaa650770185c0d5a2a40e740e")
+	MainnetGovernanceAddress = common.HexToAddress("0x618a9B44AfF7D8F7966a5D9516531D1E09370d87")
+	TestnetGovernanceAddress = common.HexToAddress("0x618a9B44AfF7D8F7966a5D9516531D1E09370d87")
 )
 
 var (
+
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	//MainnetChainConfig = &ChainConfig{
-	//	ChainId:             big.NewInt(88),
-	//	HomesteadBlock:      big.NewInt(1150000),
-	//	DAOForkBlock:        big.NewInt(1920000),
-	//	DAOForkSupport:      true,
-	//	EIP150Block:         big.NewInt(2463),
-	//	EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-	//	EIP155Block:         big.NewInt(2675),
-	//	EIP158Block:         big.NewInt(2675),
-	//	ByzantiumBlock:      big.NewInt(4370),
-	//	EthzeroGenesisBlock: big.NewInt(192365),
-	//	EthzeroTOSBlock:     big.NewInt(192366),
-	//	EthzeroBlock:        big.NewInt(192367),
-	//	EthzeroMasternodeBlock: big.NewInt(192368),
-	//	ConstantinopleBlock: nil,
-	//	Ethash:              new(EthashConfig),
-	//}
-	//MainnetChainConfig = &ChainConfig{
-	//	ChainId:                big.NewInt(88),
-	//	HomesteadBlock:         big.NewInt(714921),
-	//	DAOForkBlock:           big.NewInt(1714922),
-	//	DAOForkSupport:         true,
-	//	EIP150Block:            big.NewInt(714923),
-	//	EIP150Hash:             common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-	//	EIP155Block:            big.NewInt(714924),
-	//	EIP158Block:            big.NewInt(714925),
-	//	ByzantiumBlock:         big.NewInt(714926),
-	//	EthzeroGenesisBlock:    big.NewInt(714927),
-	//	EthzeroTOSBlock:        big.NewInt(714928),
-	//	EthzeroBlock:           big.NewInt(714929),
-	//	EthzeroMasternodeBlock: big.NewInt(714930),
-	//	ConstantinopleBlock:    nil,
-	//	Ethash:                 new(EthashConfig),
-	//}
 	MainnetChainConfig = &ChainConfig{
-		ChainId:                big.NewInt(88),
-		HomesteadBlock:         big.NewInt(714921),
-		DAOForkBlock:           big.NewInt(1714922),
-		DAOForkSupport:         true,
-		EIP150Block:            big.NewInt(714923),
-		EIP150Hash:             common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:            big.NewInt(714924),
-		EIP158Block:            big.NewInt(714925),
-		ByzantiumBlock:         big.NewInt(714926),
-		EthzeroGenesisBlock:    big.NewInt(714927),
-		EthzeroTOSBlock:        big.NewInt(714928),
-		EthzeroBlock:           big.NewInt(714929),
-		EthzeroMasternodeBlock: big.NewInt(714930),
-		ConstantinopleBlock:    nil,
-		Ethash:                 new(EthashConfig),
+		ChainId:             big.NewInt(88),
+		HomesteadBlock:      big.NewInt(1150000),
+		DAOForkBlock:        big.NewInt(1920000),
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(2463000),
+		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		EIP155Block:         big.NewInt(2675000),
+		EIP158Block:         big.NewInt(2675000),
+		ByzantiumBlock:      big.NewInt(4370000),
+		EthzeroTOSBlock:     big.NewInt(4936272),
+		EthzeroBlock:        big.NewInt(5025000),
+		EthzeroGenesisBlock: big.NewInt(4936271),
+		EthzeroMasternodeBlock: big.NewInt(6000000),
+		ConstantinopleBlock: nil,
+		Ethash:              new(EthashConfig),
 	}
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
