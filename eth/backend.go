@@ -189,7 +189,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	processBlockVote := func(blocks types.Blocks) bool {
 		return eth.masternodeManager.ProcessBlock(blocks)
 	}
-	eth.blockchain.ProcessBlockVote=processBlockVote
+	eth.blockchain.ProcessBlockVote = processBlockVote
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 

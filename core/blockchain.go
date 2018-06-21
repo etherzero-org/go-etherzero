@@ -130,7 +130,7 @@ type BlockChain struct {
 
 	badBlocks *lru.Cache // Bad block cache
 
-	ProcessBlockVote blockVoteFn  // Masternode winner vote when new block arrives
+	ProcessBlockVote blockVoteFn // Masternode winner vote when new block arrives
 }
 
 // is a callback type for vote when new block arrives
@@ -603,12 +603,12 @@ func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
 	return GetBlockReceipts(bc.db, hash, GetBlockNumber(bc.db, hash))
 }
 
-func (bc *BlockChain) GetAssignedGas(account common.Address) (uint64) {
+func (bc *BlockChain) GetAssignedGas(account common.Address) uint64 {
 	lastNonce, lastBlock, lastGasUsed := GetAssignedGas(bc.db, account)
 	stateDB, _ := bc.State()
 	nonce := stateDB.GetNonce(account)
 	balance := stateDB.GetBalance(account)
-	if (lastNonce+1) != nonce {
+	if (lastNonce + 1) != nonce {
 		log.Error("Get account gas", "last nonce", lastNonce, "current nonce", nonce)
 		return 0
 	}
@@ -618,7 +618,7 @@ func (bc *BlockChain) GetAssignedGas(account common.Address) (uint64) {
 func (bc *BlockChain) getAssignedGas(currentBlock uint64, lastBlock uint64, lastGasUsed uint64, balance *big.Int) uint64 {
 	blockGap := float64(currentBlock - lastBlock)
 	etz := float64(new(big.Int).Div(balance, new(big.Int).SetUint64(1e+18)).Uint64())
-	gasPerBlock := float64(21000.0 * math.Exp(-(float64(lastGasUsed)/21000.0)*0.1))+etz
+	gasPerBlock := float64(21000.0*math.Exp(-(float64(lastGasUsed)/21000.0)*0.1)) + etz
 
 	maxGas := float64(9000000 * math.Exp(-1/etz*80))
 	maxGas = math.Max(maxGas, 100000)
@@ -724,7 +724,7 @@ func (bc *BlockChain) procFutureBlocks() {
 type WriteStatus byte
 
 const (
-	NonStatTy   WriteStatus = iota
+	NonStatTy WriteStatus = iota
 	CanonStatTy
 	SideStatTy
 )
@@ -1217,10 +1217,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			events = append(events, ChainSideEvent{block})
 		}
 
-		log.Info("blockchain processBlockVote begin ","blocknumber",block.Number())
-		if ok := bc.ProcessBlockVote(types.Blocks{block});!ok{
-			log.Debug("Masternode voted failed"," block number:",block.Number())
-			fmt.Printf("Masternode voted failed,block number:%d,",block.Number())
+		log.Info("blockchain processBlockVote begin ", "blocknumber", block.Number())
+		if ok := bc.ProcessBlockVote(types.Blocks{block}); !ok {
+			log.Debug("Masternode voted failed", " block number:", block.Number())
 		}
 		stats.processed++
 		stats.usedGas += usedGas
