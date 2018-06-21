@@ -18,12 +18,10 @@
 package eth
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"math/big"
-
 	"sync"
-
 	"fmt"
 
 	"github.com/ethzero/go-ethzero/common"
@@ -33,7 +31,7 @@ import (
 	"github.com/ethzero/go-ethzero/event"
 	"github.com/ethzero/go-ethzero/log"
 	"gopkg.in/fatih/set.v0"
-	"golang.org/x/net/context"
+	"encoding/json"
 )
 
 const (
@@ -170,10 +168,10 @@ func (self *MasternodePayments) ProcessBlock(block *types.Block, rank int) bool 
 		return false
 	}
 	// LOCATE THE NEXT MASTERNODE WHICH SHOULD BE PAID
-	log.Info("ProcessBlock -- Start: ", "BlockHeight", block.Number().String(), " masternodeId", self.active.ID)
+	log.Info("ProcessBlock -- Start: ", "BlockHeight", block.Number(), " masternodeId", self.active.ID)
 
 	vote := masternode.NewMasternodePaymentVote(block.Number(), self.active.ID, self.active.Account)
-	log.Info("CMasternodePayments::ProcessBlock -- Signing vote ")
+	log.Info("MasternodePayments::ProcessBlock -- Signing vote ")
 	hash := vote.Hash()
 	sig, err := vote.Sign(hash[:], self.active.PrivateKey)
 	vote.Sig = sig
@@ -242,7 +240,7 @@ func (self *MasternodePayments) Vote(vote *masternode.MasternodePaymentVote, sto
 		fmt.Printf("masternode already voted, masternode account:%x", vote.MasternodeAccount)
 		return false
 	}
-	log.Info("masternode_winner vote: ", "blockHeight:", vote.Number, "cacheHeight:", self.cachedBlockHeight.String(), "Hash:", vote.Hash().String())
+	log.Info("masternode_winner vote: ", "blockHeight:", vote.Number, "cacheHeight:", self.cachedBlockHeight, "Hash:", vote.Hash().String())
 	if self.Add(vote.Hash(), vote) {
 		//Relay
 		go self.PostVoteEvent(vote)

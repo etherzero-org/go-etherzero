@@ -397,11 +397,15 @@ func (self *MasternodeManager) IsValidPaymentVote(vote *masternode.MasternodePay
 	return true, nil
 }
 
-func (self *MasternodeManager) ProcessBlock(block *types.Block) bool {
+func (self *MasternodeManager) ProcessBlock(blocks types.Blocks) bool {
 
-	rank := self.GetMasternodeRank(self.active.ID)
-	return self.winner.ProcessBlock(block, rank)
-
+	for i := 1; i < len(blocks); i++ {
+		rank := self.GetMasternodeRank(self.active.ID)
+		if self.winner.ProcessBlock(blocks[i], rank) {
+			return false
+		}
+	}
+	return true
 }
 
 func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool, error) {

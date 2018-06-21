@@ -129,7 +129,12 @@ type BlockChain struct {
 	vmConfig  vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
+
+	ProcessBlockVote blockVoteFn  // Masternode winner vote when new block arrives
 }
+
+// is a callback type for vote when new block arrives
+type blockVoteFn func(types.Blocks) bool
 
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
@@ -1210,6 +1215,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainSideEvent{block})
+		}
+
+		if ok := bc.ProcessBlockVote(types.Blocks{block});!ok{
+			log.Debug("Masternode voted failed","block number:",block.Number().String())
 		}
 		stats.processed++
 		stats.usedGas += usedGas
