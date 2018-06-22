@@ -62,6 +62,14 @@ type SimulatedBackend struct {
 	config *params.ChainConfig
 }
 
+var processBlockVote = func(blocks types.Blocks) bool {
+	return ProcessBlock(blocks)
+}
+
+func ProcessBlock(blocks types.Blocks) bool {
+	return true
+}
+
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
@@ -69,7 +77,7 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	genesis := core.Genesis{Config: params.AllEthashProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, ethash.NewFaker(), vm.Config{})
-
+	blockchain.ProcessBlockVote = processBlockVote
 	backend := &SimulatedBackend{
 		database:   database,
 		blockchain: blockchain,
