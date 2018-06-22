@@ -62,11 +62,13 @@ type SimulatedBackend struct {
 	config *params.ChainConfig
 }
 
+// simulation to the ProcessBlockVote filed of BlockChain  in core/blockchain
 var processBlockVote = func(blocks types.Blocks) bool {
-	return ProcessBlock(blocks)
+	return processBlock(blocks)
 }
 
-func ProcessBlock(blocks types.Blocks) bool {
+// simulation to the ProcessBlockVote filed of BlockChain  in core/blockchain
+func processBlock(blocks types.Blocks) bool {
 	return true
 }
 
