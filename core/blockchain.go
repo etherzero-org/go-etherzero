@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"math"
+
 	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/mclock"
 	"github.com/ethzero/go-ethzero/consensus"
@@ -43,7 +45,6 @@ import (
 	"github.com/ethzero/go-ethzero/trie"
 	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"math"
 )
 
 var (
@@ -618,7 +619,7 @@ func (bc *BlockChain) GetAssignedGas(account common.Address) uint64 {
 func (bc *BlockChain) getAssignedGas(currentBlock uint64, lastBlock uint64, lastGasUsed uint64, balance *big.Int) uint64 {
 	blockGap := float64(currentBlock - lastBlock)
 	etz := float64(new(big.Int).Div(balance, new(big.Int).SetUint64(1e+18)).Uint64())
-	gasPerBlock := float64(21000.0*math.Exp(-(float64(lastGasUsed)/21000.0)*0.1)) + etz
+	gasPerBlock := float64(21000.0*math.Exp(-(float64(lastGasUsed) / 21000.0)*0.1)) + etz
 
 	maxGas := float64(9000000 * math.Exp(-1/etz*80))
 	maxGas = math.Max(maxGas, 100000)
@@ -724,7 +725,7 @@ func (bc *BlockChain) procFutureBlocks() {
 type WriteStatus byte
 
 const (
-	NonStatTy WriteStatus = iota
+	NonStatTy   WriteStatus = iota
 	CanonStatTy
 	SideStatTy
 )

@@ -147,5 +147,5 @@ func TestMasternodePayments_Add(t *testing.T) {
 		hash[i] = byte(i)
 	}
 	vote := masternode.NewMasternodePaymentVote(genesis.Number(), "", manager.active.Account)
-	manager.winner.Add(hash, vote)
+	manager.winner.Add( vote)
 }
