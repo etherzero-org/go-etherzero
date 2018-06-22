@@ -331,7 +331,7 @@ func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bo
 
 	rank := self.GetMasternodeRank(vote.MasternodeId())
 	if rank == 0 {
-		log.Info("MasternodeManager -- Can't calculate rank for masternode ","MasternodeId", vote.MasternodeId(), " rank ", rank)
+		log.Info("MasternodeManager -- Can't calculate rank for masternode ", "MasternodeId", vote.MasternodeId(), " rank ", rank)
 		return false
 	} else if rank > SignaturesTotal {
 		log.Info("InstantSend::Vote -- Masternode not in the top ", "Total", SignaturesTotal, "Rank", rank)
@@ -344,13 +344,9 @@ func (self *MasternodeManager) ProcessTxLockVote(vote *masternode.TxLockVote) bo
 	}
 
 	if !self.is.ProcessTxLockVote(vote) {
-		log.Info("ProcessTxLockVote vote failed vote Hash:", "voteid", vote.Hash())
-	} else {
-		//Vote valid, let us forward it
-		self.is.voteFeed.Send(core.VoteEvent{vote})
+		log.Error("ProcessTxLockVote vote failed vote Hash:", "voteid", vote.Hash())
+		return false
 	}
-
-	fmt.Printf("MasternodeManager arrived vote ProcessTxLockVote end\n")
 	return true
 }
 
@@ -410,39 +406,41 @@ func (self *MasternodeManager) ProcessBlock(blocks types.Blocks) bool {
 
 func (self *MasternodeManager) IsValidTxVote(vote *masternode.TxLockVote) (bool, error) {
 
-	var rank = 0
+	var (
+		rank       = 0
+		masternode *masternode.Masternode
+	)
 	masternodeId := vote.MasternodeId()
-	if self.masternodes.Node(masternodeId) == nil {
-		fmt.Printf("MasternodeManager IsValidTxVote --Unknow masternode %s \n", masternodeId)
-		return false, fmt.Errorf("MasternodeManager IsValidTxVote --Unknow masternode %s \n", masternodeId)
+
+	if masternode = self.masternodes.Node(masternodeId); masternode == nil {
+		return false, fmt.Errorf("IsValidTxVote --Unknow masternode %s \n", masternodeId)
+	}
+
+	pubkey, err := masternode.Node.ID.Pubkey()
+	if err != nil {
+		log.Info("check tx vote signature Failed , pubkey not fund")
+		return false, fmt.Errorf("IsValidTxVote check tx vote signature Failed , pubkey not fund")
+	}
+	if vote.Verify(pubkey) {
+		return false, fmt.Errorf("IsValidTxVote check tx vote signature Failed")
 	}
 	rank = self.GetMasternodeRank(masternodeId)
 	// can be caused by past versions trying to vote with an invalid protocol
 	if rank < 1 {
-		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Can't calculate rank for masternode %s \n", masternodeId)
+		return false, fmt.Errorf("IsValidTxVote -- Can't calculate rank for masternode %s \n", masternodeId)
 	}
-	fmt.Printf("MasternodeManager IsValidTxVote -- masternode ", masternodeId, " Rank ", rank)
 
 	if rank > SignaturesTotal {
-		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%s", masternodeId, SignaturesTotal, rank, vote.Hash())
+		return false, fmt.Errorf("IsValidTxVote -- Masternode %s is not in the top %d(%d) ,vote hash=%x/n", masternodeId, SignaturesTotal, rank, vote.Hash())
 	}
-
-	if self.CheckTxVoteSignature(vote) {
-		log.Info("MasternodeManager CheckTxVoteSignature Failed")
-		return false, fmt.Errorf("MasternodeManager IsValidTxVote -- CheckSignature Failed")
-	}
-
 	return true, nil
 }
 
 // ProcessTxVote process the vote procedure
 func (self *MasternodeManager) CheckTxVoteSignature(vote *masternode.TxLockVote) bool {
+
 	masternode := self.masternodes.Node(vote.MasternodeId())
 
-	if masternode == nil {
-		log.Info("check tx vote signature Failed ,masternode not found ", "masternodeId:", vote.MasternodeId())
-		return false
-	}
 	pubkey, err := masternode.Node.ID.Pubkey()
 	if err != nil {
 		log.Info("check tx vote signature Failed , pubkey not fund")

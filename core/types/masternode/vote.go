@@ -84,6 +84,10 @@ func (v *TxLockVote) Hash() common.Hash {
 	})
 }
 
+func (v *TxLockVote) TxHash() common.Hash {
+	return v.txHash
+}
+
 func (tlv *TxLockVote) CheckSignature(pubkey, signature []byte) bool {
 
 	hash := tlv.Hash()
@@ -190,7 +194,7 @@ func (tc *TxLockCondidate) Hash() common.Hash {
 
 func (tc *TxLockCondidate) AddVote(vote *TxLockVote) bool {
 
-	if node := tc.masternodeVotes[vote.MasternodeId()]; node == nil {
+	if temp := tc.masternodeVotes[vote.MasternodeId()]; temp == nil {
 		tc.masternodeVotes[vote.MasternodeId()] = vote
 		return true
 	}
@@ -201,11 +205,11 @@ func (tc *TxLockCondidate) IsReady() bool {
 	return !tc.attacked && tc.CountVotes() >= SIGNATURES_REQUIRED
 }
 
-func (tc *TxLockCondidate) CountVotes() int {
-	if tc.attacked {
+func (self *TxLockCondidate) CountVotes() int {
+	if self.attacked {
 		return 0
 	} else {
-		return len(tc.masternodeVotes)
+		return len(self.masternodeVotes)
 	}
 }
 
