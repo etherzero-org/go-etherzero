@@ -112,14 +112,37 @@ func newMasternodeSet(n int, emptyFlag bool) (*masternode.MasternodeSet) {
 			transactOpts := bind.NewKeyedTransactor(key)
 			val := new(big.Int).Mul(big.NewInt(20), big.NewInt(1e+18))
 			transactOpts.Value = val
-
-			tx, err := contract.Register(transactOpts, id1, id2, misc)
+			account := crypto.PubkeyToAddress(key.PublicKey)
+			tx, err := contract.Register(transactOpts, id1, id2, misc, account)
 			if err != nil {
 				fmt.Println("Register Error:", tx, err)
 			}
-
 			backend.Commit()
 		}
+		//for _, key := range keys {
+		//	block := backend.BlockChain().CurrentBlock()
+		//	hash := block.Hash()
+		//	sig, err := crypto.Sign(hash[:], key)
+		//	if err != nil {
+		//		fmt.Println("Sign Error:", err)
+		//	}
+		//	var (
+		//		r [32]byte
+		//		s [32]byte
+		//		v [32]byte
+		//	)
+		//	copy(r[0:32], sig[0:32])
+		//	copy(s[0:32], sig[32:64])
+		//	v[0] = sig[64]
+		//	fmt.Println("blockNumber:", block.Number())
+		//	transactOpts := bind.NewKeyedTransactor(key)
+		//	transactOpts.GasLimit = 1000000
+		//	tx1, err := contract.Ping(transactOpts, block.Number(), r, s, v)
+		//	if err != nil {
+		//		fmt.Println("Ping Error:", tx1, err)
+		//	}
+		//	backend.Commit()
+		//}
 
 	}
 
@@ -129,7 +152,8 @@ func newMasternodeSet(n int, emptyFlag bool) (*masternode.MasternodeSet) {
 	return masternodes
 
 }
+
 func TestMasternodeReg(t *testing.T) {
-	ms := newMasternodeSet(1, true)
+	ms := newMasternodeSet(3, true)
 	ms.Show()
 }

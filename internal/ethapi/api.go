@@ -1067,12 +1067,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 }
 
 func (s *PublicTransactionPoolAPI) GetTransactionGas(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
-	if state == nil || err != nil {
-		return nil, err
-	}
-	gas := s.b.GetAssignedGas(ctx, address)
-	return (*hexutil.Uint64)(&gas), state.Error()
+	gas := s.b.GetPoolTransactionGas(address)
+	return (*hexutil.Uint64)(&gas), nil
 }
 
 // GetTransactionByHash returns the transaction for the given hash
@@ -1191,7 +1187,7 @@ type SendTxArgs struct {
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
+		*(*uint64)(args.Gas) = 21000
 	}
 	if args.GasPrice == nil {
 		price, err := b.SuggestPrice(ctx)

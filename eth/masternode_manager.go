@@ -46,6 +46,7 @@ import (
 	"github.com/ethzero/go-ethzero/p2p"
 	"github.com/ethzero/go-ethzero/params"
 	"sync/atomic"
+	"github.com/ethzero/go-ethzero/accounts/abi/bind"
 )
 
 const (
@@ -525,21 +526,27 @@ func (mm *MasternodeManager) masternodeLoop() {
 		var buf bytes.Buffer
 		buf.Write(mm.srvr.Self().ID[:])
 		buf.Write(misc[:])
-		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
+		d := "0x3aa8cd8b" + common.Bytes2Hex(buf.Bytes()) + "000000000000000000000000" + common.Bytes2Hex(mm.active.NodeAccount.Bytes())
 		fmt.Println("Masternode transaction data:", d)
 	}
 
 	mm.masternodes.Show()
 
-	joinCh := make(chan *contract.ContractJoin, 32)
-	quitCh := make(chan *contract.ContractQuit, 32)
-	joinSub, err1 := mm.contract.WatchJoin(nil, joinCh)
-	if err1 != nil {
+	joinCh := make(chan *contract.ContractJoin, 8)
+	quitCh := make(chan *contract.ContractQuit, 8)
+	pingCh := make(chan *contract.ContractPingNotice, 8)
+	joinSub, err := mm.contract.WatchJoin(nil, joinCh)
+	if err != nil {
 		// TODO: exit
 		return
 	}
-	quitSub, err2 := mm.contract.WatchQuit(nil, quitCh)
-	if err2 != nil {
+	quitSub, err := mm.contract.WatchQuit(nil, quitCh)
+	if err != nil {
+		// TODO: exit
+		return
+	}
+	pingSub, err := mm.contract.WatchPingNotice(nil, pingCh)
+	if err != nil {
 		// TODO: exit
 		return
 	}
@@ -561,7 +568,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 				}
 				mm.masternodes.Show()
 			}
-
 		case quit := <-quitCh:
 			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
 			mm.masternodes.NodeQuit(quit.Id)
@@ -569,12 +575,17 @@ func (mm *MasternodeManager) masternodeLoop() {
 				mm.updateActiveMasternode()
 			}
 			mm.masternodes.Show()
+		case ping := <-pingCh:
+			fmt.Println("ping", common.Bytes2Hex(ping.Id[:]), ping.BlockLastPing.Uint64(), ping.BlockOnlineAcc.Uint64())
 
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()
 			fmt.Println("eventJoin err", err.Error())
 		case err := <-quitSub.Err():
 			quitSub.Unsubscribe()
+			fmt.Println("eventQuit err", err.Error())
+		case err := <-pingSub.Err():
+			pingSub.Unsubscribe()
 			fmt.Println("eventQuit err", err.Error())
 
 		case <-ping.C:
@@ -586,6 +597,36 @@ func (mm *MasternodeManager) masternodeLoop() {
 				log.Error("NewPingMsg", "error", err)
 				continue
 			}
+
+			address := crypto.PubkeyToAddress(mm.active.PrivateKey.PublicKey)
+			stateDB, _ := mm.blockchain.State()
+			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
+				fmt.Println("Failed to deposit 0.01 etz to ", address.String())
+				continue
+			}
+
+			block := mm.blockchain.CurrentBlock()
+			hash := block.Hash()
+			sig, err := crypto.Sign(hash[:], mm.active.PrivateKey)
+			if err != nil || len(sig) != 65{
+				fmt.Println("Sign Error:", err)
+				continue
+			}
+			var (
+				r [32]byte
+				s [32]byte
+				v [32]byte
+			)
+			copy(r[0:32], sig[0:32])
+			copy(s[0:32], sig[32:64])
+			v[0] = sig[64]
+			transactOpts := bind.NewKeyedTransactor(mm.active.PrivateKey)
+			transactOpts.GasLimit = 1000000
+			tx, err := mm.contract.Ping(transactOpts, block.Number(), r, s, v)
+			if err != nil {
+				fmt.Println("Ping Error:", tx, err)
+			}
+
 			peers := mm.peers.peers
 			for _, peer := range peers {
 				log.Debug("sending ping msg", "peer", peer.id)

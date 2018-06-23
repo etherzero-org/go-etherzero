@@ -263,7 +263,7 @@ func GetBlockReceipts(db DatabaseReader, hash common.Hash, number uint64) types.
 	return receipts
 }
 
-func GetAssignedGas(db DatabaseReader, address common.Address) (uint64, uint64, uint64){
+func GetLastUsedGas(db DatabaseReader, address common.Address) (uint64, uint64, uint64){
 	key := append(lastGasUsedPrefix, address.Bytes()...)
 	data, _ := db.Get(key)
 	if len(data) != 24 {
@@ -495,29 +495,29 @@ func WriteBlockReceipts(db ethdb.Putter, hash common.Hash, number uint64, receip
 }
 
 func WriteLastGasUseds(db ethdb.Putter, number uint64, txs types.Transactions, receipts types.Receipts) error {
-	//for i, tx := range txs {
-	//	var signer types.Signer = types.FrontierSigner{}
-	//	if tx.Protected() {
-	//		signer = types.NewEIP155Signer(tx.ChainId())
-	//	}
-	//	from, _ := types.Sender(signer, tx)
-	//	if err := WriteLastGasUsed(db, from, tx.Nonce(), number, receipts[i].GasUsed); err != nil {
-	//		return err;
-	//	}
-	//}
+	for i, tx := range txs {
+		var signer types.Signer = types.FrontierSigner{}
+		if tx.Protected() {
+			signer = types.NewEIP155Signer(tx.ChainId())
+		}
+		from, _ := types.Sender(signer, tx)
+		if err := WriteLastGasUsed(db, from, tx.Nonce(), number, receipts[i].GasUsed); err != nil {
+			return err;
+		}
+	}
 	return nil
 }
 
 func WriteLastGasUsed(db ethdb.Putter, address common.Address, nonce, number, gasUsed uint64) error {
-	//log.Info("WriteLastGasUsed", "address", address.String(), "nonce", nonce, "number", number, "gasUsed", gasUsed)
-	//blob := make([]byte, 24)
-	//binary.BigEndian.PutUint64(blob[0:8], nonce)
-	//binary.BigEndian.PutUint64(blob[8:16], number)
-	//binary.BigEndian.PutUint64(blob[16:24], gasUsed)
-	//key := append(lastGasUsedPrefix, address.Bytes()...)
-	//if err := db.Put(key, blob); err != nil {
-	//	log.Crit("Failed to store last gas used", "err", err)
-	//}
+	// log.Info("WriteLastGasUsed", "address", address.String(), "nonce", nonce, "number", number, "gasUsed", gasUsed)
+	blob := make([]byte, 24)
+	binary.BigEndian.PutUint64(blob[0:8], nonce)
+	binary.BigEndian.PutUint64(blob[8:16], number)
+	binary.BigEndian.PutUint64(blob[16:24], gasUsed)
+	key := append(lastGasUsedPrefix, address.Bytes()...)
+	if err := db.Put(key, blob); err != nil {
+		log.Crit("Failed to store last gas used", "err", err)
+	}
 	return nil
 }
 

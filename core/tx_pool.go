@@ -62,8 +62,8 @@ var (
 
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
-	ErrInsufficientFunds    = errors.New("insufficient funds for gas * price + value")
-	ErrInsufficientFundsMin = errors.New("keeping 0.01 etz at least on your wallet")
+	ErrInsufficientFunds    = errors.New("insufficient funds for gas * price + value + 0.01 etz")
+	ErrInsufficientFundsMin = errors.New("insufficient funds for 0.01 etz")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
@@ -537,19 +537,23 @@ func (pool *TxPool) GetTransactionCountByFrom(address common.Address) int {
 	return count
 }
 
-func (pool *TxPool) GetAccountGasAcc(address common.Address) uint64 {
-	var gas uint64
+func (pool *TxPool) GetTransactionGas(address common.Address) uint64 {
+	var gasUsed uint64
 	if list := pool.queue[address]; list != nil {
 		for _, tx := range list.txs.items {
-			gas += tx.Gas()
+			gasUsed += tx.Gas()
 		}
 	}
 	if list := pool.pending[address]; list != nil {
 		for _, tx := range list.txs.items {
-			gas += tx.Gas()
+			gasUsed += tx.Gas()
 		}
 	}
-	return gas
+	totalGas := pool.chain.GetAssignedGas(address)
+	if gasUsed >= totalGas {
+		return 0
+	}
+	return totalGas - gasUsed
 }
 
 // State returns the virtual managed state of the transaction pool.

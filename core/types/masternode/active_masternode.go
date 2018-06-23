@@ -43,6 +43,7 @@ const (
 type ActiveMasternode struct {
 	ID          string
 	NodeID      discover.NodeID
+	NodeAccount common.Address
 	Account     common.Address
 	PrivateKey  *ecdsa.PrivateKey
 	activeState int
@@ -58,6 +59,8 @@ func NewActiveMasternode(srvr *p2p.Server, mns *MasternodeSet) *ActiveMasternode
 		activeState: ACTIVE_MASTERNODE_INITIAL,
 		PrivateKey:  srvr.Config.PrivateKey,
 		Addr:        srvr.MasternodeAddr,
+		NodeAccount: crypto.PubkeyToAddress(srvr.Config.PrivateKey.PublicKey),
+
 	}
 	if n := mns.Node(id); n != nil {
 		am.Account = n.Account

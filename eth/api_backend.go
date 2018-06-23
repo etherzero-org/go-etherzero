@@ -173,6 +173,10 @@ func (b *EthApiBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 	return b.eth.txPool.Get(hash)
 }
 
+func (b *EthApiBackend) GetPoolTransactionGas(addr common.Address) uint64 {
+	return b.eth.txPool.GetTransactionGas(addr)
+}
+
 func (b *EthApiBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
 	return b.eth.txPool.State().GetNonce(addr), nil
 }

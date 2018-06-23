@@ -2,11 +2,7 @@ package core
 
 import (
 	"github.com/ethzero/go-ethzero/core/types"
-	//"math/big"
-	//"fmt"
-	"fmt"
 	"math/big"
-	"github.com/ethzero/go-ethzero/log"
 )
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -52,14 +48,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInsufficientFundsMin
 	}
 
-	assignedGas := pool.chain.GetAssignedGas(from)
-	gasAcc := pool.GetAccountGasAcc(from)
-
-	if (tx.Gas() + gasAcc) > assignedGas {
-		log.Error("Out of gas: ", "assignedGas", assignedGas, "gasAcc", gasAcc, "txGas", tx.Gas())
-		// TODO: uncomment for enable gas limit
-		// return ErrOutOfGas
-	}
+	//validGas := pool.GetTransactionGas(from)
+	//fmt.Println("validGas", validGas)
+	//
+	//if validGas < tx.Gas() {
+	//	log.Error("Out of gas: ", "validGas", validGas, "txGas", tx.Gas())
+	//	return ErrOutOfGas
+	//}
 
 	// Drop non-local transactions under our own minimal accepted gas price
 	//local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
@@ -91,12 +86,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return err
 	}
 
-	if tx.To() == nil && contractTxMaxGasSize < intrGas {
-		fmt.Printf(" txvalidator.go intrGas %v and contractTxMaxGassize: %v", intrGas, contractTxMaxGasSize)
-		return ErrContractTxIntrinsicGas
-	}
-	if tx.To() != nil && txMaxGasSize.Cmp(new(big.Int).SetUint64(intrGas)) < 0 {
-		fmt.Printf(" txvalidator.go intrGas %v and contractTxMaxGassize: %v", intrGas, txMaxGasSize)
+	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
 	}
 	return nil

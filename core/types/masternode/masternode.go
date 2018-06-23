@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	MasternodeInit         = iota
+	MasternodeInit = iota
 	MasternodeDisconnected
 	MasternodeExpired
 	MasternodeEnable
@@ -44,8 +44,8 @@ const (
 
 const (
 	MASTERNODE_CHECK_INTERVAL = 30 * time.Second
-	MASTERNODE_PING_TIMEOUT   = 180 * time.Second
-	MASTERNODE_PING_INTERVAL  = 60 * time.Second
+	MASTERNODE_PING_TIMEOUT   = 3600 * time.Second
+	MASTERNODE_PING_INTERVAL  = 180 * time.Second
 	MASTERNODE_ONLINE_ENABLE  = 60 * time.Second
 )
 
@@ -76,13 +76,16 @@ type Masternode struct {
 	State           int
 	ProtocolVersion uint
 	LastPingTime    uint64
+	BlockOnlineAcc  uint64
+	BlockLastPing   uint64
 	UpdateTime      time.Time
 	AccOnlineTime   time.Duration
 
 	CollateralMinConfBlockHash common.Hash
 }
 
-func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
+func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16,
+	account common.Address, block uint64, blockOnlineAcc uint64, blockLastPing uint64) *Masternode {
 
 	id := GetMasternodeID(nodeId)
 	n := discover.NewNode(nodeId, ip, 0, port)
@@ -95,6 +98,8 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 		Height:                     big.NewInt(0),
 		ProtocolVersion:            64,
 		CollateralMinConfBlockHash: common.Hash{},
+		BlockOnlineAcc:             blockOnlineAcc,
+		BlockLastPing:              blockLastPing,
 	}
 }
 
@@ -211,6 +216,18 @@ func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
 	n.LastPingTime = t
 }
 
+func (ns *MasternodeSet) RecvPingNotice(id string, blockOnlineAcc uint64, blockLastPing uint64) {
+	ns.lock.RLock()
+	defer ns.lock.RUnlock()
+
+	n := ns.nodes[id]
+	if n == nil {
+		return
+	}
+	n.BlockOnlineAcc = blockOnlineAcc
+	n.BlockLastPing = blockLastPing
+}
+
 func (ns *MasternodeSet) SetState(id string, state int) bool {
 	ns.lock.RLock()
 	defer ns.lock.RUnlock()
@@ -320,7 +337,8 @@ func GetMasternodeContext(contract *contract.Contract, id [8]byte) (*MasternodeC
 	var ip net.IP = data.Misc[1:17]
 	port := binary.BigEndian.Uint16(data.Misc[17:19])
 	nodeId, _ := discover.BytesID(append(data.Id1[:], data.Id2[:]...))
-	node := newMasternode(nodeId, ip, port, data.Account, data.BlockNumber.Uint64())
+	node := newMasternode(nodeId, ip, port, data.Account, data.BlockNumber.Uint64(),
+		data.BlockOnlineAcc.Uint64(), data.BlockLastPing.Uint64())
 
 	return &MasternodeContext{
 		Node: node,

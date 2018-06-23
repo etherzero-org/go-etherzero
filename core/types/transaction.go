@@ -266,12 +266,13 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 }
 
 // Cost returns amount + gasprice * gaslimit.
-// Cost returns amount + defaultGasPrice * defaultGas.
 func (tx *Transaction) Cost() *big.Int {
-	// total := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
-	// total := new(big.Int).Mul(big.NewInt(defaultGasPrice), big.NewInt(defaultGas))
-	// total.Add(total, tx.data.Amount)
-	// return total
+	if tx.To() == nil {
+		total := new(big.Int).Mul(new(big.Int).SetUint64(defaultGasPrice), new(big.Int).SetUint64(tx.data.GasLimit))
+		total.Add(total, tx.data.Amount)
+		total.Add(total, big.NewInt(defaultCost))
+		return total
+	}
 	return new(big.Int).Add(big.NewInt(defaultCost), tx.data.Amount)
 }
 

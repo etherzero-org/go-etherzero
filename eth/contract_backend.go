@@ -4,30 +4,27 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/core"
-	"sync"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/eth/filters"
-	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/rpc"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/bloombits"
-	"math/big"
 	"github.com/ethzero/go-ethzero"
+	"github.com/ethzero/go-ethzero/common"
 	"github.com/ethzero/go-ethzero/common/math"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"fmt"
 	"github.com/ethzero/go-ethzero/consensus/ethash"
+	"github.com/ethzero/go-ethzero/core"
+	"github.com/ethzero/go-ethzero/core/bloombits"
+	"github.com/ethzero/go-ethzero/core/state"
+	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/ethzero/go-ethzero/core/vm"
+	"github.com/ethzero/go-ethzero/eth/filters"
+	"github.com/ethzero/go-ethzero/ethdb"
+	"github.com/ethzero/go-ethzero/event"
+	"github.com/ethzero/go-ethzero/params"
+	"github.com/ethzero/go-ethzero/rpc"
+	"math/big"
+	"sync"
 	"time"
 )
 
-
 var errBlockNumberUnsupported = errors.New("ContractBackend cannot access blocks other than the latest block")
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
-
 
 type ContractBackend struct {
 	database   ethdb.Database   // In memory database to store our testing data
@@ -40,29 +37,20 @@ type ContractBackend struct {
 	events *filters.EventSystem // Event system for filtering log events live
 
 	config *params.ChainConfig
+
+	txPool *core.TxPool
 }
 
-func NewContractBackend(eth *Ethereum) *ContractBackend{
+func NewContractBackend(eth *Ethereum) *ContractBackend {
 	backend := &ContractBackend{
-		database: eth.chainDb,
+		database:   eth.chainDb,
 		blockchain: eth.blockchain,
-		config: eth.chainConfig,
-		events: filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
+		config:     eth.chainConfig,
+		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
+		txPool:     eth.txPool,
 	}
 	backend.rollback()
 	return backend
-}
-
-// Commit imports all the pending transactions as a single block and starts a
-// fresh new state.
-func (b *ContractBackend) Commit() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if _, err := b.blockchain.InsertChain([]*types.Block{b.pendingBlock}); err != nil {
-		panic(err) // This cannot happen unless the simulator is wrong, fail in that case
-	}
-	b.rollback()
 }
 
 // Rollback aborts all pending transactions, reverting to the last committed state.
@@ -166,7 +154,7 @@ func (b *ContractBackend) PendingCallContract(ctx context.Context, call ethereum
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
 
-	rval,_, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+	rval, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
 	return rval, err
 }
 
@@ -176,7 +164,7 @@ func (b *ContractBackend) PendingNonceAt(ctx context.Context, account common.Add
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	return b.pendingState.GetOrNewStateObject(account).Nonce(), nil
+	return b.txPool.State().GetNonce(account), nil
 }
 
 // SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
@@ -268,27 +256,7 @@ func (b *ContractBackend) callContract(ctx context.Context, call ethereum.CallMs
 func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
-	sender, err := types.Sender(types.HomesteadSigner{}, tx)
-	if err != nil {
-		panic(fmt.Errorf("invalid transaction: %v", err))
-	}
-	nonce := b.pendingState.GetNonce(sender)
-	if tx.Nonce() != nonce {
-		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
-	}
-
-	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), ethash.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
-		for _, tx := range b.pendingBlock.Transactions() {
-			block.AddTx(tx)
-		}
-		block.AddTx(tx)
-	})
-	statedb, _ := b.blockchain.State()
-
-	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
-	return nil
+	return b.txPool.AddLocal(tx)
 }
 
 // FilterLogs executes a log filter operation, blocking during execution and

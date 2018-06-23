@@ -118,6 +118,17 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, *usedGas)
 	receipt.TxHash = tx.Hash()
+	//if config.IsEthzeroMasternode(bc.CurrentBlock().Number()) {
+	//	gasRemain := bc.GetAssignedGas(msg.From())
+	//	if msg.To() != nil && gasRemain > gas {
+	//		gasRemain -= gas
+	//	}
+	//	gasSlot := (gasRemain << 32) + gas
+	//	fmt.Println("gasSlot gasRemain", gasRemain, "GasUsed", gas)
+	//	receipt.GasUsed = gasSlot
+	//} else {
+	//	receipt.GasUsed = gas
+	//}
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
@@ -126,6 +137,7 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
 
 	return receipt, gas, err
 }

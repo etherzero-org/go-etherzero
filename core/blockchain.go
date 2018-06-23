@@ -604,30 +604,27 @@ func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
 	return GetBlockReceipts(bc.db, hash, GetBlockNumber(bc.db, hash))
 }
 
-func (bc *BlockChain) GetAssignedGas(account common.Address) uint64 {
-	lastNonce, lastBlock, lastGasUsed := GetAssignedGas(bc.db, account)
+func (bc *BlockChain) GetAssignedGas(account common.Address) (uint64) {
+	lastNonce, lastBlock, lastGas := GetLastUsedGas(bc.db, account)
 	stateDB, _ := bc.State()
 	nonce := stateDB.GetNonce(account)
-	balance := stateDB.GetBalance(account)
-	if (lastNonce + 1) != nonce {
-		log.Error("Get account gas", "last nonce", lastNonce, "current nonce", nonce)
-		return 0
+	if nonce != 0 && (lastNonce+1) != nonce {
+		log.Warn("Get account gas", "last nonce", lastNonce, "current nonce", nonce)
+		//return 0
 	}
-	return bc.getAssignedGas(bc.CurrentBlock().NumberU64(), lastBlock, lastGasUsed, balance)
-}
-
-func (bc *BlockChain) getAssignedGas(currentBlock uint64, lastBlock uint64, lastGasUsed uint64, balance *big.Int) uint64 {
-	blockGap := float64(currentBlock - lastBlock)
+	lastGasRemain := lastGas >> 32
+	lastGasUsed := lastGas & 0x00000000ffffffff
+	fmt.Println("lastGasRemain:", lastGasRemain, "lastGasUsed", lastGasUsed)
+	balance := stateDB.GetBalance(account)
 	etz := float64(new(big.Int).Div(balance, new(big.Int).SetUint64(1e+18)).Uint64())
-	gasPerBlock := float64(21000.0*math.Exp(-(float64(lastGasUsed) / 21000.0)*0.1)) + etz
-
-	maxGas := float64(9000000 * math.Exp(-1/etz*80))
-	maxGas = math.Max(maxGas, 100000)
-
-	gas := (blockGap + 1) * gasPerBlock
-	gas = math.Min(maxGas, gas)
-	//fmt.Printf("gasPerBlock: %f, blockGap: %f, etz: %f, gas: %f, maxGas: %f\n", gasPerBlock, blockGap, etz, gas, maxGas)
-	return uint64(gas)
+	maxGas := uint64(9000000 * math.Exp(-1/etz*80))
+	speed := uint64(21000 + etz)
+	blockGap := bc.CurrentBlock().NumberU64() - lastBlock
+	gas := uint64(blockGap * speed) + lastGasRemain
+	if gas > maxGas {
+		gas = maxGas
+	}
+	return gas
 }
 
 // GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
