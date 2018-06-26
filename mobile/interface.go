@@ -22,7 +22,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-ethereum/common"
 )
 
 // Interface represents a wrapped version of Go's interface{}, with the capacity

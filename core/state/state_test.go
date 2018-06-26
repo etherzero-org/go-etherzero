@@ -21,9 +21,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/ethdb"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/ethdb"
 	checker "gopkg.in/check.v1"
 )
 
@@ -87,7 +87,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 }
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
-	s.db, _ = ethdb.NewMemDatabase()
+	s.db = ethdb.NewMemDatabase()
 	s.state, _ = New(common.Hash{}, NewDatabase(s.db))
 }
 
@@ -99,7 +99,7 @@ func (s *StateSuite) TestNull(c *checker.C) {
 	s.state.SetState(address, common.Hash{}, value)
 	s.state.Commit(false)
 	value = s.state.GetState(address, common.Hash{})
-	if !common.EmptyHash(value) {
+	if value != (common.Hash{}) {
 		c.Errorf("expected empty hash. got %x", value)
 	}
 }
@@ -133,8 +133,7 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // use testing instead of checker because checker does not support
 // printing/logging in tests (-check.vv does not work)
 func TestSnapshot2(t *testing.T) {
-	db, _ := ethdb.NewMemDatabase()
-	state, _ := New(common.Hash{}, NewDatabase(db))
+	state, _ := New(common.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
 
 	stateobjaddr0 := toAddr([]byte("so0"))
 	stateobjaddr1 := toAddr([]byte("so1"))

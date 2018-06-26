@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/mclock"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/mclock"
 )
 
 func TestTopicRadius(t *testing.T) {

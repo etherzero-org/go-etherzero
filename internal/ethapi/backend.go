@@ -21,17 +21,17 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/accounts"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/eth/downloader"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/rpc"
+	"github.com/etherzero/go-ethereum/accounts"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/state"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/core/vm"
+	"github.com/etherzero/go-ethereum/eth/downloader"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/event"
+	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-ethereum/rpc"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -65,7 +65,7 @@ type Backend interface {
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	Stats() (pending int, queued int)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
-	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
+	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block

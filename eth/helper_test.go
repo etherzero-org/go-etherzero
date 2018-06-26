@@ -27,18 +27,18 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/consensus/ethash"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/eth/downloader"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/p2p/discover"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/consensus/ethash"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/core/vm"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/eth/downloader"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/event"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/p2p/discover"
+	"github.com/etherzero/go-ethereum/params"
 )
 
 var (
@@ -53,7 +53,7 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 	var (
 		evmux  = new(event.TypeMux)
 		engine = ethash.NewFaker()
-		db, _  = ethdb.NewMemDatabase()
+		db     = ethdb.NewMemDatabase()
 		gspec  = &core.Genesis{
 			Config: params.TestChainConfig,
 			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
@@ -124,7 +124,7 @@ func (p *testTxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return batches, nil
 }
 
-func (p *testTxPool) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Subscription {
+func (p *testTxPool) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return p.txFeed.Subscribe(ch)
 }
 

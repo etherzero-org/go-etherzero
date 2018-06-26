@@ -27,7 +27,7 @@ testutils.readTestsInFolder(workdir + "/scripts/tests");
 async.series([
 function(cb) {
 	utils.setDebug(false);
-	ethconsole.startNode(ethpath, testdir + "/ethnode1", testdir + "/genesis.json", 21214, cb);
+	ethconsole.startNode(ethpath, testdir + "/ethnode1", testdir + "/genesis.json", 30305, cb);
 },
 function(cb) {
 	prepareDynamicVars(cb);
@@ -36,12 +36,12 @@ function(cb) {
 	ethconsole.stopNode(testdir + "/ethnode1", cb);
 },
 function(cb) {
-	ethconsole.startNode(ethpath, testdir + "/ethnode1", testdir + "/genesis.json", 21214, cb);
-	dynamic["node1_port"] = "21214";
+	ethconsole.startNode(ethpath, testdir + "/ethnode1", testdir + "/genesis.json", 30305, cb);
+	dynamic["node1_port"] = "30305";
 },
 function(cb) {
-	ethconsole.startNode(ethpath, testdir + "/ethnode2", testdir + "/genesis.json", 21215, cb);
-	dynamic["node2_port"] = "21215";
+	ethconsole.startNode(ethpath, testdir + "/ethnode2", testdir + "/genesis.json", 30306, cb);
+	dynamic["node2_port"] = "30306";
 },
 function(cb) {
 	runAllTests(cb);	

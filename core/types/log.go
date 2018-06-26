@@ -17,12 +17,11 @@
 package types
 
 import (
-	"fmt"
 	"io"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-ethereum/rlp"
 )
 
 //go:generate gencodec -type Log -field-override logMarshaling -out gen_log_json.go
@@ -93,10 +92,6 @@ func (l *Log) DecodeRLP(s *rlp.Stream) error {
 		l.Address, l.Topics, l.Data = dec.Address, dec.Topics, dec.Data
 	}
 	return err
-}
-
-func (l *Log) String() string {
-	return fmt.Sprintf(`log: %x %x %x %x %d %x %d`, l.Address, l.Topics, l.Data, l.TxHash, l.TxIndex, l.BlockHash, l.Index)
 }
 
 // LogForStorage is a wrapper around a Log that flattens and parses the entire content of

@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethzero/go-ethzero/accounts/keystore"
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/accounts/keystore"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 // deployFaucet queries the user for various input on deploying a faucet, after
@@ -38,7 +38,7 @@ func (w *wizard) deployFaucet() {
 	infos, err := checkFaucet(client, w.network)
 	if err != nil {
 		infos = &faucetInfos{
-			node:    &nodeInfos{port: 21212, peersTotal: 25},
+			node:    &nodeInfos{port: 30303, peersTotal: 25},
 			port:    80,
 			host:    client.server,
 			amount:  1,
@@ -49,7 +49,7 @@ func (w *wizard) deployFaucet() {
 	existed := err == nil
 
 	infos.node.genesis, _ = json.MarshalIndent(w.conf.Genesis, "", "  ")
-	infos.node.network = w.conf.Genesis.Config.ChainId.Int64()
+	infos.node.network = w.conf.Genesis.Config.ChainID.Int64()
 
 	// Figure out which port to listen on
 	fmt.Println()

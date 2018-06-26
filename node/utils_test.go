@@ -22,8 +22,8 @@ package node
 import (
 	"reflect"
 
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/rpc"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/rpc"
 )
 
 // NoopService is a trivial implementation of the Service interface.
@@ -121,12 +121,12 @@ func InstrumentedServiceMakerC(base ServiceConstructor) ServiceConstructor {
 	return InstrumentingWrapperMaker(base, reflect.TypeOf(InstrumentedServiceC{}))
 }
 
-// OneMethodApi is a single-method API handler to be returned by test services.
-type OneMethodApi struct {
+// OneMethodAPI is a single-method API handler to be returned by test services.
+type OneMethodAPI struct {
 	fun func()
 }
 
-func (api *OneMethodApi) TheOneMethod() {
+func (api *OneMethodAPI) TheOneMethod() {
 	if api.fun != nil {
 		api.fun()
 	}

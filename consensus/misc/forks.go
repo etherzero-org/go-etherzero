@@ -19,9 +19,9 @@ package misc
 import (
 	"fmt"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/params"
 )
 
 // VerifyForkHashes verifies that blocks conforming to network hard-forks do have

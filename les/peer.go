@@ -26,13 +26,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/eth"
-	"github.com/ethzero/go-ethzero/les/flowcontrol"
-	"github.com/ethzero/go-ethzero/light"
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/eth"
+	"github.com/etherzero/go-ethereum/les/flowcontrol"
+	"github.com/etherzero/go-ethereum/light"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/rlp"
 )
 
 var (
@@ -545,9 +545,11 @@ func (ps *peerSet) notify(n peerSetNotify) {
 func (ps *peerSet) Register(p *peer) error {
 	ps.lock.Lock()
 	if ps.closed {
+		ps.lock.Unlock()
 		return errClosed
 	}
 	if _, ok := ps.peers[p.id]; ok {
+		ps.lock.Unlock()
 		return errAlreadyRegistered
 	}
 	ps.peers[p.id] = p

@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core/vm"
+	"github.com/etherzero/go-ethereum/params"
 )
 
 type account struct{}

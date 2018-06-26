@@ -35,12 +35,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/crypto/ecies"
-	"github.com/ethzero/go-ethzero/crypto/secp256k1"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/p2p/discover"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/crypto/ecies"
+	"github.com/etherzero/go-ethereum/crypto/secp256k1"
+	"github.com/etherzero/go-ethereum/crypto/sha3"
+	"github.com/etherzero/go-ethereum/p2p/discover"
+	"github.com/etherzero/go-ethereum/rlp"
 	"github.com/golang/snappy"
 )
 
@@ -491,7 +491,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	}
 	// Attempt decoding pre-EIP-8 "plain" format.
 	key := ecies.ImportECDSA(prv)
-	if dec, err := key.Decrypt(rand.Reader, buf, nil, nil); err == nil {
+	if dec, err := key.Decrypt(buf, nil, nil); err == nil {
 		msg.decodePlain(dec)
 		return buf, nil
 	}
@@ -505,7 +505,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	if _, err := io.ReadFull(r, buf[plainSize:]); err != nil {
 		return buf, err
 	}
-	dec, err := key.Decrypt(rand.Reader, buf[2:], nil, prefix)
+	dec, err := key.Decrypt(buf[2:], nil, prefix)
 	if err != nil {
 		return buf, err
 	}
@@ -528,9 +528,9 @@ func importPublicKey(pubKey []byte) (*ecies.PublicKey, error) {
 		return nil, fmt.Errorf("invalid public key length %v (expect 64/65)", len(pubKey))
 	}
 	// TODO: fewer pointless conversions
-	pub := crypto.ToECDSAPub(pubKey65)
-	if pub.X == nil {
-		return nil, fmt.Errorf("invalid public key")
+	pub, err := crypto.UnmarshalPubkey(pubKey65)
+	if err != nil {
+		return nil, err
 	}
 	return ecies.ImportECDSAPublic(pub), nil
 }

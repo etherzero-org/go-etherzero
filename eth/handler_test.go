@@ -23,18 +23,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/consensus/ethash"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/eth/downloader"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/consensus/ethash"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/state"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/core/vm"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/eth/downloader"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/event"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/params"
 )
 
 // Tests that protocol versions and modes of operations are matched up properly.
@@ -366,7 +366,7 @@ func testGetNodeData(t *testing.T, protocol int) {
 			t.Errorf("data hash mismatch: have %x, want %x", hash, want)
 		}
 	}
-	statedb, _ := ethdb.NewMemDatabase()
+	statedb := ethdb.NewMemDatabase()
 	for i := 0; i < len(data); i++ {
 		statedb.Put(hashes[i].Bytes(), data[i])
 	}
@@ -468,7 +468,7 @@ func testDAOChallenge(t *testing.T, localForked, remoteForked bool, timeout bool
 	var (
 		evmux         = new(event.TypeMux)
 		pow           = ethash.NewFaker()
-		db, _         = ethdb.NewMemDatabase()
+		db            = ethdb.NewMemDatabase()
 		config        = &params.ChainConfig{DAOForkBlock: big.NewInt(1), DAOForkSupport: localForked}
 		gspec         = &core.Genesis{Config: config}
 		genesis       = gspec.MustCommit(db)

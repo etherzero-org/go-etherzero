@@ -25,15 +25,17 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
-	"github.com/ethzero/go-ethzero/common/math"
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-ethereum/common/math"
+	"github.com/etherzero/go-ethereum/core/rawdb"
+	"github.com/etherzero/go-ethereum/core/state"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-ethereum/rlp"
+	"github.com/etherzero/go-ethereum/trie"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -151,11 +153,11 @@ func (e *GenesisMismatchError) Error() string {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
+		return params.DevoteChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
-	stored := GetCanonicalHash(db, 0)
+	stored := rawdb.ReadCanonicalHash(db, 0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
@@ -177,14 +179,11 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
-	storedcfg, err := GetChainConfig(db, stored)
-	if err != nil {
-		if err == ErrChainConfigNotFound {
-			// This case happens if a genesis write was interrupted.
-			log.Warn("Found genesis block without chain config")
-			err = WriteChainConfig(db, stored, newcfg)
-		}
-		return newcfg, stored, err
+	storedcfg := rawdb.ReadChainConfig(db, stored)
+	if storedcfg == nil {
+		log.Warn("Found genesis block without chain config")
+		rawdb.WriteChainConfig(db, stored, newcfg)
+		return newcfg, stored, nil
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
@@ -195,27 +194,24 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
-	height := GetBlockNumber(db, GetHeadHeaderHash(db))
-	if height == missingNumber {
+	height := rawdb.ReadHeaderNumber(db, rawdb.ReadHeadHeaderHash(db))
+	if height == nil {
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
-	compatErr := storedcfg.CheckCompatible(newcfg, height)
-	if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
+	compatErr := storedcfg.CheckCompatible(newcfg, *height)
+	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
 		return newcfg, stored, compatErr
 	}
-	return newcfg, stored, WriteChainConfig(db, stored, newcfg)
+	rawdb.WriteChainConfig(db, stored, newcfg)
+	return newcfg, stored, nil
 }
 
 func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
-	case ghash == params.MainnetGenesisHash:
-		return params.MainnetChainConfig
-	case ghash == params.TestnetGenesisHash:
-		return params.TestnetChainConfig
 	default:
-		return params.AllEthashProtocolChanges
+		return params.DevoteChainConfig
 	}
 }
 
@@ -223,7 +219,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 // to the given database (or discards it if nil).
 func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if db == nil {
-		db, _ = ethdb.NewMemDatabase()
+		db = ethdb.NewMemDatabase()
 	}
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
@@ -235,6 +231,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		}
 	}
 	root := statedb.IntermediateRoot(false)
+
+	// add dposcontext
+	devoteContext := initGenesisDevoteContext(g, db)
+	devoteContextProto := devoteContext.ContextProto()
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -247,6 +247,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
+		Context:    devoteContextProto,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -256,8 +257,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
+	block:=types.NewBlock(head, nil, nil, nil)
+	block.DevoteContext = devoteContext
 
-	return types.NewBlock(head, nil, nil, nil)
+	return block
 }
 
 // Commit writes the block and state of a genesis specification to the database.
@@ -267,29 +270,24 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
-	if err := WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty); err != nil {
+	rawdb.WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty)
+	rawdb.WriteBlock(db, block)
+	rawdb.WriteReceipts(db, block.Hash(), block.NumberU64(), nil)
+	rawdb.WriteCanonicalHash(db, block.Hash(), block.NumberU64())
+	rawdb.WriteHeadBlockHash(db, block.Hash())
+	rawdb.WriteHeadHeaderHash(db, block.Hash())
+
+	// add devotecontext
+	if _, err := block.DevoteContext.Commit(); err != nil {
 		return nil, err
 	}
-	if err := WriteBlock(db, block); err != nil {
-		return nil, err
-	}
-	if err := WriteBlockReceipts(db, block.Hash(), block.NumberU64(), nil); err != nil {
-		return nil, err
-	}
-	if err := WriteCanonicalHash(db, block.Hash(), block.NumberU64()); err != nil {
-		return nil, err
-	}
-	if err := WriteHeadBlockHash(db, block.Hash()); err != nil {
-		return nil, err
-	}
-	if err := WriteHeadHeaderHash(db, block.Hash()); err != nil {
-		return nil, err
-	}
+
 	config := g.Config
 	if config == nil {
 		config = params.AllEthashProtocolChanges
 	}
-	return block, WriteChainConfig(db, block.Hash(), config)
+	rawdb.WriteChainConfig(db, block.Hash(), config)
+	return block, nil
 }
 
 // MustCommit writes the genesis block and state to db, panicking on error.
@@ -311,8 +309,9 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.MainnetChainConfig,
+		Config:     params.DevoteChainConfig,
 		Nonce:      66,
+		Timestamp:  1642012211,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
@@ -382,3 +381,22 @@ func decodePrealloc(data string) GenesisAlloc {
 	}
 	return ga
 }
+
+func initGenesisDevoteContext(g *Genesis, db ethdb.Database) *types.DevoteContext {
+
+	triedb := trie.NewDatabase(db)
+
+	dc, err := types.NewDevoteContextFromProto(triedb, &types.DevoteContextProto{})
+	if err != nil {
+		return nil
+	}
+	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
+		dc.SetWitnesses(g.Config.Devote.Witnesses)
+		for _, witness := range g.Config.Devote.Witnesses {
+			dc.CacheTrie().TryUpdate(append(witness.Bytes(), witness.Bytes()...), witness.Bytes())
+			dc.CandidateTrie().TryUpdate(witness.Bytes(), witness.Bytes())
+		}
+	}
+	return dc
+}
+

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 // deployWallet creates a new web wallet based on some user input.
@@ -46,13 +46,13 @@ func (w *wizard) deployWallet() {
 	infos, err := checkWallet(client, w.network)
 	if err != nil {
 		infos = &walletInfos{
-			nodePort: 21212, rpcPort: 9646, webPort: 80, webHost: client.server,
+			nodePort: 30303, rpcPort: 8545, webPort: 80, webHost: client.server,
 		}
 	}
 	existed := err == nil
 
 	infos.genesis, _ = json.MarshalIndent(w.conf.Genesis, "", "  ")
-	infos.network = w.conf.Genesis.Config.ChainId.Int64()
+	infos.network = w.conf.Genesis.Config.ChainID.Int64()
 
 	// Figure out which port to listen on
 	fmt.Println()

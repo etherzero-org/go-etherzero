@@ -22,27 +22,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethzero/go-ethzero/accounts"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
-	"github.com/ethzero/go-ethzero/consensus"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/bloombits"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/eth"
-	"github.com/ethzero/go-ethzero/eth/downloader"
-	"github.com/ethzero/go-ethzero/eth/filters"
-	"github.com/ethzero/go-ethzero/eth/gasprice"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/internal/ethapi"
-	"github.com/ethzero/go-ethzero/light"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/node"
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/p2p/discv5"
-	"github.com/ethzero/go-ethzero/params"
-	rpc "github.com/ethzero/go-ethzero/rpc"
+	"github.com/etherzero/go-ethereum/accounts"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-ethereum/consensus"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/bloombits"
+	"github.com/etherzero/go-ethereum/core/rawdb"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/eth"
+	"github.com/etherzero/go-ethereum/eth/downloader"
+	"github.com/etherzero/go-ethereum/eth/filters"
+	"github.com/etherzero/go-ethereum/eth/gasprice"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/event"
+	"github.com/etherzero/go-ethereum/internal/ethapi"
+	"github.com/etherzero/go-ethereum/light"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/node"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/p2p/discv5"
+	"github.com/etherzero/go-ethereum/params"
+	rpc "github.com/etherzero/go-ethereum/rpc"
 )
 
 type LightEthereum struct {
@@ -122,11 +123,11 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
 		leth.blockchain.SetHead(compat.RewindTo)
-		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
+		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
 
 	leth.txPool = light.NewTxPool(leth.chainConfig, leth.blockchain, leth.relay)
-	if leth.protocolManager, err = NewProtocolManager(leth.chainConfig, true, ClientProtocolVersions, config.NetworkId, leth.eventMux, leth.engine, leth.peers, leth.blockchain, nil, chainDb, leth.odr, leth.relay, quitSync, &leth.wg); err != nil {
+	if leth.protocolManager, err = NewProtocolManager(leth.chainConfig, true, ClientProtocolVersions, config.NetworkId, leth.eventMux, leth.engine, leth.peers, leth.blockchain, nil, chainDb, leth.odr, leth.relay, leth.serverPool, quitSync, &leth.wg); err != nil {
 		return nil, err
 	}
 	leth.ApiBackend = &LesApiBackend{leth, nil}

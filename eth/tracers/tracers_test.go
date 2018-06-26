@@ -25,15 +25,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
-	"github.com/ethzero/go-ethzero/common/math"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/tests"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-ethereum/common/math"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/core/vm"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/rlp"
+	"github.com/etherzero/go-ethereum/tests"
 )
 
 // To generate a new callTracer test, copy paste the makeTest method below into
@@ -159,8 +159,7 @@ func TestCallTracer(t *testing.T) {
 				GasLimit:    uint64(test.Context.GasLimit),
 				GasPrice:    tx.GasPrice(),
 			}
-			db, _ := ethdb.NewMemDatabase()
-			statedb := tests.MakePreState(db, test.Genesis.Alloc)
+			statedb := tests.MakePreState(ethdb.NewMemDatabase(), test.Genesis.Alloc)
 
 			// Create the tracer, the EVM environment and run it
 			tracer, err := New("callTracer")

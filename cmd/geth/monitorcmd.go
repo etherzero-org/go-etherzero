@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethzero/go-ethzero/cmd/utils"
-	"github.com/ethzero/go-ethzero/node"
-	"github.com/ethzero/go-ethzero/rpc"
+	"github.com/etherzero/go-ethereum/cmd/utils"
+	"github.com/etherzero/go-ethereum/node"
+	"github.com/etherzero/go-ethereum/rpc"
 	"github.com/gizak/termui"
 	"gopkg.in/urfave/cli.v1"
 )

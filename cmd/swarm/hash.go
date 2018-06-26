@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ethzero/go-ethzero/cmd/utils"
-	"github.com/ethzero/go-ethzero/swarm/storage"
+	"github.com/etherzero/go-ethereum/cmd/utils"
+	"github.com/etherzero/go-ethereum/swarm/storage"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -38,11 +38,11 @@ func hash(ctx *cli.Context) {
 	defer f.Close()
 
 	stat, _ := f.Stat()
-	chunker := storage.NewTreeChunker(storage.NewChunkerParams())
-	key, err := chunker.Split(f, stat.Size(), nil, nil, nil)
+	fileStore := storage.NewFileStore(storage.NewMapChunkStore(), storage.NewFileStoreParams())
+	addr, _, err := fileStore.Store(f, stat.Size(), false)
 	if err != nil {
 		utils.Fatalf("%v\n", err)
 	} else {
-		fmt.Printf("%v\n", key)
+		fmt.Printf("%v\n", addr)
 	}
 }

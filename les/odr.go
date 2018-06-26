@@ -19,10 +19,10 @@ package les
 import (
 	"context"
 
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/light"
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/light"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 // LesOdr implements light.OdrBackend

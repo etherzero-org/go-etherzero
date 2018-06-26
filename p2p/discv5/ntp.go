@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 const (

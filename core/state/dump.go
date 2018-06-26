@@ -20,9 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/trie"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/rlp"
+	"github.com/etherzero/go-ethereum/trie"
 )
 
 type DumpAccount struct {
@@ -53,7 +53,7 @@ func (self *StateDB) RawDump() Dump {
 			panic(err)
 		}
 
-		obj := newObject(nil, common.BytesToAddress(addr), data, nil)
+		obj := newObject(nil, common.BytesToAddress(addr), data)
 		account := DumpAccount{
 			Balance:  data.Balance.String(),
 			Nonce:    data.Nonce,

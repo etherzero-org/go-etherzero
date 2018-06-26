@@ -19,26 +19,27 @@ package eth
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"os"
 	"strings"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/miner"
-	"github.com/ethzero/go-ethzero/params"
-	"github.com/ethzero/go-ethzero/rlp"
-	"github.com/ethzero/go-ethzero/rpc"
-	"github.com/ethzero/go-ethzero/trie"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/rawdb"
+	"github.com/etherzero/go-ethereum/core/state"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/internal/ethapi"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/miner"
+	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-ethereum/rlp"
+	"github.com/etherzero/go-ethereum/rpc"
+	"github.com/etherzero/go-ethereum/trie"
 )
-
-var defaultBalanceTxProcess = big.NewInt(1e+17)
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related
 // information.
@@ -153,9 +154,7 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		price := api.e.gasPrice
 		api.e.lock.RUnlock()
 
-		balance := defaultBalanceTxProcess
 		api.e.txPool.SetGasPrice(price)
-		api.e.txPool.SetBalance(balance)
 		return api.e.StartMining(true)
 	}
 	return nil
@@ -190,16 +189,6 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
 	return true
 }
-
-func (api *PrivateMinerAPI) SetBalance(balance hexutil.Big) bool {
-	//api.e.lock.Lock()
-	//api.e.gasPrice = (*big.Int)(&balance)
-	//api.e.lock.Unlock()
-
-	api.e.txPool.SetBalance((*big.Int)(&balance))
-	return true
-}
-
 
 // SetEtherbase sets the etherbase of the miner
 func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
@@ -357,14 +346,40 @@ func NewPrivateDebugAPI(config *params.ChainConfig, eth *Ethereum) *PrivateDebug
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
 func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	db := core.PreimageTable(api.eth.ChainDb())
-	return db.Get(hash.Bytes())
+	if preimage := rawdb.ReadPreimage(api.eth.ChainDb(), hash); preimage != nil {
+		return preimage, nil
+	}
+	return nil, errors.New("unknown preimage")
 }
 
-// GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
+// BadBlockArgs represents the entries in the list returned when bad blocks are queried.
+type BadBlockArgs struct {
+	Hash  common.Hash            `json:"hash"`
+	Block map[string]interface{} `json:"block"`
+	RLP   string                 `json:"rlp"`
+}
+
+// GetBadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
-func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]core.BadBlockArgs, error) {
-	return api.eth.BlockChain().BadBlocks()
+func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]*BadBlockArgs, error) {
+	blocks := api.eth.BlockChain().BadBlocks()
+	results := make([]*BadBlockArgs, len(blocks))
+
+	var err error
+	for i, block := range blocks {
+		results[i] = &BadBlockArgs{
+			Hash: block.Hash(),
+		}
+		if rlpBytes, err := rlp.EncodeToBytes(block); err != nil {
+			results[i].RLP = err.Error() // Hacky, but hey, it works
+		} else {
+			results[i].RLP = fmt.Sprintf("0x%x", rlpBytes)
+		}
+		if results[i].Block, err = ethapi.RPCMarshalBlock(block, true, true); err != nil {
+			results[i].Block = map[string]interface{}{"error": err.Error()}
+		}
+	}
+	return results, nil
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.
@@ -416,7 +431,7 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	return result, nil
 }
 
-// GetModifiedAccountsByumber returns all accounts that have changed between the
+// GetModifiedAccountsByNumber returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //

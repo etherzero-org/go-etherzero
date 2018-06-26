@@ -24,8 +24,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common/math"
-	"github.com/ethzero/go-ethzero/crypto/randentropy"
+	"github.com/etherzero/go-ethereum/common/math"
+	"github.com/etherzero/go-ethereum/crypto/randentropy"
 )
 
 const TestCount = 1000
@@ -49,7 +49,7 @@ func randSig() []byte {
 // tests for malleability
 // highest bit of signature ECDSA s value must be 0, in the 33th byte
 func compactSigCheck(t *testing.T, sig []byte) {
-	var b int = int(sig[32])
+	var b = int(sig[32])
 	if b < 0 {
 		t.Errorf("highest bit is negative: %d", b)
 	}

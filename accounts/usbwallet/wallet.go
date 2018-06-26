@@ -25,11 +25,11 @@ import (
 	"sync"
 	"time"
 
-	ethereum "github.com/ethzero/go-ethzero"
-	"github.com/ethzero/go-ethzero/accounts"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/log"
+	ethereum "github.com/etherzero/go-ethereum"
+	"github.com/etherzero/go-ethereum/accounts"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/log"
 	"github.com/karalabe/hid"
 )
 
@@ -99,7 +99,7 @@ type wallet struct {
 	//
 	// As such, a hardware wallet needs two locks to function correctly. A state
 	// lock can be used to protect the wallet's software-side internal state, which
-	// must not be held exlusively during hardware communication. A communication
+	// must not be held exclusively during hardware communication. A communication
 	// lock can be used to achieve exclusive access to the device itself, this one
 	// however should allow "skipping" waiting for operations that might want to
 	// use the device, but can live without too (e.g. account self-derivation).

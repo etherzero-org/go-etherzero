@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethzero/go-ethzero/accounts/keystore"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/accounts/keystore"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 // deployNode creates a new node configuration based on some user input.
@@ -48,15 +48,15 @@ func (w *wizard) deployNode(boot bool) {
 	infos, err := checkNode(client, w.network, boot)
 	if err != nil {
 		if boot {
-			infos = &nodeInfos{port: 21212, peersTotal: 512, peersLight: 256}
+			infos = &nodeInfos{port: 30303, peersTotal: 512, peersLight: 256}
 		} else {
-			infos = &nodeInfos{port: 21212, peersTotal: 50, peersLight: 0, gasTarget: 4.7, gasPrice: 18}
+			infos = &nodeInfos{port: 30303, peersTotal: 50, peersLight: 0, gasTarget: 4.7, gasPrice: 18}
 		}
 	}
 	existed := err == nil
 
 	infos.genesis, _ = json.MarshalIndent(w.conf.Genesis, "", "  ")
-	infos.network = w.conf.Genesis.Config.ChainId.Int64()
+	infos.network = w.conf.Genesis.Config.ChainID.Int64()
 
 	// Figure out where the user wants to store the persistent data
 	fmt.Println()
@@ -107,7 +107,7 @@ func (w *wizard) deployNode(boot bool) {
 			// Ethash based miners only need an etherbase to mine against
 			fmt.Println()
 			if infos.etherbase == "" {
-				fmt.Printf("What address should the miner user?\n")
+				fmt.Printf("What address should the miner use?\n")
 				for {
 					if address := w.readAddress(); address != nil {
 						infos.etherbase = address.Hex()
@@ -115,7 +115,7 @@ func (w *wizard) deployNode(boot bool) {
 					}
 				}
 			} else {
-				fmt.Printf("What address should the miner user? (default = %s)\n", infos.etherbase)
+				fmt.Printf("What address should the miner use? (default = %s)\n", infos.etherbase)
 				infos.etherbase = w.readDefaultAddress(common.HexToAddress(infos.etherbase)).Hex()
 			}
 		} else if w.conf.Genesis.Config.Clique != nil {

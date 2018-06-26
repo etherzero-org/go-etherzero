@@ -22,7 +22,7 @@ package geth
 import (
 	"errors"
 
-	"github.com/ethzero/go-ethzero/p2p/discv5"
+	"github.com/etherzero/go-ethereum/p2p/discv5"
 )
 
 // Enode represents a host on the network.
@@ -49,10 +49,10 @@ type Enode struct {
 // query parameter "discport".
 //
 // In the following example, the node URL describes
-// a node with IP address 10.3.58.6, TCP listening port 21212
-// and UDP discovery port 21210.
+// a node with IP address 10.3.58.6, TCP listening port 30303
+// and UDP discovery port 30301.
 //
-//    enode://<hex node id>@10.3.58.6:21212?discport=21210
+//    enode://<hex node id>@10.3.58.6:30303?discport=30301
 func NewEnode(rawurl string) (enode *Enode, _ error) {
 	node, err := discv5.ParseNode(rawurl)
 	if err != nil {

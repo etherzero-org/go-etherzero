@@ -41,30 +41,30 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethzero/go-ethzero/accounts"
-	"github.com/ethzero/go-ethzero/accounts/keystore"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/eth"
-	"github.com/ethzero/go-ethzero/eth/downloader"
-	"github.com/ethzero/go-ethzero/ethclient"
-	"github.com/ethzero/go-ethzero/ethstats"
-	"github.com/ethzero/go-ethzero/les"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/node"
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/p2p/discover"
-	"github.com/ethzero/go-ethzero/p2p/discv5"
-	"github.com/ethzero/go-ethzero/p2p/nat"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-ethereum/accounts"
+	"github.com/etherzero/go-ethereum/accounts/keystore"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/eth"
+	"github.com/etherzero/go-ethereum/eth/downloader"
+	"github.com/etherzero/go-ethereum/ethclient"
+	"github.com/etherzero/go-ethereum/ethstats"
+	"github.com/etherzero/go-ethereum/les"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/node"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/p2p/discover"
+	"github.com/etherzero/go-ethereum/p2p/discv5"
+	"github.com/etherzero/go-ethereum/p2p/nat"
+	"github.com/etherzero/go-ethereum/params"
 	"golang.org/x/net/websocket"
 )
 
 var (
 	genesisFlag = flag.String("genesis", "", "Genesis json file to seed the chain with")
 	apiPortFlag = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	ethPortFlag = flag.Int("ethport", 21212, "Listener port for the devp2p connection")
+	ethPortFlag = flag.Int("ethport", 30303, "Listener port for the devp2p connection")
 	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
 	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
 	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
@@ -76,9 +76,6 @@ var (
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
 	accPassFlag = flag.String("account.pass", "", "Decryption password to access faucet funds")
-
-	githubUser  = flag.String("github.user", "", "GitHub user to authenticate with for Gist access")
-	githubToken = flag.String("github.token", "", "GitHub personal token to access Gists with")
 
 	captchaToken  = flag.String("captcha.token", "", "Recaptcha site key to authenticate client side")
 	captchaSecret = flag.String("captcha.secret", "", "Recaptcha secret key to authenticate server side")
@@ -450,7 +447,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case *noauthFlag:
 			username, avatar, address, err = authNoAuth(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/ethzero/go-ethzero/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/etherzero/go-ethereum/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {
@@ -474,7 +471,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
 			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
-			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainId)
+			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
 			if err != nil {
 				f.lock.Unlock()
 				if err = sendError(conn, err); err != nil {
@@ -636,59 +633,6 @@ func sendError(conn *websocket.Conn, err error) error {
 // setting the write deadline to 1 second to prevent waiting forever.
 func sendSuccess(conn *websocket.Conn, msg string) error {
 	return send(conn, map[string]string{"success": msg}, time.Second)
-}
-
-// authGitHub tries to authenticate a faucet request using GitHub gists, returning
-// the username, avatar URL and Ethereum address to fund on success.
-func authGitHub(url string) (string, string, common.Address, error) {
-	// Retrieve the gist from the GitHub Gist APIs
-	parts := strings.Split(url, "/")
-	req, _ := http.NewRequest("GET", "https://api.github.com/gists/"+parts[len(parts)-1], nil)
-	if *githubUser != "" {
-		req.SetBasicAuth(*githubUser, *githubToken)
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", "", common.Address{}, err
-	}
-	var gist struct {
-		Owner struct {
-			Login string `json:"login"`
-		} `json:"owner"`
-		Files map[string]struct {
-			Content string `json:"content"`
-		} `json:"files"`
-	}
-	err = json.NewDecoder(res.Body).Decode(&gist)
-	res.Body.Close()
-	if err != nil {
-		return "", "", common.Address{}, err
-	}
-	if gist.Owner.Login == "" {
-		return "", "", common.Address{}, errors.New("Anonymous Gists not allowed")
-	}
-	// Iterate over all the files and look for Ethereum addresses
-	var address common.Address
-	for _, file := range gist.Files {
-		content := strings.TrimSpace(file.Content)
-		if len(content) == 2+common.AddressLength*2 {
-			address = common.HexToAddress(content)
-		}
-	}
-	if address == (common.Address{}) {
-		return "", "", common.Address{}, errors.New("No Ethereum address found to fund")
-	}
-	// Validate the user's existence since the API is unhelpful here
-	if res, err = http.Head("https://github.com/" + gist.Owner.Login); err != nil {
-		return "", "", common.Address{}, err
-	}
-	res.Body.Close()
-
-	if res.StatusCode != 200 {
-		return "", "", common.Address{}, errors.New("Invalid user... boom!")
-	}
-	// Everything passed validation, return the gathered infos
-	return gist.Owner.Login + "@github", fmt.Sprintf("https://github.com/%s.png?size=64", gist.Owner.Login), address, nil
 }
 
 // authTwitter tries to authenticate a faucet request using Twitter posts, returning

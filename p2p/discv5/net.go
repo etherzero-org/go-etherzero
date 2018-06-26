@@ -24,19 +24,18 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/mclock"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/p2p/netutil"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/mclock"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/crypto/sha3"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/p2p/netutil"
+	"github.com/etherzero/go-ethereum/rlp"
 )
 
 var (
 	errInvalidEvent = errors.New("invalid in current state")
 	errNoQuery      = errors.New("no pending query")
-	errWrongAddress = errors.New("unknown sender address")
 )
 
 const (
@@ -828,11 +827,10 @@ type nodeEvent uint
 //go:generate stringer -type=nodeEvent
 
 const (
-	invalidEvent nodeEvent = iota // zero is reserved
 
 	// Packet type events.
 	// These correspond to packet types in the UDP protocol.
-	pingPacket
+	pingPacket = iota + 1
 	pongPacket
 	findnodePacket
 	neighborsPacket

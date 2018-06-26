@@ -33,10 +33,10 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
-	"github.com/ethzero/go-ethzero/consensus"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/metrics"
-	"github.com/ethzero/go-ethzero/rpc"
+	"github.com/etherzero/go-ethereum/consensus"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/metrics"
+	"github.com/etherzero/go-ethereum/rpc"
 	"github.com/hashicorp/golang-lru/simplelru"
 )
 
@@ -156,7 +156,7 @@ type lru struct {
 	futureItem interface{}
 }
 
-// newlru create a new least-recently-used cache for ither the verification caches
+// newlru create a new least-recently-used cache for either the verification caches
 // or the mining datasets.
 func newlru(what string, maxItems int, new func(epoch uint64) interface{}) *lru {
 	if maxItems <= 0 {

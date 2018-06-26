@@ -18,11 +18,10 @@ package core
 
 import (
 	"container/list"
-	"fmt"
 
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/event"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-ethereum/event"
 )
 
 // Implement our EthTest Manager
@@ -77,18 +76,11 @@ func (tm *TestManager) Db() ethdb.Database {
 }
 
 func NewTestManager() *TestManager {
-	db, err := ethdb.NewMemDatabase()
-	if err != nil {
-		fmt.Println("Could not create mem-db, failing")
-		return nil
-	}
-
 	testManager := &TestManager{}
 	testManager.eventMux = new(event.TypeMux)
-	testManager.db = db
+	testManager.db = ethdb.NewMemDatabase()
 	// testManager.txPool = NewTxPool(testManager)
 	// testManager.blockChain = NewBlockChain(testManager)
 	// testManager.stateManager = NewStateManager(testManager)
-
 	return testManager
 }

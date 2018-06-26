@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethzero/go-ethzero/p2p/discover"
-	"github.com/ethzero/go-ethzero/p2p/simulations/adapters"
+	"github.com/etherzero/go-ethereum/p2p/discover"
+	"github.com/etherzero/go-ethereum/p2p/simulations/adapters"
 )
 
 // TestNetworkSimulation creates a multi-node simulation network with each node
@@ -41,7 +41,8 @@ func TestNetworkSimulation(t *testing.T) {
 	nodeCount := 20
 	ids := make([]discover.NodeID, nodeCount)
 	for i := 0; i < nodeCount; i++ {
-		node, err := network.NewNode()
+		conf := adapters.RandomNodeConfig()
+		node, err := network.NewNodeWithConfig(conf)
 		if err != nil {
 			t.Fatalf("error creating node: %s", err)
 		}

@@ -23,9 +23,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethzero/go-ethzero/accounts/keystore"
-	"github.com/ethzero/go-ethzero/cmd/utils"
-	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/etherzero/go-ethereum/accounts/keystore"
+	"github.com/etherzero/go-ethereum/cmd/utils"
+	"github.com/etherzero/go-ethereum/crypto"
 	"github.com/pborman/uuid"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -90,7 +90,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 		}
 
 		// Encrypt key with passphrase.
-		passphrase := getPassPhrase(ctx, true)
+		passphrase := promptPassphrase(true)
 		keyjson, err := keystore.EncryptKey(key, passphrase, keystore.StandardScryptN, keystore.StandardScryptP)
 		if err != nil {
 			utils.Fatalf("Error encrypting key: %v", err)

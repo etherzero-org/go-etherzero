@@ -19,7 +19,7 @@ package state
 import (
 	"sync"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-ethereum/common"
 )
 
 type account struct {

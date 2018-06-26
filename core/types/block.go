@@ -19,7 +19,6 @@ package types
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"math/big"
 	"sort"
@@ -27,10 +26,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
-	"github.com/ethzero/go-ethzero/crypto/sha3"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-ethereum/crypto/sha3"
+	"github.com/etherzero/go-ethereum/rlp"
 )
 
 var (
@@ -84,7 +83,19 @@ type Header struct {
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
 	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
+
+	Witness     common.Address `json:"witness"          gencodec:"required"`
+	Context     *DevoteContextProto  `json:"context"          gencodec:"required"`
 }
+
+type DevoteContextProto struct {
+	EpochHash     common.Hash `json:"epochRoot"        gencodec:"required"`
+	CacheHash     common.Hash `json:"cacheRoot"        gencodec:"required"`
+	CandidateHash common.Hash `json:"candidateRoot"    gencodec:"required"`
+	VoteHash      common.Hash `json:"voteRoot"         gencodec:"required"`
+	MintCntHash   common.Hash `json:"mintCntRoot"      gencodec:"required"`
+}
+
 
 // field type overrides for gencodec
 type headerMarshaling struct {
@@ -117,6 +128,7 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Number,
 		h.GasLimit,
 		h.GasUsed,
+		h.Witness,
 		h.Time,
 		h.Extra,
 	})
@@ -160,6 +172,8 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+
+	DevoteContext  *DevoteContext
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -320,6 +334,10 @@ func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
+func (b *Block) Witness() common.Address  { return b.header.Witness }
+
+func (b *Block) Context() *DevoteContext { return b.DevoteContext }
+
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
@@ -387,40 +405,6 @@ func (b *Block) Hash() common.Hash {
 	v := b.header.Hash()
 	b.hash.Store(v)
 	return v
-}
-
-func (b *Block) String() string {
-	str := fmt.Sprintf(`Block(#%v): Size: %v {
-MinerHash: %x
-%v
-Transactions:
-%v
-Uncles:
-%v
-}
-`, b.Number(), b.Size(), b.header.HashNoNonce(), b.header, b.transactions, b.uncles)
-	return str
-}
-
-func (h *Header) String() string {
-	return fmt.Sprintf(`Header(%x):
-[
-	ParentHash:	    %x
-	UncleHash:	    %x
-	Coinbase:	    %x
-	Root:		    %x
-	TxSha		    %x
-	ReceiptSha:	    %x
-	Bloom:		    %x
-	Difficulty:	    %v
-	Number:		    %v
-	GasLimit:	    %v
-	GasUsed:	    %v
-	Time:		    %v
-	Extra:		    %s
-	MixDigest:      %x
-	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
 }
 
 type Blocks []*Block

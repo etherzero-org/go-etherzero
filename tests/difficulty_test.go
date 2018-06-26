@@ -21,13 +21,13 @@ import (
 
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/params"
 )
 
 var (
 	mainnetChainConfig = params.ChainConfig{
-		ChainId:        big.NewInt(1),
+		ChainID:        big.NewInt(1),
 		HomesteadBlock: big.NewInt(1150000),
 		DAOForkBlock:   big.NewInt(1920000),
 		DAOForkSupport: true,

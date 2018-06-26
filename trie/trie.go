@@ -21,10 +21,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/metrics"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-ethereum/metrics"
 )
 
 var (
@@ -59,6 +59,7 @@ func CacheUnloads() int64 {
 // between account and storage tries.
 type LeafCallback func(leaf []byte, parent common.Hash) error
 
+
 // Trie is a Merkle Patricia Trie.
 // The zero value is an empty trie with no database.
 // Use New to create a trie that sits on top of a database.
@@ -68,6 +69,7 @@ type Trie struct {
 	db           *Database
 	root         node
 	originalRoot common.Hash
+	prefix       []byte
 
 	// Cache generation values.
 	// cachegen increases by one with each commit operation.
@@ -101,7 +103,7 @@ func New(root common.Hash, db *Database) (*Trie, error) {
 		db:           db,
 		originalRoot: root,
 	}
-	if (root != common.Hash{}) && root != emptyRoot {
+	if root != (common.Hash{}) && root != emptyRoot {
 		rootnode, err := trie.resolveHash(root[:], nil)
 		if err != nil {
 			return nil, err
@@ -125,6 +127,15 @@ func (t *Trie) Get(key []byte) []byte {
 		log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
 	}
 	return res
+}
+
+func NewTrieWithPrefix(root common.Hash, prefix []byte, db *Database) (*Trie, error) {
+	trie, err := New(root, db)
+	if err != nil {
+		return nil, err
+	}
+	trie.prefix = prefix
+	return trie, nil
 }
 
 // TryGet returns the value for key stored in the trie.
@@ -433,12 +444,10 @@ func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	cacheMissCounter.Inc(1)
 
 	hash := common.BytesToHash(n)
-
-	enc, err := t.db.Node(hash)
-	if err != nil || enc == nil {
-		return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
+	if node := t.db.node(hash, t.cachegen); node != nil {
+		return node, nil
 	}
-	return mustDecodeNode(n, enc, t.cachegen), nil
+	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
 }
 
 // Root returns the root hash of the trie.

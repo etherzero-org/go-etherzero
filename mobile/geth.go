@@ -24,17 +24,18 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/eth"
-	"github.com/ethzero/go-ethzero/eth/downloader"
-	"github.com/ethzero/go-ethzero/ethclient"
-	"github.com/ethzero/go-ethzero/ethstats"
-	"github.com/ethzero/go-ethzero/les"
-	"github.com/ethzero/go-ethzero/node"
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/p2p/nat"
-	"github.com/ethzero/go-ethzero/params"
-	whisper "github.com/ethzero/go-ethzero/whisper/whisperv5"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/eth"
+	"github.com/etherzero/go-ethereum/eth/downloader"
+	"github.com/etherzero/go-ethereum/ethclient"
+	"github.com/etherzero/go-ethereum/ethstats"
+	"github.com/etherzero/go-ethereum/internal/debug"
+	"github.com/etherzero/go-ethereum/les"
+	"github.com/etherzero/go-ethereum/node"
+	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-ethereum/p2p/nat"
+	"github.com/etherzero/go-ethereum/params"
+	whisper "github.com/etherzero/go-ethereum/whisper/whisperv6"
 )
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth
@@ -72,6 +73,9 @@ type NodeConfig struct {
 
 	// WhisperEnabled specifies whether the node should run the Whisper protocol.
 	WhisperEnabled bool
+
+	// Listening address of pprof server.
+	PprofAddress string
 }
 
 // defaultNodeConfig contains the default node configuration values to use if all
@@ -80,7 +84,7 @@ var defaultNodeConfig = &NodeConfig{
 	BootstrapNodes:        FoundationBootnodes(),
 	MaxPeers:              25,
 	EthereumEnabled:       true,
-	EthereumNetworkID:     88,
+	EthereumNetworkID:     1,
 	EthereumDatabaseCache: 16,
 }
 
@@ -107,6 +111,11 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
 		config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
 	}
+
+	if config.PprofAddress != "" {
+		debug.StartPProf(config.PprofAddress)
+	}
+
 	// Create the empty networking stack
 	nodeConf := &node.Config{
 		Name:        clientIdentifier,
@@ -127,6 +136,8 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		return nil, err
 	}
 
+	debug.Memsize.Add("node", rawStack)
+
 	var genesis *core.Genesis
 	if config.EthereumGenesis != "" {
 		// Parse the user supplied genesis spec if not mainnet
@@ -137,8 +148,8 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		// If we have the testnet, hard code the chain configs too
 		if config.EthereumGenesis == TestnetGenesis() {
 			genesis.Config = params.TestnetChainConfig
-			if config.EthereumNetworkID == 88 {
-				config.EthereumNetworkID = 89
+			if config.EthereumNetworkID == 1 {
+				config.EthereumNetworkID = 3
 			}
 		}
 	}
@@ -182,7 +193,7 @@ func (n *Node) Start() error {
 	return n.node.Start()
 }
 
-// Stop terminates a running node along with all it's services. In the node was
+// Stop terminates a running node along with all it's services. If the node was
 // not started, an error is returned.
 func (n *Node) Stop() error {
 	return n.node.Stop()

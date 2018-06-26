@@ -19,7 +19,7 @@ package params
 import "math/big"
 
 var (
-	TargetGasLimit uint64 = GenesisGasLimit // The artificial target
+	TargetGasLimit = GenesisGasLimit // The artificial target
 )
 
 const (
@@ -83,7 +83,5 @@ var (
 	DifficultyBoundDivisor = big.NewInt(2048)   // The bound divisor of the difficulty, used in the update calculations.
 	GenesisDifficulty      = big.NewInt(131072) // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
-	EthzeroGenesisDifficulty      = big.NewInt(17179869184)                // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-	DurationEthzeroLimit   = big.NewInt(8)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-	)
+)

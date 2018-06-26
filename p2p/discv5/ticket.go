@@ -25,10 +25,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/mclock"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/mclock"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 const (
@@ -304,8 +304,8 @@ func (s ticketRefByWaitTime) Len() int {
 	return len(s)
 }
 
-func (r ticketRef) waitTime() mclock.AbsTime {
-	return r.t.regTime[r.idx] - r.t.issueTime
+func (ref ticketRef) waitTime() mclock.AbsTime {
+	return ref.t.regTime[ref.idx] - ref.t.issueTime
 }
 
 // Less reports whether the element with

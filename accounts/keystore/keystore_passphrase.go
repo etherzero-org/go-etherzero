@@ -19,7 +19,7 @@
 This key store behaves as KeyStorePlain with the difference that
 the private key is encrypted and on disk uses another JSON encoding.
 
-The crypto is documented at https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition
+The crypto is documented at https://github.com/etherzero/wiki/wiki/Web3-Secret-Storage-Definition
 
 */
 
@@ -36,10 +36,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/math"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/crypto/randentropy"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/common/math"
+	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-ethereum/crypto/randentropy"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
@@ -108,9 +108,8 @@ func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) er
 func (ks keyStorePassphrase) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
-	} else {
-		return filepath.Join(ks.keysDirPath, filename)
 	}
+	return filepath.Join(ks.keysDirPath, filename)
 }
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json

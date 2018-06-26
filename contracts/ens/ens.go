@@ -23,11 +23,11 @@ package ens
 import (
 	"strings"
 
-	"github.com/ethzero/go-ethzero/accounts/abi/bind"
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/contracts/ens/contract"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/etherzero/go-ethereum/accounts/abi/bind"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/contracts/ens/contract"
+	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-ethereum/crypto"
 )
 
 var (
@@ -95,7 +95,7 @@ func ensParentNode(name string) (common.Hash, common.Hash) {
 	}
 }
 
-func ensNode(name string) common.Hash {
+func EnsNode(name string) common.Hash {
 	parentNode, parentLabel := ensParentNode(name)
 	return crypto.Keccak256Hash(parentNode[:], parentLabel[:])
 }
@@ -136,7 +136,7 @@ func (self *ENS) getRegistrar(node [32]byte) (*contract.FIFSRegistrarSession, er
 
 // Resolve is a non-transactional call that returns the content hash associated with a name.
 func (self *ENS) Resolve(name string) (common.Hash, error) {
-	node := ensNode(name)
+	node := EnsNode(name)
 
 	resolver, err := self.getResolver(node)
 	if err != nil {
@@ -165,7 +165,7 @@ func (self *ENS) Register(name string) (*types.Transaction, error) {
 // SetContentHash sets the content hash associated with a name. Only works if the caller
 // owns the name, and the associated resolver implements a `setContent` function.
 func (self *ENS) SetContentHash(name string, hash common.Hash) (*types.Transaction, error) {
-	node := ensNode(name)
+	node := EnsNode(name)
 
 	resolver, err := self.getResolver(node)
 	if err != nil {

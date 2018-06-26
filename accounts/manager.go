@@ -21,7 +21,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ethzero/go-ethzero/event"
+	"github.com/etherzero/go-ethereum/event"
 )
 
 // Manager is an overarching account manager that can communicate with various

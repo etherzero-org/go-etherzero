@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-ethereum/log"
 )
 
 // explorerDockerfile is the Dockerfile required to run a block explorer.
@@ -58,7 +58,7 @@ var explorerEthstats = `[
     {
       "NODE_ENV"        : "production",
       "RPC_HOST"        : "localhost",
-      "RPC_PORT"        : "9646",
+      "RPC_PORT"        : "8545",
       "LISTENING_PORT"  : "{{.Port}}",
       "INSTANCE_NAME"   : "{{.Name}}",
       "CONTACT_DETAILS" : "",
@@ -168,7 +168,7 @@ func (info *explorerInfos) Report() map[string]string {
 	return report
 }
 
-// checkExplorer does a health-check against an block explorer server to verify
+// checkExplorer does a health-check against a block explorer server to verify
 // whether it's running, and if yes, whether it's responsive.
 func checkExplorer(client *sshClient, network string) (*explorerInfos, error) {
 	// Inspect a possible block explorer container on the host

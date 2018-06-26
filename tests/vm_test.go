@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/ethzero/go-ethzero/core/vm"
+	"github.com/etherzero/go-ethereum/core/vm"
 )
 
 func TestVM(t *testing.T) {

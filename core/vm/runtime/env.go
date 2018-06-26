@@ -17,9 +17,9 @@
 package runtime
 
 import (
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/vm"
+	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-ethereum/core"
+	"github.com/etherzero/go-ethereum/core/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {
