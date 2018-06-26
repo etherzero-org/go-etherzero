@@ -41,23 +41,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/accounts"
-	"github.com/etherzero/go-ethereum/accounts/keystore"
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/eth"
-	"github.com/etherzero/go-ethereum/eth/downloader"
-	"github.com/etherzero/go-ethereum/ethclient"
-	"github.com/etherzero/go-ethereum/ethstats"
-	"github.com/etherzero/go-ethereum/les"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/node"
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/discv5"
-	"github.com/etherzero/go-ethereum/p2p/nat"
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/accounts/keystore"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/eth"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/ethclient"
+	"github.com/etherzero/go-etherzero/ethstats"
+	"github.com/etherzero/go-etherzero/les"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/node"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/discv5"
+	"github.com/etherzero/go-etherzero/p2p/nat"
+	"github.com/etherzero/go-etherzero/params"
 	"golang.org/x/net/websocket"
 )
 
@@ -447,7 +447,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case *noauthFlag:
 			username, avatar, address, err = authNoAuth(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/etherzero/go-ethereum/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/etherzero/go-etherzero/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {

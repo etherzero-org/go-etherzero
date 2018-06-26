@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/common/hexutil"
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/rlp"
-	"github.com/etherzero/go-ethereum/swarm/storage"
-	whisper "github.com/etherzero/go-ethereum/whisper/whisperv5"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/swarm/storage"
+	whisper "github.com/etherzero/go-etherzero/whisper/whisperv5"
 )
 
 const (

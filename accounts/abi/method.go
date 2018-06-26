@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 // Method represents a callable given a `Name` and whether the method is a constant.

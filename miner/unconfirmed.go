@@ -20,9 +20,9 @@ import (
 	"container/ring"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // headerRetriever is used by the unconfirmed block set to verify whether a previously

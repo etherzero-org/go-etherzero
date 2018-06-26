@@ -26,7 +26,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 type storedCredential struct {

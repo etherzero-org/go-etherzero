@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/common/math"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/common/math"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 type diffTest struct {

@@ -19,7 +19,7 @@ package network
 import (
 	"testing"
 
-	p2ptest "github.com/etherzero/go-ethereum/p2p/testing"
+	p2ptest "github.com/etherzero/go-etherzero/p2p/testing"
 )
 
 /***

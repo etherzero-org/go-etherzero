@@ -23,15 +23,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core/rawdb"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/ethdb"
-	"github.com/etherzero/go-ethereum/light"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/rlp"
-	"github.com/etherzero/go-ethereum/trie"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/light"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/trie"
 )
 
 var (

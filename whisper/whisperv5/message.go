@@ -27,10 +27,10 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/crypto/ecies"
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/crypto/ecies"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // MessageParams specifies the exact way a message should be wrapped into an Envelope.

@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 	set "gopkg.in/fatih/set.v0"
 )
 

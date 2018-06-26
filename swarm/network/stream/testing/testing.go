@@ -27,14 +27,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/simulations"
-	"github.com/etherzero/go-ethereum/p2p/simulations/adapters"
-	"github.com/etherzero/go-ethereum/rpc"
-	"github.com/etherzero/go-ethereum/swarm/log"
-	"github.com/etherzero/go-ethereum/swarm/network"
-	"github.com/etherzero/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/simulations"
+	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/swarm/log"
+	"github.com/etherzero/go-etherzero/swarm/network"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 )
 
 type Simulation struct {

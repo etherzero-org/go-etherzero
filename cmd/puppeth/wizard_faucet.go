@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/accounts/keystore"
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/accounts/keystore"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // deployFaucet queries the user for various input on deploying a faucet, after

@@ -24,13 +24,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/protocols"
-	"github.com/etherzero/go-ethereum/rpc"
-	"github.com/etherzero/go-ethereum/swarm/log"
-	"github.com/etherzero/go-ethereum/swarm/state"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/protocols"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/swarm/log"
+	"github.com/etherzero/go-etherzero/swarm/state"
 )
 
 const (

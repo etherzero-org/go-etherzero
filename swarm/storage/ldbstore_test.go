@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/swarm/log"
-	"github.com/etherzero/go-ethereum/swarm/storage/mock/mem"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/swarm/log"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock/mem"
 
 	ldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )

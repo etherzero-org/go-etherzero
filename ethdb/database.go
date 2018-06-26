@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/metrics"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"

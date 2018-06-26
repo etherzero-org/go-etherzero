@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/nat"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/nat"
 )
 
 const (

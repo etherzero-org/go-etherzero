@@ -28,10 +28,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/metrics"
-	"github.com/etherzero/go-ethereum/swarm/api"
-	l "github.com/etherzero/go-ethereum/swarm/log"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/swarm/api"
+	l "github.com/etherzero/go-etherzero/swarm/log"
 )
 
 //templateMap holds a mapping of an HTTP error code to a template

@@ -20,9 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/etherzero/go-ethereum/core/rawdb"
-	"github.com/etherzero/go-ethereum/eth/downloader"
-	"github.com/etherzero/go-ethereum/light"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/light"
 )
 
 // syncer is responsible for periodically synchronising with the network, both

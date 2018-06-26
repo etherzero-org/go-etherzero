@@ -19,7 +19,7 @@ package event_test
 import (
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/event"
+	"github.com/etherzero/go-etherzero/event"
 )
 
 func ExampleFeed_acknowledgedEvents() {

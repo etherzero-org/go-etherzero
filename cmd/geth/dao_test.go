@@ -23,10 +23,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core/rawdb"
-	"github.com/etherzero/go-ethereum/ethdb"
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // Genesis block for nodes which don't care about the DAO fork (i.e. not configured)

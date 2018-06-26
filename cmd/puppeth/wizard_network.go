@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // manageServers displays a list of servers the user can disconnect from, and an

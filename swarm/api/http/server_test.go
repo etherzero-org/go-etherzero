@@ -29,14 +29,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/common/hexutil"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/swarm/api"
-	swarm "github.com/etherzero/go-ethereum/swarm/api/client"
-	"github.com/etherzero/go-ethereum/swarm/multihash"
-	"github.com/etherzero/go-ethereum/swarm/storage"
-	"github.com/etherzero/go-ethereum/swarm/testutil"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/swarm/api"
+	swarm "github.com/etherzero/go-etherzero/swarm/api/client"
+	"github.com/etherzero/go-etherzero/swarm/multihash"
+	"github.com/etherzero/go-etherzero/swarm/storage"
+	"github.com/etherzero/go-etherzero/swarm/testutil"
 )
 
 func init() {

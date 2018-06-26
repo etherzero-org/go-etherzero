@@ -27,8 +27,8 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 type nullTransport struct{}

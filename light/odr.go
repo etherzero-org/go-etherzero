@@ -22,11 +22,11 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core"
-	"github.com/etherzero/go-ethereum/core/rawdb"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/ethdb"
 )
 
 // NoOdr is the default context passed to an ODR capable function when the ODR

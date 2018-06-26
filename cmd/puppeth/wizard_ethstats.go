@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // deployEthstats queries the user for various input on deploying an ethstats

@@ -16,7 +16,7 @@
 
 package core
 
-import "github.com/etherzero/go-ethereum/common"
+import "github.com/etherzero/go-etherzero/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{

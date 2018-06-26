@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common/mclock"
+	"github.com/etherzero/go-etherzero/common/mclock"
 )
 
 const rcConst = 1000000

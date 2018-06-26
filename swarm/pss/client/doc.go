@@ -28,11 +28,11 @@
 //  	"context"
 //  	"fmt"
 //  	"os"
-//  	pss "github.com/etherzero/go-ethereum/swarm/pss/client"
-//  	"github.com/etherzero/go-ethereum/p2p/protocols"
-//  	"github.com/etherzero/go-ethereum/p2p"
-//  	"github.com/etherzero/go-ethereum/swarm/pot"
-//  	"github.com/etherzero/go-ethereum/swarm/log"
+//  	pss "github.com/etherzero/go-etherzero/swarm/pss/client"
+//  	"github.com/etherzero/go-etherzero/p2p/protocols"
+//  	"github.com/etherzero/go-etherzero/p2p"
+//  	"github.com/etherzero/go-etherzero/swarm/pot"
+//  	"github.com/etherzero/go-etherzero/swarm/log"
 //  )
 //
 //  type FooMsg struct {

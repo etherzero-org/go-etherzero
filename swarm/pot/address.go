@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 var (

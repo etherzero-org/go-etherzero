@@ -25,14 +25,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/etherzero/go-ethereum/accounts"
-	"github.com/etherzero/go-ethereum/accounts/keystore"
-	"github.com/etherzero/go-ethereum/accounts/usbwallet"
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/accounts/keystore"
+	"github.com/etherzero/go-etherzero/accounts/usbwallet"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 const (

@@ -33,10 +33,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/metrics"
-	"github.com/etherzero/go-ethereum/rlp"
-	"github.com/etherzero/go-ethereum/swarm/log"
-	"github.com/etherzero/go-ethereum/swarm/storage/mock"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/swarm/log"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )

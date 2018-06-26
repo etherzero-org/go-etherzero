@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/swarm/pot"
+	"github.com/etherzero/go-etherzero/swarm/pot"
 )
 
 // discovery bzz extension for requesting and relaying node address records

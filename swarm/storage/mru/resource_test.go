@@ -30,17 +30,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/accounts/abi/bind"
-	"github.com/etherzero/go-ethereum/accounts/abi/bind/backends"
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/contracts/ens"
-	"github.com/etherzero/go-ethereum/contracts/ens/contract"
-	"github.com/etherzero/go-ethereum/core"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/swarm/multihash"
-	"github.com/etherzero/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind/backends"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/contracts/ens"
+	"github.com/etherzero/go-etherzero/contracts/ens/contract"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/swarm/multihash"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 )
 
 var (

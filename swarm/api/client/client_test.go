@@ -25,9 +25,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/swarm/api"
-	swarmhttp "github.com/etherzero/go-ethereum/swarm/api/http"
-	"github.com/etherzero/go-ethereum/swarm/testutil"
+	"github.com/etherzero/go-etherzero/swarm/api"
+	swarmhttp "github.com/etherzero/go-etherzero/swarm/api/http"
+	"github.com/etherzero/go-etherzero/swarm/testutil"
 )
 
 func serverFunc(api *api.API) testutil.TestServer {

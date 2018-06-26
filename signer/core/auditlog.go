@@ -21,11 +21,11 @@ import (
 
 	"encoding/json"
 
-	"github.com/etherzero/go-ethereum/accounts"
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/common/hexutil"
-	"github.com/etherzero/go-ethereum/internal/ethapi"
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/internal/ethapi"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 type AuditLogger struct {

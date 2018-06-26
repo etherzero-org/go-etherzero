@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/crypto/sha3"
+	"github.com/etherzero/go-etherzero/crypto/sha3"
 )
 
 // the actual data length generated (could be longer than max datalength of the BMT)

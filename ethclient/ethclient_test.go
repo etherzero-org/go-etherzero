@@ -16,7 +16,7 @@
 
 package ethclient
 
-import "github.com/etherzero/go-ethereum"
+import "github.com/etherzero/go-etherzero"
 
 // Verify that Client implements the ethereum interfaces.
 var (

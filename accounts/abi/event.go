@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event

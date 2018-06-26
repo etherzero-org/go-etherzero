@@ -19,7 +19,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-etherzero/core/types"
 )
 
 // errSectionOutOfBounds is returned if the user tried to add more bloom filters

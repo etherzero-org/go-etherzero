@@ -19,11 +19,11 @@ package downloader
 import (
 	"math/big"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core"
-	"github.com/etherzero/go-ethereum/core/rawdb"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/ethdb"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/ethdb"
 )
 
 // FakePeer is a mock downloader peer that operates on a local database instance

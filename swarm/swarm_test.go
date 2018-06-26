@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/rpc"
-	"github.com/etherzero/go-ethereum/swarm/api"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/swarm/api"
 )
 
 // TestNewSwarm validates Swarm fields in repsect to the provided configuration.

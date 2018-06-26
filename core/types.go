@@ -17,9 +17,9 @@
 package core
 
 import (
-	"github.com/etherzero/go-ethereum/core/state"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/core/vm"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It

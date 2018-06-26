@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // makeWizard creates and returns a new puppeth wizard.

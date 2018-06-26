@@ -17,10 +17,10 @@
 package clique
 
 import (
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/consensus"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 // API is a user facing RPC API to allow controlling the signer and voting

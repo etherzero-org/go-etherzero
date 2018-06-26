@@ -19,7 +19,7 @@ package params
 import (
 	"math/big"
 
-	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 // DAOForkBlockExtra is the block header extra-data field to set for the DAO fork

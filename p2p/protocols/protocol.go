@@ -36,9 +36,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/metrics"
-	"github.com/etherzero/go-ethereum/p2p"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/p2p"
 )
 
 // error codes used by this  protocol scheme

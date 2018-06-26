@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/etherzero/go-ethereum/common/math"
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/common/math"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // Config are the configuration options for the Interpreter

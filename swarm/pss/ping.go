@@ -22,9 +22,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/protocols"
-	"github.com/etherzero/go-ethereum/swarm/log"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/protocols"
+	"github.com/etherzero/go-etherzero/swarm/log"
 )
 
 // Generic ping protocol implementation for

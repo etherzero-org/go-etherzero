@@ -23,11 +23,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/protocols"
-	p2ptest "github.com/etherzero/go-ethereum/p2p/testing"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/protocols"
+	p2ptest "github.com/etherzero/go-etherzero/p2p/testing"
 )
 
 var (

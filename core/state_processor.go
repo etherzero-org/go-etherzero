@@ -17,14 +17,14 @@
 package core
 
 import (
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/consensus"
-	"github.com/etherzero/go-ethereum/consensus/misc"
-	"github.com/etherzero/go-ethereum/core/state"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/core/vm"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/misc"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning

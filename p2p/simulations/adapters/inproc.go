@@ -23,13 +23,13 @@ import (
 	"net"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/event"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/node"
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/simulations/pipes"
-	"github.com/etherzero/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/node"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/simulations/pipes"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and

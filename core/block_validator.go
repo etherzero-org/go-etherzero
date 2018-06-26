@@ -19,10 +19,10 @@ package core
 import (
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/consensus"
-	"github.com/etherzero/go-ethereum/core/state"
-	"github.com/etherzero/go-ethereum/core/types"
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

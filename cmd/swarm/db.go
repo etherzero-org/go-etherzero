@@ -22,10 +22,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/etherzero/go-ethereum/cmd/utils"
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/cmd/utils"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 	"gopkg.in/urfave/cli.v1"
 )
 

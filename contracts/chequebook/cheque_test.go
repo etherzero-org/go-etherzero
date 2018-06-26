@@ -24,12 +24,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/accounts/abi/bind"
-	"github.com/etherzero/go-ethereum/accounts/abi/bind/backends"
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/contracts/chequebook/contract"
-	"github.com/etherzero/go-ethereum/core"
-	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind/backends"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/contracts/chequebook/contract"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 var (

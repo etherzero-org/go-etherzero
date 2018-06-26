@@ -19,8 +19,8 @@ package trie
 import (
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

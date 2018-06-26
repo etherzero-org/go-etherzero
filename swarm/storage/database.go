@@ -22,7 +22,7 @@ package storage
 import (
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/metrics"
+	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"

@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 var (

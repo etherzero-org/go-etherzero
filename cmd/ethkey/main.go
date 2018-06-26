@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/etherzero/go-ethereum/cmd/utils"
+	"github.com/etherzero/go-etherzero/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 

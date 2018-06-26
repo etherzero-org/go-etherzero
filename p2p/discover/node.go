@@ -31,9 +31,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/crypto/secp256k1"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/crypto/secp256k1"
 )
 
 const NodeIDBits = 512

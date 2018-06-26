@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/crypto/sha3"
-	p2ptest "github.com/etherzero/go-ethereum/p2p/testing"
+	"github.com/etherzero/go-etherzero/crypto/sha3"
+	p2ptest "github.com/etherzero/go-etherzero/p2p/testing"
 )
 
 func TestStreamerSubscribe(t *testing.T) {

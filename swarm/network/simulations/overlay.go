@@ -27,13 +27,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/node"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/simulations"
-	"github.com/etherzero/go-ethereum/p2p/simulations/adapters"
-	"github.com/etherzero/go-ethereum/swarm/network"
-	"github.com/etherzero/go-ethereum/swarm/state"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/node"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/simulations"
+	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
+	"github.com/etherzero/go-etherzero/swarm/network"
+	"github.com/etherzero/go-etherzero/swarm/state"
 	colorable "github.com/mattn/go-colorable"
 )
 

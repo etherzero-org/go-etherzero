@@ -22,12 +22,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/internal/ethapi"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/signer/core"
-	"github.com/etherzero/go-ethereum/signer/rules/deps"
-	"github.com/etherzero/go-ethereum/signer/storage"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/internal/ethapi"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/signer/core"
+	"github.com/etherzero/go-etherzero/signer/rules/deps"
+	"github.com/etherzero/go-etherzero/signer/storage"
 	"github.com/robertkrimen/otto"
 )
 

@@ -19,7 +19,7 @@ package core
 import (
 	"runtime"
 
-	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-etherzero/core/types"
 )
 
 // senderCacher is a concurrent tranaction sender recoverer anc cacher.

@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/metrics"
-	"github.com/etherzero/go-ethereum/swarm/log"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/swarm/log"
 )
 
 /*

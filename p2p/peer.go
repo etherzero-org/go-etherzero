@@ -25,11 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common/mclock"
-	"github.com/etherzero/go-ethereum/event"
-	"github.com/etherzero/go-ethereum/log"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/rlp"
+	"github.com/etherzero/go-etherzero/common/mclock"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 var (

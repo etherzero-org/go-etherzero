@@ -28,9 +28,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/etherzero/go-ethereum/internal/jsre"
-	"github.com/etherzero/go-ethereum/internal/web3ext"
-	"github.com/etherzero/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/internal/jsre"
+	"github.com/etherzero/go-etherzero/internal/web3ext"
+	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"

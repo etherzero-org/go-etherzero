@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // Forks table defines supported forks and their chain config.

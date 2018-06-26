@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/common/math"
-	"github.com/etherzero/go-ethereum/crypto"
-	"github.com/etherzero/go-ethereum/crypto/sha3"
-	"github.com/etherzero/go-ethereum/rlp"
+	"github.com/etherzero/go-etherzero/common/math"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/crypto/sha3"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 // Registry of known identity schemes.

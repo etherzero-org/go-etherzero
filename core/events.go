@@ -17,8 +17,8 @@
 package core
 
 import (
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/core/types"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/types"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

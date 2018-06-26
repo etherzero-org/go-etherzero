@@ -25,7 +25,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/etherzero/go-ethereum/swarm/testutil"
+	"github.com/etherzero/go-etherzero/swarm/testutil"
 )
 
 func TestError(t *testing.T) {

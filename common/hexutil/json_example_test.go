@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-etherzero/common/hexutil"
 )
 
 type MyType [5]byte

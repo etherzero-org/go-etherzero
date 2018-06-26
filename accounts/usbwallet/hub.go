@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/accounts"
-	"github.com/etherzero/go-ethereum/event"
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/karalabe/hid"
 )
 

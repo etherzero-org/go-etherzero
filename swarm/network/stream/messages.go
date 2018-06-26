@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/metrics"
-	"github.com/etherzero/go-ethereum/swarm/log"
-	bv "github.com/etherzero/go-ethereum/swarm/network/bitvector"
-	"github.com/etherzero/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/swarm/log"
+	bv "github.com/etherzero/go-etherzero/swarm/network/bitvector"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 )
 
 // Stream defines a unique stream identifier.

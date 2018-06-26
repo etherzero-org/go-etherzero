@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/etherzero/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 // In this example, our client whishes to track the latest 'block number'

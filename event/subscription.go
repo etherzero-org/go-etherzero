@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common/mclock"
+	"github.com/etherzero/go-etherzero/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

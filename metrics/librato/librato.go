@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/etherzero/go-ethereum/metrics"
+	"github.com/etherzero/go-etherzero/metrics"
 )
 
 // a regexp for extracting the unit from time.Duration.String

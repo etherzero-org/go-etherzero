@@ -20,11 +20,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/accounts/abi/bind"
-	"github.com/etherzero/go-ethereum/accounts/abi/bind/backends"
-	"github.com/etherzero/go-ethereum/contracts/ens/contract"
-	"github.com/etherzero/go-ethereum/core"
-	"github.com/etherzero/go-ethereum/crypto"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind/backends"
+	"github.com/etherzero/go-etherzero/contracts/ens/contract"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 var (

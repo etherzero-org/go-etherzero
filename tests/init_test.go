@@ -29,7 +29,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 var (

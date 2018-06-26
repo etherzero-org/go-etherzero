@@ -23,7 +23,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/swarm/storage/mock/test"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock/test"
 )
 
 // TestDBStore is running a test.MockStore tests

@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 )
 
 func TestParseURI(t *testing.T) {

@@ -19,7 +19,7 @@ package api
 import (
 	"path"
 
-	"github.com/etherzero/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 )
 
 type Response struct {

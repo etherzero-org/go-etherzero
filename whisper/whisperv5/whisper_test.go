@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 func TestWhisperBasic(t *testing.T) {

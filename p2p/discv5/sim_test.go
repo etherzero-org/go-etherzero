@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 // In this test, nodes try to randomly resolve each other.

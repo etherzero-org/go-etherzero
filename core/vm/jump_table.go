@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/etherzero/go-ethereum/params"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 type (

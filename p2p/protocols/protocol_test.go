@@ -23,10 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/etherzero/go-ethereum/p2p"
-	"github.com/etherzero/go-ethereum/p2p/discover"
-	"github.com/etherzero/go-ethereum/p2p/simulations/adapters"
-	p2ptest "github.com/etherzero/go-ethereum/p2p/testing"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
+	p2ptest "github.com/etherzero/go-etherzero/p2p/testing"
 )
 
 // handshake message type

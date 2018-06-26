@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // Enabled is checked by the constructor functions for all of the

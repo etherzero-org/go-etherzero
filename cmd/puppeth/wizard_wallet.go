@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/etherzero/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // deployWallet creates a new web wallet based on some user input.

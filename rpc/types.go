@@ -23,7 +23,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/etherzero/go-ethereum/common/hexutil"
+	"github.com/etherzero/go-etherzero/common/hexutil"
 	"gopkg.in/fatih/set.v0"
 )
 

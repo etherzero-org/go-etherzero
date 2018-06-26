@@ -25,8 +25,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/etherzero/go-ethereum/accounts/abi"
-	"github.com/etherzero/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/accounts/abi"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 func verify(t *testing.T, jsondata, calldata string, exp []interface{}) {

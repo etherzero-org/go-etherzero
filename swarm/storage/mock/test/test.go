@@ -25,9 +25,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/etherzero/go-ethereum/common"
-	"github.com/etherzero/go-ethereum/swarm/storage"
-	"github.com/etherzero/go-ethereum/swarm/storage/mock"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/swarm/storage"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock"
 )
 
 // MockStore creates NodeStore instances from provided GlobalStorer,

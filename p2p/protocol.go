@@ -19,7 +19,7 @@ package p2p
 import (
 	"fmt"
 
-	"github.com/etherzero/go-ethereum/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 // Protocol represents a P2P subprotocol implementation.
