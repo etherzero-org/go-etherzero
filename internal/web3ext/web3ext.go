@@ -30,6 +30,7 @@ var Modules = map[string]string{
 	"shh":        Shh_JS,
 	"swarmfs":    SWARMFS_JS,
 	"txpool":     TxPool_JS,
+	"devote":     Devote_JS,
 }
 
 const Chequebook_JS = `
@@ -627,6 +628,25 @@ web3._extend({
 				status.queued = web3._extend.utils.toDecimal(status.queued);
 				return status;
 			}
+		}),
+	]
+});
+`
+const Devote_JS = `
+web3._extend({
+	property: 'devote',
+	methods: [
+		new web3._extend.Method({
+			name: 'getWitnesses',
+			call: 'devote_getWitnesses',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getConfirmedBlockNumber',
+			call: 'devote_getConfirmedBlockNumber',
+			params: 0,
+			outputFormatter: web3._extend.utils.toBigNumber
 		}),
 	]
 });

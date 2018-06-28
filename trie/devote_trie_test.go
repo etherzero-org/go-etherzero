@@ -22,51 +22,39 @@ import (
 	"fmt"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/metrics"
 )
 
-var (
-	// emptyRoot is the known root hash of an empty trie.
-	emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 
-	// emptyState is the known hash of an empty state trie entry.
-	emptyState = crypto.Keccak256Hash(nil)
-)
 
-var (
-	cacheMissCounter   = metrics.NewRegisteredCounter("trie/cachemiss", nil)
-	cacheUnloadCounter = metrics.NewRegisteredCounter("trie/cacheunload", nil)
-)
-
-// CacheMisses retrieves a global counter measuring the number of cache misses
-// the trie had since process startup. This isn't useful for anything apart from
-// trie debugging purposes.
-func CacheMisses() int64 {
-	return cacheMissCounter.Count()
+func init() {
+	sha3.NewKeccak256().Sum(emptyState[:0])
 }
 
-// CacheUnloads retrieves a global counter measuring the number of cache unloads
-// the trie did since process startup. This isn't useful for anything apart from
-// trie debugging purposes.
-func CacheUnloads() int64 {
-	return cacheUnloadCounter.Count()
+// Database must be implemented by backing stores for the trie.
+type TrieDatabase interface {
+	DatabaseReader
+	DatabaseWriter
 }
 
-// LeafCallback is a callback type invoked when a trie operation reaches a leaf
-// node. It's used by state sync and commit to allow handling external references
-// between account and storage tries.
-type LeafCallback func(leaf []byte, parent common.Hash) error
+
+// DatabaseWriter wraps the Put method of a backing store for the trie.
+type DatabaseWriter interface {
+	// Put stores the mapping key->value in the database.
+	// Implementations must not hold onto the value bytes, the trie
+	// will reuse the slice across calls to Put.
+	Put(key, value []byte) error
+}
 
 // Trie is a Merkle Patricia Trie.
 // The zero value is an empty trie with no database.
 // Use New to create a trie that sits on top of a database.
 //
 // Trie is not safe for concurrent use.
-type Trie struct {
-	db           *Database
+type DevoteTrie struct {
 	root         node
+	db           TrieDatabase
 	originalRoot common.Hash
 	prefix       []byte
 
@@ -79,12 +67,12 @@ type Trie struct {
 
 // SetCacheLimit sets the number of 'cache generations' to keep.
 // A cache generation is created by a call to Commit.
-func (t *Trie) SetCacheLimit(l uint16) {
+func (t *DevoteTrie) SetCacheLimit(l uint16) {
 	t.cachelimit = l
 }
 
 // newFlag returns the cache flag value for a newly created node.
-func (t *Trie) newFlag() nodeFlag {
+func (t *DevoteTrie) newFlag() nodeFlag {
 	return nodeFlag{dirty: true, gen: t.cachegen}
 }
 
@@ -94,17 +82,12 @@ func (t *Trie) newFlag() nodeFlag {
 // trie is initially empty and does not require a database. Otherwise,
 // New will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
-func  New(root common.Hash, db *Database) (*Trie, error) {
-	if db == nil {
-		panic("trie.New called without a database")
-	}
-	trie := &Trie{
-		db:           db,
-		originalRoot: root,
-	}
-	fmt.Printf("trie New value:%x\n",trie.Hash())
-
-	if root != (common.Hash{}) && root != emptyRoot {
+func NewDevoteTrie(root common.Hash, db TrieDatabase) (*DevoteTrie, error) {
+	trie := &DevoteTrie{db: db, originalRoot: root}
+	if (root != common.Hash{}) && root != emptyRoot {
+		if db == nil {
+			panic("trie.New: cannot use existing root without a database")
+		}
 		rootnode, err := trie.resolveHash(root[:], nil)
 		if err != nil {
 			return nil, err
@@ -114,8 +97,8 @@ func  New(root common.Hash, db *Database) (*Trie, error) {
 	return trie, nil
 }
 
-func NewTrieWithPrefix(root common.Hash, prefix []byte, db *Database) (*Trie, error) {
-	trie, err := New(root, db)
+func NewTrieWithPrefix(root common.Hash, prefix []byte, db TrieDatabase) (*DevoteTrie, error) {
+	trie, err := NewDevoteTrie(root, db)
 	if err != nil {
 		return nil, err
 	}
@@ -125,13 +108,16 @@ func NewTrieWithPrefix(root common.Hash, prefix []byte, db *Database) (*Trie, er
 
 // NodeIterator returns an iterator that returns nodes of the trie. Iteration starts at
 // the key after the given start key.
-func (t *Trie) NodeIterator(start []byte) NodeIterator {
+func (t *DevoteTrie) NodeIterator(start []byte) NodeIterator {
+	if t.prefix != nil {
+		start = append(t.prefix, start...)
+	}
 	return newNodeIterator(t, start)
 }
 
 // PrefixIterator returns an iterator that returns nodes of the trie which has the prefix path specificed
 // Iteration starts at the key after the given start key.
-func (t *Trie) PrefixIterator(prefix []byte) NodeIterator {
+func (t *DevoteTrie) PrefixIterator(prefix []byte) NodeIterator {
 	if t.prefix != nil {
 		prefix = append(t.prefix, prefix...)
 	}
@@ -140,7 +126,7 @@ func (t *Trie) PrefixIterator(prefix []byte) NodeIterator {
 
 // Get returns the value for key stored in the trie.
 // The value bytes must not be modified by the caller.
-func (t *Trie) Get(key []byte) []byte {
+func (t *DevoteTrie) Get(key []byte) []byte {
 	res, err := t.TryGet(key)
 	if err != nil {
 		log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
@@ -151,7 +137,10 @@ func (t *Trie) Get(key []byte) []byte {
 // TryGet returns the value for key stored in the trie.
 // The value bytes must not be modified by the caller.
 // If a node was not found in the database, a MissingNodeError is returned.
-func (t *Trie) TryGet(key []byte) ([]byte, error) {
+func (t *DevoteTrie) TryGet(key []byte) ([]byte, error) {
+	if t.prefix != nil {
+		key = append(t.prefix, key...)
+	}
 	key = keybytesToHex(key)
 	value, newroot, didResolve, err := t.tryGet(t.root, key, 0)
 	if err == nil && didResolve {
@@ -160,7 +149,7 @@ func (t *Trie) TryGet(key []byte) ([]byte, error) {
 	return value, err
 }
 
-func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode node, didResolve bool, err error) {
+func (t *DevoteTrie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode node, didResolve bool, err error) {
 	switch n := (origNode).(type) {
 	case nil:
 		return nil, nil, false, nil
@@ -204,7 +193,7 @@ func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode
 //
 // The value bytes must not be modified by the caller while they are
 // stored in the trie.
-func (t *Trie) Update(key, value []byte) {
+func (t *DevoteTrie) Update(key, value []byte) {
 	if err := t.TryUpdate(key, value); err != nil {
 		log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
 	}
@@ -218,7 +207,10 @@ func (t *Trie) Update(key, value []byte) {
 // stored in the trie.
 //
 // If a node was not found in the database, a MissingNodeError is returned.
-func (t *Trie) TryUpdate(key, value []byte) error {
+func (t *DevoteTrie) TryUpdate(key, value []byte) error {
+	if t.prefix != nil {
+		key = append(t.prefix, key...)
+	}
 	k := keybytesToHex(key)
 	if len(value) != 0 {
 		_, n, err := t.insert(t.root, nil, k, valueNode(value))
@@ -236,7 +228,7 @@ func (t *Trie) TryUpdate(key, value []byte) error {
 	return nil
 }
 
-func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
+func (t *DevoteTrie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
 	if len(key) == 0 {
 		if v, ok := n.(valueNode); ok {
 			return !bytes.Equal(v, value.(valueNode)), value, nil
@@ -306,7 +298,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 }
 
 // Delete removes any existing value for key from the trie.
-func (t *Trie) Delete(key []byte) {
+func (t *DevoteTrie) Delete(key []byte) {
 	if err := t.TryDelete(key); err != nil {
 		log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
 	}
@@ -314,7 +306,10 @@ func (t *Trie) Delete(key []byte) {
 
 // TryDelete removes any existing value for key from the trie.
 // If a node was not found in the database, a MissingNodeError is returned.
-func (t *Trie) TryDelete(key []byte) error {
+func (t *DevoteTrie) TryDelete(key []byte) error {
+	if t.prefix != nil {
+		key = append(t.prefix, key...)
+	}
 	k := keybytesToHex(key)
 	_, n, err := t.delete(t.root, nil, k)
 	if err != nil {
@@ -327,7 +322,7 @@ func (t *Trie) TryDelete(key []byte) error {
 // delete returns the new root of the trie with key deleted.
 // It reduces the trie to minimal form by simplifying
 // nodes on the way up after deleting recursively.
-func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
+func (t *DevoteTrie) delete(n node, prefix, key []byte) (bool, node, error) {
 	switch n := n.(type) {
 	case *shortNode:
 		matchlen := prefixLen(key, n.Key)
@@ -436,56 +431,47 @@ func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
 	}
 }
 
-func concat(s1 []byte, s2 ...byte) []byte {
-	r := make([]byte, len(s1)+len(s2))
-	copy(r, s1)
-	copy(r[len(s1):], s2)
-	return r
-}
 
-func (t *Trie) resolve(n node, prefix []byte) (node, error) {
+func (t *DevoteTrie) resolve(n node, prefix []byte) (node, error) {
 	if n, ok := n.(hashNode); ok {
 		return t.resolveHash(n, prefix)
 	}
 	return n, nil
 }
 
-
-func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
+func (t *DevoteTrie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	cacheMissCounter.Inc(1)
 
-	hash := common.BytesToHash(n)
-	if node := t.db.node(hash, t.cachegen); node != nil {
-		return node, nil
+	enc, err := t.db.Get(n)
+	if err != nil || enc == nil {
+		return nil, &MissingNodeError{NodeHash: common.BytesToHash(n), Path: prefix}
 	}
-	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
+	dec := mustDecodeNode(n, enc, t.cachegen)
+	return dec, nil
 }
 
 // Root returns the root hash of the trie.
 // Deprecated: use Hash instead.
-func (t *Trie) Root() []byte { return t.Hash().Bytes() }
+func (t *DevoteTrie) Root() []byte { return t.Hash().Bytes() }
 
 // Hash returns the root hash of the trie. It does not write to the
 // database and can be used even if the trie doesn't have one.
-func (t *Trie) Hash() common.Hash {
-	hash, cached, _ := t.hashRoot(nil, nil)
+func (t *DevoteTrie) Hash() common.Hash {
+	hash, cached, _ := t.hashRoot(nil)
 	t.root = cached
 	return common.BytesToHash(hash.(hashNode))
 }
 
-// Commit writes all nodes to the trie's memory database, tracking the internal
-// and external (for account tries) references.
-func (t *Trie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
+// Commit writes all nodes to the trie's database.
+// Nodes are stored with their sha3 hash as the key.
+//
+// Committing flushes nodes from memory.
+// Subsequent Get calls will load nodes from the database.
+func (t *DevoteTrie) Commit() (root common.Hash, err error) {
 	if t.db == nil {
-		panic("commit called on trie with nil database")
+		panic("Commit called on trie with nil database")
 	}
-	hash, cached, err := t.hashRoot(t.db, onleaf)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	t.root = cached
-	t.cachegen++
-	return common.BytesToHash(hash.(hashNode)), nil
+	return t.CommitTo(t.db)
 }
 
 // CommitTo writes all nodes to the given database.
@@ -495,8 +481,8 @@ func (t *Trie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 // load nodes from the trie's database. Calling code must ensure that
 // the changes made to db are written back to the trie's attached
 // database before using the trie.
-func (t *Trie) CommitTo(db *Database) (root common.Hash, err error) {
-	hash, cached, err := t.hashRoot(db, nil)
+func (t *DevoteTrie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
+	hash, cached, err := t.hashRoot(db)
 	if err != nil {
 		return (common.Hash{}), err
 	}
@@ -505,11 +491,11 @@ func (t *Trie) CommitTo(db *Database) (root common.Hash, err error) {
 	return common.BytesToHash(hash.(hashNode)), nil
 }
 
-func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node, error) {
+func (t *DevoteTrie) hashRoot(db DatabaseWriter) (node, node, error) {
 	if t.root == nil {
 		return hashNode(emptyRoot.Bytes()), nil, nil
 	}
-	h := newHasher(t.cachegen, t.cachelimit, onleaf)
+	h := newHasher(t.cachegen, t.cachelimit)
 	defer returnHasherToPool(h)
 	return h.hash(t.root, db, true)
 }

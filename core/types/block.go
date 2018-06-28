@@ -85,15 +85,7 @@ type Header struct {
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 
 	Witness     common.Address `json:"witness"          gencodec:"required"`
-	Context     *DevoteContextProto  `json:"context"          gencodec:"required"`
-}
-
-type DevoteContextProto struct {
-	EpochHash     common.Hash `json:"epochRoot"        gencodec:"required"`
-	CacheHash     common.Hash `json:"cacheRoot"        gencodec:"required"`
-	CandidateHash common.Hash `json:"candidateRoot"    gencodec:"required"`
-	VoteHash      common.Hash `json:"voteRoot"         gencodec:"required"`
-	MintCntHash   common.Hash `json:"mintCntRoot"      gencodec:"required"`
+	Context     *DevoteContextAtomic  `json:"context"          gencodec:"required"`
 }
 
 
@@ -379,6 +371,8 @@ func (b *Block) WithSeal(header *Header) *Block {
 		header:       &cpy,
 		transactions: b.transactions,
 		uncles:       b.uncles,
+
+		DevoteContext:b.DevoteContext,
 	}
 }
 

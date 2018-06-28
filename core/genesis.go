@@ -234,7 +234,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 	// add dposcontext
 	devoteContext := initGenesisDevoteContext(g, db)
-	devoteContextProto := devoteContext.ContextProto()
+	devoteContextProto := devoteContext.ContextAtomic()
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -257,7 +257,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
-	block:=types.NewBlock(head, nil, nil, nil)
+	block := types.NewBlock(head, nil, nil, nil)
 	block.DevoteContext = devoteContext
 
 	return block
@@ -266,6 +266,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
+	fmt.Printf("genesis Commit begin")
 	block := g.ToBlock(db)
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
@@ -276,9 +277,10 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	rawdb.WriteCanonicalHash(db, block.Hash(), block.NumberU64())
 	rawdb.WriteHeadBlockHash(db, block.Hash())
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
-
+	triedb := trie.NewDatabase(db)
+	fmt.Printf("genesis DevoteContext Commit begin")
 	// add devotecontext
-	if _, err := block.DevoteContext.Commit(); err != nil {
+	if _, err := block.DevoteContext.Commit(triedb); err != nil {
 		return nil, err
 	}
 
@@ -384,13 +386,13 @@ func decodePrealloc(data string) GenesisAlloc {
 
 func initGenesisDevoteContext(g *Genesis, db ethdb.Database) *types.DevoteContext {
 
-	triedb := trie.NewDatabase(db)
-
-	dc, err := types.NewDevoteContextFromProto(triedb, &types.DevoteContextProto{})
+	dc, err := types.NewDevoteContextFromAtomic(db, &types.DevoteContextAtomic{})
 	if err != nil {
 		return nil
 	}
+
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
+
 		dc.SetWitnesses(g.Config.Devote.Witnesses)
 		for _, witness := range g.Config.Devote.Witnesses {
 			dc.CacheTrie().TryUpdate(append(witness.Bytes(), witness.Bytes()...), witness.Bytes())
@@ -399,4 +401,3 @@ func initGenesisDevoteContext(g *Genesis, db ethdb.Database) *types.DevoteContex
 	}
 	return dc
 }
-

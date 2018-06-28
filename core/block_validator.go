@@ -101,6 +101,16 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	return nil
 }
 
+func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
+	header := block.Header()
+	localRoot := block.Context().Root()
+	remoteRoot := header.Context.Root()
+	if remoteRoot != localRoot {
+		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
+	}
+	return nil
+}
+
 // CalcGasLimit computes the gas limit of the next block after parent.
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) uint64 {

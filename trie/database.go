@@ -332,7 +332,7 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 
 // node retrieves a cached trie node from memory, or returns nil if none can be
 // found in the memory cache.
-func (db *Database) node(hash common.Hash, cachegen uint16) node {
+func (db *Database) 	node(hash common.Hash, cachegen uint16) node {
 	// Retrieve the node from cache if available
 	db.lock.RLock()
 	node := db.nodes[hash]
@@ -341,6 +341,9 @@ func (db *Database) node(hash common.Hash, cachegen uint16) node {
 	if node != nil {
 		return node.obj(hash, cachegen)
 	}
+	value,_:=db.diskdb.Get(hash[:])
+	fmt.Printf("trie.go resolveHash db.get value:%x\n",value)
+
 	// Content unavailable in memory, attempt to retrieve from disk
 	enc, err := db.diskdb.Get(hash[:])
 	if err != nil || enc == nil {

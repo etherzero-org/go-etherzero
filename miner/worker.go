@@ -36,6 +36,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"gopkg.in/fatih/set.v0"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 )
 
 const (
@@ -80,6 +81,9 @@ type Work struct {
 	receipts []*types.Receipt
 
 	createdAt time.Time
+
+	devoteContext *types.DevoteContext
+
 }
 
 type Result struct {
@@ -130,6 +134,10 @@ type worker struct {
 	// atomic status counters
 	mining int32
 	atWork int32
+
+	quitCh  chan struct{}
+	stopper chan struct{}
+
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
@@ -149,6 +157,9 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		quitCh:         make(chan struct{}, 1),
+		stopper:        make(chan struct{}, 1),
+
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -206,25 +217,72 @@ func (self *worker) start() {
 	defer self.mu.Unlock()
 
 	atomic.StoreInt32(&self.mining, 1)
+	go self.mintLoop()
+}
 
-	// spin up agents
-	for agent := range self.agents {
-		agent.Start()
+func (self *worker) mintBlock(now int64) {
+	engine, ok := self.engine.(*devote.Devote)
+	if !ok {
+		log.Error("Only the devote engine was allowed")
+		return
+	}
+
+	err := engine.CheckValidator(self.chain.CurrentBlock(), now)
+	if err != nil {
+		switch err {
+		case devote.ErrWaitForPrevBlock,
+			devote.ErrMintFutureBlock,
+			devote.ErrInvalidBlockValidator,
+			devote.ErrInvalidMintBlockTime:
+			log.Debug("Failed to mint the block, while ", "err", err)
+		default:
+			log.Error("Failed to mint the block", "err", err)
+		}
+		return
+	}
+	work, err := self.commitNewWork()
+	if err != nil {
+		log.Error("Failed to create the new work", "err", err)
+		return
+	}
+
+
+	result, err := self.engine.Seal(self.chain, work.Block, self.quitCh)
+	if err != nil {
+		log.Error("Failed to seal the block", "err", err)
+		return
+	}
+	self.recv <- &Result{work, result}
+}
+
+func (self *worker) mintLoop() {
+	ticker := time.NewTicker(time.Second).C
+	for {
+		select {
+		case now := <-ticker:
+			self.mintBlock(now.Unix())
+		case <-self.stopper:
+			close(self.quitCh)
+			self.quitCh = make(chan struct{}, 1)
+			self.stopper = make(chan struct{}, 1)
+			return
+		}
 	}
 }
 
 func (self *worker) stop() {
+	if atomic.LoadInt32(&self.mining) == 0 {
+		return
+	}
+
 	self.wg.Wait()
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	if atomic.LoadInt32(&self.mining) == 1 {
-		for agent := range self.agents {
-			agent.Stop()
-		}
-	}
+
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.atWork, 0)
+	close(self.stopper)
 }
 
 func (self *worker) register(agent Agent) {
@@ -252,12 +310,6 @@ func (self *worker) update() {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
 			self.commitNewWork()
-
-		// Handle ChainSideEvent
-		case ev := <-self.chainSideCh:
-			self.uncleMu.Lock()
-			self.possibleUncles[ev.Block.Hash()] = ev.Block
-			self.uncleMu.Unlock()
 
 		// Handle NewTxsEvent
 		case ev := <-self.txsCh:
@@ -358,6 +410,11 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
+	fmt.Printf("worker makeCurrent context:%x\n",parent.Header().Context)
+	devoteContext, err := types.NewDevoteContextFromAtomic(self.chainDb, parent.Header().Context)
+	if err != nil {
+		return err
+	}
 	work := &Work{
 		config:    self.config,
 		signer:    types.NewEIP155Signer(self.config.ChainID),
@@ -367,6 +424,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		uncles:    set.New(),
 		header:    header,
 		createdAt: time.Now(),
+
+		devoteContext:devoteContext,
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -384,7 +443,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() {
+func (self *worker) commitNewWork() (*Work, error){
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -419,8 +478,7 @@ func (self *worker) commitNewWork() {
 		header.Coinbase = self.coinbase
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
-		return
+		return nil, fmt.Errorf("got error when preparing header, err: %s", err)
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
 	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
@@ -438,8 +496,7 @@ func (self *worker) commitNewWork() {
 	// Could potentially happen if starting to mine in an odd state.
 	err := self.makeCurrent(parent, header)
 	if err != nil {
-		log.Error("Failed to create mining context", "err", err)
-		return
+		return nil, fmt.Errorf("got error when create mining context, err: %s", err)
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
@@ -448,8 +505,7 @@ func (self *worker) commitNewWork() {
 	}
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-		return
+		return nil, fmt.Errorf("got error when fetch pending transactions, err: %s", err)
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
@@ -477,17 +533,18 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
-		log.Error("Failed to finalize block for sealing", "err", err)
-		return
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteContext); err != nil {
+		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
+	work.Block.DevoteContext = work.devoteContext
+
+	// update the count for the miner of new block
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
-	self.push(work)
-	self.updateSnapshot()
+	return work, nil
 }
 
 func (self *worker) commitUncle(work *Work, uncle *types.Header) error {

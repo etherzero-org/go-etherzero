@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/mclock"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
@@ -899,6 +900,14 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
 
+	devotedb := trie.NewDatabase(bc.db)
+	if _, err := block.DevoteContext.Commit(devotedb); err != nil {
+		fmt.Printf("blockchain WriteBlockWithState DevoteContext commit failed . err %s",err)
+		return NonStatTy, err
+	}else{
+		fmt.Printf("blockchain WriteBlockWithState DevoteContext commit successful!")
+	}
+
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
 	if err != nil {
 		return NonStatTy, err
@@ -1139,6 +1148,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		} else {
 			parent = chain[i-1]
 		}
+
+		block.DevoteContext, err = types.NewDevoteContextFromAtomic(bc.db, parent.Header().Context)
+		if err != nil {
+			return i, events, coalescedLogs, err
+		}
+
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -1156,6 +1171,22 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 		proctime := time.Since(bstart)
+
+		// Validate the devote state using the default validator
+		err = bc.Validator().ValidateDevoteState(block)
+		if err != nil {
+			bc.reportBlock(block, receipts, err)
+			return i, events, coalescedLogs, err
+		}
+		// Validate validator
+		devoteEngine, isDevote := bc.engine.(*devote.Devote)
+		if isDevote {
+			err = devoteEngine.VerifySeal(bc, block.Header())
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return i, events, coalescedLogs, err
+			}
+		}
 
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, state)
