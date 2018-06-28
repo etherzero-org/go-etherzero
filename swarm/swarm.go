@@ -131,7 +131,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	}
 	addr := &network.BzzAddr{
 		OAddr: common.FromHex(config.BzzKey),
-		UAddr: []byte(discover.NewNode(nodeID, net.IP{127, 0, 0, 1}, 30303, 30303).String()),
+		UAddr: []byte(discover.NewNode(nodeID, net.IP{127, 0, 0, 1}, 21212, 21212).String()),
 	}
 
 	bzzconfig := &network.BzzConfig{
