@@ -88,6 +88,7 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
+	witness common.Address
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
@@ -130,6 +131,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		networkID:     config.NetworkId,
 		gasPrice:      config.GasPrice,
 		etherbase:     config.Etherbase,
+		witness:       config.Witness,
+
 		bloomRequests: make(chan chan *bloombits.Retrieval),
 		bloomIndexer:  NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
@@ -214,8 +217,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 
 	// If proof-of-stake is requested, set it up
 	if chainConfig.Devote != nil {
-		fmt.Printf("init ethereum consensus engine\n")
-
 		return devote.NewDevote(chainConfig.Devote, db)
 	}
 
@@ -342,20 +343,55 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
-func (s *Ethereum) StartMining(local bool) error {
-	eb, err := s.Etherbase()
-	if err != nil {
-		log.Error("Cannot start mining without etherbase", "err", err)
-		return fmt.Errorf("etherbase missing: %v", err)
+
+func (s *Ethereum) Witness() (witness common.Address, err error) {
+	s.lock.RLock()
+	witness = s.witness
+	s.lock.RUnlock()
+
+	if witness != (common.Address{}) {
+		return witness, nil
 	}
-	if clique, ok := s.engine.(*clique.Clique); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
+		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
+			fmt.Printf("backend Witness accounts%x\n",accounts[0].Address)
+			return accounts[0].Address, nil
+		}
+	}
+	return common.Address{}, fmt.Errorf("Witness address must be explicitly specified")
+}
+
+// set in js console via admin interface or wrapper from cli flags
+func (self *Ethereum) SetWitness(witness common.Address) {
+	self.lock.Lock()
+	self.witness = witness
+	self.lock.Unlock()
+}
+
+func (s *Ethereum) StartMining(local bool) error {
+	witness, err := s.Witness()
+	if err != nil {
+		log.Error("Cannot start mining without Witness", "err", err)
+		return fmt.Errorf("Witness missing: %v", err)
+	}
+	//if clique, ok := s.engine.(*clique.Clique); ok {
+	//	wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
+	//	if wallet == nil || err != nil {
+	//		log.Error("Etherbase account unavailable locally", "err", err)
+	//		return fmt.Errorf("signer missing: %v", err)
+	//	}
+	//	clique.Authorize(witness, wallet.SignHash)
+	//}
+	eb, err := s.Etherbase()
+	if devote, ok := s.engine.(*devote.Devote); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
 		if wallet == nil || err != nil {
-			log.Error("Etherbase account unavailable locally", "err", err)
+			log.Error("Coinbase account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)
 		}
-		clique.Authorize(eb, wallet.SignHash)
+		devote.Authorize(witness, wallet.SignHash)
 	}
+
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous

@@ -102,7 +102,6 @@ func  New(root common.Hash, db *Database) (*Trie, error) {
 		db:           db,
 		originalRoot: root,
 	}
-	fmt.Printf("trie New value:%x\n",trie.Hash())
 
 	if root != (common.Hash{}) && root != emptyRoot {
 		rootnode, err := trie.resolveHash(root[:], nil)
@@ -111,15 +110,6 @@ func  New(root common.Hash, db *Database) (*Trie, error) {
 		}
 		trie.root = rootnode
 	}
-	return trie, nil
-}
-
-func NewTrieWithPrefix(root common.Hash, prefix []byte, db *Database) (*Trie, error) {
-	trie, err := New(root, db)
-	if err != nil {
-		return nil, err
-	}
-	trie.prefix = prefix
 	return trie, nil
 }
 

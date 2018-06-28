@@ -96,6 +96,8 @@ type Config struct {
 
 	// Mining-related options
 	Etherbase    common.Address `toml:",omitempty"`
+	Witness      common.Address `toml:",omitempty"`
+
 	MinerThreads int            `toml:",omitempty"`
 	ExtraData    []byte         `toml:",omitempty"`
 	GasPrice     *big.Int
@@ -114,6 +116,8 @@ type Config struct {
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
+	Devote  bool   `toml:"-"`
+
 }
 
 type configMarshaling struct {

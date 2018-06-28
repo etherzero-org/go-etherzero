@@ -1475,6 +1475,22 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, bef
 	return p, before, after
 }
 
+func (d *Downloader) syncDevoteContextState(context *types.DevoteContextAtomic) error {
+	roots := []common.Hash{
+		context.CandidateHash,
+		context.CacheHash,
+		context.VoteHash,
+		context.EpochHash,
+		context.MintCntHash,
+	}
+	for _, root := range roots {
+		if err := d.syncState(root).Wait(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *stateSync) error {
 	// Check for any early termination requests
 	if len(results) == 0 {
@@ -1510,10 +1526,16 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
+
+	if err := d.syncDevoteContextState(block.Header().Context); err != nil {
+		return err
+	}
+
 	log.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
 		return err
 	}
+
 	if err := d.blockchain.FastSyncCommitHead(block.Hash()); err != nil {
 		return err
 	}

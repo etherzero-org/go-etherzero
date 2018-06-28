@@ -54,6 +54,7 @@ func (ec *EpochContext) countVotes() (votes map[common.Address]*big.Int, err err
 	if !existCandidate {
 		return votes, errors.New("no candidates")
 	}
+
 	for existCandidate {
 
 		candidate := iterCandidate.Value
@@ -74,6 +75,7 @@ func (ec *EpochContext) countVotes() (votes map[common.Address]*big.Int, err err
 			}
 			cacheAddr := common.BytesToAddress(cache)
 			weight := statedb.GetBalance(cacheAddr)
+
 			score.Add(score, weight)
 			votes[candidateAddr] = score
 			existCache = cacheIterator.Next()

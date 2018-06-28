@@ -410,7 +410,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	fmt.Printf("worker makeCurrent context:%x\n",parent.Header().Context)
 	devoteContext, err := types.NewDevoteContextFromAtomic(self.chainDb, parent.Header().Context)
 	if err != nil {
 		return err
