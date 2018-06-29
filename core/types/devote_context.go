@@ -290,7 +290,7 @@ func (d *DevoteProtocol) Commit(db *trie.Database) (*DevoteProtocolAtomic, error
 	}, nil
 }
 
-func (d *DevoteProtocol) ContextAtomic() *DevoteProtocolAtomic {
+func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 	return &DevoteProtocolAtomic{
 		EpochHash:     d.epochTrie.Hash(),
 		CacheHash:     d.cacheTrie.Hash(),

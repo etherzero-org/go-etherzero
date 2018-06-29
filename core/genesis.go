@@ -234,7 +234,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 	// add devote protocol
 	devoteProtocol := initGenesisDevoteProtocol(g, db)
-	devoteProtocolAtomic := devoteProtocol.ContextAtomic()
+	devoteProtocolAtomic := devoteProtocol.ProtocolAtomic()
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -279,7 +279,7 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
 	triedb := trie.NewDatabase(db)
 	fmt.Printf("genesis devoteProtocol Commit begin")
-	// add devoteProtocol
+	// add devote protocol
 	if _, err := block.DevoteProtocol.Commit(triedb); err != nil {
 		return nil, err
 	}

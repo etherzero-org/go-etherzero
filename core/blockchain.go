@@ -902,10 +902,10 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	devotedb := trie.NewDatabase(bc.db)
 	if _, err := block.DevoteProtocol.Commit(devotedb); err != nil {
-		fmt.Printf("blockchain WriteBlockWithState DevoteContext commit failed . err %s",err)
+		fmt.Printf("blockchain WriteBlockWithState DevoteProtocol commit failed . err %s",err)
 		return NonStatTy, err
 	}else{
-		fmt.Printf("blockchain WriteBlockWithState DevoteContext commit successful!")
+		fmt.Printf("blockchain WriteBlockWithState DevoteProtocol commit successful!")
 	}
 
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))

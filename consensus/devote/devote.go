@@ -275,7 +275,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 
 	//update mint count trie
 	updateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Witness, devoteProtocol)
-	header.Protocol = devoteProtocol.ContextAtomic()
+	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -522,9 +522,9 @@ func NextSlot(now int64) int64 {
 }
 
 // update counts in MintCntTrie for the miner of newBlock
-func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Address, devoteContext *types.DevoteProtocol) {
+func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Address, devoteProtocol *types.DevoteProtocol) {
 
-	currentMintCntTrie := devoteContext.MintCntTrie()
+	currentMintCntTrie := devoteProtocol.MintCntTrie()
 	currentEpoch := parentBlockTime / epochInterval
 	currentEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentEpochBytes, uint64(currentEpoch))
@@ -550,7 +550,7 @@ func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Add
 	newEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newEpochBytes, uint64(newEpoch))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	devoteContext.MintCntTrie().TryUpdate(append(newEpochBytes, validator.Bytes()...), newCntBytes)
+	devoteProtocol.MintCntTrie().TryUpdate(append(newEpochBytes, validator.Bytes()...), newCntBytes)
 
 }
 
