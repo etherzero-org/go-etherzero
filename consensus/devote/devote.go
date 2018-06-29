@@ -34,13 +34,13 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
+	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
-	"github.com/etherzero/go-etherzero/ethdb"
 )
 
 const (
@@ -258,9 +258,9 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	controller := &Controller{
-		statedb:       state,
+		statedb:        state,
 		DevoteProtocol: devoteProtocol,
-		TimeStamp:     header.Time.Int64(),
+		TimeStamp:      header.Time.Int64(),
 	}
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
@@ -385,10 +385,10 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, parent.Protocol)
 	if err != nil {
-		fmt.Printf("devote verifySeal failed epoch hash:%x",devoteProtocol.EpochTrie())
+		fmt.Printf("devote verifySeal failed epoch hash:%x", devoteProtocol.EpochTrie())
 		return err
 	}
-	fmt.Printf("devote verifySeal successful epoch hash:%x",devoteProtocol.EpochTrie())
+	fmt.Printf("devote verifySeal successful epoch hash:%x", devoteProtocol.EpochTrie())
 	controller := &Controller{DevoteProtocol: devoteProtocol}
 	witness, err := controller.lookup(header.Time.Int64())
 	if err != nil {
@@ -427,12 +427,12 @@ func (d *Devote) checkDeadline(lastBlock *types.Block, now int64) error {
 	return ErrWaitForPrevBlock
 }
 
-func (d *Devote) CheckValidator(lastBlock *types.Block, now int64) error {
+func (d *Devote) CheckValidator(db ethdb.Database,lastBlock *types.Block, now int64) error {
 	if err := d.checkDeadline(lastBlock, now); err != nil {
 		return err
 	}
 
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, lastBlock.Header().Protocol)
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(db, lastBlock.Header().Protocol)
 	if err != nil {
 		return err
 	}

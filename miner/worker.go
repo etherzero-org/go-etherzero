@@ -227,7 +227,8 @@ func (self *worker) mintBlock(now int64) {
 		return
 	}
 
-	err := engine.CheckValidator(self.chain.CurrentBlock(), now)
+
+	err := engine.CheckValidator(self.chainDb,self.chain.CurrentBlock(), now)
 	if err != nil {
 		switch err {
 		case devote.ErrWaitForPrevBlock,

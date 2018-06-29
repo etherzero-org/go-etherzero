@@ -36,12 +36,14 @@ import (
 )
 
 type Controller struct {
-	TimeStamp   int64
+
 	DevoteProtocol *types.DevoteProtocol
 	statedb     *state.StateDB
+
+	TimeStamp   int64
 }
 
-// votes
+// votes return  vote list in the Epoch.
 func (ec *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
@@ -85,13 +87,13 @@ func (ec *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 	return votes, nil
 }
 
-func (ec *Controller) kickout(epoch int64) error {
+func (ec *Controller) uncast(epoch int64) error {
 	witnesses, err := ec.DevoteProtocol.GetWitnesses()
 	if err != nil {
 		return fmt.Errorf("failed to get witness: %s", err)
 	}
 	if len(witnesses) == 0 {
-		return errors.New("no witness could be kickout")
+		return errors.New("no witness could be uncast")
 	}
 
 	epochDuration := epochInterval
@@ -103,7 +105,7 @@ func (ec *Controller) kickout(epoch int64) error {
 		epochDuration = ec.TimeStamp - timeOfFirstBlock
 	}
 
-	needKickoutWitnesses := sortableAddresses{}
+	needUncastWitnesses := sortableAddresses{}
 	for _, witness := range witnesses {
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(epoch))
@@ -113,39 +115,39 @@ func (ec *Controller) kickout(epoch int64) error {
 			cnt = int64(binary.BigEndian.Uint64(cntBytes))
 		}
 		if cnt < epochDuration/blockInterval/maxValidatorSize/2 {
-			// not active witnesses need kickout
-			needKickoutWitnesses = append(needKickoutWitnesses, &sortableAddress{witness, big.NewInt(cnt)})
+			// not active witnesses need uncast
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(cnt)})
 		}
 	}
-	// no witnessees need kickout
-	needKickoutWitnessCnt := len(needKickoutWitnesses)
-	if needKickoutWitnessCnt <= 0 {
+	// no witnessees need uncast
+	needUncastWitnessCnt := len(needUncastWitnesses)
+	if needUncastWitnessCnt <= 0 {
 		return nil
 	}
-	sort.Sort(sort.Reverse(needKickoutWitnesses))
+	sort.Sort(sort.Reverse(needUncastWitnesses))
 
 	candidateCount := 0
 	iter := trie.NewIterator(ec.DevoteProtocol.CandidateTrie().NodeIterator(nil))
 	for iter.Next() {
 		candidateCount++
-		if candidateCount >= needKickoutWitnessCnt+safeSize {
+		if candidateCount >= needUncastWitnessCnt+safeSize {
 			break
 		}
 	}
 
-	for i, witness := range needKickoutWitnesses {
+	for i, witness := range needUncastWitnesses {
 		// ensure candidate count greater than or equal to safeSize
 		if candidateCount <= safeSize {
-			log.Info("No more candidate can be kickout", "prevEpochID", epoch, "candidateCount", candidateCount, "needKickoutCount", len(needKickoutWitnesses)-i)
+			log.Info("No more candidate can be kickout", "prevEpochID", epoch, "candidateCount", candidateCount, "needKickoutCount", len(needUncastWitnesses)-i)
 			return nil
 		}
 
-		if err := ec.DevoteProtocol.KickoutCandidate(witness.address); err != nil {
+		if err := ec.DevoteProtocol.Uncast(witness.address); err != nil {
 			return err
 		}
-		// if kickout success, candidateCount minus 1
+		// if uncast success, candidate Count minus 1
 		candidateCount--
-		log.Info("Kickout candidate", "prevEpochID", epoch, "candidate", witness.address.String(), "mintCnt", witness.weight.String())
+		log.Info("uncast candidate", "prevEpochID", epoch, "candidate", witness.address.String(), "mintCnt", witness.weight.String())
 	}
 	return nil
 }
@@ -187,9 +189,9 @@ func (ec *Controller) voting(genesis, parent *types.Header) error {
 	binary.BigEndian.PutUint64(prevEpochBytes, uint64(prevEpoch))
 	iter := trie.NewIterator(ec.DevoteProtocol.MintCntTrie().PrefixIterator(prevEpochBytes))
 	for i := prevEpoch; i < currentEpoch; i++ {
-		// if prevEpoch is not genesis, kickout not active candidate
+		// if prevEpoch is not genesis, uncast not active candidate
 		if !prevEpochIsGenesis && iter.Next() {
-			if err := ec.kickout(prevEpoch); err != nil {
+			if err := ec.uncast(prevEpoch); err != nil {
 				return err
 			}
 		}

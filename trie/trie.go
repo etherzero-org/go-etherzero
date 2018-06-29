@@ -113,6 +113,16 @@ func  New(root common.Hash, db *Database) (*Trie, error) {
 	return trie, nil
 }
 
+
+func NewTrieWithPrefix(root common.Hash, prefix []byte, db *Database) (*Trie, error) {
+	trie, err := New(root, db)
+	if err != nil {
+		return nil, err
+	}
+	trie.prefix = prefix
+	return trie, nil
+}
+
 // NodeIterator returns an iterator that returns nodes of the trie. Iteration starts at
 // the key after the given start key.
 func (t *Trie) NodeIterator(start []byte) NodeIterator {

@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	epochPrefix     = "epoch-"
-	cachePrefix     = "cache-"
-	votePrefix      = "vote-"
-	candidatePrefix = "candidate-"
-	mintCntPrefix   = "mintCnt-"
+	epochPrefix     = []byte("epoch-")
+	cachePrefix  = []byte("cache-")
+	votePrefix      = []byte("vote-")
+	candidatePrefix = []byte("candidate-")
+	mintCntPrefix   = []byte("mintCnt-")
 )
 
 type DevoteProtocol struct {
@@ -31,28 +31,29 @@ type DevoteProtocol struct {
 }
 
 func NewEpochTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(ethdb.NewTable(db, epochPrefix))
-	return trie.New(root, triedb)
+	triedb := trie.NewDatabase(db)
+	return trie.NewTrieWithPrefix(root,epochPrefix,triedb)
+	//return trie.New(root, triedb)
 }
 
 func NewCacheTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(ethdb.NewTable(db, cachePrefix))
-	return trie.New(root, triedb)
+	triedb := trie.NewDatabase(db)
+	return trie.NewTrieWithPrefix(root,cachePrefix,triedb)
 }
 
 func NewVoteTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(ethdb.NewTable(db, votePrefix))
-	return trie.New(root, triedb)
+	triedb := trie.NewDatabase(db)
+	return trie.NewTrieWithPrefix(root,votePrefix,triedb)
 }
 
 func NewCandidateTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(ethdb.NewTable(db, candidatePrefix))
-	return trie.New(root, triedb)
+	triedb := trie.NewDatabase(db)
+	return trie.NewTrieWithPrefix(root,candidatePrefix,triedb)
 }
 
 func NewMintCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix))
-	return trie.New(root, triedb)
+	triedb := trie.NewDatabase(db)
+	return trie.NewTrieWithPrefix(root,mintCntPrefix,triedb)
 
 }
 
@@ -91,36 +92,36 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 
 func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
 
-	fmt.Printf("devote_protocol epochTrie old value:%x\n",ctxAtomic.EpochHash)
+	fmt.Printf("devote_protocol epochTrie old value:%x\n", ctxAtomic.EpochHash)
 	epochTrie, err := NewEpochTrie(ctxAtomic.EpochHash, db)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("devote_protocol epochTrie new value:%x\n",epochTrie.Hash())
+	fmt.Printf("devote_protocol epochTrie new value:%x\n", epochTrie.Hash())
 
-	fmt.Printf("devote_protocol cacheTrie old value:%x\n",ctxAtomic.CacheHash)
+	fmt.Printf("devote_protocol cacheTrie old value:%x\n", ctxAtomic.CacheHash)
 
 	cacheTrie, err := NewCacheTrie(ctxAtomic.CacheHash, db)
-	fmt.Printf("devote_protocol cacheTrie new value:%x\n",cacheTrie.Hash())
+	fmt.Printf("devote_protocol cacheTrie new value:%x\n", cacheTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	voteTrie, err := NewVoteTrie(ctxAtomic.VoteHash, db)
-	fmt.Printf("devote_protocol voteTrie new value:%x\n",voteTrie.Hash())
+	fmt.Printf("devote_protocol voteTrie new value:%x\n", voteTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	candidateTrie, err := NewCandidateTrie(ctxAtomic.CandidateHash, db)
-	fmt.Printf("devote_protocol candidateTrie new value:%x\n",candidateTrie.Hash())
+	fmt.Printf("devote_protocol candidateTrie new value:%x\n", candidateTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	mintCntTrie, err := NewMintCntTrie(ctxAtomic.MintCntHash, db)
-	fmt.Printf("devote_protocol mintCntTrie new value:%x\n",mintCntTrie.Hash())
+	fmt.Printf("devote_protocol mintCntTrie new value:%x\n", mintCntTrie.Hash())
 
 	if err != nil {
 		return nil, err
@@ -135,7 +136,8 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 	}, nil
 }
 
-func (d *DevoteProtocol) KickoutCandidate(candidateAddr common.Address) error {
+//Uncast Candidate
+func (d *DevoteProtocol) Uncast(candidateAddr common.Address) error {
 	candidate := candidateAddr.Bytes()
 	err := d.candidateTrie.TryDelete(candidate)
 	if err != nil {
@@ -333,7 +335,8 @@ func (dc *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
 	return witnesses, nil
 }
 
-func (d *DevoteProtocol) BecomeCandidate(candidateAddr common.Address) error {
+// cast candidate
+func (d *DevoteProtocol) Cast(candidateAddr common.Address) error {
 	candidate := candidateAddr.Bytes()
 	return d.candidateTrie.TryUpdate(candidate, candidate)
 }
@@ -341,7 +344,7 @@ func (d *DevoteProtocol) BecomeCandidate(candidateAddr common.Address) error {
 func (d *DevoteProtocol) UnDelegate(delegatorAddr, candidateAddr common.Address) error {
 	delegator, candidate := delegatorAddr.Bytes(), candidateAddr.Bytes()
 
-	// the candidate must be candidate
+	// the delegate must be cast candidate
 	candidateInTrie, err := d.candidateTrie.TryGet(candidate)
 	if err != nil {
 		return err
