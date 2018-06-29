@@ -20,7 +20,7 @@ var (
 	mintCntPrefix   = "mintCnt-"
 )
 
-type DevoteContext struct {
+type DevoteProtocol struct {
 	epochTrie     *trie.Trie
 	cacheTrie     *trie.Trie
 	voteTrie      *trie.Trie
@@ -56,7 +56,7 @@ func NewMintCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 
 }
 
-func NewDevoteContext(db ethdb.Database) (*DevoteContext, error) {
+func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 
 	epochTrie, err := NewEpochTrie(common.Hash{}, db)
 	if err != nil {
@@ -78,7 +78,7 @@ func NewDevoteContext(db ethdb.Database) (*DevoteContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DevoteContext{
+	return &DevoteProtocol{
 		epochTrie:     epochTrie,
 		cacheTrie:     cacheTrie,
 		voteTrie:      voteTrie,
@@ -89,43 +89,43 @@ func NewDevoteContext(db ethdb.Database) (*DevoteContext, error) {
 
 }
 
-func NewDevoteContextFromAtomic(db ethdb.Database, ctxAtomic *DevoteContextAtomic) (*DevoteContext, error) {
+func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
 
-	fmt.Printf("devote_context epochTrie old value:%x\n",ctxAtomic.EpochHash)
+	fmt.Printf("devote_protocol epochTrie old value:%x\n",ctxAtomic.EpochHash)
 	epochTrie, err := NewEpochTrie(ctxAtomic.EpochHash, db)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("devote_context epochTrie new value:%x\n",epochTrie.Hash())
+	fmt.Printf("devote_protocol epochTrie new value:%x\n",epochTrie.Hash())
 
-	fmt.Printf("devote_context cacheTrie old value:%x\n",ctxAtomic.CacheHash)
+	fmt.Printf("devote_protocol cacheTrie old value:%x\n",ctxAtomic.CacheHash)
 
 	cacheTrie, err := NewCacheTrie(ctxAtomic.CacheHash, db)
-	fmt.Printf("devote_context cacheTrie new value:%x\n",cacheTrie.Hash())
+	fmt.Printf("devote_protocol cacheTrie new value:%x\n",cacheTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	voteTrie, err := NewVoteTrie(ctxAtomic.VoteHash, db)
-	fmt.Printf("devote_context voteTrie new value:%x\n",voteTrie.Hash())
+	fmt.Printf("devote_protocol voteTrie new value:%x\n",voteTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	candidateTrie, err := NewCandidateTrie(ctxAtomic.CandidateHash, db)
-	fmt.Printf("devote_context candidateTrie new value:%x\n",candidateTrie.Hash())
+	fmt.Printf("devote_protocol candidateTrie new value:%x\n",candidateTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	mintCntTrie, err := NewMintCntTrie(ctxAtomic.MintCntHash, db)
-	fmt.Printf("devote_context mintCntTrie new value:%x\n",mintCntTrie.Hash())
+	fmt.Printf("devote_protocol mintCntTrie new value:%x\n",mintCntTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
-	return &DevoteContext{
+	return &DevoteProtocol{
 		epochTrie:     epochTrie,
 		cacheTrie:     cacheTrie,
 		voteTrie:      voteTrie,
@@ -135,7 +135,7 @@ func NewDevoteContextFromAtomic(db ethdb.Database, ctxAtomic *DevoteContextAtomi
 	}, nil
 }
 
-func (d *DevoteContext) KickoutCandidate(candidateAddr common.Address) error {
+func (d *DevoteProtocol) KickoutCandidate(candidateAddr common.Address) error {
 	candidate := candidateAddr.Bytes()
 	err := d.candidateTrie.TryDelete(candidate)
 	if err != nil {
@@ -171,7 +171,7 @@ func (d *DevoteContext) KickoutCandidate(candidateAddr common.Address) error {
 	return nil
 }
 
-func (d *DevoteContext) Copy() *DevoteContext {
+func (d *DevoteProtocol) Copy() *DevoteProtocol {
 
 	epochTrie := *d.epochTrie
 	cacheTrie := *d.cacheTrie
@@ -179,7 +179,7 @@ func (d *DevoteContext) Copy() *DevoteContext {
 	candidateTrie := *d.candidateTrie
 	mintCntTrie := *d.mintCntTrie
 
-	return &DevoteContext{
+	return &DevoteProtocol{
 		epochTrie:     &epochTrie,
 		cacheTrie:     &cacheTrie,
 		voteTrie:      &voteTrie,
@@ -188,7 +188,7 @@ func (d *DevoteContext) Copy() *DevoteContext {
 	}
 }
 
-func (d *DevoteContext) Root() (h common.Hash) {
+func (d *DevoteProtocol) Root() (h common.Hash) {
 
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, d.epochTrie.Hash())
@@ -200,11 +200,11 @@ func (d *DevoteContext) Root() (h common.Hash) {
 	return h
 }
 
-func (d *DevoteContext) Snapshot() *DevoteContext {
+func (d *DevoteProtocol) Snapshot() *DevoteProtocol {
 	return d.Copy()
 }
 
-func (d *DevoteContext) RevertToSnapShot(snapshot *DevoteContext) {
+func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
 
 	d.epochTrie = snapshot.epochTrie
 	d.cacheTrie = snapshot.cacheTrie
@@ -213,7 +213,7 @@ func (d *DevoteContext) RevertToSnapShot(snapshot *DevoteContext) {
 	d.mintCntTrie = snapshot.mintCntTrie
 }
 
-func (d *DevoteContext) FromAtomic(dcp *DevoteContextAtomic) error {
+func (d *DevoteProtocol) FromAtomic(dcp *DevoteProtocolAtomic) error {
 
 	var err error
 	d.epochTrie, err = NewEpochTrie(dcp.EpochHash, d.diskdb)
@@ -236,7 +236,7 @@ func (d *DevoteContext) FromAtomic(dcp *DevoteContextAtomic) error {
 	return err
 }
 
-type DevoteContextAtomic struct {
+type DevoteProtocolAtomic struct {
 	EpochHash     common.Hash `json:"epochRoot"        gencodec:"required"`
 	CacheHash     common.Hash `json:"cacheRoot"        gencodec:"required"`
 	CandidateHash common.Hash `json:"candidateRoot"    gencodec:"required"`
@@ -244,22 +244,21 @@ type DevoteContextAtomic struct {
 	MintCntHash   common.Hash `json:"mintCntRoot"      gencodec:"required"`
 }
 
-func (d *DevoteContext) CandidateTrie() *trie.Trie { return d.candidateTrie }
-func (d *DevoteContext) CacheTrie() *trie.Trie     { return d.cacheTrie }
-func (d *DevoteContext) VoteTrie() *trie.Trie      { return d.voteTrie }
-func (d *DevoteContext) EpochTrie() *trie.Trie     { return d.epochTrie }
-func (d *DevoteContext) MintCntTrie() *trie.Trie   { return d.mintCntTrie }
+func (d *DevoteProtocol) CandidateTrie() *trie.Trie { return d.candidateTrie }
+func (d *DevoteProtocol) CacheTrie() *trie.Trie     { return d.cacheTrie }
+func (d *DevoteProtocol) VoteTrie() *trie.Trie      { return d.voteTrie }
+func (d *DevoteProtocol) EpochTrie() *trie.Trie     { return d.epochTrie }
+func (d *DevoteProtocol) MintCntTrie() *trie.Trie   { return d.mintCntTrie }
 
-func (d *DevoteContext) DB() ethdb.Database { return d.diskdb }
+func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
-func (dc *DevoteContext) SetEpoch(epoch *trie.Trie)         { dc.epochTrie = epoch }
-func (dc *DevoteContext) SetCache(cache *trie.Trie)         { dc.cacheTrie = cache }
-func (dc *DevoteContext) SetVote(vote *trie.Trie)           { dc.voteTrie = vote }
-func (dc *DevoteContext) SetCandidate(candidate *trie.Trie) { dc.candidateTrie = candidate }
-func (dc *DevoteContext) SetMintCnt(mintCnt *trie.Trie)     { dc.mintCntTrie = mintCnt }
+func (dc *DevoteProtocol) SetEpoch(epoch *trie.Trie)         { dc.epochTrie = epoch }
+func (dc *DevoteProtocol) SetCache(cache *trie.Trie)         { dc.cacheTrie = cache }
+func (dc *DevoteProtocol) SetVote(vote *trie.Trie)           { dc.voteTrie = vote }
+func (dc *DevoteProtocol) SetCandidate(candidate *trie.Trie) { dc.candidateTrie = candidate }
+func (dc *DevoteProtocol) SetMintCnt(mintCnt *trie.Trie)     { dc.mintCntTrie = mintCnt }
 
-func (d *DevoteContext) Commit(db *trie.Database) (*DevoteContextAtomic, error) {
-	fmt.Printf("************ devote_context commit begin ************")
+func (d *DevoteProtocol) Commit(db *trie.Database) (*DevoteProtocolAtomic, error) {
 	epochRoot, err := d.epochTrie.Commit(nil)
 
 	if err != nil {
@@ -281,9 +280,8 @@ func (d *DevoteContext) Commit(db *trie.Database) (*DevoteContextAtomic, error) 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("************ devote_context commit end ************")
 
-	return &DevoteContextAtomic{
+	return &DevoteProtocolAtomic{
 		EpochHash:     epochRoot,
 		CacheHash:     cacheRoot,
 		VoteHash:      voteRoot,
@@ -292,8 +290,8 @@ func (d *DevoteContext) Commit(db *trie.Database) (*DevoteContextAtomic, error) 
 	}, nil
 }
 
-func (d *DevoteContext) ContextAtomic() *DevoteContextAtomic {
-	return &DevoteContextAtomic{
+func (d *DevoteProtocol) ContextAtomic() *DevoteProtocolAtomic {
+	return &DevoteProtocolAtomic{
 		EpochHash:     d.epochTrie.Hash(),
 		CacheHash:     d.cacheTrie.Hash(),
 		CandidateHash: d.candidateTrie.Hash(),
@@ -302,7 +300,7 @@ func (d *DevoteContext) ContextAtomic() *DevoteContextAtomic {
 	}
 }
 
-func (p *DevoteContextAtomic) Root() (h common.Hash) {
+func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, p.EpochHash)
 	rlp.Encode(hw, p.CacheHash)
@@ -313,7 +311,7 @@ func (p *DevoteContextAtomic) Root() (h common.Hash) {
 	return h
 }
 
-func (dc *DevoteContext) SetWitnesses(witnesses []common.Address) error {
+func (dc *DevoteProtocol) SetWitnesses(witnesses []common.Address) error {
 
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
@@ -324,7 +322,7 @@ func (dc *DevoteContext) SetWitnesses(witnesses []common.Address) error {
 	return nil
 }
 
-func (dc *DevoteContext) GetWitnesses() ([]common.Address, error) {
+func (dc *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
 
 	var witnesses []common.Address
 	key := []byte("witness")
@@ -335,12 +333,12 @@ func (dc *DevoteContext) GetWitnesses() ([]common.Address, error) {
 	return witnesses, nil
 }
 
-func (d *DevoteContext) BecomeCandidate(candidateAddr common.Address) error {
+func (d *DevoteProtocol) BecomeCandidate(candidateAddr common.Address) error {
 	candidate := candidateAddr.Bytes()
 	return d.candidateTrie.TryUpdate(candidate, candidate)
 }
 
-func (d *DevoteContext) UnDelegate(delegatorAddr, candidateAddr common.Address) error {
+func (d *DevoteProtocol) UnDelegate(delegatorAddr, candidateAddr common.Address) error {
 	delegator, candidate := delegatorAddr.Bytes(), candidateAddr.Bytes()
 
 	// the candidate must be candidate

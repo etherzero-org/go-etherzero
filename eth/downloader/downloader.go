@@ -1475,13 +1475,13 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, bef
 	return p, before, after
 }
 
-func (d *Downloader) syncDevoteContextState(context *types.DevoteContextAtomic) error {
+func (d *Downloader) syncDevoteProtocolState(protocol *types.DevoteProtocolAtomic) error {
 	roots := []common.Hash{
-		context.CandidateHash,
-		context.CacheHash,
-		context.VoteHash,
-		context.EpochHash,
-		context.MintCntHash,
+		protocol.CandidateHash,
+		protocol.CacheHash,
+		protocol.VoteHash,
+		protocol.EpochHash,
+		protocol.MintCntHash,
 	}
 	for _, root := range roots {
 		if err := d.syncState(root).Wait(); err != nil {
@@ -1527,7 +1527,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 
-	if err := d.syncDevoteContextState(block.Header().Context); err != nil {
+	if err := d.syncDevoteProtocolState(block.Header().Protocol); err != nil {
 		return err
 	}
 

@@ -232,9 +232,9 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	root := statedb.IntermediateRoot(false)
 
-	// add dposcontext
-	devoteContext := initGenesisDevoteContext(g, db)
-	devoteContextProto := devoteContext.ContextAtomic()
+	// add devote protocol
+	devoteProtocol := initGenesisDevoteProtocol(g, db)
+	devoteProtocolAtomic := devoteProtocol.ContextAtomic()
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -247,7 +247,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
-		Context:    devoteContextProto,
+		Protocol:    devoteProtocolAtomic,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -258,7 +258,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
 	block := types.NewBlock(head, nil, nil, nil)
-	block.DevoteContext = devoteContext
+	block.DevoteProtocol = devoteProtocol
 
 	return block
 }
@@ -278,9 +278,9 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	rawdb.WriteHeadBlockHash(db, block.Hash())
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
 	triedb := trie.NewDatabase(db)
-	fmt.Printf("genesis DevoteContext Commit begin")
-	// add devotecontext
-	if _, err := block.DevoteContext.Commit(triedb); err != nil {
+	fmt.Printf("genesis devoteProtocol Commit begin")
+	// add devoteProtocol
+	if _, err := block.DevoteProtocol.Commit(triedb); err != nil {
 		return nil, err
 	}
 
@@ -384,9 +384,9 @@ func decodePrealloc(data string) GenesisAlloc {
 	return ga
 }
 
-func initGenesisDevoteContext(g *Genesis, db ethdb.Database) *types.DevoteContext {
+func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *types.DevoteProtocol {
 
-	dc, err := types.NewDevoteContextFromAtomic(db, &types.DevoteContextAtomic{})
+	dc, err := types.NewDevoteProtocolFromAtomic(db, &types.DevoteProtocolAtomic{})
 	if err != nil {
 		return nil
 	}

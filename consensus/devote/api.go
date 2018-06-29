@@ -45,13 +45,13 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 		return nil, errUnknownBlock
 	}
 
-	epochTrie, err := types.NewEpochTrie(header.Context.EpochHash, api.devote.db)
+	epochTrie, err := types.NewEpochTrie(header.Protocol.EpochHash, api.devote.db)
 	if err != nil {
 		return nil, err
 	}
-	devoteContext := types.DevoteContext{}
-	devoteContext.SetEpoch(epochTrie)
-	witnesses, err := devoteContext.GetWitnesses()
+	devoteProtocol := types.DevoteProtocol{}
+	devoteProtocol.SetEpoch(epochTrie)
+	witnesses, err := devoteProtocol.GetWitnesses()
 	if err != nil {
 		return nil, err
 	}

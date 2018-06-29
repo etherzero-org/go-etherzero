@@ -37,16 +37,16 @@ import (
 
 type EpochContext struct {
 	TimeStamp   int64
-	DevoteContext *types.DevoteContext
+	DevoteProtocol *types.DevoteProtocol
 	statedb     *state.StateDB
 }
 
-// countVotes
-func (ec *EpochContext) countVotes() (votes map[common.Address]*big.Int, err error) {
+// votes
+func (ec *EpochContext) votes() (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
-	cacheTrie := ec.DevoteContext.CacheTrie()
-	candidateTrie := ec.DevoteContext.CandidateTrie()
+	cacheTrie := ec.DevoteProtocol.CacheTrie()
+	candidateTrie := ec.DevoteProtocol.CandidateTrie()
 	statedb := ec.statedb
 
 	iterCandidate := trie.NewIterator(candidateTrie.NodeIterator(nil))
@@ -85,8 +85,8 @@ func (ec *EpochContext) countVotes() (votes map[common.Address]*big.Int, err err
 	return votes, nil
 }
 
-func (ec *EpochContext) kickoutWitness(epoch int64) error {
-	witnesses, err := ec.DevoteContext.GetWitnesses()
+func (ec *EpochContext) kickout(epoch int64) error {
+	witnesses, err := ec.DevoteProtocol.GetWitnesses()
 	if err != nil {
 		return fmt.Errorf("failed to get witness: %s", err)
 	}
@@ -109,15 +109,15 @@ func (ec *EpochContext) kickoutWitness(epoch int64) error {
 		binary.BigEndian.PutUint64(key, uint64(epoch))
 		key = append(key, witness.Bytes()...)
 		cnt := int64(0)
-		if cntBytes := ec.DevoteContext.MintCntTrie().Get(key); cntBytes != nil {
+		if cntBytes := ec.DevoteProtocol.MintCntTrie().Get(key); cntBytes != nil {
 			cnt = int64(binary.BigEndian.Uint64(cntBytes))
 		}
 		if cnt < epochDuration/blockInterval/maxValidatorSize/2 {
-			// not active validators need kickout
+			// not active witnesses need kickout
 			needKickoutWitnesses = append(needKickoutWitnesses, &sortableAddress{witness, big.NewInt(cnt)})
 		}
 	}
-	// no validators need kickout
+	// no witnessees need kickout
 	needKickoutValidatorCnt := len(needKickoutWitnesses)
 	if needKickoutValidatorCnt <= 0 {
 		return nil
@@ -125,7 +125,7 @@ func (ec *EpochContext) kickoutWitness(epoch int64) error {
 	sort.Sort(sort.Reverse(needKickoutWitnesses))
 
 	candidateCount := 0
-	iter := trie.NewIterator(ec.DevoteContext.CandidateTrie().NodeIterator(nil))
+	iter := trie.NewIterator(ec.DevoteProtocol.CandidateTrie().NodeIterator(nil))
 	for iter.Next() {
 		candidateCount++
 		if candidateCount >= needKickoutValidatorCnt+safeSize {
@@ -140,7 +140,7 @@ func (ec *EpochContext) kickoutWitness(epoch int64) error {
 			return nil
 		}
 
-		if err := ec.DevoteContext.KickoutCandidate(witness.address); err != nil {
+		if err := ec.DevoteProtocol.KickoutCandidate(witness.address); err != nil {
 			return err
 		}
 		// if kickout success, candidateCount minus 1
@@ -150,7 +150,7 @@ func (ec *EpochContext) kickoutWitness(epoch int64) error {
 	return nil
 }
 
-func (ec *EpochContext) lookupWitness(now int64) (validator common.Address, err error) {
+func (ec *EpochContext) lookup(now int64) (validator common.Address, err error) {
 	validator = common.Address{}
 	offset := now % epochInterval
 	if offset%blockInterval != 0 {
@@ -158,7 +158,7 @@ func (ec *EpochContext) lookupWitness(now int64) (validator common.Address, err 
 	}
 	offset /= blockInterval
 
-	witnesses, err := ec.DevoteContext.GetWitnesses()
+	witnesses, err := ec.DevoteProtocol.GetWitnesses()
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -167,12 +167,12 @@ func (ec *EpochContext) lookupWitness(now int64) (validator common.Address, err 
 		return common.Address{}, errors.New("failed to lookup witness")
 	}
 	offset %= int64(witnessSize)
-	//return validators[offset], nil
+	//return witnesses[offset], nil
 
 	return common.HexToAddress("0x44655bd29f63eacf71e715c8b9fd4a4bcc561175"), nil
 }
 
-func (ec *EpochContext) tryElect(genesis, parent *types.Header) error {
+func (ec *EpochContext) voting(genesis, parent *types.Header) error {
 
 	genesisEpoch := genesis.Time.Int64() / epochInterval
 	prevEpoch := parent.Time.Int64() / epochInterval
@@ -185,15 +185,15 @@ func (ec *EpochContext) tryElect(genesis, parent *types.Header) error {
 
 	prevEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevEpochBytes, uint64(prevEpoch))
-	iter := trie.NewIterator(ec.DevoteContext.MintCntTrie().PrefixIterator(prevEpochBytes))
+	iter := trie.NewIterator(ec.DevoteProtocol.MintCntTrie().PrefixIterator(prevEpochBytes))
 	for i := prevEpoch; i < currentEpoch; i++ {
 		// if prevEpoch is not genesis, kickout not active candidate
 		if !prevEpochIsGenesis && iter.Next() {
-			if err := ec.kickoutWitness(prevEpoch); err != nil {
+			if err := ec.kickout(prevEpoch); err != nil {
 				return err
 			}
 		}
-		votes, err := ec.countVotes()
+		votes, err := ec.votes()
 		if err != nil {
 			return err
 		}
@@ -221,9 +221,9 @@ func (ec *EpochContext) tryElect(genesis, parent *types.Header) error {
 			sortedWitnesses = append(sortedWitnesses, candidate.address)
 		}
 
-		epochTrie, _ := types.NewEpochTrie(common.Hash{}, ec.DevoteContext.DB())
-		ec.DevoteContext.SetEpoch(epochTrie)
-		ec.DevoteContext.SetWitnesses(sortedWitnesses)
+		epochTrie, _ := types.NewEpochTrie(common.Hash{}, ec.DevoteProtocol.DB())
+		ec.DevoteProtocol.SetEpoch(epochTrie)
+		ec.DevoteProtocol.SetWitnesses(sortedWitnesses)
 		log.Info("Come to new epoch", "prevEpoch", i, "nextEpoch", i+1)
 	}
 	return nil

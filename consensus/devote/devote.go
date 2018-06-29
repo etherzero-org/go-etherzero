@@ -127,7 +127,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
-		header.Context.Root(),
+		header.Protocol.Root(),
 	})
 	hasher.Sum(hash[:0])
 	return hash
@@ -251,7 +251,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteContext *types.DevoteContext) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol) (*types.Block, error) {
 	// Accumulate block rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -259,7 +259,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	epochContext := &EpochContext{
 		statedb:       state,
-		DevoteContext: devoteContext,
+		DevoteProtocol: devoteProtocol,
 		TimeStamp:     header.Time.Int64(),
 	}
 	if timeOfFirstBlock == 0 {
@@ -268,14 +268,14 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	err := epochContext.tryElect(genesis, parent)
+	err := epochContext.voting(genesis, parent)
 	if err != nil {
 		return nil, fmt.Errorf("got error when elect next epoch, err: %s", err)
 	}
 
 	//update mint count trie
-	updateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Witness, devoteContext)
-	header.Context = devoteContext.ContextAtomic()
+	updateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Witness, devoteProtocol)
+	header.Protocol = devoteProtocol.ContextAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -383,14 +383,14 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	} else {
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}
-	devoteContext, err := types.NewDevoteContextFromAtomic(d.db, parent.Context)
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, parent.Protocol)
 	if err != nil {
-		fmt.Printf("devote verifySeal failed epoch hash:%x",devoteContext.EpochTrie())
+		fmt.Printf("devote verifySeal failed epoch hash:%x",devoteProtocol.EpochTrie())
 		return err
 	}
-	fmt.Printf("devote verifySeal successful epoch hash:%x",devoteContext.EpochTrie())
-	epochContext := &EpochContext{DevoteContext: devoteContext}
-	witness, err := epochContext.lookupWitness(header.Time.Int64())
+	fmt.Printf("devote verifySeal successful epoch hash:%x",devoteProtocol.EpochTrie())
+	epochContext := &EpochContext{DevoteProtocol: devoteProtocol}
+	witness, err := epochContext.lookup(header.Time.Int64())
 	if err != nil {
 		return err
 	}
@@ -432,13 +432,13 @@ func (d *Devote) CheckValidator(lastBlock *types.Block, now int64) error {
 		return err
 	}
 
-	devoteContext, err := types.NewDevoteContextFromAtomic(d.db, lastBlock.Header().Context)
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, lastBlock.Header().Protocol)
 	if err != nil {
 		return err
 	}
 
-	epochContext := &EpochContext{DevoteContext: devoteContext}
-	witness, err := epochContext.lookupWitness(now)
+	epochContext := &EpochContext{DevoteProtocol: devoteProtocol}
+	witness, err := epochContext.lookup(now)
 	if err != nil {
 		return err
 	}
@@ -522,7 +522,7 @@ func NextSlot(now int64) int64 {
 }
 
 // update counts in MintCntTrie for the miner of newBlock
-func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Address, devoteContext *types.DevoteContext) {
+func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Address, devoteContext *types.DevoteProtocol) {
 
 	currentMintCntTrie := devoteContext.MintCntTrie()
 	currentEpoch := parentBlockTime / epochInterval

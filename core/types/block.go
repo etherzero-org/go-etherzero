@@ -85,7 +85,7 @@ type Header struct {
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 
 	Witness     common.Address `json:"witness"          gencodec:"required"`
-	Context     *DevoteContextAtomic  `json:"context"          gencodec:"required"`
+	Protocol     *DevoteProtocolAtomic  `json:"protocol"          gencodec:"required"`
 }
 
 
@@ -165,7 +165,7 @@ type Block struct {
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
 
-	DevoteContext  *DevoteContext
+	DevoteProtocol  *DevoteProtocol
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -328,7 +328,7 @@ func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Ext
 
 func (b *Block) Witness() common.Address  { return b.header.Witness }
 
-func (b *Block) Context() *DevoteContext { return b.DevoteContext }
+func (b *Block) Protocol() *DevoteProtocol { return b.DevoteProtocol }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -372,7 +372,7 @@ func (b *Block) WithSeal(header *Header) *Block {
 		transactions: b.transactions,
 		uncles:       b.uncles,
 
-		DevoteContext:b.DevoteContext,
+		DevoteProtocol:b.DevoteProtocol,
 	}
 }
 

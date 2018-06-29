@@ -103,8 +103,8 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 
 func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	header := block.Header()
-	localRoot := block.Context().Root()
-	remoteRoot := header.Context.Root()
+	localRoot := block.Protocol().Root()
+	remoteRoot := header.Protocol.Root()
 	if remoteRoot != localRoot {
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}

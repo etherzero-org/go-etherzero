@@ -232,19 +232,19 @@ func GetBlock(db DatabaseReader, hash common.Hash, number uint64) *types.Block {
 	// Reassemble the block and return
 	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
 
-	// add dposContext to block
-	block.DevoteContext = getDevoteContextTrie(db.(ethdb.Database), header)
+	// add devoteProtocol to block
+	block.DevoteProtocol = getDevoteProtocolTrie(db.(ethdb.Database), header)
 	return block
 }
 
-func getDevoteContextTrie(db ethdb.Database, header *types.Header) *types.DevoteContext {
-	dposContestProto := header.Context
-	if dposContestProto != nil {
-		dposContext, err := types.NewDevoteContextFromAtomic(db, dposContestProto)
+func getDevoteProtocolTrie(db ethdb.Database, header *types.Header) *types.DevoteProtocol {
+	devoteContestProto := header.Protocol
+	if devoteContestProto != nil {
+		devoteProtocol, err := types.NewDevoteProtocolFromAtomic(db, devoteContestProto)
 		if err != nil {
 			return nil
 		}
-		return dposContext
+		return devoteProtocol
 	}
 	return nil
 }

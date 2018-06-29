@@ -901,7 +901,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	rawdb.WriteBlock(batch, block)
 
 	devotedb := trie.NewDatabase(bc.db)
-	if _, err := block.DevoteContext.Commit(devotedb); err != nil {
+	if _, err := block.DevoteProtocol.Commit(devotedb); err != nil {
 		fmt.Printf("blockchain WriteBlockWithState DevoteContext commit failed . err %s",err)
 		return NonStatTy, err
 	}else{
@@ -1149,7 +1149,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
-		block.DevoteContext, err = types.NewDevoteContextFromAtomic(bc.db, parent.Header().Context)
+		block.DevoteProtocol, err = types.NewDevoteProtocolFromAtomic(bc.db, parent.Header().Protocol)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}

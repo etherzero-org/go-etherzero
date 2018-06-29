@@ -82,7 +82,7 @@ type Work struct {
 
 	createdAt time.Time
 
-	devoteContext *types.DevoteContext
+	devoteProtocol *types.DevoteProtocol
 
 }
 
@@ -410,7 +410,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	devoteContext, err := types.NewDevoteContextFromAtomic(self.chainDb, parent.Header().Context)
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(self.chainDb, parent.Header().Protocol)
 	if err != nil {
 		return err
 	}
@@ -424,7 +424,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		header:    header,
 		createdAt: time.Now(),
 
-		devoteContext:devoteContext,
+		devoteProtocol:devoteProtocol,
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -532,10 +532,10 @@ func (self *worker) commitNewWork() (*Work, error){
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteContext); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
-	work.Block.DevoteContext = work.devoteContext
+	work.Block.DevoteProtocol = work.devoteProtocol
 
 	// update the count for the miner of new block
 	// We only care about logging if we're actually mining.
