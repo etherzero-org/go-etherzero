@@ -427,12 +427,11 @@ func (d *Devote) checkDeadline(lastBlock *types.Block, now int64) error {
 	return ErrWaitForPrevBlock
 }
 
-func (d *Devote) CheckValidator(db ethdb.Database,lastBlock *types.Block, now int64) error {
+func (d *Devote) CheckValidator(lastBlock *types.Block, now int64) error {
 	if err := d.checkDeadline(lastBlock, now); err != nil {
 		return err
 	}
-
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(db, lastBlock.Header().Protocol)
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, lastBlock.Header().Protocol)
 	if err != nil {
 		return err
 	}

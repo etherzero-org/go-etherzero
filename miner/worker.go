@@ -227,8 +227,7 @@ func (self *worker) mintBlock(now int64) {
 		return
 	}
 
-
-	err := engine.CheckValidator(self.chainDb,self.chain.CurrentBlock(), now)
+	err := engine.CheckValidator(self.chain.CurrentBlock(), now)
 	if err != nil {
 		switch err {
 		case devote.ErrWaitForPrevBlock,
@@ -236,8 +235,11 @@ func (self *worker) mintBlock(now int64) {
 			devote.ErrInvalidBlockValidator,
 			devote.ErrInvalidMintBlockTime:
 			log.Debug("Failed to mint the block, while ", "err", err)
+			fmt.Printf("Failed to mint the block, while error:%s\n",  err)
 		default:
 			log.Error("Failed to mint the block", "err", err)
+			fmt.Printf("Failed to mint the block, while error:%s\n",  err)
+
 		}
 		return
 	}

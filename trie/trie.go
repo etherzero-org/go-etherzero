@@ -68,7 +68,6 @@ type Trie struct {
 	db           *Database
 	root         node
 	originalRoot common.Hash
-	prefix       []byte
 
 	// Cache generation values.
 	// cachegen increases by one with each commit operation.
@@ -94,7 +93,7 @@ func (t *Trie) newFlag() nodeFlag {
 // trie is initially empty and does not require a database. Otherwise,
 // New will panic if db is nil and returns a MissingNodeError if root does
 // not exist in the database. Accessing the trie loads nodes from db on demand.
-func  New(root common.Hash, db *Database) (*Trie, error) {
+func New(root common.Hash, db *Database) (*Trie, error) {
 	if db == nil {
 		panic("trie.New called without a database")
 	}
@@ -102,7 +101,6 @@ func  New(root common.Hash, db *Database) (*Trie, error) {
 		db:           db,
 		originalRoot: root,
 	}
-
 	if root != (common.Hash{}) && root != emptyRoot {
 		rootnode, err := trie.resolveHash(root[:], nil)
 		if err != nil {
@@ -113,29 +111,10 @@ func  New(root common.Hash, db *Database) (*Trie, error) {
 	return trie, nil
 }
 
-
-func NewTrieWithPrefix(root common.Hash, prefix []byte, db *Database) (*Trie, error) {
-	trie, err := New(root, db)
-	if err != nil {
-		return nil, err
-	}
-	trie.prefix = prefix
-	return trie, nil
-}
-
 // NodeIterator returns an iterator that returns nodes of the trie. Iteration starts at
 // the key after the given start key.
 func (t *Trie) NodeIterator(start []byte) NodeIterator {
 	return newNodeIterator(t, start)
-}
-
-// PrefixIterator returns an iterator that returns nodes of the trie which has the prefix path specificed
-// Iteration starts at the key after the given start key.
-func (t *Trie) PrefixIterator(prefix []byte) NodeIterator {
-	if t.prefix != nil {
-		prefix = append(t.prefix, prefix...)
-	}
-	return newPrefixIterator(t, prefix)
 }
 
 // Get returns the value for key stored in the trie.
@@ -449,7 +428,6 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 	}
 	return n, nil
 }
-
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	cacheMissCounter.Inc(1)

@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	epochPrefix     = []byte("epoch-")
-	cachePrefix  = []byte("cache-")
-	votePrefix      = []byte("vote-")
-	candidatePrefix = []byte("candidate-")
-	mintCntPrefix   = []byte("mintCnt-")
+	epochPrefix     = "epoch-"
+	cachePrefix     = "cache-"
+	votePrefix      = "vote-"
+	candidatePrefix = "candidate-"
+	mintCntPrefix   = "mintCnt-"
 )
 
 type DevoteProtocol struct {
@@ -27,33 +27,40 @@ type DevoteProtocol struct {
 	candidateTrie *trie.Trie
 	mintCntTrie   *trie.Trie
 
+	epochTriedb        *trie.Database
+	cacheTriedb        *trie.Database
+	voteTriedb        *trie.Database
+	candidateTriedb        *trie.Database
+	mintCntTriedb        *trie.Database
+
 	diskdb ethdb.Database
+
 }
 
 func NewEpochTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(db)
-	return trie.NewTrieWithPrefix(root,epochPrefix,triedb)
-	//return trie.New(root, triedb)
+
+	epochTriedb:=trie.NewDatabase(ethdb.NewTable(db, epochPrefix))
+	return trie.New(root, epochTriedb)
 }
 
 func NewCacheTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(db)
-	return trie.NewTrieWithPrefix(root,cachePrefix,triedb)
+	cacheTriedb:=trie.NewDatabase(ethdb.NewTable(db, cachePrefix))
+	return trie.New(root, cacheTriedb)
 }
 
 func NewVoteTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(db)
-	return trie.NewTrieWithPrefix(root,votePrefix,triedb)
+	voteTriedb:=trie.NewDatabase(ethdb.NewTable(db, votePrefix))
+	return trie.New(root, voteTriedb)
 }
 
 func NewCandidateTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(db)
-	return trie.NewTrieWithPrefix(root,candidatePrefix,triedb)
+	candidateTriedb:=trie.NewDatabase(ethdb.NewTable(db, candidatePrefix))
+	return trie.New(root, candidateTriedb)
 }
 
 func NewMintCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	triedb := trie.NewDatabase(db)
-	return trie.NewTrieWithPrefix(root,mintCntPrefix,triedb)
+	mintCntTriedb:=trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix))
+	return trie.New(root, mintCntTriedb)
 
 }
 
@@ -72,6 +79,7 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 		return nil, err
 	}
 	candidateTrie, err := NewCandidateTrie(common.Hash{}, db)
+
 	if err != nil {
 		return nil, err
 	}
@@ -86,42 +94,38 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 		candidateTrie: candidateTrie,
 		mintCntTrie:   mintCntTrie,
 		diskdb:        db,
+		epochTriedb:      trie.NewDatabase(ethdb.NewTable(db, epochPrefix)),
+		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
+		voteTriedb:      trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
+		candidateTriedb:      trie.NewDatabase(ethdb.NewTable(db, candidatePrefix)),
+		mintCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix)),
+
 	}, nil
 
 }
 
 func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
 
-	fmt.Printf("devote_protocol epochTrie old value:%x\n", ctxAtomic.EpochHash)
 	epochTrie, err := NewEpochTrie(ctxAtomic.EpochHash, db)
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("devote_protocol epochTrie new value:%x\n", epochTrie.Hash())
-
-	fmt.Printf("devote_protocol cacheTrie old value:%x\n", ctxAtomic.CacheHash)
-
 	cacheTrie, err := NewCacheTrie(ctxAtomic.CacheHash, db)
-	fmt.Printf("devote_protocol cacheTrie new value:%x\n", cacheTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	voteTrie, err := NewVoteTrie(ctxAtomic.VoteHash, db)
-	fmt.Printf("devote_protocol voteTrie new value:%x\n", voteTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	candidateTrie, err := NewCandidateTrie(ctxAtomic.CandidateHash, db)
-	fmt.Printf("devote_protocol candidateTrie new value:%x\n", candidateTrie.Hash())
 
 	if err != nil {
 		return nil, err
 	}
 	mintCntTrie, err := NewMintCntTrie(ctxAtomic.MintCntHash, db)
-	fmt.Printf("devote_protocol mintCntTrie new value:%x\n", mintCntTrie.Hash())
 
 	if err != nil {
 		return nil, err
@@ -133,6 +137,12 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		candidateTrie: candidateTrie,
 		mintCntTrie:   mintCntTrie,
 		diskdb:        db,
+		epochTriedb:      trie.NewDatabase(ethdb.NewTable(db, epochPrefix)),
+		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
+		voteTriedb:      trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
+		candidateTriedb:      trie.NewDatabase(ethdb.NewTable(db, candidatePrefix)),
+		mintCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix)),
+
 	}, nil
 }
 
@@ -145,7 +155,7 @@ func (d *DevoteProtocol) Uncast(candidateAddr common.Address) error {
 			return err
 		}
 	}
-	iter := trie.NewIterator(d.cacheTrie.PrefixIterator(candidate))
+	iter := trie.NewIterator(d.cacheTrie.NodeIterator(candidate))
 	for iter.Next() {
 		delegator := iter.Value
 		key := append(candidate, delegator...)
@@ -260,28 +270,38 @@ func (dc *DevoteProtocol) SetVote(vote *trie.Trie)           { dc.voteTrie = vot
 func (dc *DevoteProtocol) SetCandidate(candidate *trie.Trie) { dc.candidateTrie = candidate }
 func (dc *DevoteProtocol) SetMintCnt(mintCnt *trie.Trie)     { dc.mintCntTrie = mintCnt }
 
-func (d *DevoteProtocol) Commit(db *trie.Database) (*DevoteProtocolAtomic, error) {
-	epochRoot, err := d.epochTrie.Commit(nil)
+func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error) {
 
+	epochRoot, err := d.epochTrie.CommitTo(d.epochTriedb)
 	if err != nil {
 		return nil, err
 	}
-	cacheRoot, err := d.cacheTrie.Commit(nil)
+	dberr:=d.epochTriedb.Commit(epochRoot,false)
+	if dberr != nil{
+		return nil,err
+	}
+	cacheRoot, err := d.cacheTrie.CommitTo(d.cacheTriedb)
 	if err != nil {
 		return nil, err
 	}
-	voteRoot, err := d.voteTrie.Commit(nil)
+	d.cacheTriedb.Commit(cacheRoot,false)
+	voteRoot, err := d.voteTrie.CommitTo(d.voteTriedb)
 	if err != nil {
 		return nil, err
 	}
-	candidateRoot, err := d.candidateTrie.Commit(nil)
+	d.voteTriedb.Commit(voteRoot,false)
+
+	candidateRoot, err := d.candidateTrie.CommitTo(d.candidateTriedb)
 	if err != nil {
 		return nil, err
 	}
-	mintCntRoot, err := d.mintCntTrie.Commit(nil)
+	d.candidateTriedb.Commit(candidateRoot,false)
+
+	mintCntRoot, err := d.mintCntTrie.CommitTo(d.mintCntTriedb)
 	if err != nil {
 		return nil, err
 	}
+	d.mintCntTriedb.Commit(mintCntRoot,false)
 
 	return &DevoteProtocolAtomic{
 		EpochHash:     epochRoot,

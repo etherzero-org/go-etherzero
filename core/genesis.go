@@ -35,7 +35,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/trie"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -235,6 +234,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	// add devote protocol
 	devoteProtocol := initGenesisDevoteProtocol(g, db)
 	devoteProtocolAtomic := devoteProtocol.ProtocolAtomic()
+
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -266,8 +266,14 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
-	fmt.Printf("genesis Commit begin")
 	block := g.ToBlock(db)
+
+	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n",block.DevoteProtocol)
+	// add devote protocol
+	if _, err := block.DevoteProtocol.Commit(db); err != nil {
+		return nil, err
+	}
+
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
@@ -277,12 +283,6 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	rawdb.WriteCanonicalHash(db, block.Hash(), block.NumberU64())
 	rawdb.WriteHeadBlockHash(db, block.Hash())
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
-	triedb := trie.NewDatabase(db)
-	fmt.Printf("genesis devoteProtocol Commit begin")
-	// add devote protocol
-	if _, err := block.DevoteProtocol.Commit(triedb); err != nil {
-		return nil, err
-	}
 
 	config := g.Config
 	if config == nil {

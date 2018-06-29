@@ -33,8 +33,8 @@ type API struct {
 }
 
 
-// GetValidators retrieves the list of the validators at specified block
-func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+// GetWitnesses retrieves the list of the Witnesses at specified block
+func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]common.Address, error) {
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()

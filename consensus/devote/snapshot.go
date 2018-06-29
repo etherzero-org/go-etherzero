@@ -61,7 +61,7 @@ func (ec *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 
 		candidate := iterCandidate.Value
 		candidateAddr := common.BytesToAddress(candidate)
-		cacheIterator := trie.NewIterator(cacheTrie.PrefixIterator(candidate))
+		cacheIterator := trie.NewIterator(cacheTrie.NodeIterator(candidate))
 		existCache := cacheIterator.Next()
 
 		if !existCache {
@@ -171,7 +171,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	offset %= int64(witnessSize)
 	//return witnesses[offset], nil
 
-	return common.HexToAddress("0x44655bd29f63eacf71e715c8b9fd4a4bcc561175"), nil
+	return common.HexToAddress("0xc5d725b7d19c6c7e2c50c85fb9cf5c0b78531da7"), nil
 }
 
 func (ec *Controller) voting(genesis, parent *types.Header) error {
@@ -187,7 +187,7 @@ func (ec *Controller) voting(genesis, parent *types.Header) error {
 
 	prevEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevEpochBytes, uint64(prevEpoch))
-	iter := trie.NewIterator(ec.DevoteProtocol.MintCntTrie().PrefixIterator(prevEpochBytes))
+	iter := trie.NewIterator(ec.DevoteProtocol.MintCntTrie().NodeIterator(prevEpochBytes))
 	for i := prevEpoch; i < currentEpoch; i++ {
 		// if prevEpoch is not genesis, uncast not active candidate
 		if !prevEpochIsGenesis && iter.Next() {

@@ -58,6 +58,14 @@ type DatabaseReader interface {
 	Has(key []byte) (bool, error)
 }
 
+// DatabaseWriter wraps the Put method of a backing store for the trie.
+type DatabaseWriter interface {
+	// Put stores the mapping key->value in the database.
+	// Implementations must not hold onto the value bytes, the trie
+	// will reuse the slice across calls to Put.
+	Put(key, value []byte) error
+}
+
 // Database is an intermediate write layer between the trie data structures and
 // the disk database. The aim is to accumulate trie writes in-memory and only
 // periodically flush a couple tries to disk, garbage collecting the remainder.
@@ -341,11 +349,6 @@ func (db *Database) node(hash common.Hash, cachegen uint16) node {
 	if node != nil {
 		return node.obj(hash, cachegen)
 	}
-	value, _ := db.diskdb.Get(hash[:])
-	fmt.Printf("trie.go resolveHash db.get hash value:%x\n", hash)
-	b, _ := db.diskdb.Has(hash[:])
-	fmt.Printf("trie.go resolveHash db.get Has:%b,value:%x\n", b, value)
-
 	// Content unavailable in memory, attempt to retrieve from disk
 	enc, err := db.diskdb.Get(hash[:])
 	if err != nil || enc == nil {
