@@ -35,14 +35,14 @@ import (
 	"github.com/etherzero/go-etherzero/trie"
 )
 
-type EpochContext struct {
+type Controller struct {
 	TimeStamp   int64
 	DevoteProtocol *types.DevoteProtocol
 	statedb     *state.StateDB
 }
 
 // votes
-func (ec *EpochContext) votes() (votes map[common.Address]*big.Int, err error) {
+func (ec *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
 	cacheTrie := ec.DevoteProtocol.CacheTrie()
@@ -85,7 +85,7 @@ func (ec *EpochContext) votes() (votes map[common.Address]*big.Int, err error) {
 	return votes, nil
 }
 
-func (ec *EpochContext) kickout(epoch int64) error {
+func (ec *Controller) kickout(epoch int64) error {
 	witnesses, err := ec.DevoteProtocol.GetWitnesses()
 	if err != nil {
 		return fmt.Errorf("failed to get witness: %s", err)
@@ -118,8 +118,8 @@ func (ec *EpochContext) kickout(epoch int64) error {
 		}
 	}
 	// no witnessees need kickout
-	needKickoutValidatorCnt := len(needKickoutWitnesses)
-	if needKickoutValidatorCnt <= 0 {
+	needKickoutWitnessCnt := len(needKickoutWitnesses)
+	if needKickoutWitnessCnt <= 0 {
 		return nil
 	}
 	sort.Sort(sort.Reverse(needKickoutWitnesses))
@@ -128,7 +128,7 @@ func (ec *EpochContext) kickout(epoch int64) error {
 	iter := trie.NewIterator(ec.DevoteProtocol.CandidateTrie().NodeIterator(nil))
 	for iter.Next() {
 		candidateCount++
-		if candidateCount >= needKickoutValidatorCnt+safeSize {
+		if candidateCount >= needKickoutWitnessCnt+safeSize {
 			break
 		}
 	}
@@ -150,8 +150,8 @@ func (ec *EpochContext) kickout(epoch int64) error {
 	return nil
 }
 
-func (ec *EpochContext) lookup(now int64) (validator common.Address, err error) {
-	validator = common.Address{}
+func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
+	witness = common.Address{}
 	offset := now % epochInterval
 	if offset%blockInterval != 0 {
 		return common.Address{}, ErrInvalidMintBlockTime
@@ -172,7 +172,7 @@ func (ec *EpochContext) lookup(now int64) (validator common.Address, err error) 
 	return common.HexToAddress("0x44655bd29f63eacf71e715c8b9fd4a4bcc561175"), nil
 }
 
-func (ec *EpochContext) voting(genesis, parent *types.Header) error {
+func (ec *Controller) voting(genesis, parent *types.Header) error {
 
 	genesisEpoch := genesis.Time.Int64() / epochInterval
 	prevEpoch := parent.Time.Int64() / epochInterval

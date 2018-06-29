@@ -257,7 +257,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
 	parent := chain.GetHeaderByHash(header.ParentHash)
-	epochContext := &EpochContext{
+	controller := &Controller{
 		statedb:       state,
 		DevoteProtocol: devoteProtocol,
 		TimeStamp:     header.Time.Int64(),
@@ -268,7 +268,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	err := epochContext.voting(genesis, parent)
+	err := controller.voting(genesis, parent)
 	if err != nil {
 		return nil, fmt.Errorf("got error when elect next epoch, err: %s", err)
 	}
@@ -389,8 +389,8 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		return err
 	}
 	fmt.Printf("devote verifySeal successful epoch hash:%x",devoteProtocol.EpochTrie())
-	epochContext := &EpochContext{DevoteProtocol: devoteProtocol}
-	witness, err := epochContext.lookup(header.Time.Int64())
+	controller := &Controller{DevoteProtocol: devoteProtocol}
+	witness, err := controller.lookup(header.Time.Int64())
 	if err != nil {
 		return err
 	}
@@ -437,8 +437,8 @@ func (d *Devote) CheckValidator(lastBlock *types.Block, now int64) error {
 		return err
 	}
 
-	epochContext := &EpochContext{DevoteProtocol: devoteProtocol}
-	witness, err := epochContext.lookup(now)
+	controller := &Controller{DevoteProtocol: devoteProtocol}
+	witness, err := controller.lookup(now)
 	if err != nil {
 		return err
 	}
