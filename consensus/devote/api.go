@@ -45,12 +45,12 @@ func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]common.Address, error) 
 		return nil, errUnknownBlock
 	}
 
-	epochTrie, err := types.NewEpochTrie(header.Protocol.EpochHash, api.devote.db)
+	cycleTrie, err := types.NewCycleTrie(header.Protocol.CycleHash, api.devote.db)
 	if err != nil {
 		return nil, err
 	}
 	devoteProtocol := types.DevoteProtocol{}
-	devoteProtocol.SetEpoch(epochTrie)
+	devoteProtocol.SetCycle(cycleTrie)
 	witnesses, err := devoteProtocol.GetWitnesses()
 	if err != nil {
 		return nil, err

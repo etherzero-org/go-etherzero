@@ -41,7 +41,7 @@ type Controller struct {
 	TimeStamp int64
 }
 
-// votes return  vote list in the Epoch.
+// votes return  vote list in the Cycle.
 func (self *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
@@ -86,8 +86,8 @@ func (self *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 	return votes, nil
 }
 
-//when a node does't work in the current epoch, delete.
-func (ec *Controller) uncast(epoch int64) error {
+//when a node does't work in the current cycle, delete.
+func (ec *Controller) uncast(cycle int64) error {
 
 	witnesses, err := ec.DevoteProtocol.GetWitnesses()
 	if err != nil {
@@ -97,25 +97,25 @@ func (ec *Controller) uncast(epoch int64) error {
 		return errors.New("no witness could be uncast")
 	}
 
-	epochDuration := epochInterval
-	// First epoch duration may lt epoch interval,
-	// while the first block time wouldn't always align with epoch interval,
-	// so caculate the first epoch duartion with first block time instead of epoch interval,
+	cycleDuration := cycleInterval
+	// First cycle duration may lt cycle interval,
+	// while the first block time wouldn't always align with cycle interval,
+	// so caculate the first cycle duartion with first block time instead of cycle interval,
 	// prevent the validators were uncast incorrectly.
-	if ec.TimeStamp-timeOfFirstBlock < epochInterval {
-		epochDuration = ec.TimeStamp - timeOfFirstBlock
+	if ec.TimeStamp-timeOfFirstBlock < cycleInterval {
+		cycleDuration = ec.TimeStamp - timeOfFirstBlock
 	}
 
 	needUncastWitnesses := sortableAddresses{}
 	for _, witness := range witnesses {
 		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, uint64(epoch))
+		binary.BigEndian.PutUint64(key, uint64(cycle))
 		key = append(key, witness.Bytes()...)
 		size := int64(0)
 		if cntBytes := ec.DevoteProtocol.MintCntTrie().Get(key); cntBytes != nil {
 			size = int64(binary.BigEndian.Uint64(cntBytes))
 		}
-		if size < epochDuration / blockInterval / maxWitnessSize / 2 {
+		if size < cycleDuration / blockInterval / maxWitnessSize / 2 {
 			// not active witnesses need uncast
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(size)})
 		}
@@ -139,7 +139,7 @@ func (ec *Controller) uncast(epoch int64) error {
 	for i, witness := range needUncastWitnesses {
 		// ensure witness count greater than or equal to safeSize
 		if masternodeCount <= safeSize {
-			log.Info("No more masternode can be kickout", "prevEpochID", epoch, "masternodeCount", masternodeCount, "needKickoutCount", len(needUncastWitnesses)-i)
+			log.Info("No more masternode can be kickout", "prevCycleID", cycle, "masternodeCount", masternodeCount, "needKickoutCount", len(needUncastWitnesses)-i)
 			return nil
 		}
 		if err := ec.DevoteProtocol.Unregister(witness.address); err != nil {
@@ -147,7 +147,7 @@ func (ec *Controller) uncast(epoch int64) error {
 		}
 		// if uncast success, masternode Count minus 1
 		masternodeCount--
-		log.Info("uncast masternode", "prevEpochID", epoch, "witness", witness.address.String(), "mintCnt", witness.weight.String())
+		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.address.String(), "mintCnt", witness.weight.String())
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func (ec *Controller) uncast(epoch int64) error {
 func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 
 	witness = common.Address{}
-	offset := now % epochInterval
+	offset := now % cycleInterval
 	if offset % blockInterval != 0 {
 		return common.Address{}, ErrInvalidMinerBlockTime
 	}
@@ -177,23 +177,23 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 
 func (self *Controller) voting(genesis, parent *types.Header) error {
 
-	genesisEpoch := genesis.Time.Int64() / epochInterval
-	prevEpoch := parent.Time.Int64() / epochInterval
-	currentEpoch := self.TimeStamp / epochInterval
+	genesisCycle := genesis.Time.Int64() / cycleInterval
+	prevCycle := parent.Time.Int64() / cycleInterval
+	currentCycle := self.TimeStamp / cycleInterval
 
-	prevEpochIsGenesis := prevEpoch == genesisEpoch
-	if prevEpochIsGenesis && prevEpoch < currentEpoch {
-		prevEpoch = currentEpoch - 1
+	prevCycleIsGenesis := prevCycle == genesisCycle
+	if prevCycleIsGenesis && prevCycle < currentCycle {
+		prevCycle = currentCycle - 1
 	}
 
-	prevEpochBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(prevEpochBytes, uint64(prevEpoch))
-	iter := trie.NewIterator(self.DevoteProtocol.MintCntTrie().NodeIterator(prevEpochBytes))
+	prevCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+	iter := trie.NewIterator(self.DevoteProtocol.MintCntTrie().NodeIterator(prevCycleBytes))
 
-	for i := prevEpoch; i < currentEpoch; i++ {
-		// if prevEpoch is not genesis, uncast not active masternode
-		if !prevEpochIsGenesis && iter.Next() {
-			if err := self.uncast(prevEpoch); err != nil {
+	for i := prevCycle; i < currentCycle; i++ {
+		// if prevCycle is not genesis, uncast not active masternode
+		if !prevCycleIsGenesis && iter.Next() {
+			if err := self.uncast(prevCycle); err != nil {
 				return err
 			}
 		}
@@ -226,10 +226,10 @@ func (self *Controller) voting(genesis, parent *types.Header) error {
 			sortedWitnesses = append(sortedWitnesses, masternode.address)
 		}
 
-		epochTrie, _ := types.NewEpochTrie(common.Hash{}, self.DevoteProtocol.DB())
-		self.DevoteProtocol.SetEpoch(epochTrie)
+		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.DevoteProtocol.DB())
+		self.DevoteProtocol.SetCycle(cycleTrie)
 		self.DevoteProtocol.SetWitnesses(sortedWitnesses)
-		log.Info("Come to new epoch", "prev", i, "next", i+1)
+		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
 }

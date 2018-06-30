@@ -1480,7 +1480,7 @@ func (d *Downloader) syncDevoteProtocolState(protocol *types.DevoteProtocolAtomi
 		protocol.MasternodeHash,
 		protocol.CacheHash,
 		protocol.VoteHash,
-		protocol.EpochHash,
+		protocol.CycleHash,
 		protocol.MintCntHash,
 	}
 	for _, root := range roots {

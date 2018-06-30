@@ -49,7 +49,7 @@ const (
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
 	blockInterval    = int64(10)
-	epochInterval    = int64(3600)
+	cycleInterval    = int64(3600)
 	maxWitnessSize = 21
 	safeSize         = maxWitnessSize*2/3 + 1
 	consensusSize    = maxWitnessSize*2/3 + 1
@@ -59,9 +59,6 @@ var (
 	big0  = big.NewInt(0)
 	big8  = big.NewInt(8)
 	big32 = big.NewInt(32)
-
-	frontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	byzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 
 	etherzeroBlockReward  *big.Int = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
 
@@ -170,13 +167,13 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	}
 
 	curHeader := chain.CurrentHeader()
-	epoch := int64(-1)
+	cycle := int64(-1)
 	witnessMap := make(map[common.Address]bool)
 	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
 		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
-		curEpoch := curHeader.Time.Int64() / epochInterval
-		if curEpoch != epoch {
-			epoch = curEpoch
+		curCycle := curHeader.Time.Int64() / cycleInterval
+		if curCycle != cycle {
+			cycle = curCycle
 			witnessMap = make(map[common.Address]bool)
 		}
 		// fast return
@@ -270,7 +267,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	genesis := chain.GetHeaderByNumber(0)
 	err := controller.voting(genesis, parent)
 	if err != nil {
-		return nil, fmt.Errorf("got error when elect next epoch, err: %s", err)
+		return nil, fmt.Errorf("got error when elect next cycle, err: %s", err)
 	}
 
 	//update mint count trie
@@ -385,10 +382,10 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, parent.Protocol)
 	if err != nil {
-		fmt.Printf("devote verifySeal failed epoch hash:%x", devoteProtocol.EpochTrie())
+		fmt.Printf("devote verifySeal failed cycle hash:%x", devoteProtocol.CycleTrie())
 		return err
 	}
-	fmt.Printf("devote verifySeal successful epoch hash:%x", devoteProtocol.EpochTrie())
+	fmt.Printf("devote verifySeal successful cycle hash:%x", devoteProtocol.CycleTrie())
 	controller := &Controller{DevoteProtocol: devoteProtocol}
 	witness, err := controller.lookup(header.Time.Int64())
 	if err != nil {
@@ -524,19 +521,19 @@ func NextSlot(now int64) int64 {
 func updateMintCnt(parentBlockTime, currentBlockTime int64, witness common.Address, devoteProtocol *types.DevoteProtocol) {
 
 	currentMintCntTrie := devoteProtocol.MintCntTrie()
-	currentEpoch := parentBlockTime / epochInterval
-	currentEpochBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(currentEpochBytes, uint64(currentEpoch))
+	currentCycle := parentBlockTime / cycleInterval
+	currentCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
 
 	cnt := int64(1)
-	newEpoch := currentBlockTime / epochInterval
-	// still during the currentEpochID
-	if currentEpoch == newEpoch {
-		iter := trie.NewIterator(currentMintCntTrie.NodeIterator(currentEpochBytes))
+	newCycle := currentBlockTime / cycleInterval
+	// still during the currentCycleID
+	if currentCycle == newCycle {
+		iter := trie.NewIterator(currentMintCntTrie.NodeIterator(currentCycleBytes))
 
 		// when current is not genesis, read last count from the MintCntTrie
 		if iter.Next() {
-			cntBytes := currentMintCntTrie.Get(append(currentEpochBytes, witness.Bytes()...))
+			cntBytes := currentMintCntTrie.Get(append(currentCycleBytes, witness.Bytes()...))
 			// not the first time to mint
 			if cntBytes != nil {
 				cnt = int64(binary.BigEndian.Uint64(cntBytes)) + 1
@@ -545,10 +542,10 @@ func updateMintCnt(parentBlockTime, currentBlockTime int64, witness common.Addre
 	}
 
 	newCntBytes := make([]byte, 8)
-	newEpochBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(newEpochBytes, uint64(newEpoch))
+	newCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	devoteProtocol.MintCntTrie().TryUpdate(append(newEpochBytes, witness.Bytes()...), newCntBytes)
+	devoteProtocol.MintCntTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
 
 }
 

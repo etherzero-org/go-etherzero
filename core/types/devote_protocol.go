@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	epochPrefix      = "epoch-"
+	cyclePrefix      = "cycle-"
 	cachePrefix      = "cache-"
 	votePrefix       = "vote-"
 	masternodePrefix = "masternode-"
@@ -21,13 +21,13 @@ var (
 )
 
 type DevoteProtocol struct {
-	epochTrie      *trie.Trie
+	cycleTrie      *trie.Trie
 	cacheTrie      *trie.Trie
 	voteTrie       *trie.Trie
 	masternodeTrie *trie.Trie
 	mintCntTrie    *trie.Trie
 
-	epochTriedb      *trie.Database
+	cycleTriedb      *trie.Database
 	cacheTriedb      *trie.Database
 	voteTriedb       *trie.Database
 	masternodeTriedb *trie.Database
@@ -36,10 +36,10 @@ type DevoteProtocol struct {
 	diskdb ethdb.Database
 }
 
-func NewEpochTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
+func NewCycleTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 
-	epochTriedb := trie.NewDatabase(ethdb.NewTable(db, epochPrefix))
-	return trie.New(root, epochTriedb)
+	cycleTriedb := trie.NewDatabase(ethdb.NewTable(db, cyclePrefix))
+	return trie.New(root, cycleTriedb)
 }
 
 func NewCacheTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
@@ -65,7 +65,7 @@ func NewMintCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 
 func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 
-	epochTrie, err := NewEpochTrie(common.Hash{}, db)
+	cycleTrie, err := NewCycleTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,13 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 		return nil, err
 	}
 	return &DevoteProtocol{
-		epochTrie:        epochTrie,
+		cycleTrie:        cycleTrie,
 		cacheTrie:        cacheTrie,
 		voteTrie:         voteTrie,
 		masternodeTrie:   masternodeTrie,
 		mintCntTrie:      mintCntTrie,
 		diskdb:           db,
-		epochTriedb:      trie.NewDatabase(ethdb.NewTable(db, epochPrefix)),
+		cycleTriedb:      trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
 		voteTriedb:       trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
 		masternodeTriedb: trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
@@ -104,7 +104,7 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 
 func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
 
-	epochTrie, err := NewEpochTrie(ctxAtomic.EpochHash, db)
+	cycleTrie, err := NewCycleTrie(ctxAtomic.CycleHash, db)
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +129,13 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		return nil, err
 	}
 	return &DevoteProtocol{
-		epochTrie:        epochTrie,
+		cycleTrie:        cycleTrie,
 		cacheTrie:        cacheTrie,
 		voteTrie:         voteTrie,
 		masternodeTrie:   masternodeTrie,
 		mintCntTrie:      mintCntTrie,
 		diskdb:           db,
-		epochTriedb:      trie.NewDatabase(ethdb.NewTable(db, epochPrefix)),
+		cycleTriedb:      trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
 		voteTriedb:       trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
 		masternodeTriedb: trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
@@ -183,14 +183,14 @@ func (d *DevoteProtocol) Unregister(masternodeAddr common.Address) error {
 
 func (d *DevoteProtocol) Copy() *DevoteProtocol {
 
-	epochTrie := *d.epochTrie
+	cycleTrie := *d.cycleTrie
 	cacheTrie := *d.cacheTrie
 	voteTrie := *d.voteTrie
 	masternodeTrie := *d.masternodeTrie
 	mintCntTrie := *d.mintCntTrie
 
 	return &DevoteProtocol{
-		epochTrie:      &epochTrie,
+		cycleTrie:      &cycleTrie,
 		cacheTrie:      &cacheTrie,
 		voteTrie:       &voteTrie,
 		masternodeTrie: &masternodeTrie,
@@ -201,7 +201,7 @@ func (d *DevoteProtocol) Copy() *DevoteProtocol {
 func (d *DevoteProtocol) Root() (h common.Hash) {
 
 	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, d.epochTrie.Hash())
+	rlp.Encode(hw, d.cycleTrie.Hash())
 	rlp.Encode(hw, d.cacheTrie.Hash())
 	rlp.Encode(hw, d.masternodeTrie.Hash())
 	rlp.Encode(hw, d.voteTrie.Hash())
@@ -216,7 +216,7 @@ func (d *DevoteProtocol) Snapshot() *DevoteProtocol {
 
 func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
 
-	d.epochTrie = snapshot.epochTrie
+	d.cycleTrie = snapshot.cycleTrie
 	d.cacheTrie = snapshot.cacheTrie
 	d.masternodeTrie = snapshot.masternodeTrie
 	d.voteTrie = snapshot.voteTrie
@@ -226,7 +226,7 @@ func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
 func (d *DevoteProtocol) FromAtomic(dcp *DevoteProtocolAtomic) error {
 
 	var err error
-	d.epochTrie, err = NewEpochTrie(dcp.EpochHash, d.diskdb)
+	d.cycleTrie, err = NewCycleTrie(dcp.CycleHash, d.diskdb)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func (d *DevoteProtocol) FromAtomic(dcp *DevoteProtocolAtomic) error {
 }
 
 type DevoteProtocolAtomic struct {
-	EpochHash      common.Hash `json:"epochRoot"        gencodec:"required"`
+	CycleHash      common.Hash `json:"cycleRoot"        gencodec:"required"`
 	CacheHash      common.Hash `json:"cacheRoot"        gencodec:"required"`
 	MasternodeHash common.Hash `json:"masternodeRoot"    gencodec:"required"`
 	VoteHash       common.Hash `json:"voteRoot"         gencodec:"required"`
@@ -257,12 +257,12 @@ type DevoteProtocolAtomic struct {
 func (d *DevoteProtocol) MasternodeTrie() *trie.Trie { return d.masternodeTrie }
 func (d *DevoteProtocol) CacheTrie() *trie.Trie      { return d.cacheTrie }
 func (d *DevoteProtocol) VoteTrie() *trie.Trie       { return d.voteTrie }
-func (d *DevoteProtocol) EpochTrie() *trie.Trie      { return d.epochTrie }
+func (d *DevoteProtocol) CycleTrie() *trie.Trie      { return d.cycleTrie }
 func (d *DevoteProtocol) MintCntTrie() *trie.Trie    { return d.mintCntTrie }
 
 func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
-func (dc *DevoteProtocol) SetEpoch(epoch *trie.Trie)           { dc.epochTrie = epoch }
+func (dc *DevoteProtocol) SetCycle(cycle *trie.Trie)           { dc.cycleTrie = cycle }
 func (dc *DevoteProtocol) SetCache(cache *trie.Trie)           { dc.cacheTrie = cache }
 func (dc *DevoteProtocol) SetVote(vote *trie.Trie)             { dc.voteTrie = vote }
 func (dc *DevoteProtocol) SetMasternode(masternode *trie.Trie) { dc.masternodeTrie = masternode }
@@ -270,11 +270,11 @@ func (dc *DevoteProtocol) SetMintCnt(mintCnt *trie.Trie)       { dc.mintCntTrie 
 
 func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error) {
 
-	epochRoot, err := d.epochTrie.CommitTo(d.epochTriedb)
+	cycleRoot, err := d.cycleTrie.CommitTo(d.cycleTriedb)
 	if err != nil {
 		return nil, err
 	}
-	dberr := d.epochTriedb.Commit(epochRoot, false)
+	dberr := d.cycleTriedb.Commit(cycleRoot, false)
 	if dberr != nil {
 		return nil, err
 	}
@@ -302,7 +302,7 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 	d.mintCntTriedb.Commit(mintCntRoot, false)
 
 	return &DevoteProtocolAtomic{
-		EpochHash:      epochRoot,
+		CycleHash:      cycleRoot,
 		CacheHash:      cacheRoot,
 		VoteHash:       voteRoot,
 		MasternodeHash: masternodeRoot,
@@ -312,7 +312,7 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 
 func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 	return &DevoteProtocolAtomic{
-		EpochHash:      d.epochTrie.Hash(),
+		CycleHash:      d.cycleTrie.Hash(),
 		CacheHash:      d.cacheTrie.Hash(),
 		MasternodeHash: d.masternodeTrie.Hash(),
 		VoteHash:       d.voteTrie.Hash(),
@@ -322,7 +322,7 @@ func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 
 func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, p.EpochHash)
+	rlp.Encode(hw, p.CycleHash)
 	rlp.Encode(hw, p.CacheHash)
 	rlp.Encode(hw, p.MasternodeHash)
 	rlp.Encode(hw, p.VoteHash)
@@ -331,22 +331,22 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	return h
 }
 
-func (dc *DevoteProtocol) SetWitnesses(witnesses []common.Address) error {
+func (self *DevoteProtocol) SetWitnesses(witnesses []common.Address) error {
 
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
 	if err != nil {
 		return fmt.Errorf("failed to encode witnesses to rlp bytes: %s", err)
 	}
-	dc.epochTrie.Update(key, witnessesRLP)
+	self.cycleTrie.Update(key, witnessesRLP)
 	return nil
 }
 
-func (dc *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
+func (self *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
 
 	var witnesses []common.Address
 	key := []byte("witness")
-	witnessRLP := dc.epochTrie.Get(key)
+	witnessRLP := self.cycleTrie.Get(key)
 	if err := rlp.DecodeBytes(witnessRLP, &witnesses); err != nil {
 		return nil, fmt.Errorf("failed to decode witnesses: %s", err)
 	}
@@ -359,10 +359,38 @@ func (d *DevoteProtocol) Register(masternodeAddr common.Address) error {
 	return d.masternodeTrie.TryUpdate(masternode, masternode)
 }
 
+func (d *DevoteProtocol) Delegate(delegatorAddr, masternodeAddr common.Address) error {
+	delegator, masternode := delegatorAddr.Bytes(), masternodeAddr.Bytes()
+
+	// the candidate must be masternode
+	masternodeInTrie, err := d.masternodeTrie.TryGet(masternode)
+	if err != nil {
+		return err
+	}
+	if masternodeInTrie == nil {
+		return errors.New("invalid masternode to delegate")
+	}
+
+	// delete old masternode if exists
+	oldMasternode, err := d.voteTrie.TryGet(delegator)
+	if err != nil {
+		if _, ok := err.(*trie.MissingNodeError); !ok {
+			return err
+		}
+	}
+	if oldMasternode != nil {
+		d.cacheTrie.Delete(append(oldMasternode, delegator...))
+	}
+	if err = d.cacheTrie.TryUpdate(append(masternode, delegator...), delegator); err != nil {
+		return err
+	}
+	return d.voteTrie.TryUpdate(delegator, masternode)
+}
+
 func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address) error {
 	delegator, masternode := delegatorAddr.Bytes(), masternodeAddr.Bytes()
 
-	// the delegate must be cast masternode
+	// the delegate must be register a masternode
 	masternodeInTrie, err := d.masternodeTrie.TryGet(masternode)
 	if err != nil {
 		return err
