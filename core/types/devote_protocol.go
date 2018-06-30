@@ -338,7 +338,7 @@ func (dc *DevoteProtocol) SetWitnesses(witnesses []common.Address) error {
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
 	if err != nil {
-		return fmt.Errorf("failed to encode Witnesses to rlp bytes: %s", err)
+		return fmt.Errorf("failed to encode witnesses to rlp bytes: %s", err)
 	}
 	dc.epochTrie.Update(key, witnessesRLP)
 	return nil

@@ -354,7 +354,7 @@ func (s *Ethereum) Witness() (witness common.Address, err error) {
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			fmt.Printf("backend Witness accounts%x\n",accounts[0].Address)
+			fmt.Printf("backend Witness accounts: %x \n",accounts[0].Address)
 			return accounts[0].Address, nil
 		}
 	}
