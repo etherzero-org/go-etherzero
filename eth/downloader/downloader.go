@@ -1477,7 +1477,7 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, bef
 
 func (d *Downloader) syncDevoteProtocolState(protocol *types.DevoteProtocolAtomic) error {
 	roots := []common.Hash{
-		protocol.CandidateHash,
+		protocol.MasternodeHash,
 		protocol.CacheHash,
 		protocol.VoteHash,
 		protocol.EpochHash,

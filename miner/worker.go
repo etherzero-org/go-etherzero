@@ -227,18 +227,18 @@ func (self *worker) mintBlock(now int64) {
 		return
 	}
 
-	err := engine.CheckValidator(self.chain.CurrentBlock(), now)
+	err := engine.CheckWitness(self.chain.CurrentBlock(), now)
 	if err != nil {
 		switch err {
 		case devote.ErrWaitForPrevBlock,
 			devote.ErrMintFutureBlock,
 			devote.ErrInvalidBlockValidator,
-			devote.ErrInvalidMintBlockTime:
-			log.Debug("Failed to mint the block, while ", "err", err)
-			fmt.Printf("Failed to mint the block, while error:%s\n",  err)
+			devote.ErrInvalidMinerBlockTime:
+			log.Debug("Failed to miner the block, while ", "err", err)
+			fmt.Printf("Failed to miner the block, while error:%s\n",  err)
 		default:
-			log.Error("Failed to mint the block", "err", err)
-			fmt.Printf("Failed to mint the block, while error:%s\n",  err)
+			log.Error("Failed to miner the block", "err", err)
+			fmt.Printf("Failed to miner the block, while error:%s\n",  err)
 
 		}
 		return

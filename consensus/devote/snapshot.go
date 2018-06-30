@@ -18,7 +18,6 @@
 
 package devote
 
-
 import (
 	"encoding/binary"
 	"errors"
@@ -36,58 +35,60 @@ import (
 )
 
 type Controller struct {
-
 	DevoteProtocol *types.DevoteProtocol
-	statedb     *state.StateDB
+	statedb        *state.StateDB
 
-	TimeStamp   int64
+	TimeStamp int64
 }
 
 // votes return  vote list in the Epoch.
-func (ec *Controller) votes() (votes map[common.Address]*big.Int, err error) {
+func (self *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
-	cacheTrie := ec.DevoteProtocol.CacheTrie()
-	candidateTrie := ec.DevoteProtocol.CandidateTrie()
-	statedb := ec.statedb
+	cacheTrie := self.DevoteProtocol.CacheTrie()
+	masternodeTrie := self.DevoteProtocol.MasternodeTrie()
+	statedb := self.statedb
 
-	iterCandidate := trie.NewIterator(candidateTrie.NodeIterator(nil))
-	existCandidate := iterCandidate.Next()
-	if !existCandidate {
+	iterMasternode := trie.NewIterator(masternodeTrie.NodeIterator(nil))
+	existMasternode := iterMasternode.Next()
+	if !existMasternode {
 		return votes, errors.New("no candidates")
 	}
 
-	for existCandidate {
+	for existMasternode {
 
-		candidate := iterCandidate.Value
-		candidateAddr := common.BytesToAddress(candidate)
-		cacheIterator := trie.NewIterator(cacheTrie.NodeIterator(candidate))
+		masternode := iterMasternode.Value
+		masternodeAddr := common.BytesToAddress(masternode)
+		cacheIterator := trie.NewIterator(cacheTrie.NodeIterator(masternode))
 		existCache := cacheIterator.Next()
 
 		if !existCache {
-			votes[candidateAddr] = new(big.Int)
-			existCandidate = iterCandidate.Next()
+			votes[masternodeAddr] = new(big.Int)
+			existMasternode = iterMasternode.Next()
 			continue
 		}
 		for existCache {
-			cache := cacheIterator.Value
-			score, ok := votes[candidateAddr]
+			account := cacheIterator.Value
+			score, ok := votes[masternodeAddr]
 			if !ok {
 				score = new(big.Int)
 			}
-			cacheAddr := common.BytesToAddress(cache)
+			cacheAddr := common.BytesToAddress(account)
 			weight := statedb.GetBalance(cacheAddr)
 
 			score.Add(score, weight)
-			votes[candidateAddr] = score
+			votes[masternodeAddr] = score
 			existCache = cacheIterator.Next()
 		}
-		existCandidate = iterCandidate.Next()
+		existMasternode = iterMasternode.Next()
 	}
+	fmt.Printf("controller votes context:%x \n", votes)
 	return votes, nil
 }
 
+//when a node does't work in the current epoch, delete.
 func (ec *Controller) uncast(epoch int64) error {
+
 	witnesses, err := ec.DevoteProtocol.GetWitnesses()
 	if err != nil {
 		return fmt.Errorf("failed to get witness: %s", err)
@@ -100,7 +101,7 @@ func (ec *Controller) uncast(epoch int64) error {
 	// First epoch duration may lt epoch interval,
 	// while the first block time wouldn't always align with epoch interval,
 	// so caculate the first epoch duartion with first block time instead of epoch interval,
-	// prevent the validators were kickout incorrectly.
+	// prevent the validators were uncast incorrectly.
 	if ec.TimeStamp-timeOfFirstBlock < epochInterval {
 		epochDuration = ec.TimeStamp - timeOfFirstBlock
 	}
@@ -110,13 +111,13 @@ func (ec *Controller) uncast(epoch int64) error {
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(epoch))
 		key = append(key, witness.Bytes()...)
-		cnt := int64(0)
+		size := int64(0)
 		if cntBytes := ec.DevoteProtocol.MintCntTrie().Get(key); cntBytes != nil {
-			cnt = int64(binary.BigEndian.Uint64(cntBytes))
+			size = int64(binary.BigEndian.Uint64(cntBytes))
 		}
-		if cnt < epochDuration/blockInterval/maxValidatorSize/2 {
+		if size < epochDuration/blockInterval/maxWitnessSize/2 {
 			// not active witnesses need uncast
-			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(cnt)})
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(size)})
 		}
 	}
 	// no witnessees need uncast
@@ -127,7 +128,7 @@ func (ec *Controller) uncast(epoch int64) error {
 	sort.Sort(sort.Reverse(needUncastWitnesses))
 
 	candidateCount := 0
-	iter := trie.NewIterator(ec.DevoteProtocol.CandidateTrie().NodeIterator(nil))
+	iter := trie.NewIterator(ec.DevoteProtocol.MasternodeTrie().NodeIterator(nil))
 	for iter.Next() {
 		candidateCount++
 		if candidateCount >= needUncastWitnessCnt+safeSize {
@@ -141,8 +142,7 @@ func (ec *Controller) uncast(epoch int64) error {
 			log.Info("No more candidate can be kickout", "prevEpochID", epoch, "candidateCount", candidateCount, "needKickoutCount", len(needUncastWitnesses)-i)
 			return nil
 		}
-
-		if err := ec.DevoteProtocol.Uncast(witness.address); err != nil {
+		if err := ec.DevoteProtocol.Unregister(witness.address); err != nil {
 			return err
 		}
 		// if uncast success, candidate Count minus 1
@@ -153,10 +153,11 @@ func (ec *Controller) uncast(epoch int64) error {
 }
 
 func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
+
 	witness = common.Address{}
 	offset := now % epochInterval
-	if offset%blockInterval != 0 {
-		return common.Address{}, ErrInvalidMintBlockTime
+	if offset % blockInterval != 0 {
+		return common.Address{}, ErrInvalidMinerBlockTime
 	}
 	offset /= blockInterval
 
@@ -170,15 +171,15 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	}
 	offset %= int64(witnessSize)
 	//return witnesses[offset], nil
-
+	fmt.Printf("current witnesses count %d\n", len(witnesses))
 	return common.HexToAddress("0xc5d725b7d19c6c7e2c50c85fb9cf5c0b78531da7"), nil
 }
 
-func (ec *Controller) voting(genesis, parent *types.Header) error {
+func (self *Controller) voting(genesis, parent *types.Header) error {
 
 	genesisEpoch := genesis.Time.Int64() / epochInterval
 	prevEpoch := parent.Time.Int64() / epochInterval
-	currentEpoch := ec.TimeStamp / epochInterval
+	currentEpoch := self.TimeStamp / epochInterval
 
 	prevEpochIsGenesis := prevEpoch == genesisEpoch
 	if prevEpochIsGenesis && prevEpoch < currentEpoch {
@@ -187,15 +188,16 @@ func (ec *Controller) voting(genesis, parent *types.Header) error {
 
 	prevEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevEpochBytes, uint64(prevEpoch))
-	iter := trie.NewIterator(ec.DevoteProtocol.MintCntTrie().NodeIterator(prevEpochBytes))
+	iter := trie.NewIterator(self.DevoteProtocol.MintCntTrie().NodeIterator(prevEpochBytes))
+
 	for i := prevEpoch; i < currentEpoch; i++ {
 		// if prevEpoch is not genesis, uncast not active candidate
 		if !prevEpochIsGenesis && iter.Next() {
-			if err := ec.uncast(prevEpoch); err != nil {
+			if err := self.uncast(prevEpoch); err != nil {
 				return err
 			}
 		}
-		votes, err := ec.votes()
+		votes, err := self.votes()
 		if err != nil {
 			return err
 		}
@@ -207,26 +209,27 @@ func (ec *Controller) voting(genesis, parent *types.Header) error {
 			return errors.New("too few candidates")
 		}
 		sort.Sort(candidates)
-		if len(candidates) > maxValidatorSize {
-			candidates = candidates[:maxValidatorSize]
+		if len(candidates) > maxWitnessSize {
+			candidates = candidates[:maxWitnessSize]
 		}
 
-		// shuffle candidates
+		// disrupt the candidates node to ensure the disorder of the node
 		seed := int64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
 		r := rand.New(rand.NewSource(seed))
 		for i := len(candidates) - 1; i > 0; i-- {
 			j := int(r.Int31n(int32(i + 1)))
 			candidates[i], candidates[j] = candidates[j], candidates[i]
 		}
+
 		sortedWitnesses := make([]common.Address, 0)
 		for _, candidate := range candidates {
 			sortedWitnesses = append(sortedWitnesses, candidate.address)
 		}
 
-		epochTrie, _ := types.NewEpochTrie(common.Hash{}, ec.DevoteProtocol.DB())
-		ec.DevoteProtocol.SetEpoch(epochTrie)
-		ec.DevoteProtocol.SetWitnesses(sortedWitnesses)
-		log.Info("Come to new epoch", "prevEpoch", i, "nextEpoch", i+1)
+		epochTrie, _ := types.NewEpochTrie(common.Hash{}, self.DevoteProtocol.DB())
+		self.DevoteProtocol.SetEpoch(epochTrie)
+		self.DevoteProtocol.SetWitnesses(sortedWitnesses)
+		log.Info("Come to new epoch", "prev", i, "next", i+1)
 	}
 	return nil
 }

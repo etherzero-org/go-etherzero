@@ -396,7 +396,7 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *types.DevoteProto
 		dc.SetWitnesses(g.Config.Devote.Witnesses)
 		for _, witness := range g.Config.Devote.Witnesses {
 			dc.CacheTrie().TryUpdate(append(witness.Bytes(), witness.Bytes()...), witness.Bytes())
-			dc.CandidateTrie().TryUpdate(witness.Bytes(), witness.Bytes())
+			dc.MasternodeTrie().TryUpdate(witness.Bytes(), witness.Bytes())
 		}
 	}
 	return dc

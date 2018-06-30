@@ -49,10 +49,10 @@ const (
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
 	blockInterval    = int64(10)
-	epochInterval    = int64(86400)
-	maxValidatorSize = 21
-	safeSize         = maxValidatorSize*2/3 + 1
-	consensusSize    = maxValidatorSize*2/3 + 1
+	epochInterval    = int64(3600)
+	maxWitnessSize = 21
+	safeSize         = maxWitnessSize*2/3 + 1
+	consensusSize    = maxWitnessSize*2/3 + 1
 )
 
 var (
@@ -62,6 +62,8 @@ var (
 
 	frontierBlockReward  *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 	byzantiumBlockReward *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
+
+	etherzeroBlockReward  *big.Int = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
 
 	timeOfFirstBlock = int64(0)
 
@@ -93,7 +95,7 @@ var (
 	ErrMintFutureBlock            = errors.New("mint the future block")
 	ErrMismatchSignerAndValidator = errors.New("mismatch block signer and validator")
 	ErrInvalidBlockValidator      = errors.New("invalid block validator")
-	ErrInvalidMintBlockTime       = errors.New("invalid time to mint the block")
+	ErrInvalidMinerBlockTime       = errors.New("invalid time to miner the block")
 	ErrNilBlockHeader             = errors.New("nil block header returned")
 )
 
@@ -239,10 +241,8 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 
 func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
-	blockReward := frontierBlockReward
-	if config.IsByzantium(header.Number) {
-		blockReward = byzantiumBlockReward
-	}
+	blockReward := etherzeroBlockReward
+
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward)
@@ -427,7 +427,7 @@ func (d *Devote) checkDeadline(lastBlock *types.Block, now int64) error {
 	return ErrWaitForPrevBlock
 }
 
-func (d *Devote) CheckValidator(lastBlock *types.Block, now int64) error {
+func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err := d.checkDeadline(lastBlock, now); err != nil {
 		return err
 	}
@@ -521,7 +521,7 @@ func NextSlot(now int64) int64 {
 }
 
 // update counts in MintCntTrie for the miner of newBlock
-func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Address, devoteProtocol *types.DevoteProtocol) {
+func updateMintCnt(parentBlockTime, currentBlockTime int64, witness common.Address, devoteProtocol *types.DevoteProtocol) {
 
 	currentMintCntTrie := devoteProtocol.MintCntTrie()
 	currentEpoch := parentBlockTime / epochInterval
@@ -536,8 +536,7 @@ func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Add
 
 		// when current is not genesis, read last count from the MintCntTrie
 		if iter.Next() {
-			cntBytes := currentMintCntTrie.Get(append(currentEpochBytes, validator.Bytes()...))
-
+			cntBytes := currentMintCntTrie.Get(append(currentEpochBytes, witness.Bytes()...))
 			// not the first time to mint
 			if cntBytes != nil {
 				cnt = int64(binary.BigEndian.Uint64(cntBytes)) + 1
@@ -549,7 +548,7 @@ func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Add
 	newEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newEpochBytes, uint64(newEpoch))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	devoteProtocol.MintCntTrie().TryUpdate(append(newEpochBytes, validator.Bytes()...), newCntBytes)
+	devoteProtocol.MintCntTrie().TryUpdate(append(newEpochBytes, witness.Bytes()...), newCntBytes)
 
 }
 
