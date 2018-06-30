@@ -267,7 +267,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	genesis := chain.GetHeaderByNumber(0)
 	err := controller.voting(genesis, parent)
 	if err != nil {
-		return nil, fmt.Errorf("got error when elect next cycle, err: %s", err)
+		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
 
 	//update mint count trie

@@ -42,12 +42,19 @@ type Controller struct {
 }
 
 // votes return  vote list in the Cycle.
-func (self *Controller) votes() (votes map[common.Address]*big.Int, err error) {
+func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
 	cacheTrie := self.DevoteProtocol.CacheTrie()
 	masternodeTrie := self.DevoteProtocol.MasternodeTrie()
-	statedb := self.statedb
+	//voteCntTrie:=self.DevoteProtocol.VoteCntTrie()
+	//statedb := self.statedb
+
+	//iterVoteCnt := trie.NewIterator(voteCntTrie.NodeIterator(nil))
+	//existVoteCnt := iterVoteCnt.Next()
+	//if !existVoteCnt {
+	//	return votes,errors.New("no vote count in current cycle")
+	//}
 
 	iterMasternode := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 	existMasternode := iterMasternode.Next()
@@ -68,15 +75,23 @@ func (self *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 			continue
 		}
 		for existCache {
-			account := cacheIterator.Value
+			//account := cacheIterator.Value
 			score, ok := votes[masternodeAddr]
 			if !ok {
 				score = new(big.Int)
 			}
-			cacheAddr := common.BytesToAddress(account)
-			weight := statedb.GetBalance(cacheAddr)
+			//cacheAddr := common.BytesToAddress(account)
+			//weight := statedb.GetBalance(cacheAddr)
+			//score.Add(score, weight)
+			key := make([]byte, 8)
+			binary.BigEndian.PutUint64(key, uint64(currentCycle))
+			key =append(key,masternodeAddr.Bytes()...)
+			votecnt := int64(0)
+			if voteCntBytes := self.DevoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
+				votecnt = int64(binary.BigEndian.Uint64(voteCntBytes))
+			}
 
-			score.Add(score, weight)
+			score.Add(score, big.NewInt(votecnt))
 			votes[masternodeAddr] = score
 			existCache = cacheIterator.Next()
 		}
@@ -197,7 +212,7 @@ func (self *Controller) voting(genesis, parent *types.Header) error {
 				return err
 			}
 		}
-		votes, err := self.votes()
+		votes, err := self.votes(currentCycle)
 		if err != nil {
 			return err
 		}

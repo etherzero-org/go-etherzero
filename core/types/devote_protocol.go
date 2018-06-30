@@ -18,6 +18,7 @@ var (
 	votePrefix       = "vote-"
 	masternodePrefix = "masternode-"
 	mintCntPrefix    = "mintCnt-"
+	voteCntPrefix    = "voteCnt-"
 )
 
 type DevoteProtocol struct {
@@ -26,12 +27,14 @@ type DevoteProtocol struct {
 	voteTrie       *trie.Trie
 	masternodeTrie *trie.Trie
 	mintCntTrie    *trie.Trie
+	voteCntTrie    *trie.Trie
 
 	cycleTriedb      *trie.Database
 	cacheTriedb      *trie.Database
 	voteTriedb       *trie.Database
 	masternodeTriedb *trie.Database
 	mintCntTriedb    *trie.Database
+	voteCntTriedb    *trie.Database
 
 	diskdb ethdb.Database
 }
@@ -63,41 +66,57 @@ func NewMintCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 
 }
 
+func NewVoteCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
+	voteCntTriedb := trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix))
+	return trie.New(root, voteCntTriedb)
+
+}
 func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 
 	cycleTrie, err := NewCycleTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
+
 	cacheTrie, err := NewCacheTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
+
 	voteTrie, err := NewVoteTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
-	masternodeTrie, err := NewMasternodeTrie(common.Hash{}, db)
 
+	masternodeTrie, err := NewMasternodeTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
+
 	mintCntTrie, err := NewMintCntTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
+
+	voteCntTrie, err := NewVoteCntTrie(common.Hash{}, db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DevoteProtocol{
 		cycleTrie:        cycleTrie,
 		cacheTrie:        cacheTrie,
 		voteTrie:         voteTrie,
 		masternodeTrie:   masternodeTrie,
 		mintCntTrie:      mintCntTrie,
+		voteCntTrie:      voteCntTrie,
 		diskdb:           db,
 		cycleTriedb:      trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
 		voteTriedb:       trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
 		masternodeTriedb: trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
 		mintCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix)),
+		voteCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
 	}, nil
 
 }
@@ -108,23 +127,28 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 	if err != nil {
 		return nil, err
 	}
+
 	cacheTrie, err := NewCacheTrie(ctxAtomic.CacheHash, db)
-
 	if err != nil {
 		return nil, err
 	}
+
 	voteTrie, err := NewVoteTrie(ctxAtomic.VoteHash, db)
-
 	if err != nil {
 		return nil, err
 	}
+
 	masternodeTrie, err := NewMasternodeTrie(ctxAtomic.MasternodeHash, db)
-
 	if err != nil {
 		return nil, err
 	}
-	mintCntTrie, err := NewMintCntTrie(ctxAtomic.MintCntHash, db)
 
+	mintCntTrie, err := NewMintCntTrie(ctxAtomic.MintCntHash, db)
+	if err != nil {
+		return nil, err
+	}
+
+	voteCntTrie, err := NewVoteCntTrie(ctxAtomic.VoteCntHash, db)
 	if err != nil {
 		return nil, err
 	}
@@ -134,12 +158,14 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		voteTrie:         voteTrie,
 		masternodeTrie:   masternodeTrie,
 		mintCntTrie:      mintCntTrie,
+		voteCntTrie:      voteCntTrie,
 		diskdb:           db,
 		cycleTriedb:      trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
 		voteTriedb:       trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
 		masternodeTriedb: trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
 		mintCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix)),
+		voteCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
 	}, nil
 }
 
@@ -252,6 +278,7 @@ type DevoteProtocolAtomic struct {
 	MasternodeHash common.Hash `json:"masternodeRoot"    gencodec:"required"`
 	VoteHash       common.Hash `json:"voteRoot"         gencodec:"required"`
 	MintCntHash    common.Hash `json:"mintCntRoot"      gencodec:"required"`
+	VoteCntHash    common.Hash `json:"voteCntRoot"      gencodec:"required"`
 }
 
 func (d *DevoteProtocol) MasternodeTrie() *trie.Trie { return d.masternodeTrie }
@@ -259,6 +286,7 @@ func (d *DevoteProtocol) CacheTrie() *trie.Trie      { return d.cacheTrie }
 func (d *DevoteProtocol) VoteTrie() *trie.Trie       { return d.voteTrie }
 func (d *DevoteProtocol) CycleTrie() *trie.Trie      { return d.cycleTrie }
 func (d *DevoteProtocol) MintCntTrie() *trie.Trie    { return d.mintCntTrie }
+func (d *DevoteProtocol) VoteCntTrie() *trie.Trie    { return d.voteCntTrie }
 
 func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
@@ -267,6 +295,7 @@ func (dc *DevoteProtocol) SetCache(cache *trie.Trie)           { dc.cacheTrie = 
 func (dc *DevoteProtocol) SetVote(vote *trie.Trie)             { dc.voteTrie = vote }
 func (dc *DevoteProtocol) SetMasternode(masternode *trie.Trie) { dc.masternodeTrie = masternode }
 func (dc *DevoteProtocol) SetMintCnt(mintCnt *trie.Trie)       { dc.mintCntTrie = mintCnt }
+func (dc *DevoteProtocol) SetVoteCnt(voteCnt *trie.Trie)       { dc.voteCntTrie = voteCnt }
 
 func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error) {
 
@@ -317,6 +346,7 @@ func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 		MasternodeHash: d.masternodeTrie.Hash(),
 		VoteHash:       d.voteTrie.Hash(),
 		MintCntHash:    d.mintCntTrie.Hash(),
+		VoteCntHash:    d.voteCntTrie.Hash(),
 	}
 }
 
@@ -327,6 +357,7 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	rlp.Encode(hw, p.MasternodeHash)
 	rlp.Encode(hw, p.VoteHash)
 	rlp.Encode(hw, p.MintCntHash)
+	rlp.Encode(hw, p.VoteCntHash)
 	hw.Sum(h[:0])
 	return h
 }
@@ -381,6 +412,7 @@ func (d *DevoteProtocol) Delegate(delegatorAddr, masternodeAddr common.Address) 
 	if oldMasternode != nil {
 		d.cacheTrie.Delete(append(oldMasternode, delegator...))
 	}
+
 	if err = d.cacheTrie.TryUpdate(append(masternode, delegator...), delegator); err != nil {
 		return err
 	}
@@ -411,4 +443,18 @@ func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address
 		return err
 	}
 	return d.voteTrie.TryDelete(delegator)
+}
+
+// Voting save the vote result to the desk
+func (d *DevoteProtocol) Voting(vote *Vote) error{
+
+	voteId:=vote.voteId.Bytes()
+	voteCntInTrie ,err := d.voteCntTrie.TryGet(voteId)
+	if err != nil{
+		return err
+	}
+	if voteCntInTrie != nil {
+		return errors.New("vote already exists")
+	}
+	return d.voteCntTrie.TryUpdate(voteId, vote.masternode.Bytes())
 }
