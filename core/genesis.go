@@ -386,18 +386,18 @@ func decodePrealloc(data string) GenesisAlloc {
 
 func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *types.DevoteProtocol {
 
-	dc, err := types.NewDevoteProtocolFromAtomic(db, &types.DevoteProtocolAtomic{})
+	dp, err := types.NewDevoteProtocolFromAtomic(db, &types.DevoteProtocolAtomic{})
 	if err != nil {
 		return nil
 	}
 
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
 
-		dc.SetWitnesses(g.Config.Devote.Witnesses)
+		dp.SetWitnesses(g.Config.Devote.Witnesses)
 		for _, witness := range g.Config.Devote.Witnesses {
-			dc.CacheTrie().TryUpdate(append(witness.Bytes(), witness.Bytes()...), witness.Bytes())
-			dc.MasternodeTrie().TryUpdate(witness.Bytes(), witness.Bytes())
+			dp.CacheTrie().TryUpdate(append(witness.Bytes(), witness.Bytes()...), witness.Bytes())
+			dp.MasternodeTrie().TryUpdate(witness.Bytes(), witness.Bytes())
 		}
 	}
-	return dc
+	return dp
 }

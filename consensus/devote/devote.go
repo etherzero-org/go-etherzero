@@ -93,8 +93,8 @@ var (
 	ErrInvalidTimestamp           = errors.New("invalid timestamp")
 	ErrWaitForPrevBlock           = errors.New("wait for last block arrived")
 	ErrMintFutureBlock            = errors.New("mint the future block")
-	ErrMismatchSignerAndValidator = errors.New("mismatch block signer and validator")
-	ErrInvalidBlockValidator      = errors.New("invalid block validator")
+	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
+	ErrInvalidBlockWitness      = errors.New("invalid block witness")
 	ErrInvalidMinerBlockTime       = errors.New("invalid time to miner the block")
 	ErrNilBlockHeader             = errors.New("nil block header returned")
 )
@@ -171,23 +171,23 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 
 	curHeader := chain.CurrentHeader()
 	epoch := int64(-1)
-	validatorMap := make(map[common.Address]bool)
+	witnessMap := make(map[common.Address]bool)
 	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
 		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
 		curEpoch := curHeader.Time.Int64() / epochInterval
 		if curEpoch != epoch {
 			epoch = curEpoch
-			validatorMap = make(map[common.Address]bool)
+			witnessMap = make(map[common.Address]bool)
 		}
 		// fast return
 		// if block number difference less consensusSize-witnessNum
 		// there is no need to check block is confirmed
-		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(consensusSize-len(validatorMap)) {
-			log.Debug("Devote fast return", "current", curHeader.Number.String(), "confirmed", d.confirmedBlockHeader.Number.String(), "witnessCount", len(validatorMap))
+		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(consensusSize-len(witnessMap)) {
+			log.Debug("Devote fast return", "current", curHeader.Number.String(), "confirmed", d.confirmedBlockHeader.Number.String(), "witnessCount", len(witnessMap))
 			return nil
 		}
-		validatorMap[curHeader.Witness] = true
-		if len(validatorMap) >= consensusSize {
+		witnessMap[curHeader.Witness] = true
+		if len(witnessMap) >= consensusSize {
 			d.confirmedBlockHeader = curHeader
 			if err := d.storeConfirmedBlockHeader(d.db); err != nil {
 				return err
@@ -400,16 +400,16 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	return d.updateConfirmedBlockHeader(chain)
 }
 
-func (d *Devote) verifyBlockSigner(validator common.Address, header *types.Header) error {
+func (d *Devote) verifyBlockSigner(witness common.Address, header *types.Header) error {
 	signer, err := ecrecover(header, d.signatures)
 	if err != nil {
 		return err
 	}
-	if bytes.Compare(signer.Bytes(), validator.Bytes()) != 0 {
-		return ErrInvalidBlockValidator
+	if bytes.Compare(signer.Bytes(), witness.Bytes()) != 0 {
+		return ErrInvalidBlockWitness
 	}
 	if bytes.Compare(signer.Bytes(), header.Witness.Bytes()) != 0 {
-		return ErrMismatchSignerAndValidator
+		return ErrMismatchSignerAndWitness
 	}
 	return nil
 }
@@ -442,7 +442,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 	if (witness == common.Address{}) || bytes.Compare(witness.Bytes(), d.signer.Bytes()) != 0 {
-		return ErrInvalidBlockValidator
+		return ErrInvalidBlockWitness
 	}
 	return nil
 }

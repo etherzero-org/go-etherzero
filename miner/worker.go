@@ -232,7 +232,7 @@ func (self *worker) mintBlock(now int64) {
 		switch err {
 		case devote.ErrWaitForPrevBlock,
 			devote.ErrMintFutureBlock,
-			devote.ErrInvalidBlockValidator,
+			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)
 			fmt.Printf("Failed to miner the block, while error:%s\n",  err)

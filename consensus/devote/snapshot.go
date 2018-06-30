@@ -52,7 +52,7 @@ func (self *Controller) votes() (votes map[common.Address]*big.Int, err error) {
 	iterMasternode := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 	existMasternode := iterMasternode.Next()
 	if !existMasternode {
-		return votes, errors.New("no candidates")
+		return votes, errors.New("no masternodes")
 	}
 
 	for existMasternode {
@@ -115,7 +115,7 @@ func (ec *Controller) uncast(epoch int64) error {
 		if cntBytes := ec.DevoteProtocol.MintCntTrie().Get(key); cntBytes != nil {
 			size = int64(binary.BigEndian.Uint64(cntBytes))
 		}
-		if size < epochDuration/blockInterval/maxWitnessSize/2 {
+		if size < epochDuration / blockInterval / maxWitnessSize / 2 {
 			// not active witnesses need uncast
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(size)})
 		}
@@ -127,27 +127,27 @@ func (ec *Controller) uncast(epoch int64) error {
 	}
 	sort.Sort(sort.Reverse(needUncastWitnesses))
 
-	candidateCount := 0
+	masternodeCount := 0
 	iter := trie.NewIterator(ec.DevoteProtocol.MasternodeTrie().NodeIterator(nil))
 	for iter.Next() {
-		candidateCount++
-		if candidateCount >= needUncastWitnessCnt+safeSize {
+		masternodeCount++
+		if masternodeCount >= needUncastWitnessCnt+safeSize {
 			break
 		}
 	}
 
 	for i, witness := range needUncastWitnesses {
-		// ensure candidate count greater than or equal to safeSize
-		if candidateCount <= safeSize {
-			log.Info("No more candidate can be kickout", "prevEpochID", epoch, "candidateCount", candidateCount, "needKickoutCount", len(needUncastWitnesses)-i)
+		// ensure witness count greater than or equal to safeSize
+		if masternodeCount <= safeSize {
+			log.Info("No more masternode can be kickout", "prevEpochID", epoch, "masternodeCount", masternodeCount, "needKickoutCount", len(needUncastWitnesses)-i)
 			return nil
 		}
 		if err := ec.DevoteProtocol.Unregister(witness.address); err != nil {
 			return err
 		}
-		// if uncast success, candidate Count minus 1
-		candidateCount--
-		log.Info("uncast candidate", "prevEpochID", epoch, "candidate", witness.address.String(), "mintCnt", witness.weight.String())
+		// if uncast success, masternode Count minus 1
+		masternodeCount--
+		log.Info("uncast masternode", "prevEpochID", epoch, "witness", witness.address.String(), "mintCnt", witness.weight.String())
 	}
 	return nil
 }
@@ -191,7 +191,7 @@ func (self *Controller) voting(genesis, parent *types.Header) error {
 	iter := trie.NewIterator(self.DevoteProtocol.MintCntTrie().NodeIterator(prevEpochBytes))
 
 	for i := prevEpoch; i < currentEpoch; i++ {
-		// if prevEpoch is not genesis, uncast not active candidate
+		// if prevEpoch is not genesis, uncast not active masternode
 		if !prevEpochIsGenesis && iter.Next() {
 			if err := self.uncast(prevEpoch); err != nil {
 				return err
@@ -201,29 +201,29 @@ func (self *Controller) voting(genesis, parent *types.Header) error {
 		if err != nil {
 			return err
 		}
-		candidates := sortableAddresses{}
-		for candidate, cnt := range votes {
-			candidates = append(candidates, &sortableAddress{candidate, cnt})
+		masternodes := sortableAddresses{}
+		for masternode, cnt := range votes {
+			masternodes = append(masternodes, &sortableAddress{masternode, cnt})
 		}
-		if len(candidates) < safeSize {
-			return errors.New("too few candidates")
+		if len(masternodes) < safeSize {
+			return errors.New("too few masternodes")
 		}
-		sort.Sort(candidates)
-		if len(candidates) > maxWitnessSize {
-			candidates = candidates[:maxWitnessSize]
+		sort.Sort(masternodes)
+		if len(masternodes) > maxWitnessSize {
+			masternodes = masternodes[:maxWitnessSize]
 		}
 
-		// disrupt the candidates node to ensure the disorder of the node
+		// disrupt the mastrnodes node to ensure the disorder of the node
 		seed := int64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
 		r := rand.New(rand.NewSource(seed))
-		for i := len(candidates) - 1; i > 0; i-- {
+		for i := len(masternodes) - 1; i > 0; i-- {
 			j := int(r.Int31n(int32(i + 1)))
-			candidates[i], candidates[j] = candidates[j], candidates[i]
+			masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
 		}
 
 		sortedWitnesses := make([]common.Address, 0)
-		for _, candidate := range candidates {
-			sortedWitnesses = append(sortedWitnesses, candidate.address)
+		for _, masternode := range masternodes {
+			sortedWitnesses = append(sortedWitnesses, masternode.address)
 		}
 
 		epochTrie, _ := types.NewEpochTrie(common.Hash{}, self.DevoteProtocol.DB())

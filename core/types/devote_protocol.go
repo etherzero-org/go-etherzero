@@ -145,18 +145,18 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 
 // Unregister If the masternode does not complete the packing action during the current block cycle,
 // and no block has been generated during the entire cycle, the masternode is removed from the network.
-func (d *DevoteProtocol) Unregister(candidateAddr common.Address) error {
-	candidate := candidateAddr.Bytes()
-	err := d.masternodeTrie.TryDelete(candidate)
+func (d *DevoteProtocol) Unregister(masternodeAddr common.Address) error {
+	masternode := masternodeAddr.Bytes()
+	err := d.masternodeTrie.TryDelete(masternode)
 	if err != nil {
 		if _, ok := err.(*trie.MissingNodeError); !ok {
 			return err
 		}
 	}
-	iter := trie.NewIterator(d.cacheTrie.NodeIterator(candidate))
+	iter := trie.NewIterator(d.cacheTrie.NodeIterator(masternode))
 	for iter.Next() {
 		delegator := iter.Value
-		key := append(candidate, delegator...)
+		key := append(masternode, delegator...)
 		err = d.cacheTrie.TryDelete(key)
 		if err != nil {
 			if _, ok := err.(*trie.MissingNodeError); !ok {
@@ -169,7 +169,7 @@ func (d *DevoteProtocol) Unregister(candidateAddr common.Address) error {
 				return err
 			}
 		}
-		if err == nil && bytes.Equal(v, candidate) {
+		if err == nil && bytes.Equal(v, masternode) {
 			err = d.voteTrie.TryDelete(delegator)
 			if err != nil {
 				if _, ok := err.(*trie.MissingNodeError); !ok {
@@ -363,12 +363,12 @@ func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address
 	delegator, masternode := delegatorAddr.Bytes(), masternodeAddr.Bytes()
 
 	// the delegate must be cast masternode
-	candidateInTrie, err := d.masternodeTrie.TryGet(masternode)
+	masternodeInTrie, err := d.masternodeTrie.TryGet(masternode)
 	if err != nil {
 		return err
 	}
-	if candidateInTrie == nil {
-		return errors.New("invalid candidate to undelegate")
+	if masternodeInTrie == nil {
+		return errors.New("invalid masternode to undelegate")
 	}
 
 	oldMasternode, err := d.voteTrie.TryGet(delegator)
@@ -376,7 +376,7 @@ func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address
 		return err
 	}
 	if !bytes.Equal(masternode, oldMasternode) {
-		return errors.New("mismatch candidate to undelegate")
+		return errors.New("mismatch masternode to undelegate")
 	}
 
 	if err = d.cacheTrie.TryDelete(append(masternode, delegator...)); err != nil {
