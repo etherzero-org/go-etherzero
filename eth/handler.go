@@ -682,6 +682,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
+	case msg.Code == NewVoteMsg:
+		var vote types.Vote
+
+		if err := msg.Decode(&vote); err != nil{
+			return errResp(ErrDecode,"msg %v: %v",msg,err)
+		}
+		
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}

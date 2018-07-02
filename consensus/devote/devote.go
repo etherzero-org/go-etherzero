@@ -19,7 +19,6 @@ package devote
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -39,7 +38,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -48,8 +46,8 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
+	cycleInterval = int64(3600)
 	blockInterval    = int64(10)
-	cycleInterval    = int64(3600)
 	maxWitnessSize = 21
 	safeSize         = maxWitnessSize*2/3 + 1
 	consensusSize    = maxWitnessSize*2/3 + 1
@@ -265,13 +263,13 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	err := controller.voting(genesis, parent)
+	err := controller.election(genesis, parent)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
 
 	//update mint count trie
-	updateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Witness, devoteProtocol)
+	devoteProtocol.UpdateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Witness)
 	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
@@ -517,37 +515,7 @@ func NextSlot(now int64) int64 {
 	return int64((now+blockInterval-1)/blockInterval) * blockInterval
 }
 
-// update counts in MintCntTrie for the miner of newBlock
-func updateMintCnt(parentBlockTime, currentBlockTime int64, witness common.Address, devoteProtocol *types.DevoteProtocol) {
 
-	currentMintCntTrie := devoteProtocol.MintCntTrie()
-	currentCycle := parentBlockTime / cycleInterval
-	currentCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
-
-	cnt := int64(1)
-	newCycle := currentBlockTime / cycleInterval
-	// still during the currentCycleID
-	if currentCycle == newCycle {
-		iter := trie.NewIterator(currentMintCntTrie.NodeIterator(currentCycleBytes))
-
-		// when current is not genesis, read last count from the MintCntTrie
-		if iter.Next() {
-			cntBytes := currentMintCntTrie.Get(append(currentCycleBytes, witness.Bytes()...))
-			// not the first time to mint
-			if cntBytes != nil {
-				cnt = int64(binary.BigEndian.Uint64(cntBytes)) + 1
-			}
-		}
-	}
-
-	newCntBytes := make([]byte, 8)
-	newCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
-	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	devoteProtocol.MintCntTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
-
-}
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
 func (d *Devote) APIs(chain consensus.ChainReader) []rpc.API {

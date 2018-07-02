@@ -148,7 +148,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		mux:            mux,
 		txsCh:          make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -165,7 +164,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
 
 	go worker.wait()
@@ -305,7 +303,6 @@ func (self *worker) unregister(agent Agent) {
 func (self *worker) update() {
 	defer self.txsSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
-	defer self.chainSideSub.Unsubscribe()
 
 	for {
 		// A real event arrived, process interesting content
@@ -343,8 +340,6 @@ func (self *worker) update() {
 		case <-self.txsSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
-			return
-		case <-self.chainSideSub.Err():
 			return
 		}
 	}

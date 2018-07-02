@@ -19,6 +19,7 @@
 package devote
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -31,6 +32,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 )
 
@@ -85,13 +87,16 @@ func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big
 			//score.Add(score, weight)
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
-			key =append(key,masternodeAddr.Bytes()...)
-			votecnt := int64(0)
-			if voteCntBytes := self.DevoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
-				votecnt = int64(binary.BigEndian.Uint64(voteCntBytes))
-			}
+			key = append(key, masternodeAddr.Bytes()...)
 
-			score.Add(score, big.NewInt(votecnt))
+			vote := new(types.Vote)
+			if voteCntBytes := self.DevoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
+				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
+					log.Error("Invalid Vote body RLP", "masternode", masternodeAddr, "err", err)
+					return nil, err
+				}
+			}
+			score.Add(score, big.NewInt(1))
 			votes[masternodeAddr] = score
 			existCache = cacheIterator.Next()
 		}
@@ -130,7 +135,7 @@ func (ec *Controller) uncast(cycle int64) error {
 		if cntBytes := ec.DevoteProtocol.MintCntTrie().Get(key); cntBytes != nil {
 			size = int64(binary.BigEndian.Uint64(cntBytes))
 		}
-		if size < cycleDuration / blockInterval / maxWitnessSize / 2 {
+		if size < cycleDuration/blockInterval/maxWitnessSize/2 {
 			// not active witnesses need uncast
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(size)})
 		}
@@ -171,7 +176,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 
 	witness = common.Address{}
 	offset := now % cycleInterval
-	if offset % blockInterval != 0 {
+	if offset%blockInterval != 0 {
 		return common.Address{}, ErrInvalidMinerBlockTime
 	}
 	offset /= blockInterval
@@ -190,7 +195,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	return common.HexToAddress("0xc5d725b7d19c6c7e2c50c85fb9cf5c0b78531da7"), nil
 }
 
-func (self *Controller) voting(genesis, parent *types.Header) error {
+func (self *Controller) election(genesis, parent *types.Header) error {
 
 	genesisCycle := genesis.Time.Int64() / cycleInterval
 	prevCycle := parent.Time.Int64() / cycleInterval

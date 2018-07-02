@@ -5,11 +5,16 @@ import (
 	"errors"
 	"fmt"
 
+	"encoding/binary"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
+)
+
+const (
+	CycleInterval = int64(3600)
 )
 
 var (
@@ -448,13 +453,48 @@ func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address
 // Voting save the vote result to the desk
 func (d *DevoteProtocol) Voting(vote *Vote) error{
 
-	voteId:=vote.voteId.Bytes()
-	voteCntInTrie ,err := d.voteCntTrie.TryGet(voteId)
-	if err != nil{
-		return err
-	}
-	if voteCntInTrie != nil {
+	currentVoteId := make([]byte, 8)
+	binary.BigEndian.PutUint64(currentVoteId, uint64(vote.cycle))
+	masternode:=vote.Masternode().Bytes()
+	voteCntInTrieBytes := d.voteCntTrie.Get(append(currentVoteId, masternode...))
+	if voteCntInTrieBytes != nil{
 		return errors.New("vote already exists")
 	}
-	return d.voteCntTrie.TryUpdate(voteId, vote.masternode.Bytes())
+	votebytes:=vote.Hash().Bytes()
+
+	d.MintCntTrie().TryUpdate(voteCntInTrieBytes, votebytes)
+	return nil
+
+}
+
+// update counts in MintCntTrie for the miner of newBlock
+func (self *DevoteProtocol) UpdateMintCnt(parentBlockTime, currentBlockTime int64, witness common.Address) {
+
+	currentMintCntTrie := self.MintCntTrie()
+	currentCycle := parentBlockTime / CycleInterval
+	currentCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
+
+	cnt := int64(1)
+	newCycle := currentBlockTime / CycleInterval
+	// still during the currentCycleID
+	if currentCycle == newCycle {
+		iter := trie.NewIterator(currentMintCntTrie.NodeIterator(currentCycleBytes))
+
+		// when current is not genesis, read last count from the MintCntTrie
+		if iter.Next() {
+			cntBytes := currentMintCntTrie.Get(append(currentCycleBytes, witness.Bytes()...))
+			// not the first time to mint
+			if cntBytes != nil {
+				cnt = int64(binary.BigEndian.Uint64(cntBytes)) + 1
+			}
+		}
+	}
+
+	newCntBytes := make([]byte, 8)
+	newCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
+	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
+	self.MintCntTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
+
 }

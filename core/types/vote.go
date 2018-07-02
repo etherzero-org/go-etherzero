@@ -19,18 +19,21 @@
 package types
 
 import (
+	"crypto/ecdsa"
 	"io"
+	"bytes"
 
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/rlp"
 )
 
 // Vote represents an entire vote in the Etherzero blockchain.
 type Vote struct {
-	voteId     common.Hash    `json:"voteId"     gencodec:"required`
-	cycle      uint64         `json:"cycle"      gencodec:"required"`
+	cycle      int64          `json:"cycle"      gencodec:"required"`
+	account    common.Address `json:"account"    gencodec:"required"`
 	masternode common.Address `json:"masternode" gencodec:"required"`
-	value      common.Address `json:"value"      gencodec:"required"`
+	sign       []byte         `json:"sign"       gencodec:"required"`
 }
 
 // Hash returns the vote hash , which is simply the keccak256 hash of its
@@ -39,13 +42,13 @@ func (v *Vote) Hash() (h common.Hash) {
 	return rlpHash(v)
 }
 
-// DecodeRLP decodes the Ethereum
+// DecodeRLP decodes the Vote
 func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	var vt Vote
 	if err := s.Decode(&vt); err != nil {
 		return err
 	}
-	v.masternode, v.voteId, v.cycle, v.value = vt.masternode, vt.voteId, vt.cycle, vt.value
+	v.account, v.cycle, v.masternode, v.sign = vt.account, vt.cycle, vt.masternode, vt.sign
 
 	return nil
 }
@@ -53,9 +56,39 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 // EncodeRLP serializes v into the Ethereum RLP vote format.
 func (v *Vote) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, Vote{
-		masternode: v.masternode,
-		voteId:     v.voteId,
+		account:    v.account,
 		cycle:      v.cycle,
-		value:      v.value,
+		masternode: v.masternode,
+		sign:       v.sign,
 	})
+}
+
+func (v *Vote) Account() common.Address {
+	return v.account
+}
+
+func (v *Vote) Masternode() common.Address {
+	return v.masternode
+}
+
+func (v *Vote) Cycle() int64 {
+	return v.cycle
+}
+
+// SignVote signs the transaction using the given signer and private key
+func SignVote(vote *Vote, prv *ecdsa.PrivateKey) (*Vote, error) {
+	h := vote.Hash() //not sign
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+	vote.sign = sig
+
+	return vote, nil
+}
+
+func (v *Vote) Verify(hash, sig []byte, pub *ecdsa.PublicKey) bool {
+	recoveredPub1, _ := crypto.Ecrecover(hash, sig)
+	recoveredPubBytes := crypto.FromECDSAPub(pub)
+	return bytes.Equal(recoveredPub1, recoveredPubBytes)
 }
