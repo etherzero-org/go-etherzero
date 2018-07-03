@@ -161,7 +161,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 	for {
 		select {
 		case join := <-joinCh:
-			fmt.Println("join", common.Bytes2Hex(join.Id[:]))
 			node, err := mm.masternodes.NodeJoin(join.Id)
 			if err == nil {
 				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {

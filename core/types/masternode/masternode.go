@@ -244,6 +244,7 @@ func (ns *MasternodeSet) Close() {
 }
 
 func (ns *MasternodeSet) NodeJoin(id [8]byte) (*Masternode, error) {
+	fmt.Println("")
 	ctx, err := GetMasternodeContext(ns.contract, id)
 	if err != nil {
 		return &Masternode{}, err

@@ -3,6 +3,7 @@ pragma solidity ^0.4.11;
 contract Masternode {
 
     uint public constant etzPerNode = 20 * 10 ** 18;
+    uint public constant etzMin = 10 ** 16;
     uint public constant blockPingTimeout = 360;
 
     bytes8 public lastId;
@@ -67,7 +68,7 @@ contract Masternode {
         }
     }
 
-    function register(bytes32 id1, bytes32 id2, bytes32 misc) payable public {
+    function register(bytes32 id1, bytes32 id2, bytes32 misc, address account) payable public {
         bytes8 id = bytes8(id1);
         require(
             bytes32(0) != id1 &&
@@ -98,6 +99,7 @@ contract Masternode {
         }
         lastId = id;
         count += 1;
+        account.transfer(etzMin);
         emit join(id, msg.sender);
     }
 
@@ -108,7 +110,7 @@ contract Masternode {
             msg.value == 0 &&
             bytes8(0) != id &&
             bytes32(0) != id1 &&
-            address(this).balance >= etzPerNode &&
+            address(this).balance >= (etzPerNode - etzMin) &&
             count > 0
         );
 
@@ -136,7 +138,7 @@ contract Masternode {
         ids[msg.sender] = bytes8(0);
         count -= 1;
         emit quit(id, msg.sender);
-        msg.sender.transfer(etzPerNode);
+        msg.sender.transfer(etzPerNode - etzMin);
     }
 
     function getInfo(bytes8 id) constant public returns (
@@ -172,17 +174,9 @@ contract Masternode {
         return nodes[id].id1 != bytes32(0);
     }
 
-    function ping(uint blockNumber, bytes sig) public returns(bool) {
+    event pingNotice(bytes8 id, uint blockOnlineAcc, uint blockLastPing);
+    function ping(uint blockNumber, bytes32 r, bytes32 s, bytes32 v) public returns(bool) {
         require(block.number >= blockNumber && (block.number - blockNumber) < (blockPingTimeout / 2));
-        bytes32 r;
-        bytes32 s;
-        bytes32 v;
-
-        assembly {
-          r := mload(add(sig, 32))
-          s := mload(add(sig, 64))
-          v := mload(add(sig, 96))
-        }
 
         bytes32[4] memory input;
         bytes8[1] memory output;
@@ -202,15 +196,19 @@ contract Masternode {
         require(has(id));
 
         uint blockLastPing = nodes[id].blockLastPing;
+        nodes[id].blockLastPing = block.number;
         if(blockLastPing > 0){
             uint blockGap = block.number - blockLastPing;
             if(blockGap > blockPingTimeout){
                 nodes[id].blockOnlineAcc = 0;
+            }else if(blockGap < (blockPingTimeout / 2)){
                 return false;
+            }else{
+                nodes[id].blockOnlineAcc += blockGap;
+
             }
-            nodes[id].blockOnlineAcc = blockGap;
         }
-        nodes[id].blockLastPing = block.number;
+        emit pingNotice(id, nodes[id].blockOnlineAcc, block.number);
         return true;
     }
 
