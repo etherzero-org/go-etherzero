@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
@@ -50,7 +49,6 @@ type MasternodeManager struct {
 	newPeerCh    chan *peer
 	peers        *peerSet
 	IsMasternode uint32
-	engine       *devote.Devote
 	srvr         *p2p.Server
 	contract     *contract.Contract
 }
@@ -79,7 +77,7 @@ func (self *MasternodeManager) process(vote *types.Vote) error {
 		return errors.New("vote valid failed")
 	}
 
-	return self.devoteProtocol.Voting(vote)
+	return nil
 
 }
 

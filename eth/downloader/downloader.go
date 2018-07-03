@@ -1481,7 +1481,7 @@ func (d *Downloader) syncDevoteProtocolState(protocol *types.DevoteProtocolAtomi
 		protocol.CacheHash,
 		protocol.VoteHash,
 		protocol.CycleHash,
-		protocol.MintCntHash,
+		protocol.MinerRollingHash,
 	}
 	for _, root := range roots {
 		if err := d.syncState(root).Wait(); err != nil {

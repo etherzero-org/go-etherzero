@@ -18,28 +18,28 @@ const (
 )
 
 var (
-	cyclePrefix      = "cycle-"
-	cachePrefix      = "cache-"
-	votePrefix       = "vote-"
-	masternodePrefix = "masternode-"
-	mintCntPrefix    = "mintCnt-"
-	voteCntPrefix    = "voteCnt-"
+	cyclePrefix        = "cycle-"
+	cachePrefix        = "cache-"
+	votePrefix         = "vote-"
+	masternodePrefix   = "masternode-"
+	minerRollingPrefix = "mintCnt-"
+	voteCntPrefix      = "voteCnt-"
 )
 
 type DevoteProtocol struct {
-	cycleTrie      *trie.Trie
-	cacheTrie      *trie.Trie
-	voteTrie       *trie.Trie
-	masternodeTrie *trie.Trie
-	mintCntTrie    *trie.Trie
-	voteCntTrie    *trie.Trie
+	cycleTrie        *trie.Trie
+	cacheTrie        *trie.Trie
+	voteTrie         *trie.Trie
+	masternodeTrie   *trie.Trie
+	minerRollingTrie *trie.Trie
+	voteCntTrie      *trie.Trie
 
-	cycleTriedb      *trie.Database
-	cacheTriedb      *trie.Database
-	voteTriedb       *trie.Database
-	masternodeTriedb *trie.Database
-	mintCntTriedb    *trie.Database
-	voteCntTriedb    *trie.Database
+	cycleTriedb        *trie.Database
+	cacheTriedb        *trie.Database
+	voteTriedb         *trie.Database
+	masternodeTriedb   *trie.Database
+	minerRollingTriedb *trie.Database
+	voteCntTriedb      *trie.Database
 
 	diskdb ethdb.Database
 }
@@ -65,9 +65,9 @@ func NewMasternodeTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) 
 	return trie.New(root, masternodeTriedb)
 }
 
-func NewMintCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	mintCntTriedb := trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix))
-	return trie.New(root, mintCntTriedb)
+func NewMinerRollingTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
+	minerRollingTriedb := trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix))
+	return trie.New(root, minerRollingTriedb)
 
 }
 
@@ -98,7 +98,7 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 		return nil, err
 	}
 
-	mintCntTrie, err := NewMintCntTrie(common.Hash{}, db)
+	minerRollingTrie, err := NewMinerRollingTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
@@ -109,19 +109,19 @@ func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
 	}
 
 	return &DevoteProtocol{
-		cycleTrie:        cycleTrie,
-		cacheTrie:        cacheTrie,
-		voteTrie:         voteTrie,
-		masternodeTrie:   masternodeTrie,
-		mintCntTrie:      mintCntTrie,
-		voteCntTrie:      voteCntTrie,
-		diskdb:           db,
-		cycleTriedb:      trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
-		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
-		voteTriedb:       trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
-		masternodeTriedb: trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
-		mintCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix)),
-		voteCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
+		cycleTrie:          cycleTrie,
+		cacheTrie:          cacheTrie,
+		voteTrie:           voteTrie,
+		masternodeTrie:     masternodeTrie,
+		minerRollingTrie:   minerRollingTrie,
+		voteCntTrie:        voteCntTrie,
+		diskdb:             db,
+		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
+		cacheTriedb:        trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
+		voteTriedb:         trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
+		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
+		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
+		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
 	}, nil
 
 }
@@ -148,7 +148,7 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		return nil, err
 	}
 
-	mintCntTrie, err := NewMintCntTrie(ctxAtomic.MintCntHash, db)
+	minerRollingTrie, err := NewMinerRollingTrie(ctxAtomic.MinerRollingHash, db)
 	if err != nil {
 		return nil, err
 	}
@@ -158,19 +158,19 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		return nil, err
 	}
 	return &DevoteProtocol{
-		cycleTrie:        cycleTrie,
-		cacheTrie:        cacheTrie,
-		voteTrie:         voteTrie,
-		masternodeTrie:   masternodeTrie,
-		mintCntTrie:      mintCntTrie,
-		voteCntTrie:      voteCntTrie,
-		diskdb:           db,
-		cycleTriedb:      trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
-		cacheTriedb:      trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
-		voteTriedb:       trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
-		masternodeTriedb: trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
-		mintCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, mintCntPrefix)),
-		voteCntTriedb:    trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
+		cycleTrie:          cycleTrie,
+		cacheTrie:          cacheTrie,
+		voteTrie:           voteTrie,
+		masternodeTrie:     masternodeTrie,
+		minerRollingTrie:   minerRollingTrie,
+		voteCntTrie:        voteCntTrie,
+		diskdb:             db,
+		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
+		cacheTriedb:        trie.NewDatabase(ethdb.NewTable(db, cachePrefix)),
+		voteTriedb:         trie.NewDatabase(ethdb.NewTable(db, votePrefix)),
+		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
+		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
+		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
 	}, nil
 }
 
@@ -218,14 +218,14 @@ func (d *DevoteProtocol) Copy() *DevoteProtocol {
 	cacheTrie := *d.cacheTrie
 	voteTrie := *d.voteTrie
 	masternodeTrie := *d.masternodeTrie
-	mintCntTrie := *d.mintCntTrie
+	minerRollingTrie := *d.minerRollingTrie
 
 	return &DevoteProtocol{
-		cycleTrie:      &cycleTrie,
-		cacheTrie:      &cacheTrie,
-		voteTrie:       &voteTrie,
-		masternodeTrie: &masternodeTrie,
-		mintCntTrie:    &mintCntTrie,
+		cycleTrie:        &cycleTrie,
+		cacheTrie:        &cacheTrie,
+		voteTrie:         &voteTrie,
+		masternodeTrie:   &masternodeTrie,
+		minerRollingTrie: &minerRollingTrie,
 	}
 }
 
@@ -236,7 +236,7 @@ func (d *DevoteProtocol) Root() (h common.Hash) {
 	rlp.Encode(hw, d.cacheTrie.Hash())
 	rlp.Encode(hw, d.masternodeTrie.Hash())
 	rlp.Encode(hw, d.voteTrie.Hash())
-	rlp.Encode(hw, d.mintCntTrie.Hash())
+	rlp.Encode(hw, d.minerRollingTrie.Hash())
 	hw.Sum(h[:0])
 	return h
 }
@@ -251,7 +251,7 @@ func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
 	d.cacheTrie = snapshot.cacheTrie
 	d.masternodeTrie = snapshot.masternodeTrie
 	d.voteTrie = snapshot.voteTrie
-	d.mintCntTrie = snapshot.mintCntTrie
+	d.minerRollingTrie = snapshot.minerRollingTrie
 }
 
 func (d *DevoteProtocol) FromAtomic(dcp *DevoteProtocolAtomic) error {
@@ -273,34 +273,34 @@ func (d *DevoteProtocol) FromAtomic(dcp *DevoteProtocolAtomic) error {
 	if err != nil {
 		return err
 	}
-	d.mintCntTrie, err = NewMintCntTrie(dcp.MintCntHash, d.diskdb)
+	d.minerRollingTrie, err = NewMinerRollingTrie(dcp.MinerRollingHash, d.diskdb)
 	return err
 }
 
 type DevoteProtocolAtomic struct {
-	CycleHash      common.Hash `json:"cycleRoot"        gencodec:"required"`
-	CacheHash      common.Hash `json:"cacheRoot"        gencodec:"required"`
-	MasternodeHash common.Hash `json:"masternodeRoot"    gencodec:"required"`
-	VoteHash       common.Hash `json:"voteRoot"         gencodec:"required"`
-	MintCntHash    common.Hash `json:"mintCntRoot"      gencodec:"required"`
-	VoteCntHash    common.Hash `json:"voteCntRoot"      gencodec:"required"`
+	CycleHash        common.Hash `json:"cycleRoot"         gencodec:"required"`
+	CacheHash        common.Hash `json:"cacheRoot"         gencodec:"required"`
+	MasternodeHash   common.Hash `json:"masternodeRoot"    gencodec:"required"`
+	VoteHash         common.Hash `json:"voteRoot"          gencodec:"required"`
+	MinerRollingHash common.Hash `json:"minerRollingRoot"  gencodec:"required"`
+	VoteCntHash      common.Hash `json:"voteCntRoot"       gencodec:"required"`
 }
 
-func (d *DevoteProtocol) MasternodeTrie() *trie.Trie { return d.masternodeTrie }
-func (d *DevoteProtocol) CacheTrie() *trie.Trie      { return d.cacheTrie }
-func (d *DevoteProtocol) VoteTrie() *trie.Trie       { return d.voteTrie }
-func (d *DevoteProtocol) CycleTrie() *trie.Trie      { return d.cycleTrie }
-func (d *DevoteProtocol) MintCntTrie() *trie.Trie    { return d.mintCntTrie }
-func (d *DevoteProtocol) VoteCntTrie() *trie.Trie    { return d.voteCntTrie }
+func (d *DevoteProtocol) MasternodeTrie() *trie.Trie   { return d.masternodeTrie }
+func (d *DevoteProtocol) CacheTrie() *trie.Trie        { return d.cacheTrie }
+func (d *DevoteProtocol) VoteTrie() *trie.Trie         { return d.voteTrie }
+func (d *DevoteProtocol) CycleTrie() *trie.Trie        { return d.cycleTrie }
+func (d *DevoteProtocol) MinerRollingTrie() *trie.Trie { return d.minerRollingTrie }
+func (d *DevoteProtocol) VoteCntTrie() *trie.Trie      { return d.voteCntTrie }
 
 func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
-func (dc *DevoteProtocol) SetCycle(cycle *trie.Trie)           { dc.cycleTrie = cycle }
-func (dc *DevoteProtocol) SetCache(cache *trie.Trie)           { dc.cacheTrie = cache }
-func (dc *DevoteProtocol) SetVote(vote *trie.Trie)             { dc.voteTrie = vote }
-func (dc *DevoteProtocol) SetMasternode(masternode *trie.Trie) { dc.masternodeTrie = masternode }
-func (dc *DevoteProtocol) SetMintCnt(mintCnt *trie.Trie)       { dc.mintCntTrie = mintCnt }
-func (dc *DevoteProtocol) SetVoteCnt(voteCnt *trie.Trie)       { dc.voteCntTrie = voteCnt }
+func (dc *DevoteProtocol) SetCycle(cycle *trie.Trie)              { dc.cycleTrie = cycle }
+func (dc *DevoteProtocol) SetCache(cache *trie.Trie)              { dc.cacheTrie = cache }
+func (dc *DevoteProtocol) SetVote(vote *trie.Trie)                { dc.voteTrie = vote }
+func (dc *DevoteProtocol) SetMasternode(masternode *trie.Trie)    { dc.masternodeTrie = masternode }
+func (dc *DevoteProtocol) SetMinerRollingTrie(rolling *trie.Trie) { dc.minerRollingTrie = rolling }
+func (dc *DevoteProtocol) SetVoteCnt(voteCnt *trie.Trie)          { dc.voteCntTrie = voteCnt }
 
 func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error) {
 
@@ -329,29 +329,29 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 	}
 	d.masternodeTriedb.Commit(masternodeRoot, false)
 
-	mintCntRoot, err := d.mintCntTrie.CommitTo(d.mintCntTriedb)
+	minerRollingRoot, err := d.minerRollingTrie.CommitTo(d.minerRollingTriedb)
 	if err != nil {
 		return nil, err
 	}
-	d.mintCntTriedb.Commit(mintCntRoot, false)
+	d.minerRollingTriedb.Commit(minerRollingRoot, false)
 
 	return &DevoteProtocolAtomic{
-		CycleHash:      cycleRoot,
-		CacheHash:      cacheRoot,
-		VoteHash:       voteRoot,
-		MasternodeHash: masternodeRoot,
-		MintCntHash:    mintCntRoot,
+		CycleHash:        cycleRoot,
+		CacheHash:        cacheRoot,
+		VoteHash:         voteRoot,
+		MasternodeHash:   masternodeRoot,
+		MinerRollingHash: minerRollingRoot,
 	}, nil
 }
 
 func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 	return &DevoteProtocolAtomic{
-		CycleHash:      d.cycleTrie.Hash(),
-		CacheHash:      d.cacheTrie.Hash(),
-		MasternodeHash: d.masternodeTrie.Hash(),
-		VoteHash:       d.voteTrie.Hash(),
-		MintCntHash:    d.mintCntTrie.Hash(),
-		VoteCntHash:    d.voteCntTrie.Hash(),
+		CycleHash:        d.cycleTrie.Hash(),
+		CacheHash:        d.cacheTrie.Hash(),
+		MasternodeHash:   d.masternodeTrie.Hash(),
+		VoteHash:         d.voteTrie.Hash(),
+		MinerRollingHash: d.minerRollingTrie.Hash(),
+		VoteCntHash:      d.voteCntTrie.Hash(),
 	}
 }
 
@@ -361,7 +361,7 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	rlp.Encode(hw, p.CacheHash)
 	rlp.Encode(hw, p.MasternodeHash)
 	rlp.Encode(hw, p.VoteHash)
-	rlp.Encode(hw, p.MintCntHash)
+	rlp.Encode(hw, p.MinerRollingHash)
 	rlp.Encode(hw, p.VoteCntHash)
 	hw.Sum(h[:0])
 	return h
@@ -406,7 +406,6 @@ func (d *DevoteProtocol) Delegate(delegatorAddr, masternodeAddr common.Address) 
 	if masternodeInTrie == nil {
 		return errors.New("invalid masternode to delegate")
 	}
-
 	// delete old masternode if exists
 	oldMasternode, err := d.voteTrie.TryGet(delegator)
 	if err != nil {
@@ -450,27 +449,12 @@ func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address
 	return d.voteTrie.TryDelete(delegator)
 }
 
-// Voting save the vote result to the desk
-func (d *DevoteProtocol) Voting(vote *Vote) error{
 
-	currentVoteId := make([]byte, 8)
-	binary.BigEndian.PutUint64(currentVoteId, uint64(vote.cycle))
-	masternode:=vote.Masternode().Bytes()
-	voteCntInTrieBytes := d.voteCntTrie.Get(append(currentVoteId, masternode...))
-	if voteCntInTrieBytes != nil{
-		return errors.New("vote already exists")
-	}
-	votebytes:=vote.Hash().Bytes()
-
-	d.MintCntTrie().TryUpdate(voteCntInTrieBytes, votebytes)
-	return nil
-
-}
 
 // update counts in MintCntTrie for the miner of newBlock
-func (self *DevoteProtocol) UpdateMintCnt(parentBlockTime, currentBlockTime int64, witness common.Address) {
+func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime int64, witness common.Address) {
 
-	currentMintCntTrie := self.MintCntTrie()
+	currentMinerRollingTrie := self.MinerRollingTrie()
 	currentCycle := parentBlockTime / CycleInterval
 	currentCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
@@ -479,11 +463,11 @@ func (self *DevoteProtocol) UpdateMintCnt(parentBlockTime, currentBlockTime int6
 	newCycle := currentBlockTime / CycleInterval
 	// still during the currentCycleID
 	if currentCycle == newCycle {
-		iter := trie.NewIterator(currentMintCntTrie.NodeIterator(currentCycleBytes))
+		iter := trie.NewIterator(currentMinerRollingTrie.NodeIterator(currentCycleBytes))
 
 		// when current is not genesis, read last count from the MintCntTrie
 		if iter.Next() {
-			cntBytes := currentMintCntTrie.Get(append(currentCycleBytes, witness.Bytes()...))
+			cntBytes := currentMinerRollingTrie.Get(append(currentCycleBytes, witness.Bytes()...))
 			// not the first time to mint
 			if cntBytes != nil {
 				cnt = int64(binary.BigEndian.Uint64(cntBytes)) + 1
@@ -495,6 +479,6 @@ func (self *DevoteProtocol) UpdateMintCnt(parentBlockTime, currentBlockTime int6
 	newCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	self.MintCntTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
+	self.MinerRollingTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
 
 }
