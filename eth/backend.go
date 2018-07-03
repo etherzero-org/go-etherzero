@@ -50,6 +50,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 )
 
 type LesServer interface {
@@ -88,10 +89,10 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
-	witness common.Address
+	witness   common.Address
 
-	networkID     uint64
-	netRPCService *ethapi.PublicNetAPI
+	networkID         uint64
+	netRPCService     *ethapi.PublicNetAPI
 	masternodeManager *MasternodeManager
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
@@ -128,11 +129,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, &config.Ethash, chainConfig, chainDb),
-		shutdownChan:  make(chan bool),
-		networkID:     config.NetworkId,
-		gasPrice:      config.GasPrice,
-		etherbase:     config.Etherbase,
-		witness:       config.Witness,
+		shutdownChan:   make(chan bool),
+		networkID:      config.NetworkId,
+		gasPrice:       config.GasPrice,
+		etherbase:      config.Etherbase,
+		witness:        config.Witness,
 
 		bloomRequests: make(chan chan *bloombits.Retrieval),
 		bloomIndexer:  NewBloomIndexer(chainDb, params.BloomBitsBlocks),
@@ -350,7 +351,6 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
-
 func (s *Ethereum) Witness() (witness common.Address, err error) {
 	s.lock.RLock()
 	witness = s.witness
@@ -361,7 +361,7 @@ func (s *Ethereum) Witness() (witness common.Address, err error) {
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			fmt.Printf("backend Witness accounts: %x \n",accounts[0].Address)
+			fmt.Printf("backend Witness accounts: %x \n", accounts[0].Address)
 			return accounts[0].Address, nil
 		}
 	}
@@ -453,9 +453,16 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
+	contractBackend := NewContractBackend(s)
+	contract, err := contract.NewContract(srvr.MasternodeContract, contractBackend)
+	if err != nil {
+		return err
+	}
+	s.masternodeManager.Start(srvr, contract, s.protocolManager.peers)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
+
 	return nil
 }
 

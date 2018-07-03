@@ -179,6 +179,8 @@ type Server struct {
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
 	log           log.Logger
+	// Masternode
+	MasternodeContract common.Address
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -192,7 +194,7 @@ type peerDrop struct {
 type connFlag int
 
 const (
-	dynDialedConn connFlag = 1 << iota
+	dynDialedConn    connFlag = 1 << iota
 	staticDialedConn
 	inboundConn
 	trustedConn
@@ -201,7 +203,7 @@ const (
 // conn wraps a network connection with information gathered
 // during the two handshakes.
 type conn struct {
-	fd net.Conn
+	fd    net.Conn
 	transport
 	flags connFlag
 	cont  chan error      // The run loop uses cont to signal errors to SetupConn.
@@ -707,7 +709,7 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, inbound
 
 func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
+	case !c.is(trustedConn | staticDialedConn) && len(peers) >= srv.MaxPeers:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers

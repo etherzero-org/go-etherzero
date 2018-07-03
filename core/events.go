@@ -21,6 +21,9 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 )
 
+// TxPreEvent is posted when a transaction enters the transaction pool.
+type TxPreEvent struct{ Tx *types.Transaction }
+
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.
 type NewTxsEvent struct{ Txs []*types.Transaction }
 
