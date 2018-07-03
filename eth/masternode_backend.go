@@ -122,10 +122,6 @@ func (self *MasternodeManager) Stop() {
 
 func (mm *MasternodeManager) masternodeLoop() {
 	mm.updateActiveMasternode()
-	fmt.Println(" mm.active.State() ", mm.active.State())
-	fmt.Println("1111111111111111", !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}))
-	fmt.Println("22222222222222222", mm.srvr.MasternodeAddr.IP.String())
-
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternodeCheck true")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
@@ -251,6 +247,7 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
+	fmt.Println("22222222222222222222", state)
 	mm.active.SetState(state)
 }
 

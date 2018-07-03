@@ -4,15 +4,16 @@
 package contract
 
 import (
+	"math/big"
+	"strings"
+
+	"github.com/etherzero/go-etherzero"
+
 	"github.com/etherzero/go-etherzero/accounts/abi"
 	"github.com/etherzero/go-etherzero/accounts/abi/bind"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/event"
-	"math/big"
-	"strings"
-
-	"github.com/etherzero/go-etherzero"
 )
 
 // ContractABI is the input ABI used to generate the binding from.
