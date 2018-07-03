@@ -92,6 +92,7 @@ type Ethereum struct {
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
+	masternodeManager *MasternodeManager
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -172,6 +173,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
+
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(eth.chainDb, eth.blockchain.CurrentBlock().Header().Protocol)
+
+	if eth.masternodeManager = NewMasternodeManager(devoteProtocol); err != nil {
+		return nil, err
+	}
 
 	eth.APIBackend = &EthAPIBackend{eth, nil}
 	gpoParams := config.GPO

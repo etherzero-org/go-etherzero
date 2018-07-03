@@ -28,6 +28,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/rlp"
 	"gopkg.in/fatih/set.v0"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 var (
@@ -78,6 +79,7 @@ type peer struct {
 	*p2p.Peer
 	rw p2p.MsgReadWriter
 
+	isMasternode     bool
 	version  int         // Protocol version negotiated
 	forkDrop *time.Timer // Timed connection dropper if forks aren't validated in time
 
@@ -191,6 +193,10 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 		p.knownTxs.Pop()
 	}
 	p.knownTxs.Add(hash)
+}
+
+func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
+	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
 }
 
 // SendTransactions sends transactions to the peer and includes the hashes
