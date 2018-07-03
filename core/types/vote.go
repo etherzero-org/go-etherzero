@@ -37,15 +37,14 @@ type Vote struct {
 }
 
 // NewVote return a no has sign vote
-func NewVote(cycle int64,account common.Address,masternode common.Address) *Vote{
-	vote:=&Vote{
-		cycle:cycle,
-		account:account,
-		masternode:masternode,
+func NewVote(cycle int64, account common.Address, masternode common.Address) *Vote {
+	vote := &Vote{
+		cycle:      cycle,
+		account:    account,
+		masternode: masternode,
 	}
 	return vote
 }
-
 
 // Hash returns the vote hash , which is simply the keccak256 hash of its
 // RLP encoding.
@@ -89,9 +88,12 @@ func (v *Vote) Cycle() int64 {
 func (v *Vote) Sign() []byte {
 	return v.sign
 }
+func (v *Vote) SetSign(sign []byte) {
+	v.sign = sign
+}
 
 // SignVote signs the transaction using the given signer and private key
-func SignVote(vote *Vote, prv *ecdsa.PrivateKey) (*Vote, error) {
+func (vote *Vote) SignVote(prv *ecdsa.PrivateKey) (*Vote, error) {
 	h := vote.Hash() //not sign
 	sig, err := crypto.Sign(h[:], prv)
 	if err != nil {
@@ -107,4 +109,3 @@ func (v *Vote) Verify(hash, sig []byte, pub *ecdsa.PublicKey) bool {
 	recoveredPubBytes := crypto.FromECDSAPub(pub)
 	return bytes.Equal(recoveredPub1, recoveredPubBytes)
 }
-

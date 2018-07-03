@@ -46,11 +46,11 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	cycleInterval = int64(3600)
-	blockInterval    = int64(10)
+	cycleInterval  = int64(3600)
+	blockInterval  = int64(10)
 	maxWitnessSize = 21
-	safeSize         = maxWitnessSize*2/3 + 1
-	consensusSize    = maxWitnessSize*2/3 + 1
+	safeSize       = maxWitnessSize*2/3 + 1
+	consensusSize  = maxWitnessSize*2/3 + 1
 )
 
 var (
@@ -58,7 +58,7 @@ var (
 	big8  = big.NewInt(8)
 	big32 = big.NewInt(32)
 
-	etherzeroBlockReward  *big.Int = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
+	etherzeroBlockReward *big.Int = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
 
 	timeOfFirstBlock = int64(0)
 
@@ -85,13 +85,13 @@ var (
 
 	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
 	// the previous block's timestamp + the minimum block period.
-	ErrInvalidTimestamp           = errors.New("invalid timestamp")
-	ErrWaitForPrevBlock           = errors.New("wait for last block arrived")
-	ErrMintFutureBlock            = errors.New("mint the future block")
+	ErrInvalidTimestamp         = errors.New("invalid timestamp")
+	ErrWaitForPrevBlock         = errors.New("wait for last block arrived")
+	ErrMintFutureBlock          = errors.New("mint the future block")
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
 	ErrInvalidBlockWitness      = errors.New("invalid block witness")
-	ErrInvalidMinerBlockTime       = errors.New("invalid time to miner the block")
-	ErrNilBlockHeader             = errors.New("nil block header returned")
+	ErrInvalidMinerBlockTime    = errors.New("invalid time to miner the block")
+	ErrNilBlockHeader           = errors.New("nil block header returned")
 )
 
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
@@ -254,7 +254,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	controller := &Controller{
 		statedb:        state,
-		DevoteProtocol: devoteProtocol,
+		devoteProtocol: devoteProtocol,
 		TimeStamp:      header.Time.Int64(),
 	}
 	if timeOfFirstBlock == 0 {
@@ -268,15 +268,21 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
 
-	//update mint count trie
-	devoteProtocol.UpdateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Witness)
+	//miner Rolling
+	devoteProtocol.Rolling(parent.Time.Int64(), header.Time.Int64(), header.Witness)
+
+	//vote, err := controller.Voting(genesis, parent)
+	//if err != nil {
+	//	return nil, fmt.Errorf("masternode voting err ,err:%s", err)
+	//}
+	//fmt.Printf("vote successfully vote hash:%s", vote.Hash())
 	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-stake verified author of the block.
-func (ethash *Devote) Author(header *types.Header) (common.Address, error) {
+func (d *Devote) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
 }
 
@@ -384,7 +390,8 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		return err
 	}
 	fmt.Printf("devote verifySeal successful cycle hash:%x", devoteProtocol.CycleTrie())
-	controller := &Controller{DevoteProtocol: devoteProtocol}
+
+	controller := &Controller{devoteProtocol: devoteProtocol}
 	witness, err := controller.lookup(header.Time.Int64())
 	if err != nil {
 		return err
@@ -431,7 +438,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 
-	controller := &Controller{DevoteProtocol: devoteProtocol}
+	controller := &Controller{devoteProtocol: devoteProtocol}
 	witness, err := controller.lookup(now)
 	if err != nil {
 		return err
@@ -514,8 +521,6 @@ func PrevSlot(now int64) int64 {
 func NextSlot(now int64) int64 {
 	return int64((now+blockInterval-1)/blockInterval) * blockInterval
 }
-
-
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
 func (d *Devote) APIs(chain consensus.ChainReader) []rpc.API {

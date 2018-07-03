@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/rlp"
@@ -37,18 +38,18 @@ import (
 )
 
 type Controller struct {
-	DevoteProtocol *types.DevoteProtocol
+	devoteProtocol *types.DevoteProtocol
 	statedb        *state.StateDB
-
-	TimeStamp int64
+	active         *masternode.ActiveMasternode
+	TimeStamp      int64
 }
 
 // votes return  vote list in the Cycle.
 func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
-	cacheTrie := self.DevoteProtocol.CacheTrie()
-	masternodeTrie := self.DevoteProtocol.MasternodeTrie()
+	cacheTrie := self.devoteProtocol.CacheTrie()
+	masternodeTrie := self.devoteProtocol.MasternodeTrie()
 	//voteCntTrie:=self.DevoteProtocol.VoteCntTrie()
 	//statedb := self.statedb
 
@@ -90,7 +91,7 @@ func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big
 			key = append(key, masternodeAddr.Bytes()...)
 
 			vote := new(types.Vote)
-			if voteCntBytes := self.DevoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
+			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternode", masternodeAddr, "err", err)
 					return nil, err
@@ -109,7 +110,7 @@ func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big
 //when a node does't work in the current cycle, delete.
 func (ec *Controller) uncast(cycle int64) error {
 
-	witnesses, err := ec.DevoteProtocol.GetWitnesses()
+	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
 		return fmt.Errorf("failed to get witness: %s", err)
 	}
@@ -132,7 +133,7 @@ func (ec *Controller) uncast(cycle int64) error {
 		binary.BigEndian.PutUint64(key, uint64(cycle))
 		key = append(key, witness.Bytes()...)
 		size := int64(0)
-		if cntBytes := ec.DevoteProtocol.MintCntTrie().Get(key); cntBytes != nil {
+		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
 			size = int64(binary.BigEndian.Uint64(cntBytes))
 		}
 		if size < cycleDuration/blockInterval/maxWitnessSize/2 {
@@ -148,7 +149,7 @@ func (ec *Controller) uncast(cycle int64) error {
 	sort.Sort(sort.Reverse(needUncastWitnesses))
 
 	masternodeCount := 0
-	iter := trie.NewIterator(ec.DevoteProtocol.MasternodeTrie().NodeIterator(nil))
+	iter := trie.NewIterator(ec.devoteProtocol.MasternodeTrie().NodeIterator(nil))
 	for iter.Next() {
 		masternodeCount++
 		if masternodeCount >= needUncastWitnessCnt+safeSize {
@@ -162,7 +163,7 @@ func (ec *Controller) uncast(cycle int64) error {
 			log.Info("No more masternode can be kickout", "prevCycleID", cycle, "masternodeCount", masternodeCount, "needKickoutCount", len(needUncastWitnesses)-i)
 			return nil
 		}
-		if err := ec.DevoteProtocol.Unregister(witness.address); err != nil {
+		if err := ec.devoteProtocol.Unregister(witness.address); err != nil {
 			return err
 		}
 		// if uncast success, masternode Count minus 1
@@ -181,7 +182,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	}
 	offset /= blockInterval
 
-	witnesses, err := ec.DevoteProtocol.GetWitnesses()
+	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -201,14 +202,14 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 	prevCycle := parent.Time.Int64() / cycleInterval
 	currentCycle := self.TimeStamp / cycleInterval
 
-	prevCycleIsGenesis := prevCycle == genesisCycle
+	prevCycleIsGenesis := (prevCycle == genesisCycle)
 	if prevCycleIsGenesis && prevCycle < currentCycle {
 		prevCycle = currentCycle - 1
 	}
 
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
-	iter := trie.NewIterator(self.DevoteProtocol.MintCntTrie().NodeIterator(prevCycleBytes))
+	iter := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
 
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
@@ -246,12 +247,56 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 			sortedWitnesses = append(sortedWitnesses, masternode.address)
 		}
 
-		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.DevoteProtocol.DB())
-		self.DevoteProtocol.SetCycle(cycleTrie)
-		self.DevoteProtocol.SetWitnesses(sortedWitnesses)
+		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
+		self.devoteProtocol.SetCycle(cycleTrie)
+		self.devoteProtocol.SetWitnesses(sortedWitnesses)
+
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
+}
+
+// Voting save the vote result to the desk
+func (self *Controller) Voting(genesis, parent *types.Header) (*types.Vote, error) {
+
+	//genesisCycle := genesis.Time.Int64() / cycleInterval
+	//prevCycle := parent.Time.Int64() / cycleInterval
+	currentCycle := self.TimeStamp / cycleInterval
+
+	currentVoteId := make([]byte, 8)
+	binary.BigEndian.PutUint64(currentVoteId, uint64(currentCycle))
+
+	masternodeBytes := self.active.Account.Bytes()
+	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(append(currentVoteId, masternodeBytes...))
+	if voteCntInTrieBytes != nil {
+		return nil, errors.New("vote already exists")
+	}
+
+	votes, err := self.votes(currentCycle)
+	if err != nil {
+		return nil, err
+	}
+
+	weight := int64(0)
+	best := common.Address{}
+	for account, _ := range votes {
+
+		hash := append(parent.Hash().Bytes(), account.Bytes()...)
+		// shuffle votes
+		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+		if temp > weight && account != self.active.Account {
+			weight = temp
+			best = account
+		}
+	}
+
+	vote := types.NewVote(currentCycle, self.active.Account, best)
+	vote.SignVote(self.active.PrivateKey)
+	voteRLP, err := rlp.EncodeToBytes(vote)
+
+	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
+	return vote, nil
+
 }
 
 type sortableAddress struct {
