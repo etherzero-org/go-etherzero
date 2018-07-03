@@ -32,6 +32,8 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
+
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -71,13 +73,13 @@ type Backend interface {
 	CurrentBlock() *types.Block
 }
 
-func GetAPIs(apiBackend Backend) []rpc.API {
+func GetAPIs(apiBackend Backend, ms *masternode.MasternodeSet) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(apiBackend),
+			Service:   NewPublicEthereumAPI(apiBackend, ms),
 			Public:    true,
 		}, {
 			Namespace: "eth",
@@ -110,6 +112,12 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Public:    true,
 		}, {
 			Namespace: "personal",
+			Version:   "1.0",
+			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
+			Public:    false,
+		},
+		{
+			Namespace: "masternode",
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,

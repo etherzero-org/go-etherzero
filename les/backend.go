@@ -43,7 +43,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/p2p/discv5"
 	"github.com/etherzero/go-etherzero/params"
-	rpc "github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 type LightEthereum struct {
@@ -177,7 +177,7 @@ func (s *LightDummyAPI) Mining() bool {
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *LightEthereum) APIs() []rpc.API {
-	return append(ethapi.GetAPIs(s.ApiBackend), []rpc.API{
+	return append(ethapi.GetAPIs(s.ApiBackend, nil), []rpc.API{
 		{
 			Namespace: "eth",
 			Version:   "1.0",

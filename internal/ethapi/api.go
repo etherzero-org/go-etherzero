@@ -44,6 +44,7 @@ import (
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 const (
@@ -57,7 +58,7 @@ type PublicEthereumAPI struct {
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
-func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
+func NewPublicEthereumAPI(b Backend, m *masternode.MasternodeSet) *PublicEthereumAPI {
 	return &PublicEthereumAPI{b}
 }
 

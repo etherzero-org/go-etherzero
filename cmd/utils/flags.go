@@ -57,6 +57,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 	"gopkg.in/urfave/cli.v1"
+	"net"
 )
 
 var (
@@ -532,6 +533,16 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+	MasternodeContractFlag = cli.StringFlag{
+		Name:  "masternode.contract",
+		Usage: "Masternode contract address",
+		Value: "0xe260bf670cbae2731ad3bb8bfb0536c415693e13",
+	}
+	MasternodeIPFlag = cli.StringFlag{
+		Name:  "masternode.ip",
+		Usage: "Masternode public ip",
+		Value: "",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -611,6 +622,18 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 			continue
 		}
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
+	}
+}
+
+func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
+	if account := ctx.GlobalString(MasternodeContractFlag.Name); len(account) == 42 {
+		cfg.MasternodeContract = common.HexToAddress(account)
+	}
+	if ip := ctx.GlobalString(MasternodeIPFlag.Name); len(ip) > 0 {
+		cfg.MasternodeAddr = net.TCPAddr{
+			IP:   net.ParseIP(ip),
+			Port: ctx.GlobalInt(ListenPortFlag.Name),
+		}
 	}
 }
 
@@ -807,6 +830,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setListenAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
+	setMasternode(ctx, cfg)
 
 	lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
