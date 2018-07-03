@@ -136,7 +136,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 		var buf bytes.Buffer
 		buf.Write(mm.srvr.Self().ID[:])
 		buf.Write(misc[:])
-		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
+		d := "0x3aa8cd8b" + common.Bytes2Hex(buf.Bytes()) + "000000000000000000000000" + common.Bytes2Hex(mm.active.NodeAccount.Bytes())
 		fmt.Println("Masternode transaction data:", d)
 	}
 
@@ -246,7 +246,6 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
-	fmt.Println("22222222222222222222", state)
 	mm.active.SetState(state)
 }
 

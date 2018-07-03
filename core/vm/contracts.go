@@ -29,7 +29,6 @@ import (
 	"github.com/etherzero/go-etherzero/crypto/secp256k1"
 	"github.com/etherzero/go-etherzero/log"
 	"golang.org/x/crypto/ripemd160"
-	"fmt"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -374,7 +373,6 @@ func (c *peeridrecover) Run(input []byte) ([]byte, error) {
 		return nil, nil
 	}
 	//input = common.RightPadBytes(input, 128)
-	fmt.Println("input: ", common.Bytes2Hex(input[:]))
 
 	key, err := secp256k1.RecoverPubkey(input[:32], input[32:97])
 	if err != nil || len(key) != 65 {

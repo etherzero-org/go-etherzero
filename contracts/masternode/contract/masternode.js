@@ -6,7 +6,7 @@ var masternode = masternodeContract.new(
         gas: '4700000'
     }, function (e, contract){
         console.log(e, contract);
-        if (typeof contract.address !== 'undefined') {
+        if (typeof contract.add66666666666666666666666ress !== 'undefined') {
             console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
         }
     })
