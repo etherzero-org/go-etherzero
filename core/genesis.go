@@ -247,7 +247,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
-		Protocol:    devoteProtocolAtomic,
+		Protocol:   devoteProtocolAtomic,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -268,7 +268,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	block := g.ToBlock(db)
 
-	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n",block.DevoteProtocol)
+	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n", block.DevoteProtocol)
 	// add devote protocol
 	if _, err := block.DevoteProtocol.Commit(db); err != nil {
 		return nil, err
@@ -367,7 +367,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
-			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }
@@ -395,8 +395,8 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *types.DevoteProto
 
 		dp.SetWitnesses(g.Config.Devote.Witnesses)
 		for _, witness := range g.Config.Devote.Witnesses {
-			dp.CacheTrie().TryUpdate(append(witness.Bytes(), witness.Bytes()...), witness.Bytes())
-			dp.MasternodeTrie().TryUpdate(witness.Bytes(), witness.Bytes())
+			dp.CacheTrie().TryUpdate(append([]byte(witness.ID), witness.Addr.Bytes()...), witness.Addr.Bytes())
+			dp.MasternodeTrie().TryUpdate([]byte(witness.ID), witness.Addr.Bytes())
 		}
 	}
 	return dp

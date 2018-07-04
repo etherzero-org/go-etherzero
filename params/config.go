@@ -138,7 +138,13 @@ func (c *CliqueConfig) String() string {
 
 // MasternodeConfig is the consensus engine configs for devote + delegated proof-of-stake based sealing.
 type DevoteConfig struct {
-	Witnesses []common.Address `json:"Witnesses"` // Genesis witness list
+	Witnesses []*Account `json:"witnesses"` // Genesis witness list
+}
+
+// masternode ID and acount
+type Account struct {
+	ID   string         `json:"id"`
+	Addr common.Address `json:"addr"`
 }
 
 // String implements the stringer interface, returning the consensus engine details.

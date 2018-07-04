@@ -367,7 +367,7 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	return h
 }
 
-func (self *DevoteProtocol) SetWitnesses(witnesses []common.Address) error {
+func (self *DevoteProtocol) SetWitnesses(witnesses interface{}) error {
 
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
@@ -448,8 +448,6 @@ func (d *DevoteProtocol) UnDelegate(delegatorAddr, masternodeAddr common.Address
 	}
 	return d.voteTrie.TryDelete(delegator)
 }
-
-
 
 // update counts in MintCntTrie for the miner of newBlock
 func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime int64, witness common.Address) {
