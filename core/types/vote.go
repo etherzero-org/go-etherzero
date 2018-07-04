@@ -32,12 +32,12 @@ import (
 type Vote struct {
 	cycle      int64          `json:"cycle"      gencodec:"required"`
 	account    common.Address `json:"account"    gencodec:"required"`
-	masternode common.Address `json:"masternode" gencodec:"required"`
+	masternode string `json:"masternode" gencodec:"required"`
 	sign       []byte         `json:"sign"       gencodec:"required"`
 }
 
 // NewVote return a no has sign vote
-func NewVote(cycle int64, account common.Address, masternode common.Address) *Vote {
+func NewVote(cycle int64, account common.Address, masternode string) *Vote {
 	vote := &Vote{
 		cycle:      cycle,
 		account:    account,
@@ -77,7 +77,7 @@ func (v *Vote) Account() common.Address {
 	return v.account
 }
 
-func (v *Vote) Masternode() common.Address {
+func (v *Vote) Masternode() string {
 	return v.masternode
 }
 

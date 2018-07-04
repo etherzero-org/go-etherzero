@@ -49,6 +49,9 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
+
+	// temporarily set to 4096
+	voteChanSize = 4096
 )
 
 var (
@@ -78,6 +81,7 @@ type ProtocolManager struct {
 	fetcher    *fetcher.Fetcher
 	peers      *peerSet
 
+	mm           *MasternodeManager
 	SubProtocols []p2p.Protocol
 
 	eventMux      *event.TypeMux
@@ -90,6 +94,8 @@ type ProtocolManager struct {
 	txsyncCh    chan *txsync
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
+
+
 
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
@@ -683,12 +689,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == NewVoteMsg:
-		var vote types.Vote
-
-		if err := msg.Decode(&vote); err != nil{
-			return errResp(ErrDecode,"msg %v: %v",msg,err)
+		var vote *types.Vote
+		if err := msg.Decode(&vote); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		
+		pm.mm.Process(vote)
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -771,6 +776,7 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 		}
 	}
 }
+
 
 // NodeInfo represents a short summary of the Ethereum sub-protocol metadata
 // known about the host peer.
