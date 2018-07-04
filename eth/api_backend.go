@@ -35,6 +35,7 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -199,6 +200,24 @@ func (b *EthAPIBackend) Downloader() *downloader.Downloader {
 
 func (b *EthAPIBackend) ProtocolVersion() int {
 	return b.eth.EthVersion()
+}
+
+// Masternodes return masternode info
+func (b *EthAPIBackend) Masternodes() map[string]*masternode.Masternode {
+	return b.eth.masternodeManager.masternodes.AllNodes()
+}
+
+// StartMasternode just call the start function of instantx
+// TODO ,send 20 ether to the contract address
+func (b *EthAPIBackend) StartMasternode() bool {
+	//b.eth.masternodeManager.is.Start()
+	return true
+}
+
+// Stop
+func (b *EthAPIBackend) StopMasternode() bool {
+	//b.eth.masternodeManager.is.Stop()
+	return true
 }
 
 func (b *EthAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {

@@ -6625,18 +6625,6 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         }
 
         var methods = function () {
-            var newMasternode = new Method({
-                name: 'newMasternode',
-                call: 'masternode_newMasternode',
-                params: 1,
-                inputFormatter: [null]
-            });
-            var getPrivateKey = new Method({
-                name: 'getPrivateKey',
-                call: 'masternode_getPrivateKey',
-                params: 2,
-                inputFormatter: [formatters.inputAddressFormatter,null]
-            });
             var startMasternode = new Method({
                 name: 'startMasternode',
                 call: 'masternode_startMasternode',
@@ -6646,8 +6634,6 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 call: 'masternode_stopMasternode',
             });
             return [
-                newMasternode,
-                getPrivateKey,
                 startMasternode,
                 stopMasternode
             ];

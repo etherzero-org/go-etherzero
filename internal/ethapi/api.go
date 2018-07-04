@@ -54,12 +54,13 @@ const (
 // PublicEthereumAPI provides an API to access Ethereum related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
-	b Backend
+	b  Backend
+	ms *masternode.MasternodeSet
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
 func NewPublicEthereumAPI(b Backend, m *masternode.MasternodeSet) *PublicEthereumAPI {
-	return &PublicEthereumAPI{b}
+	return &PublicEthereumAPI{b, m}
 }
 
 // GasPrice returns a suggestion for a gas price.
@@ -71,6 +72,23 @@ func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) 
 // ProtocolVersion returns the current Ethereum protocol version this node supports
 func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
+}
+
+// Masternodes return masternode info
+// TODO optimize the returned info's format
+func (s *PublicEthereumAPI) Masternodes() map[string]*masternode.Masternode {
+	return nil
+	//return s.ms.AllNodes()
+}
+
+// Start return the masternodewinner info
+func (s *PublicEthereumAPI) StartMasternode() bool {
+	return false
+}
+
+// Stop return the masternodewinner info
+func (s *PublicEthereumAPI) StopMasternode() bool {
+	return false
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -227,6 +245,21 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 		}
 	}
 	return addresses
+}
+
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) List() map[string]*masternode.Masternode {
+	return s.b.Masternodes()
+}
+
+// Start  the masternodewinner info
+func (s *PrivateAccountAPI) StartMasternode() bool {
+	return s.b.StartMasternode()
+}
+
+// Stop return the masternodewinner info
+func (s *PrivateAccountAPI) StopMasternode() bool {
+	return s.b.StopMasternode()
 }
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its

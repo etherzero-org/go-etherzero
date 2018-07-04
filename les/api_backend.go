@@ -36,6 +36,7 @@ import (
 	"github.com/etherzero/go-etherzero/light"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 type LesApiBackend struct {
@@ -176,6 +177,21 @@ func (b *LesApiBackend) ChainDb() ethdb.Database {
 	return b.eth.chainDb
 }
 
+// Masternodes return masternode info
+// TODO LesApiBackend interface does not implemente this api for now(2018-05-30)
+func (b *LesApiBackend) Masternodes() map[string]*masternode.Masternode {
+	return nil
+}
+
+// Start the masternode insfo
+func (s *LesApiBackend) StartMasternode() bool {
+	return false
+}
+
+// Stop the masternode insfo
+func (s *LesApiBackend) StopMasternode() bool {
+	return false
+}
 func (b *LesApiBackend) EventMux() *event.TypeMux {
 	return b.eth.eventMux
 }
