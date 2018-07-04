@@ -57,14 +57,13 @@ const (
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
 
-	NewVoteMsg         = 0x08
-
 	// Protocol messages belonging to eth/63
 	GetNodeDataMsg = 0x0d
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
 
+	NewVoteMsg = 0x21
 	MasternodePingMsg = 0x22
 )
 

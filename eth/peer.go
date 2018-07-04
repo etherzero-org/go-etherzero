@@ -93,6 +93,9 @@ type peer struct {
 	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
 	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
 	term        chan struct{}             // Termination channel to stop the broadcaster
+
+
+	knownVotes       *set.Set // Set of vote hashes known to be known by this peer
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -207,6 +210,13 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	}
 	return p2p.Send(p.rw, TxMsg, txs)
 }
+
+
+// SendNewVote propagates an vote to a remote masternode.
+func (p *peer) SendNewVote(vote *types.Vote) error {
+	return p2p.Send(p.rw, NewVoteMsg, vote)
+}
+
 
 // AsyncSendTransactions queues list of transactions propagation to a remote
 // peer. If the peer's broadcast queue is full, the event is silently dropped.
@@ -492,6 +502,22 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if !p.knownTxs.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+
+// PeersWithoutVote retrieves a list of Masternodes that do not have a given Winner Vote
+// in their set of knows hashes.
+func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownVotes.Has(hash) {
 			list = append(list, p)
 		}
 	}

@@ -28,7 +28,9 @@ import (
 	"time"
 
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
+	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto"
@@ -43,7 +45,6 @@ type MasternodeManager struct {
 	devoteProtocol *types.DevoteProtocol
 	active         *masternode.ActiveMasternode
 	masternodes    *masternode.MasternodeSet
-	voteFeed       event.Feed
 	mu             sync.Mutex
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh    chan *peer
@@ -51,31 +52,64 @@ type MasternodeManager struct {
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
+	controller   *devote.Controller
+
+	scope    event.SubscriptionScope
+	voteFeed event.Feed
+
+	voteCh  chan core.NewVoteEvent
+	voteSub event.Subscription
 }
 
 func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 
+	controller := devote.Newcontroller(dp)
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
 		votes:          make(map[common.Hash]*types.Vote),
 		masternodes:    &masternode.MasternodeSet{},
 		devoteProtocol: dp,
+		controller:     controller,
 	}
 
 	return manager
 }
 
-func (self *MasternodeManager) AddVote() {
+func (self *MasternodeManager) Voting(parent *types.Header, cycle int64) {
 
+	masternodes := self.masternodes.AllNodes()
+
+	weight := int64(0)
+	best := common.Address{}
+	for _, masternode := range masternodes {
+
+		hash := append(parent.Hash().Bytes(), masternode.Account.Bytes()...)
+		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+		if temp > weight && masternode.Account != self.active.Account {
+			weight = temp
+			best = masternode.Account
+		}
+	}
+	vote := types.NewVote(cycle, best, self.active.ID)
+	vote.SignVote(self.active.PrivateKey)
+
+	self.controller.Process(vote)
 }
 
-func (self *MasternodeManager) process(vote *types.Vote) error {
+func (self *MasternodeManager) Process(vote *types.Vote) error {
 
 	h := vote.Hash()
-	pubkey := self.active.PrivateKey.PublicKey
-	if !vote.Verify(h[:], vote.Sign(), &pubkey) {
+
+	masternode := self.masternodes.Node(vote.Masternode())
+	pubkey, err := masternode.Node.ID.Pubkey()
+	if err == nil {
+		return err
+	}
+
+	if !vote.Verify(h[:], vote.Sign(), pubkey) {
 		return errors.New("vote valid failed")
 	}
+	self.controller.Process(vote)
 
 	return nil
 
@@ -111,7 +145,18 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	self.active = masternode.NewActiveMasternode(srvr, mns)
 	fmt.Printf("MasternodeManager start active MasternodeId: %v\n", self.active.ID)
 
+	// broadcast votes
+	self.voteCh = make(chan core.NewVoteEvent, voteChanSize)
+	self.voteSub = self.SubscribeVoteEvent(self.voteCh)
+
+	postfn := func(vote *types.Vote) {
+		self.PostVoteEvent(vote)
+	}
+	//fmt.Printf("postfn%x", postfn)
+	self.controller.PostVote(postfn)
 	go self.masternodeLoop()
+
+	go self.voteBroadcastLoop()
 }
 
 func (self *MasternodeManager) Stop() {
@@ -271,4 +316,43 @@ func (mm *MasternodeManager) checkPeers() {
 	}
 	key := rand.Intn(i - 1)
 	mm.srvr.AddPeer(nodes[key].Node)
+}
+
+func (self *MasternodeManager) PostVoteEvent(vote *types.Vote) {
+	self.voteFeed.Send(core.NewVoteEvent{vote})
+}
+
+// SubscribeVoteEvent registers a subscription of VoteEvent and
+// starts sending event to the given channel.
+func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
+	return self.scope.Track(self.voteFeed.Subscribe(ch))
+}
+
+func (self *MasternodeManager) voteBroadcastLoop() {
+	for {
+		select {
+		case event := <-self.voteCh:
+			self.BroadcastVote(event.Vote.Hash(), event.Vote)
+
+		case <-self.voteSub.Err():
+			return
+		}
+	}
+}
+
+// BroadcastVote will propagate a Vote to all Masternodes which are not known to
+// already have the given WinnerVote
+func (self *MasternodeManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
+	peers := self.peers.PeersWithoutVote(hash)
+	fmt.Printf("BroadcastPaymentVote peers size:%d\n", len(peers))
+	for _, peer := range peers {
+		peer.SendNewVote(vote)
+	}
+	log.Trace("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
+}
+
+func (self *MasternodeManager) Register(masternode *masternode.Masternode) error{
+
+	return self.devoteProtocol.Register(masternode.Account)
+
 }

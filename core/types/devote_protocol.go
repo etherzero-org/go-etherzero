@@ -174,6 +174,13 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 	}, nil
 }
 
+
+// register as a master node for saving to a block
+func (d *DevoteProtocol) Register(masternodeAddr common.Address) error {
+	masternode := masternodeAddr.Bytes()
+	return d.masternodeTrie.TryUpdate(masternode, masternode)
+}
+
 // Unregister If the masternode does not complete the packing action during the current block cycle,
 // and no block has been generated during the entire cycle, the masternode is removed from the network.
 func (d *DevoteProtocol) Unregister(masternodeAddr common.Address) error {
@@ -389,11 +396,6 @@ func (self *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
 	return witnesses, nil
 }
 
-// register as a master node for saving to a block
-func (d *DevoteProtocol) Register(masternodeAddr common.Address) error {
-	masternode := masternodeAddr.Bytes()
-	return d.masternodeTrie.TryUpdate(masternode, masternode)
-}
 
 func (d *DevoteProtocol) Delegate(delegatorAddr, masternodeAddr common.Address) error {
 	delegator, masternode := delegatorAddr.Bytes(), masternodeAddr.Bytes()
