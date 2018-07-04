@@ -33,7 +33,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
-
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -46,6 +45,10 @@ type Backend interface {
 	ChainDb() ethdb.Database
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
+	// masternode control api
+	Masternodes() map[string]*masternode.Masternode // masternodes info
+	StartMasternode() bool                          // start the masternode,hash ,srvr means two different parameters
+	StopMasternode() bool                           // stop the masternode,hash ,srvr means two different parameters
 
 	// BlockChain API
 	SetHead(number uint64)
