@@ -265,10 +265,12 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
+	fmt.Println("ddddddddddddddddd", devoteProtocol == nil)
 	err := controller.election(genesis, parent)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
+
 
 	//miner Rolling
 	devoteProtocol.Rolling(parent.Time.Int64(), header.Time.Int64(), header.Witness)
@@ -410,8 +412,6 @@ func (d *Devote) verifyBlockSigner(witness common.Address, header *types.Header)
 		return err
 	}
 	if bytes.Compare(signer.Bytes(), witness.Bytes()) != 0 {
-		fmt.Println("222222222222222")
-
 		return ErrInvalidBlockWitness
 	}
 	if bytes.Compare(signer.Bytes(), header.Witness.Bytes()) != 0 {
@@ -448,8 +448,6 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 	if (witness == common.Address{}) || bytes.Compare(witness.Bytes(), d.signer.Bytes()) != 0 {
-		fmt.Println("11111111111111111", witness == common.Address{})
-		fmt.Println("33333333333333", witness.String(), d.signer.String())
 		return ErrInvalidBlockWitness
 	}
 	return nil

@@ -213,11 +213,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 					if err != nil {
 						fmt.Println("err when register ", err)
 					}
-					//b, err := mm.devoteProtocol.MasternodeTrie().TryGet(join.Id[:])
-					//if err != nil {
-					//	fmt.Println("ssasdadsadsdasdasdsadsdsa", err)
-					//}
-					//fmt.Println("11111111111111111", string(b))
 					mm.active.Account = node.Account
 				} else {
 					mm.srvr.AddPeer(node.Node)
@@ -235,11 +230,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 				if err != nil {
 					fmt.Println("err when register ", err)
 				}
-				//b, err := mm.devoteProtocol.MasternodeTrie().TryGet(quit.Id[:])
-				//if err != nil {
-				//	fmt.Println("sdsdfdfsdfdgfgfhfghf", err)
-				//}
-				//fmt.Println("22222222222222", string(b))
 				mm.masternodes.NodeQuit(quit.Id)
 				if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
 					mm.updateActiveMasternode()

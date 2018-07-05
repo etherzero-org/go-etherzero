@@ -191,6 +191,8 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+	fmt.Println("wwwwwwwwwwww", self.devoteProtocol.MinerRollingTrie().Hash().String())
+	fmt.Println("vvvvvvvvvvv", string(prevCycleBytes))
 	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
 
 	for i := prevCycle; i < currentCycle; i++ {
