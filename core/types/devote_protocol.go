@@ -176,7 +176,7 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 }
 
 // register as a master node for saving to a block
-func (d *DevoteProtocol) Register(masternode masternode.Masternode) error {
+func (d *DevoteProtocol) Register(masternode *masternode.Masternode) error {
 	masternodeAddr := masternode.Account
 	masternodeid := masternode.ID
 	masternodeBytes := masternodeAddr.Bytes()
