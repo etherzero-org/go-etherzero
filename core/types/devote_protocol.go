@@ -11,6 +11,7 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 const (
@@ -173,7 +174,6 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
 	}, nil
 }
-
 
 // register as a master node for saving to a block
 func (d *DevoteProtocol) Register(masternodeAddr common.Address) error {
@@ -374,7 +374,7 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	return h
 }
 
-func (self *DevoteProtocol) SetWitnesses(witnesses interface{}) error {
+func (self *DevoteProtocol) SetWitnesses(witnesses []*params.Account) error {
 
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
@@ -385,9 +385,9 @@ func (self *DevoteProtocol) SetWitnesses(witnesses interface{}) error {
 	return nil
 }
 
-func (self *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
+func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
 
-	var witnesses []common.Address
+	var witnesses []*params.Account
 	key := []byte("witness")
 	witnessRLP := self.cycleTrie.Get(key)
 	if err := rlp.DecodeBytes(witnessRLP, &witnesses); err != nil {
@@ -395,7 +395,6 @@ func (self *DevoteProtocol) GetWitnesses() ([]common.Address, error) {
 	}
 	return witnesses, nil
 }
-
 
 func (d *DevoteProtocol) Delegate(delegatorAddr, masternodeAddr common.Address) error {
 	delegator, masternode := delegatorAddr.Bytes(), masternodeAddr.Bytes()

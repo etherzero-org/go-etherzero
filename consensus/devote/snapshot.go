@@ -35,6 +35,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 type Controller struct {
@@ -142,14 +143,15 @@ func (ec *Controller) uncast(cycle int64) error {
 	for _, witness := range witnesses {
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(cycle))
-		key = append(key, witness.Bytes()...)
+		// TODO
+		key = append(key, witness.Addr.Bytes()...)
 		size := int64(0)
 		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
 			size = int64(binary.BigEndian.Uint64(cntBytes))
 		}
 		if size < cycleDuration/blockInterval/maxWitnessSize/2 {
 			// not active witnesses need uncast
-			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(size)})
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness.ID, witness.Addr, big.NewInt(size)})
 		}
 	}
 	// no witnessees need uncast
@@ -195,6 +197,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 
 	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
+		fmt.Println("$$$$$$$$$$$$$$$$$$$$$")
 		return common.Address{}, err
 	}
 	witnessSize := len(witnesses)
@@ -235,7 +238,7 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 		}
 		masternodes := sortableAddresses{}
 		for masternode, cnt := range votes {
-			masternodes = append(masternodes, &sortableAddress{masternode, cnt})
+			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
 			return errors.New("too few masternodes")
@@ -253,9 +256,11 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 			masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
 		}
 
-		sortedWitnesses := make([]common.Address, 0)
-		for _, masternode := range masternodes {
-			sortedWitnesses = append(sortedWitnesses, masternode.address)
+		var sortedWitnesses []*params.Account
+		for _, masternode_ := range masternodes {
+
+			singlesortedWitnesses := &params.Account{Addr: masternode_.address}
+			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
 
 		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
@@ -275,8 +280,8 @@ func (self *Controller) Voting() (*types.Vote, error) {
 	nextCycleVoteId := make([]byte, 8)
 	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
 
-	if self.active == nil{
-		return nil,errors.New(" the current node is not masternode")
+	if self.active == nil {
+		return nil, errors.New(" the current node is not masternode")
 	}
 
 	masternodeBytes := self.active.Account.Bytes()
@@ -340,9 +345,11 @@ func (self *Controller) PostVote(fn PostVoteFn) {
 }
 
 type sortableAddress struct {
+	id      string
 	address common.Address
 	weight  *big.Int
 }
+
 type sortableAddresses []*sortableAddress
 
 func (p sortableAddresses) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
