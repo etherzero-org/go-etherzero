@@ -208,19 +208,44 @@ func (mm *MasternodeManager) masternodeLoop() {
 			if err == nil {
 				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
 					mm.updateActiveMasternode()
+					// TODO
+					err := mm.Register(node)
+					if err != nil {
+						fmt.Println("err when register ", err)
+					}
+					//b, err := mm.devoteProtocol.MasternodeTrie().TryGet(join.Id[:])
+					//if err != nil {
+					//	fmt.Println("ssasdadsadsdasdasdsadsdsa", err)
+					//}
+					//fmt.Println("11111111111111111", string(b))
 					mm.active.Account = node.Account
 				} else {
 					mm.srvr.AddPeer(node.Node)
 				}
+
 				mm.masternodes.Show()
 			}
 
 		case quit := <-quitCh:
-			fmt.Println("quit", common.Bytes2Hex(quit.Id[:]))
-			mm.masternodes.NodeQuit(quit.Id)
-			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
-				mm.updateActiveMasternode()
+			nodeid := common.Bytes2Hex(quit.Id[:])
+			fmt.Println("quit", nodeid)
+			node := mm.masternodes.Node(nodeid)
+			if node != nil {
+				err := mm.Unregister(node)
+				if err != nil {
+					fmt.Println("err when register ", err)
+				}
+				//b, err := mm.devoteProtocol.MasternodeTrie().TryGet(quit.Id[:])
+				//if err != nil {
+				//	fmt.Println("sdsdfdfsdfdgfgfhfghf", err)
+				//}
+				//fmt.Println("22222222222222", string(b))
+				mm.masternodes.NodeQuit(quit.Id)
+				if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
+					mm.updateActiveMasternode()
+				}
 			}
+
 			mm.masternodes.Show()
 
 		case err := <-joinSub.Err():
@@ -353,4 +378,8 @@ func (self *MasternodeManager) BroadcastVote(hash common.Hash, vote *types.Vote)
 
 func (self *MasternodeManager) Register(masternode *masternode.Masternode) error {
 	return self.devoteProtocol.Register(masternode.ID, masternode.Account)
+}
+
+func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) error {
+	return self.devoteProtocol.Unregister(masternode.Account)
 }

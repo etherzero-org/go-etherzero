@@ -166,7 +166,6 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 
 	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
-		fmt.Println("$$$$$$$$$$$$$$$$$$$$$")
 		return common.Address{}, err
 	}
 	witnessSize := len(witnesses)
