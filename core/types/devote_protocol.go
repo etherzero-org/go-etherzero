@@ -7,6 +7,7 @@ import (
 
 	"encoding/binary"
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/rlp"
@@ -176,9 +177,12 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 }
 
 // register as a master node for saving to a block
-func (d *DevoteProtocol) Register(masternodeAddr common.Address) error {
-	masternode := masternodeAddr.Bytes()
-	return d.masternodeTrie.TryUpdate(masternode, masternode)
+func (d *DevoteProtocol) Register(masternode *masternode.Masternode) error {
+	masternodeAddr := masternode.Account
+	masternodeid := masternode.ID
+	masternodeBytes := masternodeAddr.Bytes()
+
+	return d.masternodeTrie.TryUpdate([]byte(masternodeid), masternodeBytes)
 }
 
 // Unregister If the masternode does not complete the packing action during the current block cycle,

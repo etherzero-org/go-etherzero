@@ -353,6 +353,6 @@ func (self *MasternodeManager) BroadcastVote(hash common.Hash, vote *types.Vote)
 
 func (self *MasternodeManager) Register(masternode *masternode.Masternode) error{
 
-	return self.devoteProtocol.Register(masternode.Account)
+	return self.devoteProtocol.Register(masternode)
 
 }

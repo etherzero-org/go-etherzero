@@ -56,20 +56,12 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
-// votes return  vote list in the Cycle.
-func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big.Int, err error) {
+// masternodes return  masternode list in the Cycle.
+func (self *Controller) masternodes(currentCycle int64) (votes map[common.Address]*big.Int, err error) {
 
 	votes = map[common.Address]*big.Int{}
 	cacheTrie := self.devoteProtocol.CacheTrie()
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
-	//voteCntTrie:=self.DevoteProtocol.VoteCntTrie()
-	//statedb := self.statedb
-
-	//iterVoteCnt := trie.NewIterator(voteCntTrie.NodeIterator(nil))
-	//existVoteCnt := iterVoteCnt.Next()
-	//if !existVoteCnt {
-	//	return votes,errors.New("no vote count in current cycle")
-	//}
 
 	iterMasternode := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 	existMasternode := iterMasternode.Next()
@@ -78,7 +70,7 @@ func (self *Controller) votes(currentCycle int64) (votes map[common.Address]*big
 	}
 
 	for existMasternode {
-
+		//nodeid := iterMasternode.Key
 		masternode := iterMasternode.Value
 		masternodeAddr := common.BytesToAddress(masternode)
 		cacheIterator := trie.NewIterator(cacheTrie.NodeIterator(masternode))
@@ -173,7 +165,7 @@ func (ec *Controller) uncast(cycle int64) error {
 	for i, witness := range needUncastWitnesses {
 		// ensure witness count greater than or equal to safeSize
 		if masternodeCount <= safeSize {
-			log.Info("No more masternode can be uncast", "prevCycleID", cycle, "masternodeCount", masternodeCount, "needKickoutCount", len(needUncastWitnesses)-i)
+			log.Info("No more masternode can be uncast", "prevCycleID", cycle, "masternodeCount", masternodeCount, "needUncastCount", len(needUncastWitnesses)-i)
 			return nil
 		}
 		if err := ec.devoteProtocol.Unregister(witness.address); err != nil {
@@ -232,13 +224,14 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 				return err
 			}
 		}
-		votes, err := self.votes(currentCycle)
+		votes, err := self.masternodes(currentCycle)
 		if err != nil {
 			return err
 		}
 		masternodes := sortableAddresses{}
 		for masternode, cnt := range votes {
 			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt})
+
 		}
 		if len(masternodes) < safeSize {
 			return errors.New("too few masternodes")
@@ -290,7 +283,7 @@ func (self *Controller) Voting() (*types.Vote, error) {
 		return nil, errors.New("vote already exists")
 	}
 
-	masternodes, err := self.votes(currentCycle)
+	masternodes, err := self.masternodes(currentCycle)
 	if err != nil {
 		return nil, err
 	}
