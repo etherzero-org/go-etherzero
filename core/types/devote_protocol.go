@@ -10,6 +10,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/etherzero/go-etherzero/params"
+	"encoding/json"
 )
 
 const (
@@ -57,42 +58,6 @@ func NewMinerRollingTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error
 func NewVoteCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 	voteCntTriedb := trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix))
 	return trie.New(root, voteCntTriedb)
-
-}
-func NewDevoteProtocol(db ethdb.Database) (*DevoteProtocol, error) {
-
-	cycleTrie, err := NewCycleTrie(common.Hash{}, db)
-	if err != nil {
-		return nil, err
-	}
-
-	masternodeTrie, err := NewMasternodeTrie(common.Hash{}, db)
-	if err != nil {
-		return nil, err
-	}
-
-	minerRollingTrie, err := NewMinerRollingTrie(common.Hash{}, db)
-	if err != nil {
-		return nil, err
-	}
-
-	voteCntTrie, err := NewVoteCntTrie(common.Hash{}, db)
-	if err != nil {
-		return nil, err
-	}
-
-	return &DevoteProtocol{
-		cycleTrie:          cycleTrie,
-		masternodeTrie:     masternodeTrie,
-		minerRollingTrie:   minerRollingTrie,
-		voteCntTrie:        voteCntTrie,
-		diskdb:             db,
-		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
-		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
-		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
-		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
-	}, nil
-
 }
 
 func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
@@ -210,10 +175,15 @@ type DevoteProtocolAtomic struct {
 	VoteCntHash      common.Hash `json:"voteCntRoot"       gencodec:"required"`
 }
 
-func (d *DevoteProtocol) MasternodeTrie() *trie.Trie   { return d.masternodeTrie }
-func (d *DevoteProtocol) CycleTrie() *trie.Trie        { return d.cycleTrie }
-func (d *DevoteProtocol) MinerRollingTrie() *trie.Trie { return d.minerRollingTrie }
-func (d *DevoteProtocol) VoteCntTrie() *trie.Trie      { return d.voteCntTrie }
+func (d *DevoteProtocol) MasternodeTrie() *trie.Trie { return d.masternodeTrie }
+func (d *DevoteProtocol) CycleTrie() *trie.Trie      { return d.cycleTrie }
+func (d *DevoteProtocol) MinerRollingTrie() *trie.Trie {
+	b, _ := json.Marshal(d)
+	fmt.Println("ppopopopopop", string(b))
+	fmt.Println("yyyyyyyyyy", d.minerRollingTrie == nil)
+	return d.minerRollingTrie
+}
+func (d *DevoteProtocol) VoteCntTrie() *trie.Trie { return d.voteCntTrie }
 
 func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
@@ -247,13 +217,14 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 		return nil, err
 	}
 	d.voteCntTriedb.Commit(voteCntRoot, false)
-
-	return &DevoteProtocolAtomic{
+	a := &DevoteProtocolAtomic{
 		CycleHash:        cycleRoot,
 		MasternodeHash:   masternodeRoot,
 		MinerRollingHash: minerRollingRoot,
 		VoteCntHash:      voteCntRoot,
-	}, nil
+	}
+	fmt.Println("xxxxxxxxxxxxxxxxxxxxxx", a.CycleHash.String(), "13232323", a.MasternodeHash.String(), "4343434", a.MinerRollingHash.String(), "454545455", a.VoteCntHash.String())
+	return a, nil
 }
 
 func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {

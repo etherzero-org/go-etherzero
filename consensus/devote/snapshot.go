@@ -183,7 +183,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	offset %= int64(witnessSize)
 	//return witnesses[offset], nil
 	fmt.Printf("current witnesses count %d\n", len(witnesses))
-	return common.HexToAddress("0xc5D725B7d19c6c7E2c50C85fB9cF5C0B78531Da7"), nil
+	return common.HexToAddress("0xc5c5b2c89e61d8e129f5f53a6697ae3b96d04204"), nil
 }
 
 func (self *Controller) election(genesis, parent *types.Header) error {
@@ -199,6 +199,8 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+	fmt.Println("wwwwwwwwwwww", self.devoteProtocol.MinerRollingTrie().Hash().String())
+	fmt.Println("vvvvvvvvvvv", string(prevCycleBytes))
 	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
 
 	for i := prevCycle; i < currentCycle; i++ {
