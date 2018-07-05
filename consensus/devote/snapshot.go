@@ -56,58 +56,35 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 }
 
 // masternodes return  masternode list in the Cycle.
-func (self *Controller) masternodes(currentCycle int64) (votes map[common.Address]*big.Int, err error) {
+func (self *Controller) masternodes(currentCycle int64) (nodes map[common.Address]*big.Int, err error) {
 
-	votes = map[common.Address]*big.Int{}
-	cacheTrie := self.devoteProtocol.CacheTrie()
+	nodes = map[common.Address]*big.Int{}
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
+	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
-	iterMasternode := trie.NewIterator(masternodeTrie.NodeIterator(nil))
-	existMasternode := iterMasternode.Next()
-	if !existMasternode {
-		return votes, errors.New("no masternodes")
-	}
-
-	for existMasternode {
-		//nodeid := iterMasternode.Key
-		masternode := iterMasternode.Value
+	for it.Next() {
+		masternode := it.Value
 		masternodeAddr := common.BytesToAddress(masternode)
-		cacheIterator := trie.NewIterator(cacheTrie.NodeIterator(masternode))
-		existCache := cacheIterator.Next()
-
-		if !existCache {
-			votes[masternodeAddr] = new(big.Int)
-			existMasternode = iterMasternode.Next()
-			continue
+		score, ok := nodes[masternodeAddr]
+		if !ok {
+			score = new(big.Int)
 		}
-		for existCache {
-			//account := cacheIterator.Value
-			score, ok := votes[masternodeAddr]
-			if !ok {
-				score = new(big.Int)
-			}
-			//cacheAddr := common.BytesToAddress(account)
-			//weight := statedb.GetBalance(cacheAddr)
-			//score.Add(score, weight)
-			key := make([]byte, 8)
-			binary.BigEndian.PutUint64(key, uint64(currentCycle))
-			key = append(key, masternodeAddr.Bytes()...)
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, uint64(currentCycle))
+		key = append(key, masternodeAddr.Bytes()...)
 
-			vote := new(types.Vote)
-			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
-				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
-					log.Error("Invalid Vote body RLP", "masternode", masternodeAddr, "err", err)
-					return nil, err
-				}
+		vote := new(types.Vote)
+		if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
+			if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
+				log.Error("Invalid Vote body RLP", "masternode", masternodeAddr, "err", err)
+				return nil, err
 			}
-			score.Add(score, big.NewInt(1))
-			votes[masternodeAddr] = score
-			existCache = cacheIterator.Next()
 		}
-		existMasternode = iterMasternode.Next()
+		score.Add(score, big.NewInt(1))
+		nodes[masternodeAddr] = score
 	}
-	//fmt.Printf("controller votes context:%x \n", votes)
-	return votes, nil
+	//fmt.Printf("controller nodes context:%x \n", nodes)
+	return nodes, nil
 }
 
 //when a node does't work in the current cycle, delete.
@@ -171,7 +148,7 @@ func (ec *Controller) uncast(cycle int64) error {
 		}
 		// if uncast success, masternode Count minus 1
 		masternodeCount--
-		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.address.String(), "mintCnt", witness.weight.String())
+		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.address.String(), "miner count", witness.weight.String())
 	}
 	return nil
 }
@@ -212,11 +189,11 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
-	iter := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
+	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
 
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
-		if !prevCycleIsGenesis && iter.Next() {
+		if !prevCycleIsGenesis && it.Next() {
 			if err := self.uncast(prevCycle); err != nil {
 				return err
 			}

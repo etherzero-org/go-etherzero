@@ -351,8 +351,6 @@ func (self *MasternodeManager) BroadcastVote(hash common.Hash, vote *types.Vote)
 	log.Trace("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
 }
 
-func (self *MasternodeManager) Register(masternode *masternode.Masternode) error{
-
-	return self.devoteProtocol.Register(masternode)
-
+func (self *MasternodeManager) Register(masternode *masternode.Masternode) error {
+	return self.devoteProtocol.Register(masternode.ID, masternode.Account)
 }

@@ -1478,10 +1478,9 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, bef
 func (d *Downloader) syncDevoteProtocolState(protocol *types.DevoteProtocolAtomic) error {
 	roots := []common.Hash{
 		protocol.MasternodeHash,
-		protocol.CacheHash,
-		protocol.VoteHash,
 		protocol.CycleHash,
 		protocol.MinerRollingHash,
+		protocol.VoteCntHash,
 	}
 	for _, root := range roots {
 		if err := d.syncState(root).Wait(); err != nil {
