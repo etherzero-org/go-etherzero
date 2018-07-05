@@ -58,7 +58,7 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 
 // masternodes return  masternode list in the Cycle.
 func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Address]*big.Int, err error) {
-	currentCycle := self.TimeStamp/cycleInterval
+	currentCycle := self.TimeStamp / cycleInterval
 
 	nodes = map[common.Address]*big.Int{}
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
@@ -69,6 +69,7 @@ func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Addre
 			address := common.BytesToAddress(it.Value)
 			nodes[address] = big.NewInt(0)
 		} else {
+			fmt.Printf("add masternodes masternodeId:%s , Account:%x \n", string(it.Key), common.BytesToAddress(it.Value))
 			masternodeId := it.Key
 			//masternodeAddr := string(masternode
 			key := make([]byte, 8)
@@ -77,6 +78,7 @@ func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Addre
 
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
+				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account())
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
@@ -90,7 +92,7 @@ func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Addre
 			}
 		}
 	}
-	//fmt.Printf("controller nodes context:%x \n", nodes)
+	fmt.Printf("controller nodes context:%x \n", nodes)
 	return nodes, nil
 }
 
@@ -208,6 +210,7 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 			//	return err
 			//}
 		}
+		fmt.Printf("election prevCycleisGenesis %b\n", prevCycleIsGenesis)
 		votes, err := self.masternodes(prevCycleIsGenesis)
 		if err != nil {
 			return err
@@ -252,6 +255,7 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 // Process save the vote result to the desk
 func (self *Controller) Voting(isGenesisCycle bool) (*types.Vote, error) {
 
+	fmt.Printf("come to voting begin\n")
 	currentCycle := self.TimeStamp / cycleInterval
 	nextCycle := currentCycle + 1
 	nextCycleVoteId := make([]byte, 8)
@@ -295,7 +299,7 @@ func (self *Controller) Voting(isGenesisCycle bool) (*types.Vote, error) {
 	}
 	self.postVote(vote)
 	voteCntInTrieBytes = append(append(voteCntInTrieBytes, nextCycleVoteId...), best.Bytes()...)
-	fmt.Printf("controller new voteCntbytes id %s\n", voteCntInTrieBytes)
+	fmt.Printf("controller new voteCntbytes id %x\n", voteCntInTrieBytes)
 	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
 	return vote, nil
 }
