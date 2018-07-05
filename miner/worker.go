@@ -215,10 +215,10 @@ func (self *worker) start() {
 	defer self.mu.Unlock()
 
 	atomic.StoreInt32(&self.mining, 1)
-	go self.mintLoop()
+	go self.mineLoop()
 }
 
-func (self *worker) mintBlock(now int64) {
+func (self *worker) mine(now int64) {
 	engine, ok := self.engine.(*devote.Devote)
 	if !ok {
 		log.Error("Only the devote engine was allowed")
@@ -233,10 +233,10 @@ func (self *worker) mintBlock(now int64) {
 			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)
-			fmt.Printf("xxxxxxxxxxxxxxxFailed to miner the block, while error:%s\n",  err)
+			fmt.Printf("Failed to miner the block, while error:%s\n",  err)
 		default:
 			log.Error("Failed to miner the block", "err", err)
-			fmt.Printf("yyyyyyyyyyyyyyyyyyyFailed to miner the block, while error:%s\n",  err)
+			fmt.Printf("Failed to miner the block, while error:%s\n",  err)
 
 		}
 		return
@@ -256,12 +256,12 @@ func (self *worker) mintBlock(now int64) {
 	self.recv <- &Result{work, result}
 }
 
-func (self *worker) mintLoop() {
+func (self *worker) mineLoop() {
 	ticker := time.NewTicker(time.Second).C
 	for {
 		select {
 		case now := <-ticker:
-			self.mintBlock(now.Unix())
+			self.mine(now.Unix())
 		case <-self.stopper:
 			close(self.quitCh)
 			self.quitCh = make(chan struct{}, 1)

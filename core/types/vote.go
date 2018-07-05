@@ -32,7 +32,7 @@ import (
 type Vote struct {
 	cycle      int64          `json:"cycle"      gencodec:"required"`
 	account    common.Address `json:"account"    gencodec:"required"`
-	masternode string `json:"masternode" gencodec:"required"`
+	masternode string         `json:"masternode" gencodec:"required"`
 	sign       []byte         `json:"sign"       gencodec:"required"`
 }
 
