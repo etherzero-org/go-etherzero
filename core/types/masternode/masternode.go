@@ -33,7 +33,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/core/types"
-
 )
 
 const (
@@ -88,7 +87,6 @@ type Masternode struct {
 
 
 func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
-
 
 	id := GetMasternodeID(nodeId)
 	n := discover.NewNode(nodeId, ip, 0, port)

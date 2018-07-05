@@ -82,7 +82,6 @@ func (self *MasternodeManager) Voting(parent *types.Header, cycle int64) {
 	weight := int64(0)
 	best := common.Address{}
 	for _, masternode := range masternodes {
-
 		hash := append(parent.Hash().Bytes(), masternode.Account.Bytes()...)
 		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
 		if temp > weight && masternode.Account != self.active.Account {
@@ -354,3 +353,4 @@ func (self *MasternodeManager) BroadcastVote(hash common.Hash, vote *types.Vote)
 func (self *MasternodeManager) Register(masternode *masternode.Masternode) error {
 	return self.devoteProtocol.Register(masternode.ID, masternode.Account)
 }
+
