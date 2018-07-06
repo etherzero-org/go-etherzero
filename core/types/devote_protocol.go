@@ -10,7 +10,6 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/etherzero/go-etherzero/params"
-	"encoding/json"
 )
 
 const (
@@ -175,15 +174,10 @@ type DevoteProtocolAtomic struct {
 	VoteCntHash      common.Hash `json:"voteCntRoot"       gencodec:"required"`
 }
 
-func (d *DevoteProtocol) MasternodeTrie() *trie.Trie { return d.masternodeTrie }
-func (d *DevoteProtocol) CycleTrie() *trie.Trie      { return d.cycleTrie }
-func (d *DevoteProtocol) MinerRollingTrie() *trie.Trie {
-	b, _ := json.Marshal(d)
-	fmt.Println("ppopopopopop", string(b))
-	fmt.Println("yyyyyyyyyy", d.minerRollingTrie == nil)
-	return d.minerRollingTrie
-}
-func (d *DevoteProtocol) VoteCntTrie() *trie.Trie { return d.voteCntTrie }
+func (d *DevoteProtocol) MasternodeTrie() *trie.Trie   { return d.masternodeTrie }
+func (d *DevoteProtocol) CycleTrie() *trie.Trie        { return d.cycleTrie }
+func (d *DevoteProtocol) MinerRollingTrie() *trie.Trie { return d.minerRollingTrie }
+func (d *DevoteProtocol) VoteCntTrie() *trie.Trie      { return d.voteCntTrie }
 
 func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
@@ -223,7 +217,6 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 		MinerRollingHash: minerRollingRoot,
 		VoteCntHash:      voteCntRoot,
 	}
-	fmt.Println("xxxxxxxxxxxxxxxxxxxxxx", a.CycleHash.String(), "13232323", a.MasternodeHash.String(), "4343434", a.MinerRollingHash.String(), "454545455", a.VoteCntHash.String())
 	return a, nil
 }
 

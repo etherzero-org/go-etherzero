@@ -265,7 +265,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	fmt.Println("ddddddddddddddddd", devoteProtocol == nil)
 	err := controller.election(genesis, parent)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
