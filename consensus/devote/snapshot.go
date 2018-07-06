@@ -56,22 +56,30 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
+// node vote static info
+type Score struct {
+	ID     []byte
+	Weight *big.Int
+}
+
 // masternodes return  masternode list in the Cycle.
-func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Address]*big.Int, err error) {
+func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Address]*Score, err error) {
 	currentCycle := self.TimeStamp / cycleInterval
 
-	nodes = map[common.Address]*big.Int{}
+	nodes = map[common.Address]*Score{}
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
 	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
 	for it.Next() {
 		if isGenesisCycle {
-			address := common.BytesToAddress(it.Value)
-			nodes[address] = big.NewInt(0)
+			singleNode := &Score{
+				ID:     it.Key,
+				Weight: big.NewInt(0),
+			}
+			nodes[common.BytesToAddress(it.Value)] = singleNode
 		} else {
 			fmt.Printf("add masternodes masternodeId:%s , Account:%x \n", string(it.Key), common.BytesToAddress(it.Value))
 			masternodeId := it.Key
-			//masternodeAddr := string(masternode
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
@@ -85,10 +93,11 @@ func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Addre
 				}
 				score, ok := nodes[vote.Account()]
 				if !ok {
-					score = new(big.Int)
+					score.Weight = new(big.Int)
 				}
-				score.Add(score, big.NewInt(1))
+				score.Weight.Add(score.Weight, big.NewInt(1))
 				nodes[vote.Account()] = score
+
 			}
 		}
 	}
@@ -184,6 +193,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	//return witnesses[offset], nil
 	fmt.Printf("current witnesses count %d\n", len(witnesses))
 	return common.HexToAddress("0xc5c5b2c89e61d8e129f5f53a6697ae3b96d04204"), nil
+	//return common.HexToAddress("0xa8aa0d4d57fcb8838e78b3fe3d319d7a4f7a2e40"), nil
 }
 
 func (self *Controller) election(genesis, parent *types.Header) error {
@@ -208,24 +218,24 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 			//	return err
 			//}
 		}
-		fmt.Printf("election prevCycleisGenesis %b\n", prevCycleIsGenesis)
+		fmt.Printf("election prevCycleisGenesis %v\n", prevCycleIsGenesis)
 		votes, err := self.masternodes(prevCycleIsGenesis)
 		if err != nil {
 			return err
 		}
 		masternodes := sortableAddresses{}
-		for masternode, cnt := range votes {
-			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt})
+		for address, score := range votes {
+			masternodes = append(masternodes, &sortableAddress{address: address, weight: score.Weight, id: score.ID})
 
 		}
 		if len(masternodes) < safeSize {
+			fmt.Errorf("mastenodes:%v,safeSize:%v\n", len(masternodes), safeSize)
 			return errors.New("too few masternodes")
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > maxWitnessSize {
 			masternodes = masternodes[:maxWitnessSize]
 		}
-
 		// disrupt the mastrnodes node to ensure the disorder of the node
 		seed := int64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
 		r := rand.New(rand.NewSource(seed))
@@ -236,8 +246,7 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 
 		var sortedWitnesses []*params.Account
 		for _, masternode_ := range masternodes {
-
-			singlesortedWitnesses := &params.Account{Addr: masternode_.address}
+			singlesortedWitnesses := &params.Account{ID: masternode_.id, Addr: masternode_.address}
 			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
 
@@ -329,7 +338,7 @@ func (self *Controller) PostVote(fn PostVoteFn) {
 }
 
 type sortableAddress struct {
-	id      string
+	id      []byte
 	address common.Address
 	weight  *big.Int
 }

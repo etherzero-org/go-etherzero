@@ -25,7 +25,6 @@ import (
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/log"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -77,18 +76,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts, block.Protocol())
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	// func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(p.bc.db, header.Protocol)
-	if err != nil {
-		log.Debug("debug info ", err)
-		return nil, nil, uint64(0), err
-	}
-	//p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts, nil)
-
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts, devoteProtocol)
-
+	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts, block.Protocol())
 	return receipts, allLogs, *usedGas, nil
 }
 
