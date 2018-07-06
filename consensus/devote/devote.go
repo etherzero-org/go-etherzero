@@ -46,7 +46,7 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	cycleInterval  = int64(60)
+	cycleInterval  = int64(3600)
 	blockInterval  = int64(10)
 	maxWitnessSize = 21
 	safeSize       = maxWitnessSize*2/3 + 1
