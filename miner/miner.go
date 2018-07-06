@@ -32,6 +32,7 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 // Backend wraps all methods required for mining.
@@ -40,6 +41,8 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
+
+	ActiveMasternode() *masternode.ActiveMasternode
 }
 
 // Miner creates blocks and searches for proof-of-work values.

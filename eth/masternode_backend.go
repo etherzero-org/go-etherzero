@@ -142,8 +142,10 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
+
 	fmt.Printf("MasternodeManager start active MasternodeId: %v\n", self.active.ID)
 
+	self.controller.Active(self.active)
 	// broadcast votes
 	self.voteCh = make(chan core.NewVoteEvent, voteChanSize)
 	self.voteSub = self.SubscribeVoteEvent(self.voteCh)
@@ -372,4 +374,3 @@ func (self *MasternodeManager) Register(masternode *masternode.Masternode) error
 func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) error {
 	return self.devoteProtocol.Unregister(masternode.Account)
 }
-

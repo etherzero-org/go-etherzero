@@ -175,15 +175,17 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
-	eth.miner.SetExtra(makeExtraData(config.ExtraData))
-
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(eth.chainDb, eth.blockchain.CurrentBlock().Header().Protocol)
 
 	if eth.masternodeManager = NewMasternodeManager(devoteProtocol); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
+
+	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
+	eth.miner.SetExtra(makeExtraData(config.ExtraData))
+
+
 
 	eth.APIBackend = &EthAPIBackend{eth, nil}
 	gpoParams := config.GPO
@@ -427,6 +429,10 @@ func (s *Ethereum) IsListening() bool                  { return true } // Always
 func (s *Ethereum) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+
+func (s *Ethereum) MastenrodeManager() *MasternodeManager{return s.masternodeManager}
+func (s *Ethereum) ActiveMasternode() *masternode.ActiveMasternode {return s.masternodeManager.active}
+
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.

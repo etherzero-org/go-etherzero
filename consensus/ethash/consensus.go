@@ -32,6 +32,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/params"
 	set "gopkg.in/fatih/set.v0"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 // Ethash proof-of-work protocol constants.
@@ -514,7 +515,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainReader, header *types.Header)
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (ethash *Ethash) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol,masternode *masternode.ActiveMasternode) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
