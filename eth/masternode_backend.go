@@ -38,6 +38,8 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 type MasternodeManager struct {
@@ -57,8 +59,6 @@ type MasternodeManager struct {
 	scope    event.SubscriptionScope
 	voteFeed event.Feed
 
-	voteCh  chan core.NewVoteEvent
-	voteSub event.Subscription
 }
 
 func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
@@ -75,30 +75,65 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 	return manager
 }
 
-func (self *MasternodeManager) Voting(parent *types.Header, cycle int64) {
+func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
+
+	fmt.Printf("masternode_backend voting begin")
+	currentCycle := current.Time.Uint64() / params.CycleInterval
+	nextCycle := currentCycle + 1
+	nextCycleVoteId := make([]byte, 8)
+	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
+	masternodeBytes := self.active.ID
+
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, uint64(nextCycle))
+	key = append(key, []byte(masternodeBytes)...)
+
+	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
+	if voteCntInTrieBytes != nil {
+		fmt.Printf("vote already exists!\n")
+		return nil, errors.New("vote already exists")
+	}
 
 	masternodes := self.masternodes.AllNodes()
 
 	weight := int64(0)
 	best := common.Address{}
 	for _, masternode := range masternodes {
-		hash := append(parent.Hash().Bytes(), masternode.Account.Bytes()...)
+		hash := make([]byte, 8)
+		binary.BigEndian.PutUint64(hash, current.Time.Uint64())
+		hash = append(hash, masternode.Account.Bytes()...)
 		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
 		if temp > weight && masternode.Account != self.active.Account {
 			weight = temp
 			best = masternode.Account
 		}
 	}
-	vote := types.NewVote(cycle, best, self.active.ID)
+	vote := types.NewVote(nextCycle, best, self.active.ID)
+	fmt.Printf("best masternode:%x\n", best)
 	vote.SignVote(self.active.PrivateKey)
 
-	self.controller.Process(vote)
+	fmt.Printf("voting signvote end vote.sign:%x\n", vote.Sign())
+	voteRLP, err := rlp.EncodeToBytes(vote)
+	if err != nil {
+		fmt.Printf("voting rlp.EncodeTobytes error err%x\n", err)
+		log.Error("Invalid Vote RLP", "vote", vote, "err", err)
+		return nil, err
+	}
+	self.PostVoteEvent(vote)
+	voteCntInTrieBytes = append(append(voteCntInTrieBytes, nextCycleVoteId...), best.Bytes()...)
+	fmt.Printf("controller new vote hash: %x\n", vote.Hash())
+	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
+
+	fmt.Printf("controller new vote save end %x\n", voteCntInTrieBytes)
+	return vote, nil
+
 }
 
 func (self *MasternodeManager) Process(vote *types.Vote) error {
 
 	h := vote.Hash()
 
+	fmt.Printf("MasternodeManager process vote begin vote hash:%x\n",vote.Hash())
 	masternode := self.masternodes.Node(vote.Masternode())
 	pubkey, err := masternode.Node.ID.Pubkey()
 	if err == nil {
@@ -106,6 +141,7 @@ func (self *MasternodeManager) Process(vote *types.Vote) error {
 	}
 
 	if !vote.Verify(h[:], vote.Sign(), pubkey) {
+		log.Error("vote valid failed")
 		return errors.New("vote valid failed")
 	}
 	self.controller.Process(vote)
@@ -146,9 +182,6 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	fmt.Printf("MasternodeManager start active MasternodeId: %v\n", self.active.ID)
 
 	self.controller.Active(self.active)
-	// broadcast votes
-	self.voteCh = make(chan core.NewVoteEvent, voteChanSize)
-	self.voteSub = self.SubscribeVoteEvent(self.voteCh)
 
 	postfn := func(vote *types.Vote) {
 		self.PostVoteEvent(vote)
@@ -157,7 +190,6 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	self.controller.PostVote(postfn)
 	go self.masternodeLoop()
 
-	go self.voteBroadcastLoop()
 }
 
 func (self *MasternodeManager) Stop() {
@@ -342,29 +374,6 @@ func (self *MasternodeManager) PostVoteEvent(vote *types.Vote) {
 // starts sending event to the given channel.
 func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
 	return self.scope.Track(self.voteFeed.Subscribe(ch))
-}
-
-func (self *MasternodeManager) voteBroadcastLoop() {
-	for {
-		select {
-		case event := <-self.voteCh:
-			self.BroadcastVote(event.Vote.Hash(), event.Vote)
-
-		case <-self.voteSub.Err():
-			return
-		}
-	}
-}
-
-// BroadcastVote will propagate a Vote to all Masternodes which are not known to
-// already have the given WinnerVote
-func (self *MasternodeManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
-	peers := self.peers.PeersWithoutVote(hash)
-	fmt.Printf("BroadcastPaymentVote peers size:%d\n", len(peers))
-	for _, peer := range peers {
-		peer.SendNewVote(vote)
-	}
-	log.Trace("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
 }
 
 func (self *MasternodeManager) Register(masternode *masternode.Masternode) error {

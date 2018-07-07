@@ -12,9 +12,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 )
 
-const (
-	CycleInterval = int64(3600)
-)
 
 var (
 	cyclePrefix        = "cycle-"
@@ -262,15 +259,15 @@ func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
 }
 
 // update counts in MinerRollingTrie for the miner of newBlock
-func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime int64, witness common.Address) {
+func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, witness common.Address) {
 
 	currentMinerRollingTrie := self.MinerRollingTrie()
-	currentCycle := parentBlockTime / CycleInterval
+	currentCycle := parentBlockTime / params.CycleInterval
 	currentCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
 
-	cnt := int64(1)
-	newCycle := currentBlockTime / CycleInterval
+	cnt := uint64(1)
+	newCycle := currentBlockTime / params.CycleInterval
 	// still during the currentCycleID
 	if currentCycle == newCycle {
 		iter := trie.NewIterator(currentMinerRollingTrie.NodeIterator(currentCycleBytes))
@@ -280,7 +277,7 @@ func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime int64, wit
 			cntBytes := currentMinerRollingTrie.Get(append(currentCycleBytes, witness.Bytes()...))
 			// not the first time to mint
 			if cntBytes != nil {
-				cnt = int64(binary.BigEndian.Uint64(cntBytes)) + 1
+				cnt = binary.BigEndian.Uint64(cntBytes) + 1
 			}
 		}
 	}

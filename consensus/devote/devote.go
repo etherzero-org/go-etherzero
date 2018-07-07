@@ -47,9 +47,9 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	cycleInterval  = int64(36000)
-	blockInterval  = int64(10)
-	maxWitnessSize = 3
+	cycleInterval  = int64(360000)
+	blockInterval  uint64 = 10
+	maxWitnessSize uint64 =3
 	safeSize       = maxWitnessSize*2/3 + 1
 	consensusSize  = maxWitnessSize*2/3 + 1
 )
@@ -61,7 +61,7 @@ var (
 
 	etherzeroBlockReward *big.Int = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
 
-	timeOfFirstBlock = int64(0)
+	timeOfFirstBlock uint64 = 0
 
 	confirmedBlockHead = []byte("confirmed-block-head")
 	uncleHash          = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
@@ -168,11 +168,11 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	}
 
 	curHeader := chain.CurrentHeader()
-	cycle := int64(-1)
+	cycle := uint64(0)
 	witnessMap := make(map[common.Address]bool)
 	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
 		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
-		curCycle := curHeader.Time.Int64() / cycleInterval
+		curCycle := curHeader.Time.Uint64() / params.CycleInterval
 		if curCycle != cycle {
 			cycle = curCycle
 			witnessMap = make(map[common.Address]bool)
@@ -180,12 +180,12 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 		// fast return
 		// if block number difference less consensusSize-witnessNum
 		// there is no need to check block is confirmed
-		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(consensusSize-len(witnessMap)) {
+		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(int(consensusSize)-len(witnessMap)) {
 			log.Debug("Devote fast return", "current", curHeader.Number.String(), "confirmed", d.confirmedBlockHeader.Number.String(), "witnessCount", len(witnessMap))
 			return nil
 		}
 		witnessMap[curHeader.Witness] = true
-		if len(witnessMap) >= consensusSize {
+		if len(witnessMap) >= int(consensusSize) {
 			d.confirmedBlockHeader = curHeader
 			if err := d.storeConfirmedBlockHeader(d.db); err != nil {
 				return err
@@ -258,12 +258,12 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	controller := &Controller{
 		statedb:        state,
 		devoteProtocol: devoteProtocol,
-		TimeStamp:      header.Time.Int64(),
+		TimeStamp:      header.Time.Uint64(),
 		active:         masternode,
 	}
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
-			timeOfFirstBlock = firstBlockHeader.Time.Int64()
+			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
@@ -274,7 +274,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 
 	//miner Rolling
-	devoteProtocol.Rolling(parent.Time.Int64(), header.Time.Int64(), header.Witness)
+	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 
 	//vote, err := controller.Voting(genesis, parent)
 	//if err != nil {
@@ -396,7 +396,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 
 	controller := &Controller{devoteProtocol: devoteProtocol}
-	witness, err := controller.lookup(header.Time.Int64())
+	witness, err := controller.lookup(header.Time.Uint64())
 	if err != nil {
 		return err
 	}
@@ -420,21 +420,21 @@ func (d *Devote) verifyBlockSigner(witness common.Address, header *types.Header)
 	return nil
 }
 
-func (d *Devote) checkDeadline(lastBlock *types.Block, now int64) error {
+func (d *Devote) checkDeadline(lastBlock *types.Block, now uint64) error {
 	prevSlot := PrevSlot(now)
 	nextSlot := NextSlot(now)
-	if lastBlock.Time().Int64() >= nextSlot {
+	if lastBlock.Time().Uint64() >= nextSlot {
 		return ErrMintFutureBlock
 	}
 	// last block was arrived, or time's up
-	if lastBlock.Time().Int64() == prevSlot || nextSlot-now <= 1 {
+	if lastBlock.Time().Uint64() == prevSlot || nextSlot-now <= 1 {
 		return nil
 	}
 	return ErrWaitForPrevBlock
 }
 
 func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
-	if err := d.checkDeadline(lastBlock, now); err != nil {
+	if err := d.checkDeadline(lastBlock, uint64(now)); err != nil {
 		return err
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, lastBlock.Header().Protocol)
@@ -443,7 +443,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	}
 
 	controller := &Controller{devoteProtocol: devoteProtocol}
-	witness, err := controller.lookup(now)
+	witness, err := controller.lookup(uint64(now))
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errUnknownBlock
 	}
 	now := time.Now().Unix()
-	delay := NextSlot(now) - now
+	delay := int64(NextSlot(uint64(now))) - now
 	if delay > 0 {
 		select {
 		case <-stop:
@@ -518,12 +518,12 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	return signer, nil
 }
 
-func PrevSlot(now int64) int64 {
-	return int64((now-1)/blockInterval) * blockInterval
+func PrevSlot(now uint64) uint64 {
+	return (now-1)/params.BlockInterval * params.BlockInterval
 }
 
-func NextSlot(now int64) int64 {
-	return int64((now+blockInterval-1)/blockInterval) * blockInterval
+func NextSlot(now uint64) uint64 {
+	return ((now+params.BlockInterval-1)/params.BlockInterval) * params.BlockInterval
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
