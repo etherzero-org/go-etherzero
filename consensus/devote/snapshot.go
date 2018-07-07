@@ -323,7 +323,7 @@ func (self *Controller) Process(vote *types.Vote) error {
 	binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
 	key = append(key, []byte(masternodeBytes)...)
 
-	fmt.Printf("process vote get key:%s\n",string(key))
+	fmt.Printf("process vote get key:%x\n",key)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		log.Error("vote already exists")
@@ -334,7 +334,7 @@ func (self *Controller) Process(vote *types.Vote) error {
 		return err
 	}
 	// update votecnt trie event
-	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
+	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
 	fmt.Printf("controller process vote end\n")
 	return nil
 }

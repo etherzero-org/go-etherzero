@@ -76,7 +76,7 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 
 func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
 
-	fmt.Printf("masternode_backend voting begin")
+	fmt.Printf("masternode_backend voting begin\n")
 	currentCycle := current.Time.Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
 	nextCycleVoteId := make([]byte, 8)
