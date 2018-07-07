@@ -28,6 +28,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 )
 
 // BlockGen creates blocks for testing.
@@ -169,52 +170,40 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		config = params.TestChainConfig
 	}
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
-	genblock := func(i int, parent *types.Block, statedb *state.StateDB) (*types.Block, types.Receipts) {
-		// TODO(karalabe): This is needed for clique, which depends on multiple blocks.
-		// It's nonetheless ugly to spin up a blockchain here. Get rid of this somehow.
-		blockchain, _ := NewBlockChain(db, nil, config, engine, vm.Config{})
-		defer blockchain.Stop()
-
-		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: statedb, config: config, engine: engine}
-		b.header = makeHeader(b.chainReader, parent, statedb, b.engine)
-
+	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
+		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: config}
 		// Mutate the state and block according to any hard-fork specs
 		if daoBlock := config.DAOForkBlock; daoBlock != nil {
 			limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-			if b.header.Number.Cmp(daoBlock) >= 0 && b.header.Number.Cmp(limit) < 0 {
+			if h.Number.Cmp(daoBlock) >= 0 && h.Number.Cmp(limit) < 0 {
 				if config.DAOForkSupport {
-					b.header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
+					h.Extra = common.CopyBytes(params.DAOForkBlockExtra)
 				}
 			}
 		}
-		if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(b.header.Number) == 0 {
+		if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
 			misc.ApplyDAOHardFork(statedb)
 		}
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
 		}
-
-		if b.engine != nil {
-			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.uncles, b.receipts, nil,nil)
-			// Write state changes to db
-			root, err := statedb.Commit(config.IsEIP158(b.header.Number))
-			if err != nil {
-				panic(fmt.Sprintf("state write error: %v", err))
-			}
-			if err := statedb.Database().TrieDB().Commit(root, false); err != nil {
-				panic(fmt.Sprintf("trie write error: %v", err))
-			}
-			return block, b.receipts
+		devote.AccumulateRewards(config, statedb, h, b.uncles)
+		root, err := statedb.Commit(config.IsEIP158(h.Number))
+		if err != nil {
+			panic(fmt.Sprintf("state write error: %v", err))
 		}
-		return nil, nil
+		h.Root = root
+		h.Protocol = parent.Header().Protocol
+		return types.NewBlock(h, b.txs, b.uncles, b.receipts), b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
 		if err != nil {
 			panic(err)
 		}
-		block, receipt := genblock(i, parent, statedb)
+		header := makeHeader(config, parent, statedb)
+		block, receipt := genblock(i, header, statedb)
 		blocks[i] = block
 		receipts[i] = receipt
 		parent = block
@@ -222,7 +211,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 	return blocks, receipts
 }
 
-func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine) *types.Header {
+func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.StateDB) *types.Header {
 	var time *big.Int
 	if parent.Time() == nil {
 		time = big.NewInt(10)
@@ -231,18 +220,15 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	}
 
 	return &types.Header{
-		Root:       state.IntermediateRoot(chain.Config().IsEIP158(parent.Number())),
-		ParentHash: parent.Hash(),
-		Coinbase:   parent.Coinbase(),
-		Difficulty: engine.CalcDifficulty(chain, time.Uint64(), &types.Header{
-			Number:     parent.Number(),
-			Time:       new(big.Int).Sub(time, big.NewInt(10)),
-			Difficulty: parent.Difficulty(),
-			UncleHash:  parent.UncleHash(),
-		}),
-		GasLimit: CalcGasLimit(parent),
-		Number:   new(big.Int).Add(parent.Number(), common.Big1),
-		Time:     time,
+		Root:        state.IntermediateRoot(config.IsEIP158(parent.Number())),
+		ParentHash:  parent.Hash(),
+		Coinbase:    parent.Coinbase(),
+		Difficulty:  parent.Difficulty(),
+		Protocol: &types.DevoteProtocolAtomic{},
+		GasLimit:    CalcGasLimit(parent),
+		GasUsed:     0,
+		Number:      new(big.Int).Add(parent.Number(), common.Big1),
+		Time:        time,
 	}
 }
 

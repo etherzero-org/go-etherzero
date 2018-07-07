@@ -40,6 +40,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/trie"
 )
 
 type MasternodeManager struct {
@@ -118,6 +119,17 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	}
 	self.PostVoteEvent(vote)
 	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
+
+	allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
+	masternodeit:=trie.NewIterator(self.devoteProtocol.MasternodeTrie().NodeIterator(nil))
+	cycleit:=trie.NewIterator(self.devoteProtocol.CycleTrie().NodeIterator(nil))
+	minerit:=trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(nil))
+
+	fmt.Printf("masternode init voteCnt trie is next%t\n", allvoteit.Next())
+	fmt.Printf("masternode init masternodeit trie is next%t\n", masternodeit.Next())
+	fmt.Printf("masternode init cycleit trie is next%t\n", cycleit.Next())
+	fmt.Printf("masternode init minerit trie is next%t\n", minerit.Next())
+
 
 	fmt.Printf("controller new vote save vote end key:%x\n", key)
 	return vote, nil
