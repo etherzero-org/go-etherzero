@@ -40,6 +40,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 const (
@@ -346,7 +347,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Status messages should never arrive after the handshake
 		return errResp(ErrExtraStatusMsg, "uncontrolled status message")
 
-	// Block header query, collect the requested headers and reply
+		// Block header query, collect the requested headers and reply
 	case msg.Code == GetBlockHeadersMsg:
 		// Decode the complex header query
 		var query getBlockHeadersData
@@ -709,6 +710,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		fmt.Printf("handler.go received newVote votehash:%x\n", vote.Hash())
 		p.MarkVote(vote.Hash())
 		pm.mm.Process(vote)
+	case msg.Code == MasternodePingMsg:
+		var ping = &masternode.PingMsg{}
+		msg.Decode(ping)
+		err := pm.mm.DealPingMsg(ping)
+		if err != nil {
+			log.Error("DealPingMsg", "error", err)
+		}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -798,7 +806,7 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 		case event := <-pm.txsCh:
 			pm.BroadcastTxs(event.Txs)
 
-		// Err() channel will be closed when unsubscribing.
+			// Err() channel will be closed when unsubscribing.
 		case <-pm.txsSub.Err():
 			return
 		}

@@ -75,12 +75,11 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			address := common.BytesToAddress(it.Value)
 			nodes[address] = big.NewInt(0)
 		} else {
-			fmt.Printf("add masternodes  , masternodeId:%s  Account:%x \n", string(it.Key), common.BytesToAddress(it.Value))
+			fmt.Printf("add masternodes  , masternodeId:%v  Account:%x \n", string(it.Key), common.BytesToAddress(it.Value))
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account())
@@ -190,6 +189,8 @@ func (ec *Controller) lookup(now uint64) (witness common.Address, err error) {
 	fmt.Printf("current witnesses count %d\n", len(witnesses))
 	account := witnesses[offset].Addr
 	return account, nil
+
+	//return common.HexToAddress("0xc5c5b2c89e61d8e129f5f53a6697ae3b96d04204"), nil
 	//return common.HexToAddress("0x37f672cc4885162b520193533546253e117acd63"), nil
 }
 
@@ -203,10 +204,9 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 	if first != nil {
 		firstCycle = first.Time.Uint64() / params.CycleInterval
 	}
-
 	isFirstCycle := currentCycle == firstCycle
 
-	fmt.Printf("election isFirstCycle %b \n", isFirstCycle)
+	fmt.Printf("election isFirstCycle %v \n", isFirstCycle)
 
 	prevCycleIsGenesis := (prevCycle == genesisCycle)
 	if prevCycleIsGenesis && prevCycle < currentCycle {
@@ -313,7 +313,7 @@ func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 	fmt.Printf("best masternode:%x\n", best)
 	vote := types.NewVote(nextCycle, best, self.active.ID)
 	vote.SignVote(self.active.PrivateKey)
-	fmt.Printf("voting signvote end vote.sign:%x\n",vote.Sign())
+	fmt.Printf("voting signvote end vote.sign:%x\n", vote.Sign())
 	voteRLP, err := rlp.EncodeToBytes(vote)
 	if err != nil {
 		fmt.Printf("voting rlp.EncodeTobytes error err%x\n",err)

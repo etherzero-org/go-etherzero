@@ -144,7 +144,7 @@ type DevoteConfig struct {
 // masternode ID and acount
 // referenced to the et
 type Account struct {
-	ID   string         `json:"id"`
+	ID   string       `json:"id"`
 	Addr common.Address `json:"addr"`
 }
 
