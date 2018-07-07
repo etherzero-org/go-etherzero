@@ -20,7 +20,7 @@ func CalculatePower(prevBlock, newBlock, prevPower, balance *big.Int) *big.Int {
 	etz2 := float64(etz1.Uint64()) / 100.0
 
 	max1 := math.Exp(-1/(etz2*50)*10000) * 10000000 + 200000
-	max2 := new(big.Int).Mul(big.NewInt(int64(max1)), big.NewInt(18e+9))
+	max2 := new(big.Int).Mul(big.NewInt(int64(max1)), big.NewInt(36e+9))
 
 	blockGap := float64(new(big.Int).Sub(newBlock, prevBlock).Uint64())
 	speed := math.Exp(-1/(etz2*2)*1000) * 200000 + 1000
