@@ -52,6 +52,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
+	"time"
 )
 
 type LesServer interface {
@@ -464,16 +465,41 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	s.protocolManager.Start(maxPeers)
 	contractBackend := NewContractBackend(s)
 	fmt.Println("MasternodeContract address ", srvr.MasternodeContract.String())
-	contract, err := contract.NewContract(srvr.MasternodeContract, contractBackend)
-	if err != nil {
-		return err
-	}
-	s.masternodeManager.Start(srvr, contract, s.protocolManager.peers)
+	go s.startMasternode(srvr, contractBackend)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
 
 	return nil
+}
+
+func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBackend) {
+	t := time.NewTimer(10 * time.Second)
+	for {
+		select {
+		case <- t.C:
+			if s.Downloader().Synchronising() {
+				t.Reset(10 * time.Second)
+				continue
+			}
+			StateDB, err := s.blockchain.State()
+			if err != nil {
+				t.Reset(10 * time.Second)
+				continue
+			}
+			if StateDB.GetCode(srvr.MasternodeContract) == nil {
+				t.Reset(10 * time.Second)
+				continue
+			}
+			contract, err := contract.NewContract(srvr.MasternodeContract, contractBackend)
+			if err != nil {
+				log.Error("startMasternode", "error", err)
+				break
+			}
+			s.masternodeManager.Start(srvr, contract, s.protocolManager.peers)
+			break
+		}
+	}
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
