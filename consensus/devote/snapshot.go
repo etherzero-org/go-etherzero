@@ -61,15 +61,6 @@ func (self *Controller) Active(activeMasternode *masternode.ActiveMasternode) {
 	fmt.Printf("controller active id :%s\n", self.active.ID)
 }
 
-func byte2String(p []byte) string {
-	for i := 0; i < len(p); i++ {
-		if p[i] == 0 {
-			return string(p[0:i])
-		}
-	}
-	return string(p)
-}
-
 // masternodes return  masternode list in the Cycle.
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address]*big.Int, err error) {
 	currentCycle := self.TimeStamp / cycleInterval
@@ -84,13 +75,11 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			address := common.BytesToAddress(it.Value)
 			nodes[address] = big.NewInt(0)
 		} else {
+			fmt.Printf("add masternodes  , masternodeId:%v  Account:%x \n", string(it.Key), common.BytesToAddress(it.Value))
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-
-			fmt.Printf("add masternodes  , masternodeId:%v  Account:%x \n", fmt.Sprintf("%x", it.Key[:8]), common.BytesToAddress(it.Value))
-
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account())
@@ -215,7 +204,6 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 	if first != nil {
 		firstCycle = first.Time.Int64() / cycleInterval
 	}
-
 	isFirstCycle := currentCycle == firstCycle
 
 	fmt.Printf("election isFirstCycle %v \n", isFirstCycle)
@@ -366,7 +354,7 @@ func (self *Controller) PostVote(fn PostVoteFn) {
 }
 
 type sortableAddress struct {
-	id      []byte
+	id      string
 	address common.Address
 	weight  *big.Int
 }
