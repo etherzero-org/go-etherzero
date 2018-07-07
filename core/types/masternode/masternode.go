@@ -27,16 +27,16 @@ import (
 	"time"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
-	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 const (
-	MasternodeInit         = iota
+	MasternodeInit = iota
 	MasternodeDisconnected
 	MasternodeExpired
 	MasternodeEnable
@@ -60,15 +60,12 @@ type PingMsg struct {
 	Sig  []byte
 }
 
-
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
 }
-
-
 
 type Masternode struct {
 	ID              string
@@ -84,7 +81,6 @@ type Masternode struct {
 
 	CollateralMinConfBlockHash common.Hash
 }
-
 
 func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
 
@@ -215,8 +211,6 @@ func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
 	n.LastPingTime = t
 }
 
-
-
 func (ns *MasternodeSet) SetState(id string, state int) bool {
 	ns.lock.RLock()
 	defer ns.lock.RUnlock()
@@ -321,7 +315,7 @@ type MasternodeContext struct {
 func GetMasternodeContext(contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
 	data, err := contract.ContractCaller.GetInfo(nil, id)
 	if err != nil {
-	return &MasternodeContext{}, err
+		return &MasternodeContext{}, err
 	}
 	// version := int(data.Misc[0])
 	var ip net.IP = data.Misc[1:17]
@@ -330,8 +324,8 @@ func GetMasternodeContext(contract *contract.Contract, id [8]byte) (*MasternodeC
 	node := newMasternode(nodeId, ip, port, data.Account, data.BlockNumber.Uint64())
 
 	return &MasternodeContext{
-	Node: node,
-	pre:  data.PreId,
-	next: data.NextId,
+		Node: node,
+		pre:  data.PreId,
+		next: data.NextId,
 	}, nil
 }

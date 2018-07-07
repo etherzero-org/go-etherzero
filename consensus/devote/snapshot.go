@@ -56,33 +56,40 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
-// node vote static info
-type Score struct {
-	ID     []byte
-	Weight *big.Int
+func (self *Controller) Active(activeMasternode *masternode.ActiveMasternode) {
+	self.active = activeMasternode
+	fmt.Printf("controller active id :%s\n", self.active.ID)
+}
+
+func byte2String(p []byte) string {
+	for i := 0; i < len(p); i++ {
+		if p[i] == 0 {
+			return string(p[0:i])
+		}
+	}
+	return string(p)
 }
 
 // masternodes return  masternode list in the Cycle.
-func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Address]*Score, err error) {
+func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address]*big.Int, err error) {
 	currentCycle := self.TimeStamp / cycleInterval
 
-	nodes = map[common.Address]*Score{}
+	nodes = map[common.Address]*big.Int{}
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
 	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
 	for it.Next() {
-		if isGenesisCycle {
-			singleNode := &Score{
-				ID:     it.Key,
-				Weight: big.NewInt(0),
-			}
-			nodes[common.BytesToAddress(it.Value)] = singleNode
+		if isFirstCycle {
+			fmt.Printf("masternodes isFirstCycle\n")
+			address := common.BytesToAddress(it.Value)
+			nodes[address] = big.NewInt(0)
 		} else {
-			fmt.Printf("add masternodes masternodeId:%s , Account:%x \n", string(it.Key), common.BytesToAddress(it.Value))
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
+
+			fmt.Printf("add masternodes  , masternodeId:%v  Account:%x \n", fmt.Sprintf("%x", it.Key[:8]), common.BytesToAddress(it.Value))
 
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
@@ -93,12 +100,12 @@ func (self *Controller) masternodes(isGenesisCycle bool) (nodes map[common.Addre
 				}
 				score, ok := nodes[vote.Account()]
 				if !ok {
-					score.Weight = new(big.Int)
+					score = new(big.Int)
 				}
-				score.Weight.Add(score.Weight, big.NewInt(1))
+				score.Add(score, big.NewInt(1))
 				nodes[vote.Account()] = score
-
 			}
+
 		}
 	}
 	//fmt.Printf("controller nodes context:%x \n", nodes)
@@ -190,17 +197,28 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 		return common.Address{}, errors.New("failed to lookup witness")
 	}
 	offset %= int64(witnessSize)
-	//return witnesses[offset], nil
 	fmt.Printf("current witnesses count %d\n", len(witnesses))
-	return common.HexToAddress("0xc5c5b2c89e61d8e129f5f53a6697ae3b96d04204"), nil
-	//return common.HexToAddress("0xa8aa0d4d57fcb8838e78b3fe3d319d7a4f7a2e40"), nil
+	account := witnesses[offset].Addr
+	return account, nil
+
+	//return common.HexToAddress("0xc5c5b2c89e61d8e129f5f53a6697ae3b96d04204"), nil
+	//return common.HexToAddress("0x37f672cc4885162b520193533546253e117acd63"), nil
 }
 
-func (self *Controller) election(genesis, parent *types.Header) error {
+func (self *Controller) election(genesis, first, parent *types.Header) error {
 
 	genesisCycle := genesis.Time.Int64() / cycleInterval
 	prevCycle := parent.Time.Int64() / cycleInterval
 	currentCycle := self.TimeStamp / cycleInterval
+	firstCycle := int64(0)
+
+	if first != nil {
+		firstCycle = first.Time.Int64() / cycleInterval
+	}
+
+	isFirstCycle := currentCycle == firstCycle
+
+	fmt.Printf("election isFirstCycle %v \n", isFirstCycle)
 
 	prevCycleIsGenesis := (prevCycle == genesisCycle)
 	if prevCycleIsGenesis && prevCycle < currentCycle {
@@ -218,24 +236,25 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 			//	return err
 			//}
 		}
-		fmt.Printf("election prevCycleisGenesis %v\n", prevCycleIsGenesis)
-		votes, err := self.masternodes(prevCycleIsGenesis)
+		votes, err := self.masternodes(isFirstCycle)
 		if err != nil {
 			return err
 		}
 		masternodes := sortableAddresses{}
-		for address, score := range votes {
-			masternodes = append(masternodes, &sortableAddress{address: address, weight: score.Weight, id: score.ID})
+		for masternode, cnt := range votes {
+			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt})
 
 		}
+		fmt.Printf("snapshot.go election masternodes %d\n", len(masternodes))
+
 		if len(masternodes) < safeSize {
-			fmt.Errorf("mastenodes:%v,safeSize:%v\n", len(masternodes), safeSize)
 			return errors.New("too few masternodes")
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > maxWitnessSize {
 			masternodes = masternodes[:maxWitnessSize]
 		}
+
 		// disrupt the mastrnodes node to ensure the disorder of the node
 		seed := int64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
 		r := rand.New(rand.NewSource(seed))
@@ -246,21 +265,22 @@ func (self *Controller) election(genesis, parent *types.Header) error {
 
 		var sortedWitnesses []*params.Account
 		for _, masternode_ := range masternodes {
-			singlesortedWitnesses := &params.Account{ID: masternode_.id, Addr: masternode_.address}
+
+			singlesortedWitnesses := &params.Account{Addr: masternode_.address}
 			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
 
 		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
 		self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
-		self.Voting(prevCycleIsGenesis)
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
+	self.Voting(isFirstCycle)
 	return nil
 }
 
 // Process save the vote result to the desk
-func (self *Controller) Voting(isGenesisCycle bool) (*types.Vote, error) {
+func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 
 	fmt.Printf("come to voting begin\n")
 	currentCycle := self.TimeStamp / cycleInterval
@@ -269,19 +289,23 @@ func (self *Controller) Voting(isGenesisCycle bool) (*types.Vote, error) {
 	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
 
 	if self.active == nil {
+
+		fmt.Printf("voting check active masternode failed \n")
 		return nil, errors.New(" the current node is not masternode")
 	}
 
+	fmt.Printf("voting check active masternode end \n")
 	masternodeBytes := self.active.ID
 	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, uint64(currentCycle))
+	binary.BigEndian.PutUint64(key, uint64(nextCycle))
 	key = append(key, []byte(masternodeBytes)...)
 
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
+		fmt.Printf("vote already exists!\n")
 		return nil, errors.New("vote already exists")
 	}
-	masternodes, err := self.masternodes(isGenesisCycle)
+	masternodes, err := self.masternodes(isFirstCycle)
 	if err != nil {
 		return nil, err
 	}
@@ -300,14 +324,18 @@ func (self *Controller) Voting(isGenesisCycle bool) (*types.Vote, error) {
 	fmt.Printf("best masternode:%x\n", best)
 	vote := types.NewVote(nextCycle, best, self.active.ID)
 	vote.SignVote(self.active.PrivateKey)
+	fmt.Printf("voting signvote end vote.sign:%x\n", vote.Sign())
 	voteRLP, err := rlp.EncodeToBytes(vote)
 	if err != nil {
+		fmt.Printf("voting rlp.EncodeTobytes error err%x\n", err)
 		return nil, err
 	}
 	self.postVote(vote)
 	voteCntInTrieBytes = append(append(voteCntInTrieBytes, nextCycleVoteId...), best.Bytes()...)
-	fmt.Printf("controller new voteCntbytes id %x\n", voteCntInTrieBytes)
+	fmt.Printf("controller new vote hash: %x\n", vote.Hash())
 	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
+
+	fmt.Printf("controller new vote save end %x\n", voteCntInTrieBytes)
 	return vote, nil
 }
 

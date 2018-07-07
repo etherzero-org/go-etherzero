@@ -31,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -46,9 +47,9 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	cycleInterval  = int64(3600)
+	cycleInterval  = int64(36000)
 	blockInterval  = int64(10)
-	maxWitnessSize = 21
+	maxWitnessSize = 3
 	safeSize       = maxWitnessSize*2/3 + 1
 	consensusSize  = maxWitnessSize*2/3 + 1
 )
@@ -248,7 +249,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol, masternode *masternode.ActiveMasternode) (*types.Block, error) {
 	// Accumulate block rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -258,6 +259,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		statedb:        state,
 		devoteProtocol: devoteProtocol,
 		TimeStamp:      header.Time.Int64(),
+		active:         masternode,
 	}
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
@@ -265,11 +267,11 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	err := controller.election(genesis, parent)
+	first := chain.GetHeaderByNumber(1)
+	err := controller.election(genesis, first, parent)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
-
 
 	//miner Rolling
 	devoteProtocol.Rolling(parent.Time.Int64(), header.Time.Int64(), header.Witness)
@@ -389,10 +391,9 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, parent.Protocol)
 	if err != nil {
-		fmt.Printf("devote verifySeal failed cycle hash:%x", devoteProtocol.CycleTrie())
+		log.Debug("devote verifySeal failed ", "cycle Hash", devoteProtocol.CycleTrie())
 		return err
 	}
-	fmt.Printf("devote verifySeal successful cycle hash:%x", devoteProtocol.CycleTrie())
 
 	controller := &Controller{devoteProtocol: devoteProtocol}
 	witness, err := controller.lookup(header.Time.Int64())
