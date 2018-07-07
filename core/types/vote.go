@@ -21,29 +21,26 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"io"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/rlp"
 )
 
 // Vote represents an entire vote in the Etherzero blockchain.
 type Vote struct {
-	cycle      int64          `json:"cycle"      gencodec:"required"`
+	cycle      uint64         `json:"cycle"      gencodec:"required"`
 	account    common.Address `json:"account"    gencodec:"required"`
 	masternode string         `json:"masternode" gencodec:"required"`
 	sign       []byte         `json:"sign"       gencodec:"required"`
 }
 
 // NewVote return a no has sign vote
-func NewVote(cycle int64, account common.Address, masternode string) *Vote {
-	vote := &Vote{
+func NewVote(cycle uint64, account common.Address, masternode string) *Vote {
+	return &Vote{
 		cycle:      cycle,
 		account:    account,
 		masternode: masternode,
 	}
-	return vote
 }
 
 // Hash returns the vote hash , which is simply the keccak256 hash of its
@@ -52,26 +49,6 @@ func (v *Vote) Hash() (h common.Hash) {
 	return rlpHash(v)
 }
 
-// DecodeRLP decodes the Vote
-func (v *Vote) DecodeRLP(s *rlp.Stream) error {
-	var vt Vote
-	if err := s.Decode(&vt); err != nil {
-		return err
-	}
-	v.account, v.cycle, v.masternode, v.sign = vt.account, vt.cycle, vt.masternode, vt.sign
-
-	return nil
-}
-
-// EncodeRLP serializes v into the Ethereum RLP vote format.
-func (v *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, Vote{
-		account:    v.account,
-		cycle:      v.cycle,
-		masternode: v.masternode,
-		sign:       v.sign,
-	})
-}
 
 func (v *Vote) Account() common.Address {
 	return v.account
@@ -81,7 +58,7 @@ func (v *Vote) Masternode() string {
 	return v.masternode
 }
 
-func (v *Vote) Cycle() int64 {
+func (v *Vote) Cycle() uint64 {
 	return v.cycle
 }
 

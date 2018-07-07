@@ -42,7 +42,7 @@ type Controller struct {
 	devoteProtocol *types.DevoteProtocol
 	statedb        *state.StateDB
 	active         *masternode.ActiveMasternode
-	TimeStamp      int64
+	TimeStamp      uint64
 
 	// update loop
 	postVote PostVoteFn
@@ -63,7 +63,7 @@ func (self *Controller) Active(activeMasternode *masternode.ActiveMasternode) {
 
 // masternodes return  masternode list in the Cycle.
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address]*big.Int, err error) {
-	currentCycle := self.TimeStamp / cycleInterval
+	currentCycle := self.TimeStamp / params.CycleInterval
 
 	nodes = map[common.Address]*big.Int{}
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
@@ -112,12 +112,12 @@ func (ec *Controller) uncast(cycle int64) error {
 		return errors.New("no witness could be uncast")
 	}
 
-	cycleDuration := cycleInterval
+	cycleDuration := params.CycleInterval
 	// First cycle duration may lt cycle interval,
 	// while the first block time wouldn't always align with cycle interval,
 	// so caculate the first cycle duartion with first block time instead of cycle interval,
 	// prevent the validators were uncast incorrectly.
-	if ec.TimeStamp-timeOfFirstBlock < cycleInterval {
+	if ec.TimeStamp-timeOfFirstBlock < params.CycleInterval {
 		cycleDuration = ec.TimeStamp - timeOfFirstBlock
 	}
 
@@ -127,13 +127,13 @@ func (ec *Controller) uncast(cycle int64) error {
 		binary.BigEndian.PutUint64(key, uint64(cycle))
 		// TODO
 		key = append(key, witness.Addr.Bytes()...)
-		size := int64(0)
+		size := uint64(0)
 		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
-			size = int64(binary.BigEndian.Uint64(cntBytes))
+			size = binary.BigEndian.Uint64(cntBytes)
 		}
 		if size < cycleDuration/blockInterval/maxWitnessSize/2 {
 			// not active witnesses need uncast
-			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness.ID, witness.Addr, big.NewInt(size)})
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness.ID, witness.Addr, big.NewInt(int64(size))})
 		}
 	}
 	// no witnessees need uncast
@@ -147,14 +147,14 @@ func (ec *Controller) uncast(cycle int64) error {
 	iter := trie.NewIterator(ec.devoteProtocol.MasternodeTrie().NodeIterator(nil))
 	for iter.Next() {
 		masternodeCount++
-		if masternodeCount >= needUncastWitnessCnt+safeSize {
+		if masternodeCount >= needUncastWitnessCnt+int(safeSize) {
 			break
 		}
 	}
 
 	for i, witness := range needUncastWitnesses {
 		// ensure witness count greater than or equal to safeSize
-		if masternodeCount <= safeSize {
+		if masternodeCount <= int(safeSize) {
 			log.Info("No more masternode can be uncast", "prevCycleID", cycle, "masternodeCount", masternodeCount, "needUncastCount", len(needUncastWitnesses)-i)
 			return nil
 		}
@@ -168,14 +168,14 @@ func (ec *Controller) uncast(cycle int64) error {
 	return nil
 }
 
-func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
+func (ec *Controller) lookup(now uint64) (witness common.Address, err error) {
 
 	witness = common.Address{}
-	offset := now % cycleInterval
-	if offset%blockInterval != 0 {
+	offset := now % params.CycleInterval
+	if offset%params.BlockInterval != 0 {
 		return common.Address{}, ErrInvalidMinerBlockTime
 	}
-	offset /= blockInterval
+	offset /= params.BlockInterval
 
 	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
@@ -185,7 +185,7 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 	if witnessSize == 0 {
 		return common.Address{}, errors.New("failed to lookup witness")
 	}
-	offset %= int64(witnessSize)
+	offset %= uint64(witnessSize)
 	fmt.Printf("current witnesses count %d\n", len(witnesses))
 	account := witnesses[offset].Addr
 	return account, nil
@@ -196,13 +196,13 @@ func (ec *Controller) lookup(now int64) (witness common.Address, err error) {
 
 func (self *Controller) election(genesis, first, parent *types.Header) error {
 
-	genesisCycle := genesis.Time.Int64() / cycleInterval
-	prevCycle := parent.Time.Int64() / cycleInterval
-	currentCycle := self.TimeStamp / cycleInterval
-	firstCycle := int64(0)
+	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
+	prevCycle := parent.Time.Uint64() / params.CycleInterval
+	currentCycle := self.TimeStamp / params.CycleInterval
+	firstCycle := uint64(0)
 
 	if first != nil {
-		firstCycle = first.Time.Int64() / cycleInterval
+		firstCycle = first.Time.Uint64() / params.CycleInterval
 	}
 	isFirstCycle := currentCycle == firstCycle
 
@@ -224,7 +224,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			//	return err
 			//}
 		}
-		votes, err := self.masternodes(isFirstCycle)
+		votes, err := self.masternodes(prevCycleIsGenesis)
 		if err != nil {
 			return err
 		}
@@ -235,17 +235,18 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		fmt.Printf("snapshot.go election masternodes %d\n", len(masternodes))
 
-		if len(masternodes) < safeSize {
+		if len(masternodes) < int(safeSize) {
 			return errors.New("too few masternodes")
 		}
 		sort.Sort(masternodes)
-		if len(masternodes) > maxWitnessSize {
+		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
 
 		// disrupt the mastrnodes node to ensure the disorder of the node
-		seed := int64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
-		r := rand.New(rand.NewSource(seed))
+		seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
+
+		r := rand.New(rand.NewSource(int64(seed)))
 		for i := len(masternodes) - 1; i > 0; i-- {
 			j := int(r.Int31n(int32(i + 1)))
 			masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
@@ -263,7 +264,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
-	self.Voting(isFirstCycle)
+	//self.Voting(isFirstCycle)
 	return nil
 }
 
@@ -271,7 +272,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 
 	fmt.Printf("come to voting begin\n")
-	currentCycle := self.TimeStamp / cycleInterval
+	currentCycle := self.TimeStamp / params.CycleInterval
 	nextCycle := currentCycle + 1
 	nextCycleVoteId := make([]byte, 8)
 	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
@@ -315,7 +316,8 @@ func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 	fmt.Printf("voting signvote end vote.sign:%x\n", vote.Sign())
 	voteRLP, err := rlp.EncodeToBytes(vote)
 	if err != nil {
-		fmt.Printf("voting rlp.EncodeTobytes error err%x\n", err)
+		fmt.Printf("voting rlp.EncodeTobytes error err%x\n",err)
+		log.Error("Invalid Vote RLP", "vote", vote, "err", err)
 		return nil, err
 	}
 	self.postVote(vote)
@@ -329,13 +331,14 @@ func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 
 // Voting save the vote result to the desk
 func (self *Controller) Process(vote *types.Vote) error {
-
+	fmt.Printf("Controller process vote begin \n")
 	currentVoteId := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentVoteId, uint64(vote.Cycle()))
 
 	masternodeBytes := []byte(vote.Masternode())
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(append(currentVoteId, masternodeBytes...))
 	if voteCntInTrieBytes != nil {
+		log.Error("vote already exists")
 		return errors.New("vote already exists")
 	}
 	voteRLP, err := rlp.EncodeToBytes(vote)
@@ -345,7 +348,7 @@ func (self *Controller) Process(vote *types.Vote) error {
 	// Broadcast the vote and update votecnt trie event
 	self.postVote(vote)
 	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
-
+	fmt.Printf("controller process vote end\n")
 	return nil
 }
 

@@ -25,10 +25,10 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/rlp"
 	"gopkg.in/fatih/set.v0"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 var (
@@ -40,6 +40,8 @@ var (
 const (
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+
+	maxKnowVotes = 1024  // Maximum vote hashes to keep in the known list (prevent DOS)
 
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
 	// dropping broadcasts. This is a sensitive number as a transaction list might
@@ -79,9 +81,9 @@ type peer struct {
 	*p2p.Peer
 	rw p2p.MsgReadWriter
 
-	isMasternode     bool
-	version  int         // Protocol version negotiated
-	forkDrop *time.Timer // Timed connection dropper if forks aren't validated in time
+	isMasternode bool
+	version      int         // Protocol version negotiated
+	forkDrop     *time.Timer // Timed connection dropper if forks aren't validated in time
 
 	head common.Hash
 	td   *big.Int
@@ -94,8 +96,7 @@ type peer struct {
 	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
 	term        chan struct{}             // Termination channel to stop the broadcaster
 
-
-	knownVotes       *set.Set // Set of vote hashes known to be known by this peer
+	knownVotes *set.Set // Set of vote hashes known to be known by this peer
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -106,6 +107,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		id:          fmt.Sprintf("%x", p.ID().Bytes()[:8]),
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
+		knownVotes:  set.New(),
 		queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
 		queuedProps: make(chan *propEvent, maxQueuedProps),
 		queuedAnns:  make(chan *types.Block, maxQueuedAnns),
@@ -198,6 +200,16 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
+// MarkVote marks a vote as known for the peer, ensuring that it
+// will never be propagated to this particular peer.
+func (p *peer) MarkVote(hash common.Hash) {
+	// If we reached the memory allowance, drop a previously known vote hash
+	for p.knownVotes.Size() >= maxKnowVotes {
+		p.knownVotes.Pop()
+	}
+	p.knownVotes.Add(hash)
+}
+
 func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
 	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
 }
@@ -211,12 +223,10 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TxMsg, txs)
 }
 
-
 // SendNewVote propagates an vote to a remote masternode.
 func (p *peer) SendNewVote(vote *types.Vote) error {
 	return p2p.Send(p.rw, NewVoteMsg, vote)
 }
-
 
 // AsyncSendTransactions queues list of transactions propagation to a remote
 // peer. If the peer's broadcast queue is full, the event is silently dropped.
@@ -507,7 +517,6 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	}
 	return list
 }
-
 
 // PeersWithoutVote retrieves a list of Masternodes that do not have a given Winner Vote
 // in their set of knows hashes.

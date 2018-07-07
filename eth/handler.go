@@ -85,14 +85,17 @@ type ProtocolManager struct {
 	mm           *MasternodeManager
 	SubProtocols []p2p.Protocol
 
-	eventMux      *event.TypeMux
-	txsCh         chan core.NewTxsEvent
-	txsSub        event.Subscription
+	eventMux *event.TypeMux
+	txsCh    chan core.NewTxsEvent
+	txsSub   event.Subscription
+	voteSub  event.Subscription
+
 	minedBlockSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
 	txsyncCh    chan *txsync
+	voteCh      chan core.NewVoteEvent
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
 
@@ -217,6 +220,12 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
+	// broadcast votes
+	pm.voteCh = make(chan core.NewVoteEvent, voteChanSize)
+	pm.voteSub = pm.mm.SubscribeVoteEvent(pm.voteCh)
+
+	go pm.voteBroadcastLoop()
+
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
@@ -227,6 +236,7 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	pm.voteSub.Unsubscribe()       //quits voteBroadcastLoop
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -649,6 +659,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
 
+		pm.mm.Voting(request.Block.Header())
+
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
 		var (
@@ -688,10 +700,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == NewVoteMsg:
+		fmt.Printf("handler.go received newVote begin")
+
 		var vote *types.Vote
 		if err := msg.Decode(&vote); err != nil {
+			log.Info("msg decode err","errDecode",ErrDecode, "msg %v: %v", msg, err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		fmt.Printf("handler.go received newVote votehash:%x\n", vote.Hash())
+		p.MarkVote(vote.Hash())
 		pm.mm.Process(vote)
 	case msg.Code == MasternodePingMsg:
 		var ping = &masternode.PingMsg{}
@@ -758,6 +775,19 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	}
 }
 
+// BroadcastVote will propagate a Vote to all Masternodes which are not known to
+// already have the given WinnerVote
+func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
+	peers := self.peers.PeersWithoutVote(hash)
+	fmt.Printf("BroadcastVote peers size:%d\n", len(peers))
+	for _, peer := range peers {
+		err:=peer.SendNewVote(vote)
+		fmt.Printf("handler.go BroadcastVote %s\n",err)
+	}
+	log.Info("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
+	log.Trace("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
+}
+
 // Mined broadcast loop
 func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
@@ -778,6 +808,18 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 
 			// Err() channel will be closed when unsubscribing.
 		case <-pm.txsSub.Err():
+			return
+		}
+	}
+}
+
+func (self *ProtocolManager) voteBroadcastLoop() {
+	for {
+		select {
+		case event := <-self.voteCh:
+			self.BroadcastVote(event.Vote.Hash(), event.Vote)
+
+		case <-self.voteSub.Err():
 			return
 		}
 	}
