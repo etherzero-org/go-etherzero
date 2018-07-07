@@ -58,7 +58,6 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 
 func (self *Controller) Active(activeMasternode *masternode.ActiveMasternode) {
 	self.active = activeMasternode
-	fmt.Printf("controller active id :%s\n", self.active.ID)
 }
 
 // masternodes return  masternode list in the Cycle.
@@ -82,17 +81,17 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			key = append(key, masternodeId...)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
-				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account())
+				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account)
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
-				score, ok := nodes[vote.Account()]
+				score, ok := nodes[vote.Account]
 				if !ok {
 					score = new(big.Int)
 				}
 				score.Add(score, big.NewInt(1))
-				nodes[vote.Account()] = score
+				nodes[vote.Account] = score
 			}
 
 		}
@@ -233,8 +232,6 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt})
 
 		}
-		fmt.Printf("snapshot.go election masternodes %d\n", len(masternodes))
-
 		if len(masternodes) < int(safeSize) {
 			return errors.New("too few masternodes")
 		}
@@ -271,19 +268,14 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 // Process save the vote result to the desk
 func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 
-	fmt.Printf("come to voting begin\n")
 	currentCycle := self.TimeStamp / params.CycleInterval
 	nextCycle := currentCycle + 1
 	nextCycleVoteId := make([]byte, 8)
 	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
 
 	if self.active == nil {
-
-		fmt.Printf("voting check active masternode failed \n")
 		return nil, errors.New(" the current node is not masternode")
 	}
-
-	fmt.Printf("voting check active masternode end \n")
 	masternodeBytes := self.active.ID
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
@@ -313,30 +305,26 @@ func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
 	fmt.Printf("best masternode:%x\n", best)
 	vote := types.NewVote(nextCycle, best, self.active.ID)
 	vote.SignVote(self.active.PrivateKey)
-	fmt.Printf("voting signvote end vote.sign:%x\n", vote.Sign())
 	voteRLP, err := rlp.EncodeToBytes(vote)
 	if err != nil {
-		fmt.Printf("voting rlp.EncodeTobytes error err%x\n",err)
 		log.Error("Invalid Vote RLP", "vote", vote, "err", err)
 		return nil, err
 	}
-	self.postVote(vote)
-	voteCntInTrieBytes = append(append(voteCntInTrieBytes, nextCycleVoteId...), best.Bytes()...)
-	fmt.Printf("controller new vote hash: %x\n", vote.Hash())
-	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
-
-	fmt.Printf("controller new vote save end %x\n", voteCntInTrieBytes)
+	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
+	fmt.Printf("controller new vote save end %x\n", key)
 	return vote, nil
 }
 
 // Voting save the vote result to the desk
 func (self *Controller) Process(vote *types.Vote) error {
-	fmt.Printf("Controller process vote begin \n")
-	currentVoteId := make([]byte, 8)
-	binary.BigEndian.PutUint64(currentVoteId, uint64(vote.Cycle()))
 
-	masternodeBytes := []byte(vote.Masternode())
-	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(append(currentVoteId, masternodeBytes...))
+	masternodeBytes := []byte(vote.Masternode)
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
+	key = append(key, []byte(masternodeBytes)...)
+
+	fmt.Printf("process vote get key:%s\n",string(key))
+	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		log.Error("vote already exists")
 		return errors.New("vote already exists")
@@ -345,8 +333,7 @@ func (self *Controller) Process(vote *types.Vote) error {
 	if err != nil {
 		return err
 	}
-	// Broadcast the vote and update votecnt trie event
-	self.postVote(vote)
+	// update votecnt trie event
 	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
 	fmt.Printf("controller process vote end\n")
 	return nil

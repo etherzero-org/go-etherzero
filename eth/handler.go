@@ -700,14 +700,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == NewVoteMsg:
-		fmt.Printf("handler.go received newVote begin")
 
 		var vote *types.Vote
 		if err := msg.Decode(&vote); err != nil {
-			log.Info("msg decode err","errDecode",ErrDecode, "msg %v: %v", msg, err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		fmt.Printf("handler.go received newVote votehash:%x\n", vote.Hash())
 		p.MarkVote(vote.Hash())
 		pm.mm.Process(vote)
 	case msg.Code == MasternodePingMsg:
@@ -779,12 +776,9 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 // already have the given WinnerVote
 func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
 	peers := self.peers.PeersWithoutVote(hash)
-	fmt.Printf("BroadcastVote peers size:%d\n", len(peers))
 	for _, peer := range peers {
-		err:=peer.SendNewVote(vote)
-		fmt.Printf("handler.go BroadcastVote %s\n",err)
+		peer.SendNewVote(vote)
 	}
-	log.Info("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
 	log.Trace("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
 }
 

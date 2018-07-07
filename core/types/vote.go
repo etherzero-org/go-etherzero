@@ -28,18 +28,18 @@ import (
 
 // Vote represents an entire vote in the Etherzero blockchain.
 type Vote struct {
-	cycle      uint64         `json:"cycle"      gencodec:"required"`
-	account    common.Address `json:"account"    gencodec:"required"`
-	masternode string         `json:"masternode" gencodec:"required"`
-	sign       []byte         `json:"sign"       gencodec:"required"`
+	Cycle      uint64         `json:"cycle"      gencodec:"required"`
+	Account    common.Address `json:"account"    gencodec:"required"`
+	Masternode string         `json:"masternode" gencodec:"required"`
+	Sign       []byte         `json:"sign"       gencodec:"required"`
 }
 
 // NewVote return a no has sign vote
 func NewVote(cycle uint64, account common.Address, masternode string) *Vote {
 	return &Vote{
-		cycle:      cycle,
-		account:    account,
-		masternode: masternode,
+		Cycle:      cycle,
+		Account:    account,
+		Masternode: masternode,
 	}
 }
 
@@ -49,26 +49,14 @@ func (v *Vote) Hash() (h common.Hash) {
 	return rlpHash(v)
 }
 
-
-func (v *Vote) Account() common.Address {
-	return v.account
+func (v *Vote) NosigHash()(h common.Hash){
+	vote:=&Vote{
+		Cycle:      v.Cycle,
+		Account:    v.Account,
+		Masternode: v.Masternode,
+	}
+	return rlpHash(vote)
 }
-
-func (v *Vote) Masternode() string {
-	return v.masternode
-}
-
-func (v *Vote) Cycle() uint64 {
-	return v.cycle
-}
-
-func (v *Vote) Sign() []byte {
-	return v.sign
-}
-func (v *Vote) SetSign(sign []byte) {
-	v.sign = sign
-}
-
 // SignVote signs the transaction using the given signer and private key
 func (vote *Vote) SignVote(prv *ecdsa.PrivateKey) (*Vote, error) {
 	h := vote.Hash() //not sign
@@ -76,7 +64,7 @@ func (vote *Vote) SignVote(prv *ecdsa.PrivateKey) (*Vote, error) {
 	if err != nil {
 		return nil, err
 	}
-	vote.sign = sig
+	vote.Sign = sig
 
 	return vote, nil
 }
