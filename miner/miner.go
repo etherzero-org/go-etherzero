@@ -43,6 +43,8 @@ type Backend interface {
 	ChainDb() ethdb.Database
 
 	ActiveMasternode() *masternode.ActiveMasternode
+
+	DevoteProtocol() *types.DevoteProtocol
 }
 
 // Miner creates blocks and searches for proof-of-work values.

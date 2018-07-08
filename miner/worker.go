@@ -26,6 +26,7 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
@@ -36,7 +37,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"gopkg.in/fatih/set.v0"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 )
 
 const (
@@ -83,7 +83,6 @@ type Work struct {
 	createdAt time.Time
 
 	devoteProtocol *types.DevoteProtocol
-
 }
 
 type Result struct {
@@ -137,7 +136,6 @@ type worker struct {
 
 	quitCh  chan struct{}
 	stopper chan struct{}
-
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
@@ -158,7 +156,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
 		quitCh:         make(chan struct{}, 1),
 		stopper:        make(chan struct{}, 1),
-
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -233,10 +230,10 @@ func (self *worker) mine(now int64) {
 			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)
-			fmt.Printf("Failed to miner the block, while error:%s\n",  err)
+			fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		default:
 			log.Error("Failed to miner the block", "err", err)
-			fmt.Printf("Failed to miner the block, while error:%s\n",  err)
+			fmt.Printf("Failed to miner the block, while error:%s\n", err)
 
 		}
 		return
@@ -246,7 +243,6 @@ func (self *worker) mine(now int64) {
 		log.Error("Failed to create the new work", "err", err)
 		return
 	}
-
 
 	result, err := self.engine.Seal(self.chain, work.Block, self.quitCh)
 	if err != nil {
@@ -408,7 +404,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(self.chainDb, parent.Header().Protocol)
+
 	if err != nil {
 		return err
 	}
@@ -422,8 +418,9 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		header:    header,
 		createdAt: time.Now(),
 
-		devoteProtocol:devoteProtocol,
+		devoteProtocol: self.eth.DevoteProtocol(),
 	}
+
 
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -440,7 +437,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() (*Work, error){
+func (self *worker) commitNewWork() (*Work, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -530,7 +527,7 @@ func (self *worker) commitNewWork() (*Work, error){
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol,self.eth.ActiveMasternode()); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol, self.eth.ActiveMasternode()); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 

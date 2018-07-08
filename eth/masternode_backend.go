@@ -40,6 +40,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/trie"
 )
 
 type MasternodeManager struct {
@@ -58,7 +59,6 @@ type MasternodeManager struct {
 
 	scope    event.SubscriptionScope
 	voteFeed event.Feed
-
 }
 
 func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
@@ -77,7 +77,7 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 
 func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
 
-	fmt.Printf("masternode_backend voting begin")
+	fmt.Printf("masternode_backend voting begin\n")
 	currentCycle := current.Time.Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
 	nextCycleVoteId := make([]byte, 8)
@@ -88,6 +88,7 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
 	key = append(key, []byte(masternodeBytes)...)
 
+	fmt.Printf("masternode Voting key:%x\n",key)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		fmt.Printf("vote already exists!\n")
@@ -109,45 +110,51 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 		}
 	}
 	vote := types.NewVote(nextCycle, best, self.active.ID)
-	fmt.Printf("best masternode:%x\n", best)
-	vote.SignVote(self.active.PrivateKey)
 
-	fmt.Printf("voting signvote end vote.sign:%x\n", vote.Sign())
+	vote.SignVote(self.active.PrivateKey)
 	voteRLP, err := rlp.EncodeToBytes(vote)
 	if err != nil {
-		fmt.Printf("voting rlp.EncodeTobytes error err%x\n", err)
 		log.Error("Invalid Vote RLP", "vote", vote, "err", err)
 		return nil, err
 	}
 	self.PostVoteEvent(vote)
-	voteCntInTrieBytes = append(append(voteCntInTrieBytes, nextCycleVoteId...), best.Bytes()...)
-	fmt.Printf("controller new vote hash: %x\n", vote.Hash())
-	self.devoteProtocol.VoteCntTrie().TryUpdate(voteCntInTrieBytes, voteRLP)
+	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
 
-	fmt.Printf("controller new vote save end %x\n", voteCntInTrieBytes)
+	allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
+	masternodeit:=trie.NewIterator(self.devoteProtocol.MasternodeTrie().NodeIterator(nil))
+	cycleit:=trie.NewIterator(self.devoteProtocol.CycleTrie().NodeIterator(nil))
+	minerit:=trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(nil))
+
+	fmt.Printf("masternode init voteCnt trie is next%t\n", allvoteit.Next())
+	fmt.Printf("masternode init masternodeit trie is next%t\n", masternodeit.Next())
+	fmt.Printf("masternode init cycleit trie is next%t\n", cycleit.Next())
+	fmt.Printf("masternode init minerit trie is next%t\n", minerit.Next())
+
+
+	fmt.Printf("controller new vote save vote end key:%x\n", key)
 	return vote, nil
 
 }
 
 func (self *MasternodeManager) Process(vote *types.Vote) error {
 
-	h := vote.Hash()
-
-	fmt.Printf("MasternodeManager process vote begin vote hash:%x\n",vote.Hash())
-	masternode := self.masternodes.Node(vote.Masternode())
+	h := vote.NosigHash()
+	masternode := self.masternodes.Node(vote.Masternode)
+	if masternode == nil {
+		log.Error("masternode not found", "masternodeId", vote.Masternode)
+		return errors.New("masternode not found masternodeId" + vote.Masternode)
+	}
 	pubkey, err := masternode.Node.ID.Pubkey()
-	if err == nil {
+	if err != nil {
+		log.Error("masternode pubkey not found ", "err", err)
 		return err
 	}
 
-	if !vote.Verify(h[:], vote.Sign(), pubkey) {
-		log.Error("vote valid failed")
+	if !vote.Verify(h[:], vote.Sign, pubkey) {
 		return errors.New("vote valid failed")
 	}
 	self.controller.Process(vote)
-
 	return nil
-
 }
 
 func (self *MasternodeManager) Clear() {
@@ -178,11 +185,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
-
-	fmt.Printf("MasternodeManager start active MasternodeId: %v\n", self.active.ID)
-
 	self.controller.Active(self.active)
-
 	postfn := func(vote *types.Vote) {
 		self.PostVoteEvent(vote)
 	}
@@ -199,7 +202,6 @@ func (self *MasternodeManager) Stop() {
 func (mm *MasternodeManager) masternodeLoop() {
 	mm.updateActiveMasternode()
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
-		fmt.Println("masternodeCheck true")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
 		mm.checkPeers()
 	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
