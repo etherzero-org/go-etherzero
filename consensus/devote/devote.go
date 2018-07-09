@@ -276,7 +276,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 
 	allvoteit := trie.NewIterator(devoteProtocol.VoteCntTrie().NodeIterator(nil))
-	fmt.Printf("devote init voteCnt trie is next%t\n", allvoteit.Next())
+	fmt.Printf("devote init voteCnt trie is next %t. \n", allvoteit.Next())
 
 	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil

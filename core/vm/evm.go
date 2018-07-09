@@ -34,7 +34,7 @@ type (
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
 	TransferFunc    func(StateDB, common.Address, common.Address, *big.Int, *big.Int)
 	// GetHashFunc returns the nth block hash in the blockchain
-	// and is used by the BLOCKHASH EVM op code.
+	// and is used by the BLOCKHFASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
 )
 
@@ -221,7 +221,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		to       = AccountRef(caller.Address())
 	)
 	// initialise a new contract and set the code that is to be used by the
-	// E The contract is a scoped evmironment for this execution context
+	// EVM, The contract is a scoped evmironment for this execution context
 	// only.
 	contract := NewContract(caller, to, value, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
