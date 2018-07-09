@@ -7,11 +7,10 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
-	"github.com/etherzero/go-etherzero/params"
 )
-
 
 var (
 	cyclePrefix        = "cycle-"
@@ -35,7 +34,6 @@ type DevoteProtocol struct {
 }
 
 func NewCycleTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-
 	cycleTriedb := trie.NewDatabase(ethdb.NewTable(db, cyclePrefix))
 	return trie.New(root, cycleTriedb)
 }
@@ -57,22 +55,18 @@ func NewVoteCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 }
 
 func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
-
 	cycleTrie, err := NewCycleTrie(ctxAtomic.CycleHash, db)
 	if err != nil {
 		return nil, err
 	}
-
 	masternodeTrie, err := NewMasternodeTrie(ctxAtomic.MasternodeHash, db)
 	if err != nil {
 		return nil, err
 	}
-
 	minerRollingTrie, err := NewMinerRollingTrie(ctxAtomic.MinerRollingHash, db)
 	if err != nil {
 		return nil, err
 	}
-
 	voteCntTrie, err := NewVoteCntTrie(ctxAtomic.VoteCntHash, db)
 	if err != nil {
 		return nil, err
@@ -114,6 +108,7 @@ func (d *DevoteProtocol) Copy() *DevoteProtocol {
 	masternodeTrie := *d.masternodeTrie
 	minerRollingTrie := *d.minerRollingTrie
 	voteCntTrie := *d.voteCntTrie
+
 	return &DevoteProtocol{
 		cycleTrie:        &cycleTrie,
 		masternodeTrie:   &masternodeTrie,
@@ -208,6 +203,7 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 		return nil, err
 	}
 	d.voteCntTriedb.Commit(voteCntRoot, false)
+
 	a := &DevoteProtocolAtomic{
 		CycleHash:        cycleRoot,
 		MasternodeHash:   masternodeRoot,

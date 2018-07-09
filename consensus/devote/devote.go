@@ -40,6 +40,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/trie"
 )
 
 const (
@@ -47,11 +48,9 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	cycleInterval  = int64(360000)
-	blockInterval  uint64 = 10
-	maxWitnessSize uint64 =3
-	safeSize       = maxWitnessSize*2/3 + 1
-	consensusSize  = maxWitnessSize*2/3 + 1
+	maxWitnessSize uint64 = 3
+	safeSize              = maxWitnessSize*2/3 + 1
+	consensusSize         = maxWitnessSize*2/3 + 1
 )
 
 var (
@@ -243,7 +242,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward, header.Number)
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -276,11 +275,9 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	//miner Rolling
 	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 
-	//vote, err := controller.Voting(genesis, parent)
-	//if err != nil {
-	//	return nil, fmt.Errorf("masternode voting err ,err:%s", err)
-	//}
-	//fmt.Printf("vote successfully vote hash:%s", vote.Hash())
+	allvoteit := trie.NewIterator(devoteProtocol.VoteCntTrie().NodeIterator(nil))
+	fmt.Printf("devote init voteCnt trie is next%t\n", allvoteit.Next())
+
 	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
@@ -339,7 +336,7 @@ func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time.Uint64()+uint64(blockInterval) > header.Time.Uint64() {
+	if parent.Time.Uint64()+params.BlockInterval > header.Time.Uint64() {
 		return ErrInvalidTimestamp
 	}
 	return nil
@@ -519,11 +516,11 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 }
 
 func PrevSlot(now uint64) uint64 {
-	return (now-1)/params.BlockInterval * params.BlockInterval
+	return (now - 1) / params.BlockInterval * params.BlockInterval
 }
 
 func NextSlot(now uint64) uint64 {
-	return ((now+params.BlockInterval-1)/params.BlockInterval) * params.BlockInterval
+	return ((now + params.BlockInterval - 1) / params.BlockInterval) * params.BlockInterval
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
