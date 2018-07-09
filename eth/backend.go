@@ -53,7 +53,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/trie"
 )
 
 type LesServer interface {
@@ -179,18 +178,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(eth.chainDb, eth.blockchain.CurrentBlock().Header().Protocol)
 
-	allvoteit := trie.NewIterator(devoteProtocol.VoteCntTrie().NodeIterator(nil))
-	masternodeit:=trie.NewIterator(devoteProtocol.MasternodeTrie().NodeIterator(nil))
-	cycleit:=trie.NewIterator(devoteProtocol.CycleTrie().NodeIterator(nil))
-	minerit:=trie.NewIterator(devoteProtocol.MinerRollingTrie().NodeIterator(nil))
-
-	fmt.Printf("backend init voteCnt trie is next%t\n", allvoteit.Next())
-	fmt.Printf("backend init masternodeit trie is next%t\n", masternodeit.Next())
-	fmt.Printf("backend init cycleit trie is next%t\n", cycleit.Next())
-	fmt.Printf("backend init minerit trie is next%t\n", minerit.Next())
-	for allvoteit.Next() {
-		fmt.Printf("all vote count vote key:%x ,vote value:%v", string(allvoteit.Key), string(allvoteit.Value))
-	}
 	if eth.masternodeManager = NewMasternodeManager(devoteProtocol); err != nil {
 		return nil, err
 	}
@@ -442,7 +429,7 @@ func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
 func (s *Ethereum) MastenrodeManager() *MasternodeManager          { return s.masternodeManager }
-func (s *Ethereum) ActiveMasternode() *masternode.ActiveMasternode { return s.masternodeManager.active }
+func (s *Ethereum) Votes() ([]*types.Vote, error) { return s.masternodeManager.Votes() }
 
 func (s *Ethereum) DevoteProtocol() *types.DevoteProtocol {return s.masternodeManager.devoteProtocol}
 
@@ -482,6 +469,12 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 
 	return nil
+}
+
+// SubscribeVoteEvent registers a subscription of VoteEvent and
+// starts sending event to the given channel.
+func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
+	return s.masternodeManager.SubscribeVoteEvent(ch)
 }
 
 func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBackend) {

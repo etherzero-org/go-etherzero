@@ -108,7 +108,6 @@ func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	if remoteRoot != localRoot {
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}
-	fmt.Printf("invalid devote root (remote: %x local: %x)\n", remoteRoot, localRoot)
 	return nil
 }
 

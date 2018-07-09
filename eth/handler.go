@@ -88,6 +88,7 @@ type ProtocolManager struct {
 	eventMux *event.TypeMux
 	txsCh    chan core.NewTxsEvent
 	txsSub   event.Subscription
+	voteCh      chan core.NewVoteEvent
 	voteSub  event.Subscription
 
 	minedBlockSub *event.TypeMuxSubscription
@@ -95,7 +96,6 @@ type ProtocolManager struct {
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
 	txsyncCh    chan *txsync
-	voteCh      chan core.NewVoteEvent
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
 
@@ -525,17 +525,21 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		transactions := make([][]*types.Transaction, len(request))
 		uncles := make([][]*types.Header, len(request))
 
+		// Deliver them all to the downloader for queuing
+		votes := make([][]*types.Vote, len(request))
+
 		for i, body := range request {
 			transactions[i] = body.Transactions
 			uncles[i] = body.Uncles
+			votes[i] = body.Votes
 		}
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
 		filter := len(transactions) > 0 || len(uncles) > 0
 		if filter {
-			transactions, uncles = pm.fetcher.FilterBodies(p.id, transactions, uncles, time.Now())
+			transactions, uncles = pm.fetcher.FilterBodies(p.id, transactions, votes, uncles, time.Now())
 		}
 		if len(transactions) > 0 || len(uncles) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.id, transactions, uncles)
+			err := pm.downloader.DeliverBodies(p.id, transactions, uncles, votes)
 			if err != nil {
 				log.Debug("Failed to deliver bodies", "err", err)
 			}

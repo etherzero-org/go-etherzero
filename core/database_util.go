@@ -230,7 +230,7 @@ func GetBlock(db DatabaseReader, hash common.Hash, number uint64) *types.Block {
 	}
 
 	// Reassemble the block and return
-	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles, body.Votes)
 
 	// add devoteProtocol to block
 	block.DevoteProtocol = getDevoteProtocolTrie(db.(ethdb.Database), header)
