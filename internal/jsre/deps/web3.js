@@ -5277,6 +5277,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 outputFormatter: formatters.outputBigNumberFormatter
             });
 
+            var getPower = new Method({
+                name: 'getPower',
+                call: 'eth_getPower',
+                params: 2,
+                inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
+                outputFormatter: formatters.outputBigNumberFormatter
+            });
+
             var getStorageAt = new Method({
                 name: 'getStorageAt',
                 call: 'eth_getStorageAt',
@@ -5443,6 +5451,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             return [
                 getBalance,
+                getPower,
                 getStorageAt,
                 getCode,
                 getBlock,

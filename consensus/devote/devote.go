@@ -241,7 +241,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward, header.Number)
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,

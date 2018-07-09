@@ -795,7 +795,7 @@ func opStop(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 
 func opSuicide(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	balance := evm.StateDB.GetBalance(contract.Address())
-	evm.StateDB.AddBalance(common.BigToAddress(stack.pop()), balance)
+	evm.StateDB.AddBalance(common.BigToAddress(stack.pop()), balance, evm.BlockNumber)
 
 	evm.StateDB.Suicide(contract.Address())
 	return nil, nil
