@@ -28,7 +28,6 @@ import (
 	"sort"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
@@ -39,11 +38,7 @@ import (
 
 type Controller struct {
 	devoteProtocol *types.DevoteProtocol
-	statedb        *state.StateDB
 	TimeStamp      uint64
-
-	// update loop
-	postVote PostVoteFn
 }
 
 func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
@@ -262,9 +257,12 @@ func (self *Controller) ApplyVote(votes []*types.Vote) error {
 		if err != nil {
 			return err
 		}
+		voteCntTrie, _ := types.NewVoteCntTrie(common.Hash{}, self.devoteProtocol.DB())
+		voteCntTrie.TryUpdate(key, voteRLP)
+
+		self.devoteProtocol.SetVoteCnt(voteCntTrie)
 		// update votecnt trie event
-		self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
-		fmt.Printf("controller process vote end\n")
+		fmt.Printf("controller ApplyVote vote end\n")
 	}
 	return nil
 }
@@ -286,8 +284,10 @@ func (self *Controller) Process(vote *types.Vote) error {
 	if err != nil {
 		return err
 	}
+	voteCntTrie, _ := types.NewVoteCntTrie(common.Hash{}, self.devoteProtocol.DB())
+	voteCntTrie.TryUpdate(key, voteRLP)
 	// update votecnt trie event
-	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
+	self.devoteProtocol.SetVoteCnt(voteCntTrie)
 	return nil
 }
 

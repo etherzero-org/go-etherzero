@@ -255,7 +255,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	controller := &Controller{
-		statedb:        state,
 		devoteProtocol: devoteProtocol,
 		TimeStamp:      header.Time.Uint64(),
 	}
@@ -270,6 +269,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
+	fmt.Printf("Finalize votes value:%v\n",votes)
+
 	voterr := controller.ApplyVote(votes)
 	if voterr != nil {
 		return nil, fmt.Errorf("got error when process vote ,err:%s", voterr)
