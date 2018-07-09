@@ -190,6 +190,7 @@ func (self *MasternodeManager) Stop() {
 func (mm *MasternodeManager) masternodeLoop() {
 	mm.updateActiveMasternode()
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
+		fmt.Println("masternode check true")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
 		mm.checkPeers()
 	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
