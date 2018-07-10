@@ -63,18 +63,18 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			nodes[address] = big.NewInt(0)
 		} else {
 
-			allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
-			for allvoteit.Next() {
-				fmt.Printf("all vote count vote key:%x ,vote value:%v", string(allvoteit.Key), string(allvoteit.Value))
-			}
+			//allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
+			//for allvoteit.Next() {
+			//	fmt.Printf("all vote count vote key:%s \n", string(allvoteit.Key))
+			//}
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
+			//fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
-				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account)
+				//fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account)
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
@@ -206,7 +206,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		votes, err := self.masternodes(prevCycleIsGenesis)
 		if err != nil {
-			log.Error("get masternodes ","err",err)
+			log.Error("get masternodes ", "err", err)
 			return err
 		}
 		masternodes := sortableAddresses{}
@@ -250,17 +250,18 @@ func (self *Controller) ApplyVote(votes []*types.Vote) error {
 		fmt.Printf("process vote get key:%x\n", key)
 		voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
-			log.Error("vote already exists vote hash:","hash:", votes[i])
+			log.Error("vote already exists vote hash:", "hash:", votes[i])
 			continue
 		}
 		voteRLP, err := rlp.EncodeToBytes(vote)
 		if err != nil {
 			return err
 		}
-		voteCntTrie, _ := types.NewVoteCntTrie(common.Hash{}, self.devoteProtocol.DB())
-		voteCntTrie.TryUpdate(key, voteRLP)
 
-		self.devoteProtocol.SetVoteCnt(voteCntTrie)
+		votecnttrie := self.devoteProtocol.VoteCntTrie()
+		fmt.Printf("before votecnttrie root hash:%x\n",votecnttrie.Hash())
+		votecnttrie.TryUpdate(key, voteRLP)
+		fmt.Printf("after  votecnttrie root hash:%x\n",votecnttrie.Hash())
 		// update votecnt trie event
 		fmt.Printf("controller ApplyVote vote end\n")
 	}
