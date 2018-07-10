@@ -49,18 +49,27 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
+// node vote static info
+type Score struct {
+	ID     string   // masternode ID
+	Weight *big.Int // masternode weight
+}
+
 // masternodes return  masternode list in the Cycle.
-func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address]*big.Int, err error) {
+func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address]*Score, err error) {
 	currentCycle := self.TimeStamp / params.CycleInterval
 
-	nodes = map[common.Address]*big.Int{}
+	nodes = map[common.Address]*Score{}
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
 	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
 	for it.Next() {
 		if isFirstCycle {
-			address := common.BytesToAddress(it.Value)
-			nodes[address] = big.NewInt(0)
+			singleNode := &Score{
+				ID:     string(it.Key),
+				Weight: big.NewInt(0),
+			}
+			nodes[common.BytesToAddress(it.Value)] = singleNode
 		} else {
 
 			//allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
@@ -81,9 +90,9 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 				}
 				score, ok := nodes[vote.Account]
 				if !ok {
-					score = new(big.Int)
+					score.Weight = new(big.Int)
 				}
-				score.Add(score, big.NewInt(1))
+				score.Weight.Add(score.Weight, big.NewInt(1))
 				nodes[vote.Account] = score
 			}
 		}
@@ -211,7 +220,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		masternodes := sortableAddresses{}
 		for masternode, cnt := range votes {
-			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt})
+			masternodes = append(masternodes, &sortableAddress{address: masternode, weight: cnt.Weight, id: cnt.ID})
 		}
 		if len(masternodes) < int(safeSize) {
 			return errors.New("too few masternodes")
@@ -229,7 +238,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		var sortedWitnesses []*params.Account
 		for _, masternode_ := range masternodes {
-			singlesortedWitnesses := &params.Account{Addr: masternode_.address}
+			singlesortedWitnesses := &params.Account{ID: masternode_.id, Addr: masternode_.address}
 			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
 		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
@@ -276,6 +285,7 @@ func (self *Controller) Process(vote *types.Vote) error {
 	binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
 	key = append(key, []byte(masternodeBytes)...)
 
+	fmt.Printf("process vote get key:%x\n", key)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		log.Error("vote already exists")
