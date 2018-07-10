@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+	errInsufficientBalanceForGas = errors.New("insufficient power to pay for gas * gasPrice")
 )
 
 /*
