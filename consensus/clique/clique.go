@@ -40,7 +40,6 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 const (
@@ -571,13 +570,13 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol,masternode *masternode.ActiveMasternode) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol, votes []*types.Vote) (*types.Block, error) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, nil, receipts, nil), nil
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks

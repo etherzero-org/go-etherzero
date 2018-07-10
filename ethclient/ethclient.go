@@ -82,6 +82,7 @@ type rpcBlock struct {
 	Hash         common.Hash      `json:"hash"`
 	Transactions []rpcTransaction `json:"transactions"`
 	UncleHashes  []common.Hash    `json:"uncles"`
+	Votes        []*types.Vote    `json:"votes"`
 }
 
 func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
@@ -146,7 +147,13 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 		}
 		txs[i] = tx.tx
 	}
-	return types.NewBlockWithHeader(head).WithBody(txs, uncles), nil
+
+	// Fill the sender cache of votes in the block.
+	votes := make([]*types.Vote, len(body.Votes))
+	for i, vote := range body.Votes {
+		votes[i] = vote
+	}
+	return types.NewBlockWithHeader(head).WithBody(txs, uncles, votes), nil
 }
 
 // HeaderByHash returns the block header with the given hash.

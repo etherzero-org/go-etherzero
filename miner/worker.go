@@ -50,6 +50,8 @@ const (
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+
+	voteChanSize = 4096
 )
 
 // Agent can register themself with the worker
@@ -79,7 +81,7 @@ type Work struct {
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
-
+	votes    []*types.Vote
 	createdAt time.Time
 
 	devoteProtocol *types.DevoteProtocol
@@ -101,6 +103,7 @@ type worker struct {
 	mux          *event.TypeMux
 	txsCh        chan core.NewTxsEvent
 	txsSub       event.Subscription
+
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
@@ -161,6 +164,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+
 	go worker.update()
 
 	go worker.wait()
@@ -234,7 +238,6 @@ func (self *worker) mine(now int64) {
 		default:
 			log.Error("Failed to miner the block", "err", err)
 			fmt.Printf("Failed to miner the block, while error:%s\n", err)
-
 		}
 		return
 	}
@@ -404,7 +407,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-
+	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(self.chainDb, parent.Header().Protocol)
 	if err != nil {
 		return err
 	}
@@ -418,9 +421,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		header:    header,
 		createdAt: time.Now(),
 
-		devoteProtocol: self.eth.DevoteProtocol(),
+		devoteProtocol: devoteProtocol,
 	}
-
 
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -501,6 +503,12 @@ func (self *worker) commitNewWork() (*Work, error) {
 	if err != nil {
 		return nil, fmt.Errorf("got error when fetch pending transactions, err: %s", err)
 	}
+
+	votes,err :=self.eth.Votes()
+	if err != nil{
+		return nil,fmt.Errorf("got error when fetch votes ,err: %s",err)
+	}
+
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
@@ -527,7 +535,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol, self.eth.ActiveMasternode()); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol, votes); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 
@@ -566,6 +574,7 @@ func (self *worker) updateSnapshot() {
 		self.current.txs,
 		nil,
 		self.current.receipts,
+		self.current.votes,
 	)
 	self.snapshotState = self.current.state.Copy()
 }
@@ -657,10 +666,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
+	devoteSnap := env.devoteProtocol.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
+		env.devoteProtocol.RevertToSnapShot(devoteSnap)
 		return err, nil
 	}
 	env.txs = append(env.txs, tx)

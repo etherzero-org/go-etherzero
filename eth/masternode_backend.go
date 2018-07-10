@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
@@ -39,12 +38,16 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/trie"
+)
+
+var (
+	statsReportInterval = 10 * time.Second // Time interval to report vote pool stats
 )
 
 type MasternodeManager struct {
-	votes          map[common.Hash]*types.Vote // vote hash -> vote
+	votes map[common.Hash]*types.Vote // vote hash -> vote
+	beats map[common.Hash]time.Time   // Last heartbeat from each known vote
+
 	devoteProtocol *types.DevoteProtocol
 	active         *masternode.ActiveMasternode
 	masternodes    *masternode.MasternodeSet
@@ -55,40 +58,41 @@ type MasternodeManager struct {
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
-	controller   *devote.Controller
 
 	scope    event.SubscriptionScope
 	voteFeed event.Feed
+	Lifetime time.Duration // Maximum amount of time vote are queued
 }
 
 func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 
-	controller := devote.Newcontroller(dp)
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		votes:          make(map[common.Hash]*types.Vote),
 		masternodes:    &masternode.MasternodeSet{},
 		devoteProtocol: dp,
-		controller:     controller,
+		votes:          make(map[common.Hash]*types.Vote),
+		beats:          make(map[common.Hash]time.Time),
+		Lifetime:       30 * time.Second,
 	}
-
 	return manager
 }
 
 func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
 
-	fmt.Printf("masternode_backend voting begin\n")
 	currentCycle := current.Time.Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
 	nextCycleVoteId := make([]byte, 8)
 	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
+	if self.active == nil {
+		return nil, errors.New("current node is not masternode ")
+	}
 	masternodeBytes := self.active.ID
 
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
 	key = append(key, []byte(masternodeBytes)...)
 
-	fmt.Printf("masternode Voting key:%x\n",key)
+	fmt.Printf("masternode Voting key:%x\n", key)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		fmt.Printf("vote already exists!\n")
@@ -96,7 +100,6 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	}
 
 	masternodes := self.masternodes.AllNodes()
-
 	weight := int64(0)
 	best := common.Address{}
 	for _, masternode := range masternodes {
@@ -112,28 +115,9 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	vote := types.NewVote(nextCycle, best, self.active.ID)
 
 	vote.SignVote(self.active.PrivateKey)
-	voteRLP, err := rlp.EncodeToBytes(vote)
-	if err != nil {
-		log.Error("Invalid Vote RLP", "vote", vote, "err", err)
-		return nil, err
-	}
+	self.Add(vote)
 	self.PostVoteEvent(vote)
-	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
-
-	allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
-	masternodeit:=trie.NewIterator(self.devoteProtocol.MasternodeTrie().NodeIterator(nil))
-	cycleit:=trie.NewIterator(self.devoteProtocol.CycleTrie().NodeIterator(nil))
-	minerit:=trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(nil))
-
-	fmt.Printf("masternode init voteCnt trie is next%t\n", allvoteit.Next())
-	fmt.Printf("masternode init masternodeit trie is next%t\n", masternodeit.Next())
-	fmt.Printf("masternode init cycleit trie is next%t\n", cycleit.Next())
-	fmt.Printf("masternode init minerit trie is next%t\n", minerit.Next())
-
-
-	fmt.Printf("controller new vote save vote end key:%x\n", key)
 	return vote, nil
-
 }
 
 func (self *MasternodeManager) Process(vote *types.Vote) error {
@@ -153,7 +137,7 @@ func (self *MasternodeManager) Process(vote *types.Vote) error {
 	if !vote.Verify(h[:], vote.Sign, pubkey) {
 		return errors.New("vote valid failed")
 	}
-	self.controller.Process(vote)
+	self.Add(vote)
 	return nil
 }
 
@@ -161,17 +145,35 @@ func (self *MasternodeManager) Clear() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	self.votes = make(map[common.Hash]*types.Vote)
 }
-
-func (self *MasternodeManager) Has(hash common.Hash) bool {
+func (self *MasternodeManager) Add(vote *types.Vote) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	if vote := self.votes[hash]; vote != nil {
-		return true
+	if self.votes[vote.Hash()] == nil {
+		self.votes[vote.Hash()] = vote
+		self.beats[vote.Hash()] = time.Now()
 	}
-	return false
+}
+
+func (self *MasternodeManager) RemoveVote(vote *types.Vote) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.votes[vote.Hash()] != nil {
+		delete(self.votes, vote.Hash())
+		delete(self.beats, vote.Hash())
+	}
+}
+func (self *MasternodeManager) Votes() ([]*types.Vote, error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+	var votes []*types.Vote
+
+	for _, vote := range self.votes {
+		votes = append(votes, vote)
+	}
+	return votes, nil
 }
 
 func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract, peers *peerSet) {
@@ -185,12 +187,6 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contra
 	}
 	self.masternodes = mns
 	self.active = masternode.NewActiveMasternode(srvr, mns)
-	self.controller.Active(self.active)
-	postfn := func(vote *types.Vote) {
-		self.PostVoteEvent(vote)
-	}
-	//fmt.Printf("postfn%x", postfn)
-	self.controller.PostVote(postfn)
 	go self.masternodeLoop()
 
 }
@@ -236,6 +232,9 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
 	check := time.NewTimer(masternode.MASTERNODE_CHECK_INTERVAL)
+
+	report := time.NewTicker(statsReportInterval)
+	defer report.Stop()
 
 	for {
 		select {
@@ -298,10 +297,16 @@ func (mm *MasternodeManager) masternodeLoop() {
 				}
 			}
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
-
 		case <-check.C:
 			mm.masternodes.Check()
 			check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
+		case <-report.C:
+			for _, vote := range mm.votes {
+				log.Debug("clean vote pool")
+				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
+					mm.RemoveVote(vote)
+				}
+			}
 		}
 	}
 }

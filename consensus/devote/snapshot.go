@@ -28,9 +28,7 @@ import (
 	"sort"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
@@ -40,12 +38,7 @@ import (
 
 type Controller struct {
 	devoteProtocol *types.DevoteProtocol
-	statedb        *state.StateDB
-	active         *masternode.ActiveMasternode
 	TimeStamp      uint64
-
-	// update loop
-	postVote PostVoteFn
 }
 
 func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
@@ -54,10 +47,6 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 		devoteProtocol: devoteProtocol,
 	}
 	return controller
-}
-
-func (self *Controller) Active(activeMasternode *masternode.ActiveMasternode) {
-	self.active = activeMasternode
 }
 
 // node vote static info
@@ -206,14 +195,6 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
 	prevCycle := parent.Time.Uint64() / params.CycleInterval
 	currentCycle := self.TimeStamp / params.CycleInterval
-	firstCycle := uint64(0)
-
-	if first != nil {
-		firstCycle = first.Time.Uint64() / params.CycleInterval
-	}
-	isFirstCycle := currentCycle == firstCycle
-
-	fmt.Printf("election isFirstCycle %v \n", isFirstCycle)
 
 	prevCycleIsGenesis := (prevCycle == genesisCycle)
 	if prevCycleIsGenesis && prevCycle < currentCycle {
@@ -223,6 +204,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
 	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
+	fmt.Printf("election prevCycle :%d ,currentCycle:%d\n", prevCycle, currentCycle)
 
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
@@ -233,6 +215,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		votes, err := self.masternodes(prevCycleIsGenesis)
 		if err != nil {
+			log.Error("get masternodes ","err",err)
 			return err
 		}
 		masternodes := sortableAddresses{}
@@ -248,7 +231,6 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		// disrupt the mastrnodes node to ensure the disorder of the node
 		seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
-
 		r := rand.New(rand.NewSource(int64(seed)))
 		for i := len(masternodes) - 1; i > 0; i-- {
 			j := int(r.Int31n(int32(i + 1)))
@@ -264,58 +246,34 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
-	//self.Voting(isFirstCycle)
 	return nil
 }
 
-// Process save the vote result to the desk
-func (self *Controller) Voting(isFirstCycle bool) (*types.Vote, error) {
+func (self *Controller) ApplyVote(votes []*types.Vote) error {
+	for i, vote := range votes {
+		masternodeBytes := []byte(vote.Masternode)
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
+		key = append(key, []byte(masternodeBytes)...)
 
-	currentCycle := self.TimeStamp / params.CycleInterval
-	nextCycle := currentCycle + 1
-	nextCycleVoteId := make([]byte, 8)
-	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
-
-	if self.active == nil {
-		return nil, errors.New(" the current node is not masternode")
-	}
-	masternodeBytes := self.active.ID
-	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, uint64(nextCycle))
-	key = append(key, []byte(masternodeBytes)...)
-
-	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
-	if voteCntInTrieBytes != nil {
-		fmt.Printf("vote already exists!\n")
-		return nil, errors.New("vote already exists")
-	}
-	masternodes, err := self.masternodes(isFirstCycle)
-	if err != nil {
-		return nil, err
-	}
-	weight := int64(0)
-	best := common.Address{}
-	for account, _ := range masternodes {
-		hash := make([]byte, 8)
-		binary.BigEndian.PutUint64(hash, uint64(self.TimeStamp))
-		hash = append(hash, account.Bytes()...)
-		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
-		if temp > weight && account != self.active.Account {
-			weight = temp
-			best = account
+		fmt.Printf("process vote get key:%x\n", key)
+		voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
+		if voteCntInTrieBytes != nil {
+			log.Error("vote already exists vote hash:","hash:", votes[i])
+			continue
 		}
+		voteRLP, err := rlp.EncodeToBytes(vote)
+		if err != nil {
+			return err
+		}
+		voteCntTrie, _ := types.NewVoteCntTrie(common.Hash{}, self.devoteProtocol.DB())
+		voteCntTrie.TryUpdate(key, voteRLP)
+
+		self.devoteProtocol.SetVoteCnt(voteCntTrie)
+		// update votecnt trie event
+		fmt.Printf("controller ApplyVote vote end\n")
 	}
-	fmt.Printf("best masternode:%x\n", best)
-	vote := types.NewVote(nextCycle, best, self.active.ID)
-	vote.SignVote(self.active.PrivateKey)
-	voteRLP, err := rlp.EncodeToBytes(vote)
-	if err != nil {
-		log.Error("Invalid Vote RLP", "vote", vote, "err", err)
-		return nil, err
-	}
-	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
-	fmt.Printf("controller new vote save end %x\n", key)
-	return vote, nil
+	return nil
 }
 
 // Voting save the vote result to the desk
@@ -336,14 +294,11 @@ func (self *Controller) Process(vote *types.Vote) error {
 	if err != nil {
 		return err
 	}
+	voteCntTrie, _ := types.NewVoteCntTrie(common.Hash{}, self.devoteProtocol.DB())
+	voteCntTrie.TryUpdate(key, voteRLP)
 	// update votecnt trie event
-	self.devoteProtocol.VoteCntTrie().TryUpdate(key, voteRLP)
-	fmt.Printf("controller process vote end\n")
+	self.devoteProtocol.SetVoteCnt(voteCntTrie)
 	return nil
-}
-
-func (self *Controller) PostVote(fn PostVoteFn) {
-	self.postVote = fn
 }
 
 type sortableAddress struct {

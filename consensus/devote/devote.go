@@ -31,7 +31,6 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -39,8 +38,8 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/hashicorp/golang-lru"
 	"github.com/etherzero/go-etherzero/trie"
+	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -58,7 +57,7 @@ var (
 	big8  = big.NewInt(8)
 	big32 = big.NewInt(32)
 
-	etherzeroBlockReward *big.Int = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
+	etherzeroBlockReward *big.Int = big.NewInt(4e+18) // Block reward in wei for successfully mining a block
 
 	timeOfFirstBlock uint64 = 0
 
@@ -248,17 +247,16 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol, masternode *masternode.ActiveMasternode) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol, votes []*types.Vote) (*types.Block, error) {
+
 	// Accumulate block rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	controller := &Controller{
-		statedb:        state,
 		devoteProtocol: devoteProtocol,
 		TimeStamp:      header.Time.Uint64(),
-		active:         masternode,
 	}
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
@@ -271,15 +269,19 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
+	fmt.Printf("Finalize votes value:%v\n",votes)
 
+	voterr := controller.ApplyVote(votes)
+	if voterr != nil {
+		return nil, fmt.Errorf("got error when process vote ,err:%s", voterr)
+	}
 	//miner Rolling
 	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 
 	allvoteit := trie.NewIterator(devoteProtocol.VoteCntTrie().NodeIterator(nil))
 	fmt.Printf("devote init voteCnt trie is next %t. \n", allvoteit.Next())
-
 	header.Protocol = devoteProtocol.ProtocolAtomic()
-	return types.NewBlock(header, txs, uncles, receipts), nil
+	return types.NewBlock(header, txs, uncles, receipts,votes), nil
 }
 
 // Author implements consensus.Engine, returning the header's coinbase as the
@@ -318,7 +320,7 @@ func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if header.Difficulty.Uint64() != 1 {
 		return errInvalidDifficulty
 	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in DPoS
+	// Ensure that the block doesn't contain any uncles which are meaningless in devote
 	if header.UncleHash != uncleHash {
 		return errInvalidUncleHash
 	}
@@ -488,7 +490,7 @@ func (d *Devote) Authorize(signer common.Address, signFn SignerFn) {
 	d.signer = signer
 
 	d.signFn = signFn
-	fmt.Printf("devote Authorize signer account%x\n", signer)
+	fmt.Printf("devote Authorize signer account: %x\n", signer)
 	d.mu.Unlock()
 }
 

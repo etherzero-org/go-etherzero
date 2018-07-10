@@ -257,7 +257,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
-	block := types.NewBlock(head, nil, nil, nil)
+	block := types.NewBlock(head, nil, nil, nil, nil)
 	block.DevoteProtocol = devoteProtocol
 
 	return block

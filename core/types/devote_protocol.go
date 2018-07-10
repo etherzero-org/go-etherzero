@@ -77,10 +77,12 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		minerRollingTrie:   minerRollingTrie,
 		voteCntTrie:        voteCntTrie,
 		diskdb:             db,
+
 		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
 		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
 		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
+
 	}, nil
 }
 
