@@ -9,6 +9,9 @@ import (
 // EXP(−1÷(etz×50)×10000)×10000000+200000
 // EXP(−1÷(etz×2)×1000)×200000+1000
 func CalculatePower(prevBlock, newBlock, prevPower, balance *big.Int) *big.Int {
+
+	return  big.NewInt(36000000e+9)
+
 	if prevBlock.Cmp(newBlock) >= 0 && prevBlock.Cmp(common.Big0) == 0 {
 		return prevPower
 	}

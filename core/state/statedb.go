@@ -317,6 +317,13 @@ func (self *StateDB) SetBalance(addr common.Address, amount, blockNumber *big.In
 	}
 }
 
+func (self *StateDB) SetPower(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetPower(amount)
+	}
+}
+
 func (self *StateDB) UpdatePower(addr common.Address, blockNumber *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
