@@ -235,7 +235,7 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 		}
 	}
 
-	if len(votes) == 0 {
+	if len(votes) != 0 {
 		b.votes = votes
 	}
 

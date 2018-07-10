@@ -658,11 +658,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		request.Block.ReceivedAt = msg.ReceivedAt
 		request.Block.ReceivedFrom = p
-
 		// Mark the peer as owning the block and schedule it for import
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
-
 		pm.mm.Voting(request.Block.Header())
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
@@ -777,7 +775,7 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 }
 
 // BroadcastVote will propagate a Vote to all Masternodes which are not known to
-// already have the given WinnerVote
+// already have the given Vote
 func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
 	peers := self.peers.PeersWithoutVote(hash)
 	for _, peer := range peers {
