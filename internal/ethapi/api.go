@@ -546,7 +546,6 @@ func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Addre
 	return b, state.Error()
 }
 
-
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
@@ -880,6 +879,19 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		fields["transactions"] = transactions
 	}
 
+	if inclTx {
+		votesList := make([]*types.Vote, len(b.Votes()))
+		for _, v := range b.Votes() {
+			singleVote := &types.Vote{
+				Cycle:      v.Cycle,
+				Sign:       v.Sign,
+				Account:    v.Account,
+				Masternode: v.Masternode,
+			}
+			votesList = append(votesList, singleVote)
+		}
+		fields["votes"] = votesList
+	}
 	uncles := b.Uncles()
 	uncleHashes := make([]common.Hash, len(uncles))
 	for i, uncle := range uncles {
