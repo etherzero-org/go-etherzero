@@ -775,7 +775,7 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 }
 
 // BroadcastVote will propagate a Vote to all Masternodes which are not known to
-// already have the given WinnerVote
+// already have the given Vote
 func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
 	peers := self.peers.PeersWithoutVote(hash)
 	for _, peer := range peers {

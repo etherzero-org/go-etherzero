@@ -254,18 +254,14 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 
 		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
-			log.Error("vote already exists vote hash:", "hash:", votes[i].Hash())
+			log.Error("vote already exists, vote", "hash:", votes[i].Hash())
 			continue
 		}
 		voteRLP, err := rlp.EncodeToBytes(vote)
 		if err != nil {
 			return err
 		}
-
-		fmt.Printf("before votecnttrie root hash:%x\n",self.VoteCntTrie().Hash())
 		self.VoteCntTrie().TryUpdate(key, voteRLP)
-		fmt.Printf("after  votecnttrie root hash:%x\n",self.VoteCntTrie().Hash())
-		// update votecnt trie event
 	}
 	return nil
 }

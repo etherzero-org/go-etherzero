@@ -98,10 +98,9 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 		fmt.Printf("vote already exists!\n")
 		return nil, errors.New("vote already exists")
 	}
-
 	masternodes := self.masternodes.AllNodes()
 	weight := int64(0)
-	best := common.Address{}
+	best := self.active.Account
 	for _, masternode := range masternodes {
 		hash := make([]byte, 8)
 		binary.BigEndian.PutUint64(hash, current.Time.Uint64())
@@ -121,7 +120,6 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 }
 
 func (self *MasternodeManager) Process(vote *types.Vote) error {
-
 	h := vote.NosigHash()
 	masternode := self.masternodes.Node(vote.Masternode)
 	if masternode == nil {
