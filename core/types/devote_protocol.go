@@ -10,6 +10,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 var (
@@ -105,12 +106,10 @@ func (d *DevoteProtocol) Unregister(masternodeAddr common.Address) error {
 }
 
 func (d *DevoteProtocol) Copy() *DevoteProtocol {
-
 	cycleTrie := *d.cycleTrie
 	masternodeTrie := *d.masternodeTrie
 	minerRollingTrie := *d.minerRollingTrie
 	voteCntTrie := *d.voteCntTrie
-
 	return &DevoteProtocol{
 		cycleTrie:        &cycleTrie,
 		masternodeTrie:   &masternodeTrie,
@@ -120,7 +119,6 @@ func (d *DevoteProtocol) Copy() *DevoteProtocol {
 }
 
 func (d *DevoteProtocol) Root() (h common.Hash) {
-
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, d.cycleTrie.Hash())
 	rlp.Encode(hw, d.masternodeTrie.Hash())
@@ -135,7 +133,6 @@ func (d *DevoteProtocol) Snapshot() *DevoteProtocol {
 }
 
 func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
-
 	d.cycleTrie = snapshot.cycleTrie
 	d.masternodeTrie = snapshot.masternodeTrie
 	d.minerRollingTrie = snapshot.minerRollingTrie
@@ -143,7 +140,6 @@ func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
 }
 
 func (d *DevoteProtocol) FromAtomic(dpa *DevoteProtocolAtomic) error {
-
 	var err error
 	d.cycleTrie, err = NewCycleTrie(dpa.CycleHash, d.diskdb)
 	if err != nil {
@@ -181,31 +177,26 @@ func (dc *DevoteProtocol) SetMinerRollingTrie(rolling *trie.Trie) { dc.minerRoll
 func (dc *DevoteProtocol) SetVoteCnt(voteCnt *trie.Trie)          { dc.voteCntTrie = voteCnt }
 
 func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error) {
-
 	cycleRoot, err := d.cycleTrie.CommitTo(d.cycleTriedb)
 	if err != nil {
 		return nil, err
 	}
 	d.cycleTriedb.Commit(cycleRoot, false)
-
 	masternodeRoot, err := d.masternodeTrie.CommitTo(d.masternodeTriedb)
 	if err != nil {
 		return nil, err
 	}
 	d.masternodeTriedb.Commit(masternodeRoot, false)
-
 	minerRollingRoot, err := d.minerRollingTrie.CommitTo(d.minerRollingTriedb)
 	if err != nil {
 		return nil, err
 	}
 	d.minerRollingTriedb.Commit(minerRollingRoot, false)
-
 	voteCntRoot, err := d.voteCntTrie.CommitTo(d.voteCntTriedb)
 	if err != nil {
 		return nil, err
 	}
 	d.voteCntTriedb.Commit(voteCntRoot, false)
-
 	a := &DevoteProtocolAtomic{
 		CycleHash:        cycleRoot,
 		MasternodeHash:   masternodeRoot,
@@ -235,7 +226,6 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 }
 
 func (self *DevoteProtocol) SetWitnesses(witnesses []*params.Account) error {
-
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
 	if err != nil {
@@ -246,7 +236,6 @@ func (self *DevoteProtocol) SetWitnesses(witnesses []*params.Account) error {
 }
 
 func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
-
 	var witnesses []*params.Account
 	key := []byte("witness")
 	witnessRLP := self.cycleTrie.Get(key)
@@ -254,6 +243,31 @@ func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
 		return nil, fmt.Errorf("failed to decode witnesses: %s", err)
 	}
 	return witnesses, nil
+}
+
+func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
+	for i, vote := range votes {
+		masternodeBytes := []byte(vote.Masternode)
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
+		key = append(key, []byte(masternodeBytes)...)
+
+		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
+		if voteCntInTrieBytes != nil {
+			log.Error("vote already exists vote hash:", "hash:", votes[i].Hash())
+			continue
+		}
+		voteRLP, err := rlp.EncodeToBytes(vote)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("before votecnttrie root hash:%x\n",self.VoteCntTrie().Hash())
+		self.VoteCntTrie().TryUpdate(key, voteRLP)
+		fmt.Printf("after  votecnttrie root hash:%x\n",self.VoteCntTrie().Hash())
+		// update votecnt trie event
+	}
+	return nil
 }
 
 // update counts in MinerRollingTrie for the miner of newBlock
@@ -269,7 +283,6 @@ func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, wi
 	// still during the currentCycleID
 	if currentCycle == newCycle {
 		iter := trie.NewIterator(currentMinerRollingTrie.NodeIterator(currentCycleBytes))
-
 		// when current is not genesis, read last count from the MintCntTrie
 		if iter.Next() {
 			cntBytes := currentMinerRollingTrie.Get(append(currentCycleBytes, witness.Bytes()...))
@@ -285,5 +298,4 @@ func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, wi
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
 	self.MinerRollingTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
-
 }

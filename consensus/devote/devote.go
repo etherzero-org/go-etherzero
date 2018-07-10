@@ -38,7 +38,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -48,7 +47,7 @@ const (
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
 	maxWitnessSize uint64 = 3
-	safeSize              = maxWitnessSize*2/3 + 1
+	safeSize              = maxWitnessSize*2/3 + 0
 	consensusSize         = maxWitnessSize*2/3 + 1
 )
 
@@ -271,17 +270,14 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	fmt.Printf("Finalize votes value:%v\n",votes)
 
-	voterr := controller.ApplyVote(votes)
+	voterr := devoteProtocol.ApplyVote(votes)
 	if voterr != nil {
 		return nil, fmt.Errorf("got error when process vote ,err:%s", voterr)
 	}
 	//miner Rolling
 	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-
-	allvoteit := trie.NewIterator(devoteProtocol.VoteCntTrie().NodeIterator(nil))
-	fmt.Printf("devote init voteCnt trie is next %t. \n", allvoteit.Next())
 	header.Protocol = devoteProtocol.ProtocolAtomic()
-	return types.NewBlock(header, txs, uncles, receipts,votes), nil
+	return types.NewBlock(header, txs, uncles, receipts, votes), nil
 }
 
 // Author implements consensus.Engine, returning the header's coinbase as the
