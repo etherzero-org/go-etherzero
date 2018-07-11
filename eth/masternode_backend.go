@@ -91,8 +91,6 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
 	key = append(key, []byte(masternodeBytes)...)
-
-	fmt.Printf("masternode Voting key:%x\n", key)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		return nil, errors.New("vote already exists")
@@ -113,6 +111,7 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	vote := types.NewVote(nextCycle, best, self.active.ID)
 
 	vote.SignVote(self.active.PrivateKey)
+	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "account", vote.Account)
 	self.Add(vote)
 	self.PostVoteEvent(vote)
 	return vote, nil
@@ -299,10 +298,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 			check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
 		case <-report.C:
 			for _, vote := range mm.votes {
-				log.Debug("clean vote pool")
 				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
-
-					log.Info("clean vote pool","hash",vote.Hash())
+					log.Debug("clean vote pool", "hash", vote.Hash())
 					mm.RemoveVote(vote)
 				}
 			}
