@@ -22,14 +22,17 @@ package masternode
 import (
 	"net"
 	"time"
+	"sync"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"errors"
 
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/common"
+
 )
 
 const (
@@ -40,6 +43,10 @@ const (
 	ACTIVE_MASTERNODE_STARTED         = 4
 )
 
+// ErrUnknownMasternode is returned for any requested operation for which no backend
+// provides the specified masternode.
+var ErrUnknownMasternode = errors.New("unknown masternode")
+
 //Responsible for activating the Masternode and pinging the network
 type ActiveMasternode struct {
 	ID          string
@@ -49,6 +56,9 @@ type ActiveMasternode struct {
 	PrivateKey  *ecdsa.PrivateKey
 	activeState int
 	Addr        net.TCPAddr
+
+	mu sync.RWMutex
+
 }
 
 func NewActiveMasternode(srvr *p2p.Server, mns *MasternodeSet) *ActiveMasternode {
@@ -89,4 +99,18 @@ func (am *ActiveMasternode) NewPingMsg() (*PingMsg, error) {
 		Time: sec,
 		Sig:  sig,
 	}, nil
+}
+
+// SignHash calculates a ECDSA signature for the given hash. The produced
+// signature is in the [R || S || V] format where V is 0 or 1.
+func (a *ActiveMasternode) SignHash(id string, hash []byte) ([]byte, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	if id != a.ID{
+		return nil, ErrUnknownMasternode
+	}
+	// Sign the hash using plain ECDSA operations
+	return crypto.Sign(hash, a.PrivateKey)
 }

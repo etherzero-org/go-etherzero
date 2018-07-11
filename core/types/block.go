@@ -84,7 +84,7 @@ type Header struct {
 	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 
-	Witness  common.Address        `json:"witness"          gencodec:"required"`
+	Witness  string                `json:"witness"          gencodec:"required"`
 	Protocol *DevoteProtocolAtomic `json:"protocol"          gencodec:"required"`
 }
 
@@ -316,8 +316,8 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
-func (b *Block) Vote(hash common.Hash) *Vote{
-	for _, vote := range b.votes{
+func (b *Block) Vote(hash common.Hash) *Vote {
+	for _, vote := range b.votes {
 		if vote.Hash() == hash {
 			return vote
 		}
@@ -343,7 +343,7 @@ func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
-func (b *Block) Witness() common.Address { return b.header.Witness }
+func (b *Block) Witness() string { return b.header.Witness }
 
 func (b *Block) Protocol() *DevoteProtocol { return b.DevoteProtocol }
 
@@ -385,10 +385,10 @@ func (b *Block) WithSeal(header *Header) *Block {
 	cpy := *header
 
 	return &Block{
-		header:       &cpy,
-		transactions: b.transactions,
-		uncles:       b.uncles,
-		votes:        b.votes,
+		header:         &cpy,
+		transactions:   b.transactions,
+		uncles:         b.uncles,
+		votes:          b.votes,
 		DevoteProtocol: b.DevoteProtocol,
 	}
 }

@@ -164,27 +164,27 @@ func (ec *Controller) uncast(cycle int64) error {
 	return nil
 }
 
-func (ec *Controller) lookup(now uint64) (witness common.Address, err error) {
+func (ec *Controller) lookup(now uint64) (witness string, err error) {
 
-	witness = common.Address{}
+	witness = ""
 	offset := now % params.CycleInterval
 	if offset%params.BlockInterval != 0 {
-		return common.Address{}, ErrInvalidMinerBlockTime
+		return "", ErrInvalidMinerBlockTime
 	}
 	offset /= params.BlockInterval
 
 	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
-		return common.Address{}, err
+		return "", err
 	}
 	witnessSize := len(witnesses)
 	if witnessSize == 0 {
-		return common.Address{}, errors.New("failed to lookup witness")
+		return "", errors.New("failed to lookup witness")
 	}
 	offset %= uint64(witnessSize)
-	fmt.Printf("current witnesses count %d\n", len(witnesses))
-	account := witnesses[offset].Addr
-	return account, nil
+	fmt.Printf("current witnesses offset%d ,id:%s,count %d value:%v\n",offset, witnesses[offset].ID,len(witnesses),witnesses)
+	id := witnesses[offset].ID
+	return id, nil
 }
 
 func (self *Controller) election(genesis, first, parent *types.Header) error {

@@ -267,7 +267,7 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 }
 
 // update counts in MinerRollingTrie for the miner of newBlock
-func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, witness common.Address) {
+func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, witness string) {
 
 	currentMinerRollingTrie := self.MinerRollingTrie()
 	currentCycle := parentBlockTime / params.CycleInterval
@@ -281,7 +281,7 @@ func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, wi
 		iter := trie.NewIterator(currentMinerRollingTrie.NodeIterator(currentCycleBytes))
 		// when current is not genesis, read last count from the MintCntTrie
 		if iter.Next() {
-			cntBytes := currentMinerRollingTrie.Get(append(currentCycleBytes, witness.Bytes()...))
+			cntBytes := currentMinerRollingTrie.Get(append(currentCycleBytes, []byte(witness)...))
 			// not the first time to mint
 			if cntBytes != nil {
 				cnt = binary.BigEndian.Uint64(cntBytes) + 1
@@ -293,5 +293,5 @@ func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, wi
 	newCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	self.MinerRollingTrie().TryUpdate(append(newCycleBytes, witness.Bytes()...), newCntBytes)
+	self.MinerRollingTrie().TryUpdate(append(newCycleBytes, []byte(witness)...), newCntBytes)
 }

@@ -103,7 +103,7 @@ func (n *Masternode) String() string {
 	return fmt.Sprintf("Account: %s\nNode: %s\n", n.Account.String(), n.Node)
 }
 
-func (n *Masternode) CalculateScore(block *types.Block) int64 {
+func (n *Masternode) CalculaoteScore(block *types.Block) int64 {
 	blockHash := rlpHash([]interface{}{
 		block.Hash(),
 		n.ID,

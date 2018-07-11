@@ -91,7 +91,7 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
-	witness   common.Address
+	witness   string
 
 	networkID          uint64
 	netRPCService      *ethapi.PublicNetAPI
@@ -354,25 +354,29 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
-func (s *Ethereum) Witness() (witness common.Address, err error) {
+func (s *Ethereum) Witness() (witness string, err error) {
 	s.lock.RLock()
 	witness = s.witness
 	s.lock.RUnlock()
 
-	if witness != (common.Address{}) {
+	if witness != "" {
 		return witness, nil
 	}
-	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
-		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			fmt.Printf("backend Witness accounts: %x \n", accounts[0].Address)
-			return accounts[0].Address, nil
-		}
+	//if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
+	//	if accounts := wallets[0].Accounts(); len(accounts) > 0 {
+	//		fmt.Printf("backend Witness accounts: %x \n", accounts[0].Address)
+	//		return accounts[0].Address, nil
+	//	}
+	//}
+	if s.masternodeManager.active != nil {
+		fmt.Printf("backend Witness accounts: %x \n", s.masternodeManager.active.ID)
+		return s.masternodeManager.active.ID, nil
 	}
-	return common.Address{}, fmt.Errorf("Witness address must be explicitly specified")
+	return "", fmt.Errorf("Witness  must be explicitly specified")
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (self *Ethereum) SetWitness(witness common.Address) {
+func (self *Ethereum) SetWitness(witness string) {
 	self.lock.Lock()
 	self.witness = witness
 	self.lock.Unlock()
@@ -380,6 +384,7 @@ func (self *Ethereum) SetWitness(witness common.Address) {
 
 func (s *Ethereum) StartMining(local bool) error {
 	witness, err := s.Witness()
+	fmt.Printf("backend StartMining witness:%s\n", witness)
 	if err != nil {
 		log.Error("Cannot start mining without Witness", "err", err)
 		return fmt.Errorf("Witness missing: %v", err)
@@ -394,12 +399,19 @@ func (s *Ethereum) StartMining(local bool) error {
 	//}
 	eb, err := s.Etherbase()
 	if devote, ok := s.engine.(*devote.Devote); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
-		if wallet == nil || err != nil {
-			log.Error("Coinbase account unavailable locally", "err", err)
-			return fmt.Errorf("signer missing: %v", err)
+		//wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
+		//if wallet == nil || err != nil {
+		//	log.Error("Coinbase account unavailable locally", "err", err)
+		//	return fmt.Errorf("signer missing: %v", err)
+		//}
+
+
+		active := s.masternodeManager.active
+		if active == nil {
+			log.Error("Active Masternode is nil")
+			return fmt.Errorf("signer missing: %v", errors.New("Active Masternode is nil"))
 		}
-		devote.Authorize(witness, wallet.SignHash)
+		devote.Authorize(witness, active.SignHash)
 	}
 
 	if local {
@@ -428,10 +440,10 @@ func (s *Ethereum) EthVersion() int                    { return int(s.protocolMa
 func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
-func (s *Ethereum) MastenrodeManager() *MasternodeManager          { return s.masternodeManager }
-func (s *Ethereum) Votes() ([]*types.Vote, error) { return s.masternodeManager.Votes() }
+func (s *Ethereum) MastenrodeManager() *MasternodeManager { return s.masternodeManager }
+func (s *Ethereum) Votes() ([]*types.Vote, error)         { return s.masternodeManager.Votes() }
 
-func (s *Ethereum) DevoteProtocol() *types.DevoteProtocol {return s.masternodeManager.devoteProtocol}
+func (s *Ethereum) DevoteProtocol() *types.DevoteProtocol { return s.masternodeManager.devoteProtocol }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.

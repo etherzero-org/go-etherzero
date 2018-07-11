@@ -96,7 +96,7 @@ type Config struct {
 
 	// Mining-related options
 	Etherbase    common.Address `toml:",omitempty"`
-	Witness      common.Address `toml:",omitempty"`
+	Witness      string `toml:",omitempty"`
 
 	MinerThreads int            `toml:",omitempty"`
 	ExtraData    []byte         `toml:",omitempty"`

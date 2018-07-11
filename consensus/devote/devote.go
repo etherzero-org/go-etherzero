@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/misc"
@@ -92,7 +91,7 @@ var (
 	ErrNilBlockHeader           = errors.New("nil block header returned")
 )
 
-type SignerFn func(accounts.Account, []byte) ([]byte, error)
+type SignerFn func(string, []byte) ([]byte, error)
 
 type PostVoteFn func(vote *types.Vote)
 
@@ -134,7 +133,7 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer               common.Address
+	signer               string
 	signFn               SignerFn
 	signatures           *lru.ARCCache // Signatures of recent blocks to speed up mining
 	confirmedBlockHeader *types.Header
@@ -166,13 +165,13 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 
 	curHeader := chain.CurrentHeader()
 	cycle := uint64(0)
-	witnessMap := make(map[common.Address]bool)
+	witnessMap := make(map[string]bool)
 	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
 		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
 		curCycle := curHeader.Time.Uint64() / params.CycleInterval
 		if curCycle != cycle {
 			cycle = curCycle
-			witnessMap = make(map[common.Address]bool)
+			witnessMap = make(map[string]bool)
 		}
 		// fast return
 		// if block number difference less consensusSize-witnessNum
@@ -401,15 +400,15 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	return d.updateConfirmedBlockHeader(chain)
 }
 
-func (d *Devote) verifyBlockSigner(witness common.Address, header *types.Header) error {
+func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 	signer, err := ecrecover(header, d.signatures)
 	if err != nil {
 		return err
 	}
-	if bytes.Compare(signer.Bytes(), witness.Bytes()) != 0 {
+	if signer != witness{
 		return ErrInvalidBlockWitness
 	}
-	if bytes.Compare(signer.Bytes(), header.Witness.Bytes()) != 0 {
+	if signer != header.Witness{
 		return ErrMismatchSignerAndWitness
 	}
 	return nil
@@ -442,7 +441,9 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err != nil {
 		return err
 	}
-	if (witness == common.Address{}) || bytes.Compare(witness.Bytes(), d.signer.Bytes()) != 0 {
+	fmt.Printf("devote checkWitness lookup witness:%s,devote.signer:%s\n",witness,d.signer)
+	if (witness == "") || witness != d.signer {
+
 		return ErrInvalidBlockWitness
 	}
 	return nil
@@ -469,7 +470,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	block.Header().Time.SetInt64(time.Now().Unix())
 
 	// time's up, sign the block
-	sighash, err := d.signFn(accounts.Account{Address: d.signer}, sigHash(header).Bytes())
+	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +482,7 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 	return big.NewInt(1)
 }
 
-func (d *Devote) Authorize(signer common.Address, signFn SignerFn) {
+func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.mu.Lock()
 	d.signer = signer
 
@@ -490,27 +491,26 @@ func (d *Devote) Authorize(signer common.Address, signFn SignerFn) {
 	d.mu.Unlock()
 }
 
-// ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
+// ecrecover extracts the Masternode account ID from a signed header.
+func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
 	// If the signature's already cached, return that
 	hash := header.Hash()
 	if address, known := sigcache.Get(hash); known {
-		return address.(common.Address), nil
+		return address.(string), nil
 	}
 	// Retrieve the signature from the header extra-data
 	if len(header.Extra) < extraSeal {
-		return common.Address{}, errMissingSignature
+		return "", errMissingSignature
 	}
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 	// Recover the public key and the Ethereum address
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
 	if err != nil {
-		return common.Address{}, err
+		return "", err
 	}
-	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
-	sigcache.Add(hash, signer)
-	return signer, nil
+	id := fmt.Sprintf("%x", pubkey[1:9])
+	sigcache.Add(hash, id)
+	return id, nil
 }
 
 func PrevSlot(now uint64) uint64 {
