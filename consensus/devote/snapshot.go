@@ -70,26 +70,24 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			}
 			nodes[common.BytesToAddress(it.Value)] = singleNode
 		} else {
-
-			allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
-			for allvoteit.Next() {
-				fmt.Printf("all vote count vote key:%x ,vote value:%v", string(allvoteit.Key), string(allvoteit.Value))
-			}
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
+			//fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
-				fmt.Printf("vote is not nil vote hash:%x,vote account:%x\n", vote.Hash(), vote.Account)
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
+				log.Debug("vote is not nil vote ","hash",vote.Hash(),"account",vote.Account)
+
 				score, ok := nodes[vote.Account]
 				if !ok {
-					score.Weight = new(big.Int)
+					score = &Score{
+						Weight: big.NewInt(0),
+					}
 				}
 				score.Weight.Add(score.Weight, big.NewInt(1))
 				nodes[vote.Account] = score
@@ -182,7 +180,7 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 		return "", errors.New("failed to lookup witness")
 	}
 	offset %= uint64(witnessSize)
-	fmt.Printf("current witnesses offset%d ,id:%s,count %d value:%v\n",offset, witnesses[offset].ID,len(witnesses),witnesses)
+	fmt.Printf("current witnesses offset%d ,id:%s,count %d value:%v\n", offset, witnesses[offset].ID, len(witnesses), witnesses)
 	id := witnesses[offset].ID
 	return id, nil
 }
