@@ -95,7 +95,6 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	fmt.Printf("masternode Voting key:%x\n", key)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
-		fmt.Printf("vote already exists!\n")
 		return nil, errors.New("vote already exists")
 	}
 	masternodes := self.masternodes.AllNodes()
@@ -302,6 +301,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 			for _, vote := range mm.votes {
 				log.Debug("clean vote pool")
 				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
+
+					log.Info("clean vote pool","hash",vote.Hash())
 					mm.RemoveVote(vote)
 				}
 			}
