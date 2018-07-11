@@ -78,10 +78,10 @@ type Work struct {
 
 	Block *types.Block // the new block
 
-	header   *types.Header
-	txs      []*types.Transaction
-	receipts []*types.Receipt
-	votes    []*types.Vote
+	header    *types.Header
+	txs       []*types.Transaction
+	receipts  []*types.Receipt
+	votes     []*types.Vote
 	createdAt time.Time
 
 	devoteProtocol *types.DevoteProtocol
@@ -100,9 +100,9 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux          *event.TypeMux
-	txsCh        chan core.NewTxsEvent
-	txsSub       event.Subscription
+	mux    *event.TypeMux
+	txsCh  chan core.NewTxsEvent
+	txsSub event.Subscription
 
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
@@ -124,9 +124,7 @@ type worker struct {
 	currentMu sync.Mutex
 	current   *Work
 
-	snapshotMu    sync.RWMutex
-	snapshotBlock *types.Block
-	snapshotState *state.StateDB
+	snapshotMu sync.RWMutex
 
 	uncleMu        sync.Mutex
 	possibleUncles map[common.Hash]*types.Block
@@ -186,28 +184,36 @@ func (self *worker) setExtra(extra []byte) {
 }
 
 func (self *worker) pending() (*types.Block, *state.StateDB) {
-	if atomic.LoadInt32(&self.mining) == 0 {
-		// return a snapshot to avoid contention on currentMu mutex
-		self.snapshotMu.RLock()
-		defer self.snapshotMu.RUnlock()
-		return self.snapshotBlock, self.snapshotState.Copy()
-	}
-
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
+
+	if atomic.LoadInt32(&self.mining) == 0 {
+		return types.NewBlock(
+			self.current.header,
+			self.current.txs,
+			nil,
+			self.current.receipts,
+			self.current.votes,
+		), self.current.state.Copy()
+	}
+
 	return self.current.Block, self.current.state.Copy()
 }
 
 func (self *worker) pendingBlock() *types.Block {
-	if atomic.LoadInt32(&self.mining) == 0 {
-		// return a snapshot to avoid contention on currentMu mutex
-		self.snapshotMu.RLock()
-		defer self.snapshotMu.RUnlock()
-		return self.snapshotBlock
-	}
-
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
+
+	if atomic.LoadInt32(&self.mining) == 0 {
+		return types.NewBlock(
+			self.current.header,
+			self.current.txs,
+			nil,
+			self.current.receipts,
+			self.current.votes,
+		)
+	}
+
 	return self.current.Block
 }
 
@@ -411,15 +417,14 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := &Work{
-		config:    self.config,
-		signer:    types.NewEIP155Signer(self.config.ChainID),
-		state:     state,
-		ancestors: set.New(),
-		family:    set.New(),
-		uncles:    set.New(),
-		header:    header,
-		createdAt: time.Now(),
-
+		config:         self.config,
+		signer:         types.NewEIP155Signer(self.config.ChainID),
+		state:          state,
+		ancestors:      set.New(),
+		family:         set.New(),
+		uncles:         set.New(),
+		header:         header,
+		createdAt:      time.Now(),
 		devoteProtocol: devoteProtocol,
 	}
 
@@ -503,11 +508,10 @@ func (self *worker) commitNewWork() (*Work, error) {
 		return nil, fmt.Errorf("got error when fetch pending transactions, err: %s", err)
 	}
 
-	votes,err :=self.eth.Votes()
-	if err != nil{
-		return nil,fmt.Errorf("got error when fetch votes ,err: %s",err)
+	votes, err := self.eth.Votes()
+	if err != nil {
+		return nil, fmt.Errorf("got error when fetch votes ,err: %s", err)
 	}
-
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
