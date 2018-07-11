@@ -326,7 +326,6 @@ func (self *worker) update() {
 				}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
-				self.updateSnapshot()
 				self.currentMu.Unlock()
 			} else {
 				// If we're mining, but nothing is being processed, wake on new transactions
@@ -563,20 +562,6 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	}
 	work.uncles.Add(uncle.Hash())
 	return nil
-}
-
-func (self *worker) updateSnapshot() {
-	self.snapshotMu.Lock()
-	defer self.snapshotMu.Unlock()
-
-	self.snapshotBlock = types.NewBlock(
-		self.current.header,
-		self.current.txs,
-		nil,
-		self.current.receipts,
-		self.current.votes,
-	)
-	self.snapshotState = self.current.state.Copy()
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {

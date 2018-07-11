@@ -61,13 +61,6 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			address := common.BytesToAddress(it.Value)
 			nodes[address] = big.NewInt(0)
 		} else {
-
-			allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
-			for allvoteit.Next() {
-				avote := new(types.Vote)
-				rlp.Decode(bytes.NewReader(allvoteit.Value), avote)
-				fmt.Printf("all vote count masternodeId%s vote cycle:%d ,vote account:%x \n", avote.Masternode, avote.Cycle, avote.Account)
-			}
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
@@ -75,11 +68,11 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address
 			fmt.Printf("add masternodes Id:%v  Account:%x, key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
-				fmt.Printf("vote is not nil vote hash: %x, vote account:%x \n", vote.Hash(), vote.Account)
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
+				fmt.Printf("vote is not nil vote hash: %x, vote account:%x \n", vote.Hash(), vote.Account)
 				score, ok := nodes[vote.Account]
 				if !ok {
 					score = new(big.Int)
@@ -143,7 +136,8 @@ func (ec *Controller) uncast(cycle int64) error {
 	for i, witness := range needUncastWitnesses {
 		// ensure witness count greater than or equal to safeSize
 		if masternodeCount <= int(safeSize) {
-			log.Info("No more masternode can be uncast", "prevCycleID", cycle, "masternodeCount", masternodeCount, "needUncastCount", len(needUncastWitnesses)-i)
+			log.Info("No more masternode can be uncast", "prevCycleID", cycle, "masternodeCount", masternodeCount,
+				"needUncastCount", len(needUncastWitnesses)-i)
 			return nil
 		}
 		if err := ec.devoteProtocol.Unregister(witness.address); err != nil {
