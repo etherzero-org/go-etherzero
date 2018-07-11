@@ -880,7 +880,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 	}
 
 	if inclTx {
-		votesList := make([]*types.Vote, len(b.Votes()))
+		votesList := []*types.Vote{}
 		for _, v := range b.Votes() {
 			singleVote := &types.Vote{
 				Cycle:      v.Cycle,
