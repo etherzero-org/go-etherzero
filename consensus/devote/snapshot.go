@@ -55,46 +55,44 @@ type Score struct {
 }
 
 // masternodes return  masternode list in the Cycle.
-func (self *Controller) masternodes(isFirstCycle bool) (nodes map[common.Address]*Score, err error) {
+func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
 	currentCycle := self.TimeStamp / params.CycleInterval
 
-	nodes = map[common.Address]*Score{}
+	nodes = make(map[string]*big.Int)
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
 	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
 	for it.Next() {
-		if isFirstCycle {
-			singleNode := &Score{
-				ID:     string(it.Key),
-				Weight: big.NewInt(0),
-			}
-			nodes[common.BytesToAddress(it.Value)] = singleNode
-		} else {
+		nodes[string(it.Key)] = big.NewInt(1)
+	}
+	if !isFirstCycle {
+		voteCntTrie := self.devoteProtocol.VoteCntTrie()
+		it := trie.NewIterator(voteCntTrie.NodeIterator(nil))
+
+		for it.Next(){
 			masternodeId := it.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			//fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
+			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
-				log.Debug("vote is not nil vote ","hash",vote.Hash(),"account",vote.Account)
+				log.Debug("vote is not nil vote ", "hash", vote.Hash(), "account", vote.Account, "masternodeid", vote.Masternode)
 
-				score, ok := nodes[vote.Account]
+				score, ok := nodes[vote.Masternode]
 				if !ok {
-					score = &Score{
-						Weight: big.NewInt(0),
-					}
+					score = big.NewInt(0)
 				}
-				score.Weight.Add(score.Weight, big.NewInt(1))
-				nodes[vote.Account] = score
+				score.Add(score, big.NewInt(1))
+				nodes[vote.Masternode] = score
 			}
 		}
 	}
-	//fmt.Printf("controller nodes context:%x \n", nodes)
+	fmt.Printf("controller nodes context:%v \n", nodes)
 	return nodes, nil
 }
 
@@ -215,7 +213,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		masternodes := sortableAddresses{}
 		for masternode, cnt := range votes {
-			masternodes = append(masternodes, &sortableAddress{id: cnt.ID, address: masternode, weight: cnt.Weight})
+			masternodes = append(masternodes, &sortableAddress{id: masternode, address: common.Address{}, weight: cnt})
 		}
 		if len(masternodes) < int(safeSize) {
 			return errors.New("too few masternodes")
