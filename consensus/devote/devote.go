@@ -415,7 +415,7 @@ func (d *Devote) verifyBlockSigner(witness common.Address, header *types.Header)
 	return nil
 }
 
-func (d *Devote) checkDeadline(lastBlock *types.Block, now uint64) error {
+func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
 	prevSlot := PrevSlot(now)
 	nextSlot := NextSlot(now)
 	if lastBlock.Time().Uint64() >= nextSlot {
@@ -429,7 +429,7 @@ func (d *Devote) checkDeadline(lastBlock *types.Block, now uint64) error {
 }
 
 func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
-	if err := d.checkDeadline(lastBlock, uint64(now)); err != nil {
+	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, lastBlock.Header().Protocol)
