@@ -307,7 +307,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 }
 
-func (mm *MasternodeManager) DealPingMsg(pm *masternode.PingMsg) error {
+func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], pm.Time)
 	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)

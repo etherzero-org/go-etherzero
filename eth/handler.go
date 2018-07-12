@@ -712,7 +712,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	case msg.Code == MasternodePingMsg:
 		var ping = &masternode.PingMsg{}
 		msg.Decode(ping)
-		err := pm.mm.DealPingMsg(ping)
+		err := pm.mm.ProcessPingMsg(ping)
 		if err != nil {
 			log.Error("DealPingMsg", "error", err)
 		}
