@@ -34,11 +34,13 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
+	"sync"
 )
 
 type Controller struct {
 	devoteProtocol *types.DevoteProtocol
 	TimeStamp      uint64
+	mu             sync.Mutex
 }
 
 func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
@@ -56,6 +58,9 @@ type Score struct {
 
 // masternodes return  masternode list in the Cycle.
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
+	self.mu.Lock()
+	defer  self.mu.Unlock()
+
 	currentCycle := self.TimeStamp / params.CycleInterval
 
 	nodes = make(map[string]*big.Int)
@@ -69,7 +74,7 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
 		itvote := trie.NewIterator(voteCntTrie.NodeIterator(nil))
 
-		for itvote.Next(){
+		for itvote.Next() {
 			masternodeId := itvote.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
