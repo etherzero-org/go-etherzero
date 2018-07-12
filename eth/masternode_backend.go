@@ -80,15 +80,13 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 }
 
 func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
 
 	currentCycle := current.Time.Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
 
 	storeCycle := atomic.LoadUint64(&self.currentCycle)
-	if storeCycle >= nextCycle{
-		log.Info("this masternode voted in next cycle ", "cycle", nextCycle)
+	if storeCycle >= nextCycle {
+		log.Info("this masternode voted in the next cycle ", "cycle", nextCycle)
 		return nil, nil
 	}
 
@@ -125,7 +123,7 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "account", vote.Account)
 	self.Add(vote)
 	atomic.StoreUint64(&self.currentCycle, nextCycle)
-	self.PostVoteEvent(vote)
+	go self.PostVoteEvent(vote)
 	return vote, nil
 }
 

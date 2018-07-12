@@ -86,7 +86,7 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
-				log.Debug("vote is not nil vote ", "hash", vote.Hash(), "account", vote.Account, "masternodeid", vote.Masternode)
+				log.Info("vote is not nil ", "hash", vote.Hash(), "account", vote.Account, "masternodeid", vote.Masternode)
 
 				score, ok := nodes[vote.Masternode]
 				if !ok {

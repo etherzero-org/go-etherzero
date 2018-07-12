@@ -31,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/eth/fetcher"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -40,7 +41,6 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 const (
@@ -88,7 +88,7 @@ type ProtocolManager struct {
 	eventMux *event.TypeMux
 	txsCh    chan core.NewTxsEvent
 	txsSub   event.Subscription
-	voteCh      chan core.NewVoteEvent
+	voteCh   chan core.NewVoteEvent
 	voteSub  event.Subscription
 
 	minedBlockSub *event.TypeMuxSubscription
@@ -661,8 +661,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Mark the peer as owning the block and schedule it for import
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
-		pm.mm.Voting(request.Block.Header())
-
+		votingBlockNumber := request.Block.Number().Uint64() - 100
+		votingblock := pm.blockchain.GetBlockByNumber(votingBlockNumber)
+		if votingblock != nil {
+			pm.mm.Voting(votingblock.Header())
+		}
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
 		var (

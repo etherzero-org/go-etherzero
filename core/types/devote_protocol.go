@@ -7,10 +7,11 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
-	"github.com/etherzero/go-etherzero/log"
+	"sync"
 )
 
 var (
@@ -32,6 +33,8 @@ type DevoteProtocol struct {
 	voteCntTriedb      *trie.Database
 
 	diskdb ethdb.Database
+
+	mu sync.Mutex
 }
 
 func NewCycleTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
@@ -73,17 +76,16 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		return nil, err
 	}
 	return &DevoteProtocol{
-		cycleTrie:          cycleTrie,
-		masternodeTrie:     masternodeTrie,
-		minerRollingTrie:   minerRollingTrie,
-		voteCntTrie:        voteCntTrie,
-		diskdb:             db,
+		cycleTrie:        cycleTrie,
+		masternodeTrie:   masternodeTrie,
+		minerRollingTrie: minerRollingTrie,
+		voteCntTrie:      voteCntTrie,
+		diskdb:           db,
 
 		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
 		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
 		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
-
 	}, nil
 }
 
@@ -246,6 +248,9 @@ func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
 }
 
 func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
 	for i, vote := range votes {
 		masternodeBytes := []byte(vote.Masternode)
 		key := make([]byte, 8)

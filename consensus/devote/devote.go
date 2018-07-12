@@ -443,7 +443,6 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	}
 	fmt.Printf("devote checkWitness lookup witness:%s,devote.signer:%s\n",witness,d.signer)
 	if (witness == "") || witness != d.signer {
-
 		return ErrInvalidBlockWitness
 	}
 	return nil
