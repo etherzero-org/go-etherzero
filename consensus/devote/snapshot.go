@@ -67,14 +67,14 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 	}
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-		it := trie.NewIterator(voteCntTrie.NodeIterator(nil))
+		itvote := trie.NewIterator(voteCntTrie.NodeIterator(nil))
 
-		for it.Next(){
-			masternodeId := it.Key
+		for itvote.Next(){
+			masternodeId := itvote.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
+			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(itvote.Key), common.BytesToAddress(itvote.Value), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
