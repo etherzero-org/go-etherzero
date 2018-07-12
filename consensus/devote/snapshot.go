@@ -34,11 +34,13 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
+	"sync"
 )
 
 type Controller struct {
 	devoteProtocol *types.DevoteProtocol
 	TimeStamp      uint64
+	mu             sync.Mutex
 }
 
 func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
@@ -48,38 +50,41 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
+
 // masternodes return  masternode list in the Cycle.
 // key   -- nodeid
 // value -- votes count
+
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
+	self.mu.Lock()
+	defer  self.mu.Unlock()
+
 	currentCycle := self.TimeStamp / params.CycleInterval
 
 	nodes = make(map[string]*big.Int)
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
-	// masternode count
-	mn := trie.NewIterator(masternodeTrie.NodeIterator(nil))
+	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
-	for mn.Next() {
-		nodes[string(mn.Key)] = big.NewInt(1)
+	for it.Next() {
+		nodes[string(it.Key)] = big.NewInt(1)
 	}
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-		// votes count
-		vc := trie.NewIterator(voteCntTrie.NodeIterator(nil))
+		itvote := trie.NewIterator(voteCntTrie.NodeIterator(nil))
 
-		for vc.Next() {
-			masternodeId := vc.Key
+		for itvote.Next() {
+			masternodeId := itvote.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(vc.Key), common.BytesToAddress(vc.Value).String(), key)
+			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(itvote.Key), common.BytesToAddress(itvote.Value), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
-				log.Debug("vote is not nil vote ", "hash", vote.Hash().String(), "account", vote.Account.String(), "masternodeid", vote.Masternode)
+				log.Info("vote is not nil ", "hash", vote.Hash(), "account", vote.Account, "masternodeid", vote.Masternode)
 
 				score, ok := nodes[vote.Masternode]
 				if !ok {

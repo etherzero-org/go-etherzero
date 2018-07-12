@@ -59,8 +59,10 @@ type MasternodeManager struct {
 	srvr         *p2p.Server
 	contract     *contract.Contract
 
-	scope    event.SubscriptionScope
-	voteFeed event.Feed
+	scope        event.SubscriptionScope
+	voteFeed     event.Feed
+	currentCycle uint64 // Current vote of the block chain
+
 	Lifetime time.Duration // Maximum amount of time vote are queued
 }
 
@@ -81,6 +83,13 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 
 	currentCycle := current.Time.Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
+
+	storeCycle := atomic.LoadUint64(&self.currentCycle)
+	if storeCycle >= nextCycle {
+		log.Info("this masternode voted in the next cycle ", "cycle", nextCycle)
+		return nil, nil
+	}
+
 	nextCycleVoteId := make([]byte, 8)
 	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
 	if self.active == nil {
@@ -113,7 +122,8 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	vote.SignVote(self.active.PrivateKey)
 	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "account", vote.Account)
 	self.Add(vote)
-	self.PostVoteEvent(vote)
+	atomic.StoreUint64(&self.currentCycle, nextCycle)
+	go self.PostVoteEvent(vote)
 	return vote, nil
 }
 

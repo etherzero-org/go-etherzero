@@ -7,10 +7,11 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
-	"github.com/etherzero/go-etherzero/log"
+	"sync"
 )
 
 var (
@@ -32,6 +33,8 @@ type DevoteProtocol struct {
 	voteCntTriedb      *trie.Database
 
 	diskdb ethdb.Database
+
+	mu sync.Mutex
 }
 
 func NewCycleTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
@@ -245,13 +248,16 @@ func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
 }
 
 func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
-	for _, vote := range votes {
-		id := []byte(vote.Masternode)
-		ids := make([]byte, 8)
-		binary.BigEndian.PutUint64(ids, uint64(vote.Cycle))
-		ids = append(ids, []byte(id)...)
+	self.mu.Lock()
+	defer self.mu.Unlock()
 
-		voteCntInTrieBytes := self.VoteCntTrie().Get(ids)
+	for _, vote := range votes {
+		masternodeBytes := []byte(vote.Masternode)
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
+		key = append(key, []byte(masternodeBytes)...)
+
+		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
 			log.Error("vote already exists, vote", "hash:", vote.Hash())
 			continue
@@ -260,10 +266,7 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 		if err != nil {
 			return err
 		}
-		err = self.VoteCntTrie().TryUpdate(ids, voteRLP)
-		if err != nil {
-			return err
-		}
+		self.VoteCntTrie().TryUpdate(key, voteRLP)
 	}
 	return nil
 }
