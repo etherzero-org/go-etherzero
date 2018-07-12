@@ -48,40 +48,38 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
-// node vote static info
-type Score struct {
-	ID     string   // masternode ID
-	Weight *big.Int // masternode weight
-}
-
 // masternodes return  masternode list in the Cycle.
+// key   -- nodeid
+// value -- votes count
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
 	currentCycle := self.TimeStamp / params.CycleInterval
 
 	nodes = make(map[string]*big.Int)
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
-	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
+	// masternode count
+	mn := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
-	for it.Next() {
-		nodes[string(it.Key)] = big.NewInt(1)
+	for mn.Next() {
+		nodes[string(mn.Key)] = big.NewInt(1)
 	}
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-		it := trie.NewIterator(voteCntTrie.NodeIterator(nil))
+		// votes count
+		vc := trie.NewIterator(voteCntTrie.NodeIterator(nil))
 
-		for it.Next(){
-			masternodeId := it.Key
+		for vc.Next() {
+			masternodeId := vc.Key
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(it.Key), common.BytesToAddress(it.Value), key)
+			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(vc.Key), common.BytesToAddress(vc.Value).String(), key)
 			vote := new(types.Vote)
 			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
-				log.Debug("vote is not nil vote ", "hash", vote.Hash(), "account", vote.Account, "masternodeid", vote.Masternode)
+				log.Debug("vote is not nil vote ", "hash", vote.Hash().String(), "account", vote.Account.String(), "masternodeid", vote.Masternode)
 
 				score, ok := nodes[vote.Masternode]
 				if !ok {

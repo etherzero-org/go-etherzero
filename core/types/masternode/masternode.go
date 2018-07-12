@@ -28,7 +28,6 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
-	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
@@ -103,17 +102,17 @@ func (n *Masternode) String() string {
 	return fmt.Sprintf("Account: %s\nNode: %s\n", n.Account.String(), n.Node)
 }
 
-func (n *Masternode) CalculaoteScore(block *types.Block) int64 {
-	blockHash := rlpHash([]interface{}{
-		block.Hash(),
-		n.ID,
-		n.Node,
-		block.Number(),
-		n.Account,
-		n.CollateralMinConfBlockHash,
-	})
-	return blockHash.Big().Int64()
-}
+//func (n *Masternode) CalculateScore(block *types.Block) int64 {
+//	blockHash := rlpHash([]interface{}{
+//		block.Hash(),
+//		n.ID,
+//		n.Node,
+//		block.Number(),
+//		n.Account,
+//		n.CollateralMinConfBlockHash,
+//	})
+//	return blockHash.Big().Int64()
+//}
 
 type MasternodeSet struct {
 	nodes    map[string]*Masternode

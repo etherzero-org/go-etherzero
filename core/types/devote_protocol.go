@@ -73,17 +73,16 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		return nil, err
 	}
 	return &DevoteProtocol{
-		cycleTrie:          cycleTrie,
-		masternodeTrie:     masternodeTrie,
-		minerRollingTrie:   minerRollingTrie,
-		voteCntTrie:        voteCntTrie,
-		diskdb:             db,
+		cycleTrie:        cycleTrie,
+		masternodeTrie:   masternodeTrie,
+		minerRollingTrie: minerRollingTrie,
+		voteCntTrie:      voteCntTrie,
+		diskdb:           db,
 
 		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
 		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
 		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
-
 	}, nil
 }
 
@@ -246,22 +245,25 @@ func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
 }
 
 func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
-	for i, vote := range votes {
-		masternodeBytes := []byte(vote.Masternode)
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-		key = append(key, []byte(masternodeBytes)...)
+	for _, vote := range votes {
+		id := []byte(vote.Masternode)
+		ids := make([]byte, 8)
+		binary.BigEndian.PutUint64(ids, uint64(vote.Cycle))
+		ids = append(ids, []byte(id)...)
 
-		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
+		voteCntInTrieBytes := self.VoteCntTrie().Get(ids)
 		if voteCntInTrieBytes != nil {
-			log.Error("vote already exists, vote", "hash:", votes[i].Hash())
+			log.Error("vote already exists, vote", "hash:", vote.Hash())
 			continue
 		}
 		voteRLP, err := rlp.EncodeToBytes(vote)
 		if err != nil {
 			return err
 		}
-		self.VoteCntTrie().TryUpdate(key, voteRLP)
+		err = self.VoteCntTrie().TryUpdate(ids, voteRLP)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
