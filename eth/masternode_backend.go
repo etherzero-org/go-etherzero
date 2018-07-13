@@ -81,6 +81,10 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 
 func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
 
+	if self.active == nil {
+		return nil, errors.New("current node is not masternode ")
+	}
+
 	currentCycle := current.Time.Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
 
@@ -90,16 +94,10 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 		return nil, nil
 	}
 
-	nextCycleVoteId := make([]byte, 8)
-	binary.BigEndian.PutUint64(nextCycleVoteId, uint64(nextCycle))
-	if self.active == nil {
-		return nil, errors.New("current node is not masternode ")
-	}
-	masternodeBytes := self.active.ID
-
+	masternodeID := self.active.ID
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
-	key = append(key, []byte(masternodeBytes)...)
+	key = append(key, []byte(masternodeID)...)
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
 		return nil, errors.New("vote already exists")

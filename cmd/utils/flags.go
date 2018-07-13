@@ -533,11 +533,6 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
-	MasternodeContractFlag = cli.StringFlag{
-		Name:  "masternode.contract",
-		Usage: "Masternode contract address",
-		Value: "0xe260bf670cbae2731ad3bb8bfb0536c415693e13",
-	}
 	MasternodeIPFlag = cli.StringFlag{
 		Name:  "masternode.ip",
 		Usage: "Masternode public ip",
@@ -626,9 +621,6 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 }
 
 func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
-	if account := ctx.GlobalString(MasternodeContractFlag.Name); len(account) == 42 {
-		cfg.MasternodeContract = common.HexToAddress(account)
-	}
 	if ip := ctx.GlobalString(MasternodeIPFlag.Name); len(ip) > 0 {
 		cfg.MasternodeAddr = net.TCPAddr{
 			IP:   net.ParseIP(ip),
