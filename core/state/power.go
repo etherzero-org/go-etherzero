@@ -3,16 +3,12 @@ package state
 import (
 	"math/big"
 	"math"
-	"github.com/etherzero/go-etherzero/common"
 )
 
 // EXP(−1÷(etz×50)×10000)×10000000+200000
 // EXP(−1÷(etz×2)×1000)×200000+1000
 func CalculatePower(prevBlock, newBlock, prevPower, balance *big.Int) *big.Int {
-	if prevBlock.Cmp(newBlock) >= 0 && prevBlock.Cmp(common.Big0) == 0 {
-		return prevPower
-	}
-	if balance.Cmp(big.NewInt(1e+16)) < 0 {
+	if prevBlock.Cmp(newBlock) >= 0 || balance.Cmp(big.NewInt(1e+16)) < 0 {
 		return prevPower
 	}
 
