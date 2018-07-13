@@ -29,6 +29,7 @@ var (
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
 
 	MasterndeContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000a")
+	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
 )
 
 var (
