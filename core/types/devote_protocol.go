@@ -121,6 +121,9 @@ func (d *DevoteProtocol) Copy() *DevoteProtocol {
 }
 
 func (d *DevoteProtocol) Root() (h common.Hash) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, d.cycleTrie.Hash())
 	rlp.Encode(hw, d.masternodeTrie.Hash())
@@ -160,6 +163,7 @@ func (d *DevoteProtocol) FromAtomic(dpa *DevoteProtocolAtomic) error {
 }
 
 type DevoteProtocolAtomic struct {
+	mu sync.Mutex
 	CycleHash        common.Hash `json:"cycleRoot"         gencodec:"required"`
 	MasternodeHash   common.Hash `json:"masternodeRoot"    gencodec:"required"`
 	MinerRollingHash common.Hash `json:"minerRollingRoot"  gencodec:"required"`
@@ -209,6 +213,8 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 }
 
 func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	return &DevoteProtocolAtomic{
 		CycleHash:        d.cycleTrie.Hash(),
 		MasternodeHash:   d.masternodeTrie.Hash(),
@@ -218,6 +224,9 @@ func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 }
 
 func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, p.CycleHash)
 	rlp.Encode(hw, p.MasternodeHash)

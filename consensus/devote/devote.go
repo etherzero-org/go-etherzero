@@ -77,7 +77,7 @@ var (
 	// the previous block's timestamp + the minimum block period.
 	ErrInvalidTimestamp         = errors.New("invalid timestamp")
 	ErrWaitForPrevBlock         = errors.New("wait for last block arrived")
-	ErrMintFutureBlock          = errors.New("mint the future block")
+	ErrMintFutureBlock          = errors.New("miner the future block")
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
 	ErrInvalidBlockWitness      = errors.New("invalid block witness")
 	ErrInvalidMinerBlockTime    = errors.New("invalid time to miner the block")

@@ -50,50 +50,38 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
-
 // masternodes return  masternode list in the Cycle.
 // key   -- nodeid
 // value -- votes count
 
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
 	self.mu.Lock()
-	defer  self.mu.Unlock()
+	defer self.mu.Unlock()
 
 	currentCycle := self.TimeStamp / params.CycleInterval
-
 	nodes = make(map[string]*big.Int)
 	masternodeTrie := self.devoteProtocol.MasternodeTrie()
 	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
 
 	for it.Next() {
-		nodes[string(it.Key)] = big.NewInt(1)
+		nodes[string(it.Key)] = big.NewInt(0)
 	}
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-		itvote := trie.NewIterator(voteCntTrie.NodeIterator(nil))
-		allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
-		for allvoteit.Next() {
-			fmt.Printf("all vote count vote key:%x ,vote value:%v", string(allvoteit.Key), string(allvoteit.Value))
-		}
-
-		for itvote.Next() {
-			masternodeId := itvote.Key
+		fmt.Printf("masternode count %d\n", len(nodes))
+		for masternode, score := range nodes {
+			masternodeId := []byte(masternode)
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%v Account:%x  ,key:%x \n", string(itvote.Key), common.BytesToAddress(itvote.Value), key)
+			fmt.Printf("add masternodes Id:%x key:%x \n", masternode, key)
 			vote := new(types.Vote)
-			if voteCntBytes := self.devoteProtocol.VoteCntTrie().Get(key); voteCntBytes != nil {
+			if voteCntBytes := voteCntTrie.Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
 				log.Info("vote is not nil ", "hash", vote.Hash(), "poll", vote.Poll, "masternodeid", vote.Masternode)
-
-				score, ok := nodes[vote.Masternode]
-				if !ok {
-					score = big.NewInt(0)
-				}
 				score.Add(score, big.NewInt(1))
 				nodes[vote.Masternode] = score
 			}
