@@ -29,7 +29,7 @@ import (
 // Vote represents an entire vote in the Etherzero blockchain.
 type Vote struct {
 	Cycle      uint64 `json:"cycle"      gencodec:"required"`
-	Poll       string `json:"Poll"    gencodec:"required"`
+	Poll       string `json:"Poll"       gencodec:"required"`
 	Masternode string `json:"masternode" gencodec:"required"`
 	Sign       []byte `json:"sign"       gencodec:"required"`
 }
@@ -45,17 +45,17 @@ func NewVote(cycle uint64, poll string, masternode string) *Vote {
 
 // Hash returns the vote hash , which is simply the keccak256 hash of its
 // RLP encoding.
-func (v *Vote) Hash() (h common.Hash) {
+func (v *Vote) Hash() (common.Hash) {
 	return rlpHash(v)
 }
 
-func (v *Vote) NosigHash() (h common.Hash) {
+func (v *Vote) NosigHash() (common.Hash) {
 	vote := &Vote{
 		Cycle:      v.Cycle,
 		Poll:       v.Poll,
 		Masternode: v.Masternode,
 	}
-	return rlpHash(vote)
+	return vote.Hash()
 }
 
 // SignVote signs the transaction using the given signer and private key
