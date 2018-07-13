@@ -251,7 +251,7 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	for i, vote := range votes {
+	for _, vote := range votes {
 		masternodeBytes := []byte(vote.Masternode)
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
@@ -259,7 +259,7 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 
 		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
-			log.Error("vote already exists, vote", "hash:", votes[i].Hash())
+			log.Error("vote already exists, vote", "hash:", vote.Hash())
 			continue
 		}
 		voteRLP, err := rlp.EncodeToBytes(vote)

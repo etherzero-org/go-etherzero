@@ -51,17 +51,10 @@ const (
 )
 
 var (
-	big0  = big.NewInt(0)
-	big8  = big.NewInt(8)
-	big32 = big.NewInt(32)
-
-	etherzeroBlockReward *big.Int = big.NewInt(4e+18) // Block reward in wei for successfully mining a block
-
-	timeOfFirstBlock uint64 = 0
-
-	confirmedBlockHead = []byte("confirmed-block-head")
-	uncleHash          = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
-
+	etherzeroBlockReward = big.NewInt(4e+18) // Block reward in wei for successfully mining a block
+	timeOfFirstBlock     = uint64(0)
+	confirmedBlockHead   = []byte("confirmed-block-head")
+	uncleHash            = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 )
 
 var (
@@ -91,6 +84,9 @@ var (
 	ErrNilBlockHeader           = errors.New("nil block header returned")
 )
 
+// SignerFn
+// string:master node id,[8]byte
+// []byte,signature
 type SignerFn func(string, []byte) ([]byte, error)
 
 type PostVoteFn func(vote *types.Vote)
@@ -133,8 +129,8 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer               string
-	signFn               SignerFn
+	signer               string        // master node id
+	signFn               SignerFn      // signature function
 	signatures           *lru.ARCCache // Signatures of recent blocks to speed up mining
 	confirmedBlockHeader *types.Header
 
@@ -216,6 +212,8 @@ func (s *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
 	return nil
 }
 
+// Prepare implements consensus.Engine, preparing all the consensus fields of the
+// header for running the transactions on top.
 func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	header.Nonce = types.BlockNonce{}
 	number := header.Number.Uint64()
@@ -267,7 +265,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
-	fmt.Printf("Finalize votes value:%v\n",votes)
+	fmt.Printf("Finalize votes value:%v\n", votes)
 
 	voterr := devoteProtocol.ApplyVote(votes)
 	if voterr != nil {
@@ -405,10 +403,10 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 	if err != nil {
 		return err
 	}
-	if signer != witness{
+	if signer != witness {
 		return ErrInvalidBlockWitness
 	}
-	if signer != header.Witness{
+	if signer != header.Witness {
 		return ErrMismatchSignerAndWitness
 	}
 	return nil
@@ -441,7 +439,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("devote checkWitness lookup witness:%s,devote.signer:%s\n",witness,d.signer)
+	fmt.Printf("devote checkWitness lookup witness:%s,devote.signer:%s\n", witness, d.signer)
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
 	}
@@ -484,7 +482,6 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.mu.Lock()
 	d.signer = signer
-
 	d.signFn = signFn
 	fmt.Printf("devote Authorize signer account: %x\n", signer)
 	d.mu.Unlock()

@@ -50,13 +50,11 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 	return controller
 }
 
-// node vote static info
-type Score struct {
-	ID     string   // masternode ID
-	Weight *big.Int // masternode weight
-}
 
 // masternodes return  masternode list in the Cycle.
+// key   -- nodeid
+// value -- votes count
+
 func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
 	self.mu.Lock()
 	defer  self.mu.Unlock()

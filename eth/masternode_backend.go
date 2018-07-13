@@ -217,7 +217,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 		var buf bytes.Buffer
 		buf.Write(mm.srvr.Self().ID[:])
 		buf.Write(misc[:])
-		d := "0x3aa8cd8b" + common.Bytes2Hex(buf.Bytes()) + "000000000000000000000000" + common.Bytes2Hex(mm.active.NodeAccount.Bytes())
+		d := "0x3aa8cd8b" + common.Bytes2Hex(buf.Bytes())
 		fmt.Println("Masternode transaction data:", d)
 	}
 

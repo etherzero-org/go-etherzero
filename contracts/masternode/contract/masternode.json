@@ -46,10 +46,6 @@
       {
         "name": "misc",
         "type": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address"
       }
     ],
     "name": "register",
@@ -142,73 +138,6 @@
       {
         "name": "account",
         "type": "address"
-      },
-      {
-        "name": "blockOnlineAcc",
-        "type": "uint256"
-      },
-      {
-        "name": "blockLastPing",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "etzMin",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "blockNumber",
-        "type": "uint256"
-      },
-      {
-        "name": "r",
-        "type": "bytes32"
-      },
-      {
-        "name": "s",
-        "type": "bytes32"
-      },
-      {
-        "name": "v",
-        "type": "bytes32"
-      }
-    ],
-    "name": "ping",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "blockPingTimeout",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
       }
     ],
     "payable": false,
@@ -300,28 +229,6 @@
       }
     ],
     "name": "quit",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "id",
-        "type": "bytes8"
-      },
-      {
-        "indexed": false,
-        "name": "blockOnlineAcc",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "name": "blockLastPing",
-        "type": "uint256"
-      }
-    ],
-    "name": "pingNotice",
     "type": "event"
   }
 ]
