@@ -343,9 +343,9 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 	} else if int(n.Node.TCP) != mm.active.Addr.Port {
 		log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
-		log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
-		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+	//} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
+	//	log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
+	//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
