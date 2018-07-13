@@ -35,6 +35,7 @@ import (
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
@@ -44,7 +45,6 @@ import (
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 const (
@@ -885,7 +885,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 			singleVote := &types.Vote{
 				Cycle:      v.Cycle,
 				Sign:       v.Sign,
-				Account:    v.Account,
+				Poll:       v.Poll,
 				Masternode: v.Masternode,
 			}
 			votesList = append(votesList, singleVote)

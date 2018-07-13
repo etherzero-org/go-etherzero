@@ -255,7 +255,7 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 		masternodeBytes := []byte(vote.Masternode)
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-		key = append(key, []byte(masternodeBytes)...)
+		key = append(key, masternodeBytes...)
 
 		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
@@ -266,6 +266,7 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("vote apply tryupdate key%s\n", string(key))
 		self.VoteCntTrie().TryUpdate(key, voteRLP)
 	}
 	return nil

@@ -106,21 +106,21 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	}
 	masternodes := self.masternodes.AllNodes()
 	weight := int64(0)
-	best := self.active.Account
+	best := self.active.ID
 	for _, masternode := range masternodes {
 		hash := make([]byte, 8)
 		binary.BigEndian.PutUint64(hash, current.Time.Uint64())
-		hash = append(hash, masternode.Account.Bytes()...)
+		hash = append(hash, []byte(masternode.ID)...)
 		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
-		if temp > weight && masternode.Account != self.active.Account {
+		if temp > weight && masternode.ID != self.active.ID {
 			weight = temp
-			best = masternode.Account
+			best = masternode.ID
 		}
 	}
 	vote := types.NewVote(nextCycle, best, self.active.ID)
 
 	vote.SignVote(self.active.PrivateKey)
-	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "account", vote.Account)
+	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "poll", vote.Poll)
 	self.Add(vote)
 	atomic.StoreUint64(&self.currentCycle, nextCycle)
 	go self.PostVoteEvent(vote)

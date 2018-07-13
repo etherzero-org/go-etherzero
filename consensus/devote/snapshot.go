@@ -86,7 +86,7 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
-				log.Info("vote is not nil ", "hash", vote.Hash(), "account", vote.Account, "masternodeid", vote.Masternode)
+				log.Info("vote is not nil ", "hash", vote.Hash(), "poll", vote.Poll, "masternodeid", vote.Masternode)
 
 				score, ok := nodes[vote.Masternode]
 				if !ok {
@@ -253,7 +253,7 @@ func (self *Controller) ApplyVote(votes []*types.Vote) error {
 		masternodeBytes := []byte(vote.Masternode)
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-		key = append(key, []byte(masternodeBytes)...)
+		key = append(key, masternodeBytes...)
 
 		voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
@@ -281,7 +281,7 @@ func (self *Controller) Process(vote *types.Vote) error {
 	masternodeBytes := []byte(vote.Masternode)
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-	key = append(key, []byte(masternodeBytes)...)
+	key = append(key, masternodeBytes...)
 
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
