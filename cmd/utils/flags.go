@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -1088,44 +1087,45 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 
 	// Override any default configs for hard coded networks.
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 4
-		}
-		cfg.Genesis = core.DefaultRinkebyGenesisBlock()
-	case ctx.GlobalBool(DeveloperFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 1337
-		}
-		// Create new developer account or reuse existing one
-		var (
-			developer accounts.Account
-			err       error
-		)
-		if accs := ks.Accounts(); len(accs) > 0 {
-			developer = ks.Accounts()[0]
-		} else {
-			developer, err = ks.NewAccount("")
-			if err != nil {
-				Fatalf("Failed to create developer account: %v", err)
-			}
-		}
-		if err := ks.Unlock(developer, ""); err != nil {
-			Fatalf("Failed to unlock developer account: %v", err)
-		}
-		log.Info("Using developer account", "address", developer.Address)
-
-		cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
-		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = big.NewInt(1)
-		}
-	}
+	cfg.Genesis = core.DefaultTestnetGenesisBlock()
+	//switch {
+	//case ctx.GlobalBool(TestnetFlag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = 3
+	//	}
+	//	cfg.Genesis = core.DefaultTestnetGenesisBlock()
+	//case ctx.GlobalBool(RinkebyFlag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = 4
+	//	}
+	//	cfg.Genesis = core.DefaultRinkebyGenesisBlock()
+	//case ctx.GlobalBool(DeveloperFlag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = 1337
+	//	}
+	//	// Create new developer account or reuse existing one
+	//	var (
+	//		developer accounts.Account
+	//		err       error
+	//	)
+	//	if accs := ks.Accounts(); len(accs) > 0 {
+	//		developer = ks.Accounts()[0]
+	//	} else {
+	//		developer, err = ks.NewAccount("")
+	//		if err != nil {
+	//			Fatalf("Failed to create developer account: %v", err)
+	//		}
+	//	}
+	//	if err := ks.Unlock(developer, ""); err != nil {
+	//		Fatalf("Failed to unlock developer account: %v", err)
+	//	}
+	//	log.Info("Using developer account", "address", developer.Address)
+	//
+	//	cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
+	//	if !ctx.GlobalIsSet(GasPriceFlag.Name) {
+	//		cfg.GasPrice = big.NewInt(1)
+	//	}
+	//}
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
 		state.MaxTrieCacheGen = uint16(gen)
@@ -1219,14 +1219,15 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) ethdb.Database {
 
 func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	var genesis *core.Genesis
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		genesis = core.DefaultRinkebyGenesisBlock()
-	case ctx.GlobalBool(DeveloperFlag.Name):
-		Fatalf("Developer chains are ephemeral")
-	}
+	genesis = core.DefaultTestnetGenesisBlock()
+	//switch {
+	//case ctx.GlobalBool(TestnetFlag.Name):
+	//	genesis = core.DefaultTestnetGenesisBlock()
+	//case ctx.GlobalBool(RinkebyFlag.Name):
+	//	genesis = core.DefaultRinkebyGenesisBlock()
+	//case ctx.GlobalBool(DeveloperFlag.Name):
+	//	Fatalf("Developer chains are ephemeral")
+	//}
 	return genesis
 }
 
