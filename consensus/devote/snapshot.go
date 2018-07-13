@@ -71,6 +71,10 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
 		itvote := trie.NewIterator(voteCntTrie.NodeIterator(nil))
+		allvoteit := trie.NewIterator(self.devoteProtocol.VoteCntTrie().NodeIterator(nil))
+		for allvoteit.Next() {
+			fmt.Printf("all vote count vote key:%x ,vote value:%v", string(allvoteit.Key), string(allvoteit.Value))
+		}
 
 		for itvote.Next() {
 			masternodeId := itvote.Key
