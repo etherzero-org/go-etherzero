@@ -27,6 +27,8 @@ import (
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
+
+	MasterndeContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000a")
 )
 
 var (
@@ -42,7 +44,14 @@ var (
 		EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 
-		Devote: &DevoteConfig{},
+		Devote : &DevoteConfig{
+			Witnesses: []*Account{
+				{
+					ID:   "17ef852410cee453",
+					Addr: common.HexToAddress("0x4cefd227ba9da0a2304e1b85588835abef926927"),
+				},
+			},
+		},
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
@@ -59,6 +68,14 @@ var (
 		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: nil,
 		Ethash:              new(EthashConfig),
+		Devote : &DevoteConfig{
+			Witnesses: []*Account{
+				{
+					ID:   "17ef852410cee453",
+					Addr: common.HexToAddress("0x4cefd227ba9da0a2304e1b85588835abef926927"),
+				},
+			},
+		},
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
@@ -77,6 +94,14 @@ var (
 		Clique: &CliqueConfig{
 			Period: 15,
 			Epoch:  30000,
+		},
+		Devote : &DevoteConfig{
+			Witnesses: []*Account{
+				{
+					ID:   "17ef852410cee453",
+					Addr: common.HexToAddress("0x4cefd227ba9da0a2304e1b85588835abef926927"),
+				},
+			},
 		},
 	}
 

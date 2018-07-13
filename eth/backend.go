@@ -96,7 +96,6 @@ type Ethereum struct {
 	networkID          uint64
 	netRPCService      *ethapi.PublicNetAPI
 	masternodeManager  *MasternodeManager
-	masternodeContract *contract.Contract
 	masternodes        *masternode.MasternodeSet
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
@@ -474,7 +473,6 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
 	contractBackend := NewContractBackend(s)
-	fmt.Println("MasternodeContract address ", srvr.MasternodeContract.String())
 	go s.startMasternode(srvr, contractBackend)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
@@ -496,18 +494,9 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBa
 		case <-t.C:
 			if s.Downloader().Synchronising() {
 				t.Reset(10 * time.Second)
-				continue
+				break
 			}
-			StateDB, err := s.blockchain.State()
-			if err != nil {
-				t.Reset(10 * time.Second)
-				continue
-			}
-			if StateDB.GetCode(srvr.MasternodeContract) == nil {
-				t.Reset(10 * time.Second)
-				continue
-			}
-			contract, err := contract.NewContract(srvr.MasternodeContract, contractBackend)
+			contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
 			if err != nil {
 				log.Error("startMasternode", "error", err)
 				break

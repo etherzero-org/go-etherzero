@@ -177,7 +177,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NetrestrictFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
-			utils.MasternodeContractFlag,
 			utils.MasternodeIPFlag,
 		},
 	},

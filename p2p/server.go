@@ -143,7 +143,6 @@ type Config struct {
 	Logger log.Logger `toml:",omitempty"`
 
 	// Masternode
-	MasternodeContract common.Address
 	MasternodeAddr     net.TCPAddr
 }
 
@@ -922,7 +921,6 @@ type NodeInfo struct {
 	ListenAddr string                 `json:"listenAddr"`
 	Protocols  map[string]interface{} `json:"protocols"`
 	Masternode struct {
-		MasternodeContract string `json:"masternodeContract"`
 		MasternodeAddr     string `json:"masternodeAddr"`
 	} `json:"masternode"`
 }
@@ -942,7 +940,6 @@ func (srv *Server) NodeInfo() *NodeInfo {
 	}
 	info.Ports.Discovery = int(node.UDP)
 	info.Ports.Listener = int(node.TCP)
-	info.Masternode.MasternodeContract = srv.MasternodeContract.String()
 	info.Masternode.MasternodeAddr = srv.MasternodeAddr.String()
 
 	// Gather all the running protocol infos (only once per protocol type)
