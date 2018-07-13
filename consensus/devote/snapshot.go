@@ -183,12 +183,10 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
 	prevCycle := parent.Time.Uint64() / params.CycleInterval
 	currentCycle := self.TimeStamp / params.CycleInterval
-
 	prevCycleIsGenesis := (prevCycle == genesisCycle)
 	if prevCycleIsGenesis && prevCycle < currentCycle {
 		prevCycle = currentCycle - 1
 	}
-
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
 	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
