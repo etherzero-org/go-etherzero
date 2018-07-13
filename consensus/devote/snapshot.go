@@ -230,8 +230,10 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
 		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
+		self.mu.Lock()
 		self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
+		self.mu.Unlock()
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
