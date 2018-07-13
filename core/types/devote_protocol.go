@@ -2,16 +2,15 @@ package types
 
 import (
 	"fmt"
-
+	"sync"
 	"encoding/binary"
+
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
-	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
-	"sync"
 )
 
 var (
@@ -268,14 +267,12 @@ func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 
 		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
-			log.Error("vote already exists, vote", "hash:", vote.Hash())
 			continue
 		}
 		voteRLP, err := rlp.EncodeToBytes(vote)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("vote apply tryupdate key%s\n", string(key))
 		self.VoteCntTrie().TryUpdate(key, voteRLP)
 	}
 	return nil

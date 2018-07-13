@@ -90,7 +90,7 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 
 	storeCycle := atomic.LoadUint64(&self.currentCycle)
 	if storeCycle >= nextCycle {
-		log.Info("this masternode voted in the next cycle ", "cycle", nextCycle)
+		log.Debug("this masternode voted in the next cycle ", "cycle", nextCycle)
 		return nil, nil
 	}
 

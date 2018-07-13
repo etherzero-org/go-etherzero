@@ -48,8 +48,16 @@ var (
 		Devote : &DevoteConfig{
 			Witnesses: []*Account{
 				{
-					ID:   "17ef852410cee453",
-					Addr: common.HexToAddress("0x4cefd227ba9da0a2304e1b85588835abef926927"),
+					ID:   "c34c967d399d38f0",
+					Addr: common.HexToAddress("0x14cf833c327d62548eba50a91375e86127eb0b26"),
+				},
+				{
+					ID:   "ffb14ca8e65770b4",
+					Addr: common.HexToAddress("0xaf8a4c1970365e755d32a923bde2f4c24f1d1ba7"),
+				},
+				{
+					ID:   "de4e2e0521f16469",
+					Addr: common.HexToAddress("0x245507dad717166b8adf43e80b4e0901db505328"),
 				},
 			},
 		},
@@ -72,8 +80,16 @@ var (
 		Devote : &DevoteConfig{
 			Witnesses: []*Account{
 				{
-					ID:   "17ef852410cee453",
-					Addr: common.HexToAddress("0x4cefd227ba9da0a2304e1b85588835abef926927"),
+					ID:   "c34c967d399d38f0",
+					Addr: common.HexToAddress("0x14cf833c327d62548eba50a91375e86127eb0b26"),
+				},
+				{
+					ID:   "ffb14ca8e65770b4",
+					Addr: common.HexToAddress("0xaf8a4c1970365e755d32a923bde2f4c24f1d1ba7"),
+				},
+				{
+					ID:   "de4e2e0521f16469",
+					Addr: common.HexToAddress("0x245507dad717166b8adf43e80b4e0901db505328"),
 				},
 			},
 		},
@@ -99,9 +115,18 @@ var (
 		Devote : &DevoteConfig{
 			Witnesses: []*Account{
 				{
-					ID:   "17ef852410cee453",
-					Addr: common.HexToAddress("0x4cefd227ba9da0a2304e1b85588835abef926927"),
+					ID:   "c34c967d399d38f0",
+					Addr: common.HexToAddress("0x14cf833c327d62548eba50a91375e86127eb0b26"),
 				},
+				{
+					ID:   "ffb14ca8e65770b4",
+					Addr: common.HexToAddress("0xaf8a4c1970365e755d32a923bde2f4c24f1d1ba7"),
+				},
+				{
+					ID:   "de4e2e0521f16469",
+					Addr: common.HexToAddress("0x245507dad717166b8adf43e80b4e0901db505328"),
+				},
+
 			},
 		},
 	}

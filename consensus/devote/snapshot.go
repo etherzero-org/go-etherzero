@@ -68,13 +68,11 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 	}
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-		fmt.Printf("masternode count %d\n", len(nodes))
 		for masternode, score := range nodes {
 			masternodeId := []byte(masternode)
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
-			fmt.Printf("add masternodes Id:%x key:%x \n", masternode, key)
 			vote := new(types.Vote)
 			if voteCntBytes := voteCntTrie.Get(key); voteCntBytes != nil {
 				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
@@ -83,7 +81,7 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 				}
 				log.Info("vote is not nil ", "hash", vote.Hash(), "poll", vote.Poll, "masternodeid", vote.Masternode)
 				score.Add(score, big.NewInt(1))
-				nodes[vote.Masternode] = score
+				nodes[vote.Poll] = score
 			}
 		}
 	}
@@ -173,7 +171,6 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 		return "", errors.New("failed to lookup witness")
 	}
 	offset %= uint64(witnessSize)
-	fmt.Printf("current witnesses offset%d ,id:%s,count %d value:%v\n", offset, witnesses[offset].ID, len(witnesses), witnesses)
 	id := witnesses[offset].ID
 	return id, nil
 }
@@ -189,16 +186,9 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 	}
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
-	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
-	fmt.Printf("election prevCycle :%d ,currentCycle:%d\n", prevCycle, currentCycle)
 
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
-		if !prevCycleIsGenesis && it.Next() {
-			//if err := self.uncast(prevCycle); err != nil {
-			//	return err
-			//}
-		}
 		votes, err := self.masternodes(prevCycleIsGenesis)
 		if err != nil {
 			log.Error("get masternodes ", "err", err)
@@ -227,11 +217,8 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			singlesortedWitnesses := &params.Account{ID: masternode_.id, Addr: masternode_.address}
 			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
-		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
-		self.mu.Lock()
-		self.devoteProtocol.SetCycle(cycleTrie)
+		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
-		self.mu.Unlock()
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
@@ -239,7 +226,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 
 func (self *Controller) ApplyVote(votes []*types.Vote) error {
 
-	for i, vote := range votes {
+	for _, vote := range votes {
 		masternodeBytes := []byte(vote.Masternode)
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
@@ -247,7 +234,6 @@ func (self *Controller) ApplyVote(votes []*types.Vote) error {
 
 		voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 		if voteCntInTrieBytes != nil {
-			log.Error("vote already exists vote hash:", "hash:", votes[i].Hash())
 			continue
 		}
 		voteRLP, err := rlp.EncodeToBytes(vote)
@@ -256,11 +242,7 @@ func (self *Controller) ApplyVote(votes []*types.Vote) error {
 		}
 
 		votecnttrie := self.devoteProtocol.VoteCntTrie()
-		fmt.Printf("before votecnttrie root hash:%x\n", votecnttrie.Hash())
 		votecnttrie.TryUpdate(key, voteRLP)
-		fmt.Printf("after  votecnttrie root hash:%x\n", votecnttrie.Hash())
-		// update votecnt trie event
-		fmt.Printf("controller ApplyVote vote end\n")
 	}
 	return nil
 }
@@ -275,7 +257,6 @@ func (self *Controller) Process(vote *types.Vote) error {
 
 	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
 	if voteCntInTrieBytes != nil {
-		log.Error("vote already exists")
 		return errors.New("vote already exists")
 	}
 	voteRLP, err := rlp.EncodeToBytes(vote)
@@ -305,6 +286,6 @@ func (p sortableAddresses) Less(i, j int) bool {
 	} else if p[i].weight.Cmp(p[j].weight) > 0 {
 		return true
 	} else {
-		return p[i].address.String() < p[j].address.String()
+		return p[i].id < p[j].id
 	}
 }
