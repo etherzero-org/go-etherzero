@@ -673,7 +673,7 @@ func (_Contract *ContractFilterer) WatchQuit(opts *bind.WatchOpts, sink chan<- *
 		defer sub.Unsubscribe()
 		for {
 			select {
-			case log := <-1:
+			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ContractQuit)
 				if err := _Contract.contract.UnpackLog(event, "quit", log); err != nil {
