@@ -109,7 +109,6 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
-		utils.MasternodeContractFlag,
 		utils.MasternodeIPFlag,
 		utils.TestnetFlag,
 		utils.RinkebyFlag,
