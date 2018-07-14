@@ -24,12 +24,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"math/rand"
+	//"math/rand"
 	"sort"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/crypto"
+	//"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
@@ -54,21 +54,18 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 // key   -- nodeid
 // value -- votes count
 
-func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.Int, err error) {
+func (self *Controller) masternodes(isFirstCycle bool, nodes map[string]*big.Int) (map[string]*big.Int, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
 	currentCycle := self.TimeStamp / params.CycleInterval
-	nodes = make(map[string]*big.Int)
-	masternodeTrie := self.devoteProtocol.MasternodeTrie()
-	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
+	fmt.Printf("****** snapshot .go masternodes init nodes count %d ,value:%s ****** \n", len(nodes), nodes)
+	count := 0
 
-	for it.Next() {
-		nodes[string(it.Key)] = big.NewInt(0)
-	}
 	if !isFirstCycle {
 		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-		for masternode, score := range nodes {
+
+		for masternode, _ := range nodes {
 			masternodeId := []byte(masternode)
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
@@ -79,13 +76,18 @@ func (self *Controller) masternodes(isFirstCycle bool) (nodes map[string]*big.In
 					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
 					return nil, err
 				}
+				count++
 				log.Info("vote is not nil ", "hash", vote.Hash(), "poll", vote.Poll, "masternodeid", vote.Masternode)
+				self.mu.Lock()
+				score := nodes[vote.Poll]
 				score.Add(score, big.NewInt(1))
+				fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), vote.Poll)
 				nodes[vote.Poll] = score
+				self.mu.Unlock()
 			}
 		}
 	}
-	fmt.Printf("controller nodes context:%v \n", nodes)
+	fmt.Printf("controller nodes context:%v count,%d \n", nodes, count)
 	return nodes, nil
 }
 
@@ -175,11 +177,12 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 	return id, nil
 }
 
-func (self *Controller) election(genesis, first, parent *types.Header) error {
+func (self *Controller) election(genesis, first, parent *types.Header, nodes map[string]*big.Int) error {
 
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
 	prevCycle := parent.Time.Uint64() / params.CycleInterval
 	currentCycle := self.TimeStamp / params.CycleInterval
+
 	prevCycleIsGenesis := (prevCycle == genesisCycle)
 	if prevCycleIsGenesis && prevCycle < currentCycle {
 		prevCycle = currentCycle - 1
@@ -189,7 +192,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
-		votes, err := self.masternodes(prevCycleIsGenesis)
+		votes, err := self.masternodes(prevCycleIsGenesis, nodes)
 		if err != nil {
 			log.Error("get masternodes ", "err", err)
 			return err
@@ -206,20 +209,20 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			masternodes = masternodes[:maxWitnessSize]
 		}
 		// disrupt the mastrnodes node to ensure the disorder of the node
-		seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
-		r := rand.New(rand.NewSource(int64(seed)))
-		for i := len(masternodes) - 1; i > 0; i-- {
-			j := int(r.Int31n(int32(i + 1)))
-			masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
-		}
+		//seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
+		//r := rand.New(rand.NewSource(int64(seed)))
+		//for i := len(masternodes) - 1; i > 0; i-- {
+		//	j := int(r.Int31n(int32(i + 1)))
+		//	masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
+		//}
 		var sortedWitnesses []string
 		for _, masternode_ := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, masternode_.nodeid)
 		}
 		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
 		self.mu.Lock()
-		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
-		self.devoteProtocol.SetCycle(cycleTrie)
+		//cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
+		//self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
 		self.mu.Unlock()
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
