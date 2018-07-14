@@ -70,7 +70,7 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		masternodes:    &masternode.MasternodeSet{},
+		masternodes:    nil,
 		devoteProtocol: dp,
 		votes:          make(map[common.Hash]*types.Vote),
 		beats:          make(map[common.Hash]time.Time),
@@ -316,6 +316,9 @@ func (mm *MasternodeManager) masternodeLoop() {
 }
 
 func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
+	if mm.masternodes == nil {
+		return nil
+	}
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], pm.Time)
 	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)

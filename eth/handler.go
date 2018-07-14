@@ -717,7 +717,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		msg.Decode(ping)
 		err := pm.mm.ProcessPingMsg(ping)
 		if err != nil {
-			log.Error("DealPingMsg", "error", err)
+			log.Error("ProcessPingMsg", "error", err)
 		}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
