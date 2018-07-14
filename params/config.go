@@ -48,16 +48,16 @@ var (
 		Devote : &DevoteConfig{
 			Witnesses: []*Account{
 				{
-					ID:   "c34c967d399d38f0",
-					Addr: common.HexToAddress("0x14cf833c327d62548eba50a91375e86127eb0b26"),
+					ID:   "51192f89980487f5",
+					Addr: common.HexToAddress("0xde05e56e17c692aa35b26108bfc31ca180ad254d"),
 				},
 				{
-					ID:   "ffb14ca8e65770b4",
-					Addr: common.HexToAddress("0xaf8a4c1970365e755d32a923bde2f4c24f1d1ba7"),
+					ID:   "cd44498042f8b98b",
+					Addr: common.HexToAddress("0x3f907a19748d2bdb49f3b5555415e35565de320f"),
 				},
 				{
-					ID:   "de4e2e0521f16469",
-					Addr: common.HexToAddress("0x245507dad717166b8adf43e80b4e0901db505328"),
+					ID:   "0dafe6457cb3700a",
+					Addr: common.HexToAddress("0x29c574950b36d1ffc91e5136cf7d9836df84885c"),
 				},
 			},
 		},
@@ -80,16 +80,16 @@ var (
 		Devote : &DevoteConfig{
 			Witnesses: []*Account{
 				{
-					ID:   "c34c967d399d38f0",
-					Addr: common.HexToAddress("0x14cf833c327d62548eba50a91375e86127eb0b26"),
+					ID:   "51192f89980487f5",
+					Addr: common.HexToAddress("0xde05e56e17c692aa35b26108bfc31ca180ad254d"),
 				},
 				{
-					ID:   "ffb14ca8e65770b4",
-					Addr: common.HexToAddress("0xaf8a4c1970365e755d32a923bde2f4c24f1d1ba7"),
+					ID:   "cd44498042f8b98b",
+					Addr: common.HexToAddress("0x3f907a19748d2bdb49f3b5555415e35565de320f"),
 				},
 				{
-					ID:   "de4e2e0521f16469",
-					Addr: common.HexToAddress("0x245507dad717166b8adf43e80b4e0901db505328"),
+					ID:   "0dafe6457cb3700a",
+					Addr: common.HexToAddress("0x29c574950b36d1ffc91e5136cf7d9836df84885c"),
 				},
 			},
 		},
@@ -115,16 +115,16 @@ var (
 		Devote : &DevoteConfig{
 			Witnesses: []*Account{
 				{
-					ID:   "c34c967d399d38f0",
-					Addr: common.HexToAddress("0x14cf833c327d62548eba50a91375e86127eb0b26"),
+					ID:   "51192f89980487f5",
+					Addr: common.HexToAddress("0xde05e56e17c692aa35b26108bfc31ca180ad254d"),
 				},
 				{
-					ID:   "ffb14ca8e65770b4",
-					Addr: common.HexToAddress("0xaf8a4c1970365e755d32a923bde2f4c24f1d1ba7"),
+					ID:   "cd44498042f8b98b",
+					Addr: common.HexToAddress("0x3f907a19748d2bdb49f3b5555415e35565de320f"),
 				},
 				{
-					ID:   "de4e2e0521f16469",
-					Addr: common.HexToAddress("0x245507dad717166b8adf43e80b4e0901db505328"),
+					ID:   "0dafe6457cb3700a",
+					Addr: common.HexToAddress("0x29c574950b36d1ffc91e5136cf7d9836df84885c"),
 				},
 
 			},
