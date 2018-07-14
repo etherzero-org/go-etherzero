@@ -78,10 +78,12 @@ func (self *Controller) masternodes(isFirstCycle bool, nodes map[string]*big.Int
 				}
 				count++
 				log.Info("vote is not nil ", "hash", vote.Hash(), "poll", vote.Poll, "masternodeid", vote.Masternode)
+				self.mu.Lock()
 				score := nodes[vote.Poll]
 				score.Add(score, big.NewInt(1))
 				fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), vote.Poll)
 				nodes[vote.Poll] = score
+				self.mu.Unlock()
 			}
 		}
 	}

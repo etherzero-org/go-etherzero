@@ -46,13 +46,13 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	maxWitnessSize uint64 = 3
-	safeSize              = maxWitnessSize*2/3 + 0
+	maxWitnessSize uint64 = 21
+	safeSize              = maxWitnessSize*2/3 + 1
 	consensusSize         = maxWitnessSize*2/3 + 1
 )
 
 var (
-	etherzeroBlockReward = big.NewInt(4e+18) // Block reward in wei for successfully mining a block
+	etherzeroBlockReward = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
 	timeOfFirstBlock     = uint64(0)
 	confirmedBlockHead   = []byte("confirmed-block-head")
 	uncleHash            = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
