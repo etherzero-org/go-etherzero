@@ -47,9 +47,9 @@ var (
 
 		Devote: &DevoteConfig{
 			Witnesses: []string{
-				"51192f89980487f5",
-				"cd44498042f8b98b",
-				"0dafe6457cb3700a",
+				"c34c967d399d38f0",
+				"ffb14ca8e65770b4",
+				"de4e2e0521f16469",
 			},
 		},
 	}
@@ -70,9 +70,9 @@ var (
 		Ethash:              new(EthashConfig),
 		Devote: &DevoteConfig{
 			Witnesses: []string{
-				"51192f89980487f5",
-				"cd44498042f8b98b",
-				"0dafe6457cb3700a",
+				"c34c967d399d38f0",
+				"ffb14ca8e65770b4",
+				"de4e2e0521f16469",
 			},
 		},
 	}
@@ -96,9 +96,9 @@ var (
 		},
 		Devote: &DevoteConfig{
 			Witnesses: []string{
-				"51192f89980487f5",
-				"cd44498042f8b98b",
-				"0dafe6457cb3700a",
+				"c34c967d399d38f0",
+				"ffb14ca8e65770b4",
+				"de4e2e0521f16469",
 			},
 		},
 	}
