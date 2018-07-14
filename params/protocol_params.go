@@ -79,7 +79,7 @@ const (
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 
-	CycleInterval           uint64 = 180
+	CycleInterval           uint64 = 360
 	BlockInterval           uint64 = 10
 )
 

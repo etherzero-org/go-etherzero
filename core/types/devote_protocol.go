@@ -89,15 +89,14 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 }
 
 // register as a master node for saving to a block
-func (d *DevoteProtocol) Register(id string, account common.Address) error {
-	return d.masternodeTrie.TryUpdate([]byte(id), account.Bytes())
+func (d *DevoteProtocol) Register(nodeid string) error {
+	return d.masternodeTrie.TryUpdate([]byte(nodeid), common.Address{}.Bytes())
 }
 
 // Unregister If the masternode does not complete the packing action during the current block cycle,
 // and no block has been generated during the entire cycle, the masternode is removed from the network.
-func (d *DevoteProtocol) Unregister(masternodeAddr common.Address) error {
-	masternode := masternodeAddr.Bytes()
-	err := d.masternodeTrie.TryDelete(masternode)
+func (d *DevoteProtocol) Unregister(nodeid string) error {
+	err := d.masternodeTrie.TryDelete([]byte(nodeid))
 	if err != nil {
 		if _, ok := err.(*trie.MissingNodeError); !ok {
 			return err
@@ -162,7 +161,7 @@ func (d *DevoteProtocol) FromAtomic(dpa *DevoteProtocolAtomic) error {
 }
 
 type DevoteProtocolAtomic struct {
-	mu sync.Mutex
+	mu               sync.Mutex
 	CycleHash        common.Hash `json:"cycleRoot"         gencodec:"required"`
 	MasternodeHash   common.Hash `json:"masternodeRoot"    gencodec:"required"`
 	MinerRollingHash common.Hash `json:"minerRollingRoot"  gencodec:"required"`
@@ -235,7 +234,7 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	return h
 }
 
-func (self *DevoteProtocol) SetWitnesses(witnesses []*params.Account) error {
+func (self *DevoteProtocol) SetWitnesses(witnesses []string) error {
 	key := []byte("witness")
 	witnessesRLP, err := rlp.EncodeToBytes(witnesses)
 	if err != nil {
@@ -245,8 +244,8 @@ func (self *DevoteProtocol) SetWitnesses(witnesses []*params.Account) error {
 	return nil
 }
 
-func (self *DevoteProtocol) GetWitnesses() ([]*params.Account, error) {
-	var witnesses []*params.Account
+func (self *DevoteProtocol) GetWitnesses() ([]string, error) {
+	var witnesses []string
 	key := []byte("witness")
 	witnessRLP := self.cycleTrie.Get(key)
 	if err := rlp.DecodeBytes(witnessRLP, &witnesses); err != nil {

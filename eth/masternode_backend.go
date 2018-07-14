@@ -389,9 +389,9 @@ func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) e
 }
 
 func (self *MasternodeManager) Register(masternode *masternode.Masternode) error {
-	return self.devoteProtocol.Register(masternode.ID, masternode.Account)
+	return self.devoteProtocol.Register(masternode.ID)
 }
 
 func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) error {
-	return self.devoteProtocol.Unregister(masternode.Account)
+	return self.devoteProtocol.Unregister(masternode.ID)
 }

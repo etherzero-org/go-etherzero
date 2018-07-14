@@ -23,7 +23,6 @@ import (
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/params"
 )
 // API is a user facing RPC API to allow controlling the delegate and voting
 // mechanisms of the delegated-proof-of-stake
@@ -34,7 +33,7 @@ type API struct {
 
 
 // GetWitnesses retrieves the list of the Witnesses at specified block
-func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]*params.Account, error) {
+func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]string, error) {
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()

@@ -85,7 +85,7 @@ var (
 )
 
 // SignerFn
-// string:master node id,[8]byte
+// string:master node nodeid,[8]byte
 // []byte,signature
 type SignerFn func(string, []byte) ([]byte, error)
 
@@ -129,7 +129,7 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer               string        // master node id
+	signer               string        // master node nodeid
 	signFn               SignerFn      // signature function
 	signatures           *lru.ARCCache // Signatures of recent blocks to speed up mining
 	confirmedBlockHeader *types.Header

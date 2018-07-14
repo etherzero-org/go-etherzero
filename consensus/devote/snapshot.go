@@ -112,14 +112,14 @@ func (ec *Controller) uncast(cycle int64) error {
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(cycle))
 		// TODO
-		key = append(key, witness.Addr.Bytes()...)
+		key = append(key, []byte(witness)...)
 		size := uint64(0)
 		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
 			size = binary.BigEndian.Uint64(cntBytes)
 		}
 		if size < cycleDuration/params.BlockInterval/maxWitnessSize/2 {
 			// not active witnesses need uncast
-			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness.ID, witness.Addr, big.NewInt(int64(size))})
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
 		}
 	}
 	// no witnessees need uncast
@@ -143,12 +143,12 @@ func (ec *Controller) uncast(cycle int64) error {
 				"needUncastCount", len(needUncastWitnesses)-i)
 			return nil
 		}
-		if err := ec.devoteProtocol.Unregister(witness.address); err != nil {
+		if err := ec.devoteProtocol.Unregister(witness.nodeid); err != nil {
 			return err
 		}
 		// if uncast success, masternode Count minus 1
 		masternodeCount--
-		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.address.String(), "miner count", witness.weight.String())
+		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.nodeid, "miner count", witness.weight.String())
 	}
 	return nil
 }
@@ -171,7 +171,7 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 		return "", errors.New("failed to lookup witness")
 	}
 	offset %= uint64(witnessSize)
-	id := witnesses[offset].ID
+	id := witnesses[offset]
 	return id, nil
 }
 
@@ -196,7 +196,7 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 		}
 		masternodes := sortableAddresses{}
 		for masternode, cnt := range votes {
-			masternodes = append(masternodes, &sortableAddress{id: masternode, address: common.Address{}, weight: cnt})
+			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < int(safeSize) {
 			return errors.New("too few masternodes")
@@ -212,13 +212,16 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			j := int(r.Int31n(int32(i + 1)))
 			masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
 		}
-		var sortedWitnesses []*params.Account
+		var sortedWitnesses []string
 		for _, masternode_ := range masternodes {
-			singlesortedWitnesses := &params.Account{ID: masternode_.id, Addr: masternode_.address}
-			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
+			sortedWitnesses = append(sortedWitnesses, masternode_.nodeid)
 		}
 		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
+		self.mu.Lock()
+		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
+		self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
+		self.mu.Unlock()
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
@@ -270,10 +273,11 @@ func (self *Controller) Process(vote *types.Vote) error {
 	return nil
 }
 
+// nodeid  masternode nodeid
+// weight the number of polls for one nodeid
 type sortableAddress struct {
-	id      string
-	address common.Address
-	weight  *big.Int
+	nodeid string
+	weight *big.Int
 }
 
 type sortableAddresses []*sortableAddress
@@ -286,6 +290,7 @@ func (p sortableAddresses) Less(i, j int) bool {
 	} else if p[i].weight.Cmp(p[j].weight) > 0 {
 		return true
 	} else {
-		return p[i].id < p[j].id
+		return p[i].nodeid > p[j].nodeid
 	}
+	return true
 }

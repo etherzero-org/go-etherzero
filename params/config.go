@@ -28,7 +28,7 @@ var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
 
-	MasterndeContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000a")
+	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
 )
 
@@ -45,20 +45,11 @@ var (
 		EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 
-		Devote : &DevoteConfig{
-			Witnesses: []*Account{
-				{
-					ID:   "51192f89980487f5",
-					Addr: common.HexToAddress("0xde05e56e17c692aa35b26108bfc31ca180ad254d"),
-				},
-				{
-					ID:   "cd44498042f8b98b",
-					Addr: common.HexToAddress("0x3f907a19748d2bdb49f3b5555415e35565de320f"),
-				},
-				{
-					ID:   "0dafe6457cb3700a",
-					Addr: common.HexToAddress("0x29c574950b36d1ffc91e5136cf7d9836df84885c"),
-				},
+		Devote: &DevoteConfig{
+			Witnesses: []string{
+				"51192f89980487f5",
+				"cd44498042f8b98b",
+				"0dafe6457cb3700a",
 			},
 		},
 	}
@@ -77,20 +68,11 @@ var (
 		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: nil,
 		Ethash:              new(EthashConfig),
-		Devote : &DevoteConfig{
-			Witnesses: []*Account{
-				{
-					ID:   "51192f89980487f5",
-					Addr: common.HexToAddress("0xde05e56e17c692aa35b26108bfc31ca180ad254d"),
-				},
-				{
-					ID:   "cd44498042f8b98b",
-					Addr: common.HexToAddress("0x3f907a19748d2bdb49f3b5555415e35565de320f"),
-				},
-				{
-					ID:   "0dafe6457cb3700a",
-					Addr: common.HexToAddress("0x29c574950b36d1ffc91e5136cf7d9836df84885c"),
-				},
+		Devote: &DevoteConfig{
+			Witnesses: []string{
+				"51192f89980487f5",
+				"cd44498042f8b98b",
+				"0dafe6457cb3700a",
 			},
 		},
 	}
@@ -112,21 +94,11 @@ var (
 			Period: 15,
 			Epoch:  30000,
 		},
-		Devote : &DevoteConfig{
-			Witnesses: []*Account{
-				{
-					ID:   "51192f89980487f5",
-					Addr: common.HexToAddress("0xde05e56e17c692aa35b26108bfc31ca180ad254d"),
-				},
-				{
-					ID:   "cd44498042f8b98b",
-					Addr: common.HexToAddress("0x3f907a19748d2bdb49f3b5555415e35565de320f"),
-				},
-				{
-					ID:   "0dafe6457cb3700a",
-					Addr: common.HexToAddress("0x29c574950b36d1ffc91e5136cf7d9836df84885c"),
-				},
-
+		Devote: &DevoteConfig{
+			Witnesses: []string{
+				"51192f89980487f5",
+				"cd44498042f8b98b",
+				"0dafe6457cb3700a",
 			},
 		},
 	}
@@ -189,14 +161,7 @@ func (c *CliqueConfig) String() string {
 
 // MasternodeConfig is the consensus engine configs for devote + delegated proof-of-stake based sealing.
 type DevoteConfig struct {
-	Witnesses []*Account `json:"witnesses"` // Genesis witness list
-}
-
-// masternode ID and acount
-// referenced to the resolve the genesis' witnesses field
-type Account struct {
-	ID   string         `json:"id"`
-	Addr common.Address `json:"addr"`
+	Witnesses []string `json:"witnesses"` // Genesis witness list
 }
 
 // String implements the stringer interface, returning the consensus engine details.
