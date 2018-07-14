@@ -218,7 +218,11 @@ func (self *Controller) election(genesis, first, parent *types.Header) error {
 			sortedWitnesses = append(sortedWitnesses, singlesortedWitnesses)
 		}
 		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
+		self.mu.Lock()
+		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
+		self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
+		self.mu.Unlock()
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
@@ -286,6 +290,6 @@ func (p sortableAddresses) Less(i, j int) bool {
 	} else if p[i].weight.Cmp(p[j].weight) > 0 {
 		return true
 	} else {
-		return p[i].id < p[j].id
+		return p[i].id > p[j].id
 	}
 }
