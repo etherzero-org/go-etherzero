@@ -1087,7 +1087,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 
 	// Override any default configs for hard coded networks.
-	cfg.Genesis = core.DefaultTestnetGenesisBlock()
+	cfg.Genesis = core.DefaultGenesisBlock()
 	//switch {
 	//case ctx.GlobalBool(TestnetFlag.Name):
 	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
@@ -1219,7 +1219,7 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) ethdb.Database {
 
 func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	var genesis *core.Genesis
-	genesis = core.DefaultTestnetGenesisBlock()
+	genesis = core.DefaultGenesisBlock()
 	//switch {
 	//case ctx.GlobalBool(TestnetFlag.Name):
 	//	genesis = core.DefaultTestnetGenesisBlock()

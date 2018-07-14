@@ -204,9 +204,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternode check true")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
-		mm.checkPeers()
+		// mm.checkPeers()
 	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
-
 		var misc [32]byte
 		misc[0] = 1
 		copy(misc[1:17], mm.srvr.Config.MasternodeAddr.IP)
@@ -218,8 +217,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
 		fmt.Println("Masternode transaction data:", d)
 	}
-
-	mm.masternodes.Show()
 
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
@@ -343,12 +340,12 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 	n := mm.masternodes.Node(mm.active.ID)
 	if n == nil {
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else if int(n.Node.TCP) != mm.active.Addr.Port {
-		log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
-		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
-		log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
-		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+	//} else if int(n.Node.TCP) != mm.active.Addr.Port {
+	//	log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
+	//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+	//} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
+	//	log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
+	//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
