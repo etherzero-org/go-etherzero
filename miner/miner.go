@@ -42,7 +42,6 @@ type Backend interface {
 	ChainDb() ethdb.Database
 
 	Votes() ([]*types.Vote, error)
-
 	DevoteProtocol() *types.DevoteProtocol
 }
 

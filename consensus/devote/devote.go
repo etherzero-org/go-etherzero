@@ -38,6 +38,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/trie"
 )
 
 const (
@@ -259,9 +260,18 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
+
+	nodes := make(map[string]*big.Int)
+	masternodeTrie := devoteProtocol.MasternodeTrie()
+	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
+
+	for it.Next() {
+		nodes[string(it.Key)] = big.NewInt(0)
+	}
+
 	genesis := chain.GetHeaderByNumber(0)
 	first := chain.GetHeaderByNumber(1)
-	err := controller.election(genesis, first, parent)
+	err := controller.election(genesis, first, parent,nodes)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}

@@ -93,10 +93,10 @@ type Ethereum struct {
 	etherbase common.Address
 	witness   string
 
-	networkID          uint64
-	netRPCService      *ethapi.PublicNetAPI
-	masternodeManager  *MasternodeManager
-	masternodes        *masternode.MasternodeSet
+	networkID         uint64
+	netRPCService     *ethapi.PublicNetAPI
+	masternodeManager *MasternodeManager
+	masternodes       *masternode.MasternodeSet
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -404,7 +404,6 @@ func (s *Ethereum) StartMining(local bool) error {
 		//	return fmt.Errorf("signer missing: %v", err)
 		//}
 
-
 		active := s.masternodeManager.active
 		if active == nil {
 			log.Error("Active Masternode is nil")
@@ -443,6 +442,7 @@ func (s *Ethereum) MastenrodeManager() *MasternodeManager { return s.masternodeM
 func (s *Ethereum) Votes() ([]*types.Vote, error)         { return s.masternodeManager.Votes() }
 
 func (s *Ethereum) DevoteProtocol() *types.DevoteProtocol { return s.masternodeManager.devoteProtocol }
+
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
