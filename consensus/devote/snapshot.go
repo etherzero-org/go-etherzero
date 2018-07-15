@@ -54,24 +54,20 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	currentCycle := self.TimeStamp / params.CycleInterval
 	fmt.Printf("****** snapshot .go masternodes init nodes count %d ,value:%s ****** \n", len(nodes), nodes)
 	count := 0
 
 	if !isFirstCycle {
 		for masternode, _ := range nodes {
-			masternodeId := []byte(masternode)
-			key := make([]byte, 8)
-			binary.BigEndian.PutUint64(key, uint64(currentCycle))
-			key = append(key, masternodeId...)
-			vote := new(types.Vote)
 			hash := parent.Hash()
-
 			weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash.Bytes())))
-			score := nodes[vote.Poll]
+			score := nodes[masternode]
+			if score == nil{
+				score=big.NewInt(0)
+			}
 			score.Add(score, big.NewInt(weight))
-			fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), vote.Poll)
-			nodes[vote.Poll] = score
+			fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), masternode)
+			nodes[masternode] = score
 		}
 	}
 	fmt.Printf("controller nodes context:%v count,%d \n", nodes, count)
