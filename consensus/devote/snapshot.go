@@ -19,7 +19,6 @@
 package devote
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -35,6 +34,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"sync"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 type Controller struct {
@@ -54,7 +54,7 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 // key   -- nodeid
 // value -- votes count
 
-func (self *Controller) masternodes(isFirstCycle bool, nodes map[string]*big.Int) (map[string]*big.Int, error) {
+func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nodes map[string]*big.Int) (map[string]*big.Int, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -63,28 +63,19 @@ func (self *Controller) masternodes(isFirstCycle bool, nodes map[string]*big.Int
 	count := 0
 
 	if !isFirstCycle {
-		voteCntTrie := self.devoteProtocol.VoteCntTrie()
-
 		for masternode, _ := range nodes {
 			masternodeId := []byte(masternode)
 			key := make([]byte, 8)
 			binary.BigEndian.PutUint64(key, uint64(currentCycle))
 			key = append(key, masternodeId...)
 			vote := new(types.Vote)
-			if voteCntBytes := voteCntTrie.Get(key); voteCntBytes != nil {
-				if err := rlp.Decode(bytes.NewReader(voteCntBytes), vote); err != nil {
-					log.Error("Invalid Vote body RLP", "masternodeId", masternodeId, "err", err)
-					return nil, err
-				}
-				count++
-				log.Info("vote is not nil ", "hash", vote.Hash(), "poll", vote.Poll, "masternodeid", vote.Masternode)
-				//self.mu.Lock()
-				score := nodes[vote.Poll]
-				score.Add(score, big.NewInt(1))
-				fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), vote.Poll)
-				nodes[vote.Poll] = score
-				//self.mu.Unlock()
-			}
+			hash := parent.Hash()
+
+			weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash.Bytes())))
+			score := nodes[vote.Poll]
+			score.Add(score, big.NewInt(weight))
+			fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), vote.Poll)
+			nodes[vote.Poll] = score
 		}
 	}
 	fmt.Printf("controller nodes context:%v count,%d \n", nodes, count)
@@ -192,7 +183,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes map
 
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
-		votes, err := self.masternodes(prevCycleIsGenesis, nodes)
+		votes, err := self.masternodes(parent, prevCycleIsGenesis, nodes)
 		if err != nil {
 			log.Error("get masternodes ", "err", err)
 			return err

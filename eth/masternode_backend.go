@@ -300,9 +300,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 		case <-check.C:
 			mm.masternodes.Check()
 			check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
-		case <-voting.C:
-			mm.Voting()
-			check.Reset(masternode.MASTERNODE_VOTING_ENABLE)
 		case <-report.C:
 			for _, vote := range mm.votes {
 				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
