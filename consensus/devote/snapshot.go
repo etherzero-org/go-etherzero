@@ -59,8 +59,11 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 
 	if !isFirstCycle {
 		for masternode, _ := range nodes {
-			hash := parent.Hash()
-			weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash.Bytes())))
+			hash:=make([]byte, 8)
+			hash = append(hash, []byte(masternode)...)
+			hash = append(hash,parent.Hash().Bytes()...)
+			weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+
 			score := nodes[masternode]
 			if score == nil{
 				score=big.NewInt(0)
