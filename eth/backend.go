@@ -177,7 +177,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(eth.chainDb, eth.blockchain.CurrentBlock().Header().Protocol)
 
-	if eth.masternodeManager = NewMasternodeManager(devoteProtocol); err != nil {
+	if eth.masternodeManager = NewMasternodeManager(devoteProtocol, eth.blockchain); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
@@ -442,7 +442,6 @@ func (s *Ethereum) MastenrodeManager() *MasternodeManager { return s.masternodeM
 func (s *Ethereum) Votes() ([]*types.Vote, error)         { return s.masternodeManager.Votes() }
 
 func (s *Ethereum) DevoteProtocol() *types.DevoteProtocol { return s.masternodeManager.devoteProtocol }
-
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.

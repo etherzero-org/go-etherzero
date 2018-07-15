@@ -661,11 +661,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Mark the peer as owning the block and schedule it for import
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
-		votingBlockNumber := request.Block.Number().Uint64() - 10
-		votingblock := pm.blockchain.GetBlockByNumber(votingBlockNumber)
-		if votingblock != nil {
-			pm.mm.Voting(votingblock.Header())
-		}
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
 		var (

@@ -58,7 +58,7 @@ type MasternodeManager struct {
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
-
+	blockchain   *core.BlockChain
 	scope        event.SubscriptionScope
 	voteFeed     event.Feed
 	currentCycle uint64 // Current vote of the block chain
@@ -66,12 +66,13 @@ type MasternodeManager struct {
 	Lifetime time.Duration // Maximum amount of time vote are queued
 }
 
-func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
+func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
 		masternodes:    nil,
 		devoteProtocol: dp,
+		blockchain:     blockchain,
 		votes:          make(map[common.Hash]*types.Vote),
 		beats:          make(map[common.Hash]time.Time),
 		Lifetime:       30 * time.Second,
@@ -79,21 +80,19 @@ func NewMasternodeManager(dp *types.DevoteProtocol) *MasternodeManager {
 	return manager
 }
 
-func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error) {
+func (self *MasternodeManager) Voting() (*types.Vote, error) {
 
 	if self.active == nil {
 		return nil, errors.New("current node is not masternode ")
 	}
 
-	currentCycle := current.Time.Uint64() / params.CycleInterval
+	currentCycle := self.blockchain.CurrentBlock().Time().Uint64() / params.CycleInterval
 	nextCycle := currentCycle + 1
-
 	storeCycle := atomic.LoadUint64(&self.currentCycle)
 	if storeCycle >= nextCycle {
 		log.Debug("this masternode voted in the next cycle ", "cycle", nextCycle)
 		return nil, nil
 	}
-
 	masternodeID := self.active.ID
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
@@ -106,10 +105,8 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 	weight := int64(0)
 	best := self.active.ID
 	for _, masternode := range masternodes {
-		hash := make([]byte, 8)
-		binary.BigEndian.PutUint64(hash, current.Time.Uint64())
-		hash = append(hash, []byte(masternode.ID)...)
-		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+		hash := self.blockchain.CurrentBlock().Hash()
+		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash.Bytes())))
 		if temp > weight && masternode.ID != self.active.ID {
 			weight = temp
 			best = masternode.ID
@@ -119,7 +116,7 @@ func (self *MasternodeManager) Voting(current *types.Header) (*types.Vote, error
 
 	vote.SignVote(self.active.PrivateKey)
 	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "poll", vote.Poll)
-	self.Add(vote)
+	//self.Add(vote)
 	atomic.StoreUint64(&self.currentCycle, nextCycle)
 	go self.PostVoteEvent(vote)
 	return vote, nil
@@ -236,6 +233,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
+	voting := time.NewTicker(masternode.MASTERNODE_VOTING_ENABLE)
+	defer voting.Stop()
 
 	for {
 		select {
@@ -301,6 +300,9 @@ func (mm *MasternodeManager) masternodeLoop() {
 		case <-check.C:
 			mm.masternodes.Check()
 			check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
+		case <-voting.C:
+			mm.Voting()
+			check.Reset(masternode.MASTERNODE_VOTING_ENABLE)
 		case <-report.C:
 			for _, vote := range mm.votes {
 				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
@@ -340,12 +342,12 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 	n := mm.masternodes.Node(mm.active.ID)
 	if n == nil {
 		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	//} else if int(n.Node.TCP) != mm.active.Addr.Port {
-	//	log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
-	//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	//} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
-	//	log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
-	//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+		//} else if int(n.Node.TCP) != mm.active.Addr.Port {
+		//	log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
+		//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+		//} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
+		//	log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
+		//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
 	} else {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}

@@ -220,11 +220,9 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes map
 			sortedWitnesses = append(sortedWitnesses, masternode_.nodeid)
 		}
 		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
-		self.mu.Lock()
 		//cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
 		//self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
-		self.mu.Unlock()
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
 	return nil
