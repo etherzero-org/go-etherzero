@@ -106,7 +106,6 @@ func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	localRoot := block.Protocol().Root()
 	remoteRoot := header.Protocol.Root()
 	if remoteRoot != localRoot {
-		fmt.Printf("VoteCntTrie block hash:%x header: hash:%x \n", block.Protocol().VoteCntTrie().Hash(), header.Protocol.VoteCntHash)
 		fmt.Printf(" MinerRolling block hash:%x header: hash:%x \n", block.Protocol().MinerRollingTrie().Hash(), header.Protocol.MinerRollingHash)
 		fmt.Printf(" Masternode block hash:%x header:  hash:%x \n", block.Protocol().MasternodeTrie().Hash(), header.Protocol.MasternodeHash)
 		fmt.Printf("Cycle block hash:%x header:  hash:%x \n", block.Protocol().CycleTrie().Hash(), header.Protocol.CycleHash)

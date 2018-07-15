@@ -23,18 +23,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	//"math/rand"
 	"sort"
+	"sync"
 
-	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	//"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
-	"sync"
-	"github.com/etherzero/go-etherzero/crypto"
 )
 
 type Controller struct {
@@ -216,52 +212,6 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes map
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
 		log.Info("Come to new cycle", "prev", i, "next", i+1)
 	}
-	return nil
-}
-
-func (self *Controller) ApplyVote(votes []*types.Vote) error {
-
-	for _, vote := range votes {
-		masternodeBytes := []byte(vote.Masternode)
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-		key = append(key, masternodeBytes...)
-
-		voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
-		if voteCntInTrieBytes != nil {
-			continue
-		}
-		voteRLP, err := rlp.EncodeToBytes(vote)
-		if err != nil {
-			return err
-		}
-
-		votecnttrie := self.devoteProtocol.VoteCntTrie()
-		votecnttrie.TryUpdate(key, voteRLP)
-	}
-	return nil
-}
-
-// Voting save the vote result to the desk
-func (self *Controller) Process(vote *types.Vote) error {
-
-	masternodeBytes := []byte(vote.Masternode)
-	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-	key = append(key, masternodeBytes...)
-
-	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
-	if voteCntInTrieBytes != nil {
-		return errors.New("vote already exists")
-	}
-	voteRLP, err := rlp.EncodeToBytes(vote)
-	if err != nil {
-		return err
-	}
-	voteCntTrie, _ := types.NewVoteCntTrie(common.Hash{}, self.devoteProtocol.DB())
-	voteCntTrie.TryUpdate(key, voteRLP)
-	// update votecnt trie event
-	self.devoteProtocol.SetVoteCnt(voteCntTrie)
 	return nil
 }
 

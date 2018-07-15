@@ -97,10 +97,6 @@ func (self *MasternodeManager) Voting() (*types.Vote, error) {
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, uint64(nextCycle))
 	key = append(key, []byte(masternodeID)...)
-	voteCntInTrieBytes := self.devoteProtocol.VoteCntTrie().Get(key)
-	if voteCntInTrieBytes != nil {
-		return nil, errors.New("vote already exists")
-	}
 	masternodes := self.masternodes.AllNodes()
 	weight := int64(0)
 	best := self.active.ID

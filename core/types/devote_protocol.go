@@ -17,19 +17,16 @@ var (
 	cyclePrefix        = "cycle-"
 	masternodePrefix   = "masternode-"
 	minerRollingPrefix = "mintCnt-"
-	voteCntPrefix      = "voteCnt-"
 )
 
 type DevoteProtocol struct {
 	cycleTrie        *trie.Trie
 	masternodeTrie   *trie.Trie
 	minerRollingTrie *trie.Trie
-	voteCntTrie      *trie.Trie
 
 	cycleTriedb        *trie.Database
 	masternodeTriedb   *trie.Database
 	minerRollingTriedb *trie.Database
-	voteCntTriedb      *trie.Database
 
 	diskdb ethdb.Database
 
@@ -52,11 +49,6 @@ func NewMinerRollingTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error
 
 }
 
-func NewVoteCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	voteCntTriedb := trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix))
-	return trie.New(root, voteCntTriedb)
-}
-
 func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAtomic) (*DevoteProtocol, error) {
 	cycleTrie, err := NewCycleTrie(ctxAtomic.CycleHash, db)
 	if err != nil {
@@ -70,21 +62,15 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 	if err != nil {
 		return nil, err
 	}
-	voteCntTrie, err := NewVoteCntTrie(ctxAtomic.VoteCntHash, db)
-	if err != nil {
-		return nil, err
-	}
 	return &DevoteProtocol{
 		cycleTrie:        cycleTrie,
 		masternodeTrie:   masternodeTrie,
 		minerRollingTrie: minerRollingTrie,
-		voteCntTrie:      voteCntTrie,
 		diskdb:           db,
 
 		cycleTriedb:        trie.NewDatabase(ethdb.NewTable(db, cyclePrefix)),
 		masternodeTriedb:   trie.NewDatabase(ethdb.NewTable(db, masternodePrefix)),
 		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
-		voteCntTriedb:      trie.NewDatabase(ethdb.NewTable(db, voteCntPrefix)),
 	}, nil
 }
 
@@ -109,12 +95,10 @@ func (d *DevoteProtocol) Copy() *DevoteProtocol {
 	cycleTrie := *d.cycleTrie
 	masternodeTrie := *d.masternodeTrie
 	minerRollingTrie := *d.minerRollingTrie
-	voteCntTrie := *d.voteCntTrie
 	return &DevoteProtocol{
 		cycleTrie:        &cycleTrie,
 		masternodeTrie:   &masternodeTrie,
 		minerRollingTrie: &minerRollingTrie,
-		voteCntTrie:      &voteCntTrie,
 	}
 }
 
@@ -126,7 +110,6 @@ func (d *DevoteProtocol) Root() (h common.Hash) {
 	rlp.Encode(hw, d.cycleTrie.Hash())
 	rlp.Encode(hw, d.masternodeTrie.Hash())
 	rlp.Encode(hw, d.minerRollingTrie.Hash())
-	rlp.Encode(hw, d.voteCntTrie.Hash())
 	hw.Sum(h[:0])
 	return h
 }
@@ -139,7 +122,6 @@ func (d *DevoteProtocol) RevertToSnapShot(snapshot *DevoteProtocol) {
 	d.cycleTrie = snapshot.cycleTrie
 	d.masternodeTrie = snapshot.masternodeTrie
 	d.minerRollingTrie = snapshot.minerRollingTrie
-	d.voteCntTrie = snapshot.voteCntTrie
 }
 
 func (d *DevoteProtocol) FromAtomic(dpa *DevoteProtocolAtomic) error {
@@ -149,10 +131,6 @@ func (d *DevoteProtocol) FromAtomic(dpa *DevoteProtocolAtomic) error {
 		return err
 	}
 	d.masternodeTrie, err = NewMasternodeTrie(dpa.MasternodeHash, d.diskdb)
-	if err != nil {
-		return err
-	}
-	d.voteCntTrie, err = NewVoteCntTrie(dpa.VoteCntHash, d.diskdb)
 	if err != nil {
 		return err
 	}
@@ -171,14 +149,12 @@ type DevoteProtocolAtomic struct {
 func (d *DevoteProtocol) MasternodeTrie() *trie.Trie   { return d.masternodeTrie }
 func (d *DevoteProtocol) CycleTrie() *trie.Trie        { return d.cycleTrie }
 func (d *DevoteProtocol) MinerRollingTrie() *trie.Trie { return d.minerRollingTrie }
-func (d *DevoteProtocol) VoteCntTrie() *trie.Trie      { return d.voteCntTrie }
 
 func (d *DevoteProtocol) DB() ethdb.Database { return d.diskdb }
 
 func (dc *DevoteProtocol) SetCycle(cycle *trie.Trie)              { dc.cycleTrie = cycle }
 func (dc *DevoteProtocol) SetMasternode(masternode *trie.Trie)    { dc.masternodeTrie = masternode }
 func (dc *DevoteProtocol) SetMinerRollingTrie(rolling *trie.Trie) { dc.minerRollingTrie = rolling }
-func (dc *DevoteProtocol) SetVoteCnt(voteCnt *trie.Trie)          { dc.voteCntTrie = voteCnt }
 
 func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error) {
 	cycleRoot, err := d.cycleTrie.CommitTo(d.cycleTriedb)
@@ -196,16 +172,10 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 		return nil, err
 	}
 	d.minerRollingTriedb.Commit(minerRollingRoot, false)
-	voteCntRoot, err := d.voteCntTrie.CommitTo(d.voteCntTriedb)
-	if err != nil {
-		return nil, err
-	}
-	d.voteCntTriedb.Commit(voteCntRoot, false)
 	a := &DevoteProtocolAtomic{
 		CycleHash:        cycleRoot,
 		MasternodeHash:   masternodeRoot,
 		MinerRollingHash: minerRollingRoot,
-		VoteCntHash:      voteCntRoot,
 	}
 	return a, nil
 }
@@ -217,7 +187,6 @@ func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 		CycleHash:        d.cycleTrie.Hash(),
 		MasternodeHash:   d.masternodeTrie.Hash(),
 		MinerRollingHash: d.minerRollingTrie.Hash(),
-		VoteCntHash:      d.voteCntTrie.Hash(),
 	}
 }
 
@@ -229,7 +198,6 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 	rlp.Encode(hw, p.CycleHash)
 	rlp.Encode(hw, p.MasternodeHash)
 	rlp.Encode(hw, p.MinerRollingHash)
-	rlp.Encode(hw, p.VoteCntHash)
 	hw.Sum(h[:0])
 	return h
 }
@@ -257,23 +225,6 @@ func (self *DevoteProtocol) GetWitnesses() ([]string, error) {
 func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-
-	for _, vote := range votes {
-		masternodeBytes := []byte(vote.Masternode)
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, uint64(vote.Cycle))
-		key = append(key, masternodeBytes...)
-
-		voteCntInTrieBytes := self.VoteCntTrie().Get(key)
-		if voteCntInTrieBytes != nil {
-			continue
-		}
-		voteRLP, err := rlp.EncodeToBytes(vote)
-		if err != nil {
-			return err
-		}
-		self.VoteCntTrie().TryUpdate(key, voteRLP)
-	}
 	return nil
 }
 
