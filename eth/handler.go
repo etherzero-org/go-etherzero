@@ -53,6 +53,8 @@ const (
 
 	// temporarily set to 4096
 	voteChanSize = 4096
+	// temporarily set to 4096
+	pingSize = 4096
 )
 
 var (
@@ -90,6 +92,9 @@ type ProtocolManager struct {
 	txsSub   event.Subscription
 	voteCh   chan core.NewVoteEvent
 	voteSub  event.Subscription
+
+	pingCh  chan core.PingEvent //ping message vote
+	pingSub event.Subscription  // ping message subscription
 
 	minedBlockSub *event.TypeMuxSubscription
 
@@ -223,8 +228,12 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// broadcast votes
 	pm.voteCh = make(chan core.NewVoteEvent, voteChanSize)
 	pm.voteSub = pm.mm.SubscribeVoteEvent(pm.voteCh)
-
 	go pm.voteBroadcastLoop()
+
+	// broadcast ping message
+	pm.pingCh = make(chan core.PingEvent, pingSize)
+	pm.pingSub = pm.mm.SubscribePingEvent(pm.pingCh)
+	go pm.broadcastPingMsg()
 
 	// start sync handlers
 	go pm.syncer()
@@ -806,6 +815,27 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 			self.BroadcastVote(event.Vote.Hash(), event.Vote)
 
 		case <-self.voteSub.Err():
+			return
+		}
+	}
+}
+
+// broadcastPingMsg,
+func (self *ProtocolManager) broadcastPingMsg() {
+	for {
+		select {
+		case msg := <-self.pingCh:
+			fmt.Println("broadcastPingMsg ping masg", self.mm.active.ID)
+			peers := self.peers.markPingWithoutProcess(self.mm.active.ID, msg.Ping.Time)
+			for _, peer := range peers {
+				fmt.Println("broadcastPingMsg xzzxzxzzxxz", peer.id)
+				if err := peer.SendMasternodePing(msg.Ping); err != nil {
+					fmt.Println("SendMasternodePing", "error", err)
+				}
+			}
+
+		case <-self.pingSub.Err():
+			fmt.Println("yuuyhnbnmhgf")
 			return
 		}
 	}

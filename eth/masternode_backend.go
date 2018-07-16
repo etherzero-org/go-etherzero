@@ -63,12 +63,9 @@ type MasternodeManager struct {
 	scope        event.SubscriptionScope
 	voteFeed     event.Feed
 
-	pingCh       chan core.PingEvent
-	pingSub      event.Subscription
 	pingFeed     event.Feed
-	currentCycle uint64 // Current vote of the block chain
-
-	Lifetime time.Duration // Maximum amount of time vote are queued
+	currentCycle uint64        // Current vote of the block chain
+	Lifetime     time.Duration // Maximum amount of time vote are queued
 }
 
 func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain) *MasternodeManager {
@@ -237,10 +234,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 	voting := time.NewTicker(masternode.MASTERNODE_VOTING_ENABLE)
 	defer voting.Stop()
 
-	mm.pingCh = make(chan core.PingEvent, voteChanSize)
-	mm.pingSub = mm.SubscribePingEvent(mm.pingCh)
-	go mm.SubscribePingEvent(mm.pingCh)
-
 	for {
 		select {
 		case join := <-joinCh:
@@ -257,7 +250,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 				} else {
 					mm.srvr.AddPeer(node.Node)
 				}
-
 				mm.masternodes.Show()
 			}
 
@@ -287,16 +279,16 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 		case <-ping.C:
 			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
-				continue
+				break
 			}
 			msg, err := mm.active.NewPingMsg()
 			if err != nil {
 				log.Error("NewPingMsg", "error", err)
-				continue
+				break
 			}
 			peers := mm.peers.peers
 			for _, peer := range peers {
-				log.Debug("sending ping msg", "peer", peer.id)
+				fmt.Println("sending ping msg", "peer", peer.id)
 				if err := peer.SendMasternodePing(msg); err != nil {
 					log.Error("SendMasternodePing", "error", err)
 				}
@@ -327,12 +319,19 @@ func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
 		return err
 	}
 	id := fmt.Sprintf("%x", key[1:9])
+	return nil
 	node := mm.masternodes.Node(id)
 	if node == nil {
 		return fmt.Errorf("error id %s", id)
 	}
+
 	if node.LastPingTime > pm.Time {
 		return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
+	}
+
+	// mark the ping message
+	for _, v := range mm.peers.peers { //
+		v.markPingMsg(id, pm.Time)
 	}
 	mm.masternodes.RecvPingMsg(id, pm.Time)
 	return nil
@@ -409,4 +408,3 @@ func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error)
 func (self *MasternodeManager) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
 	return self.scope.Track(self.pingFeed.Subscribe(ch))
 }
-
