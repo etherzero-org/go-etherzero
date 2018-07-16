@@ -68,7 +68,7 @@ type MasternodeManager struct {
 	Lifetime     time.Duration // Maximum amount of time vote are queued
 }
 
-func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain) *MasternodeManager {
+func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain, contract *contract.Contract) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
@@ -78,6 +78,7 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain)
 		votes:          make(map[common.Hash]*types.Vote),
 		beats:          make(map[common.Hash]time.Time),
 		Lifetime:       30 * time.Second,
+		contract:       contract,
 	}
 	return manager
 }
@@ -175,12 +176,11 @@ func (self *MasternodeManager) Votes() ([]*types.Vote, error) {
 	return votes, nil
 }
 
-func (self *MasternodeManager) Start(srvr *p2p.Server, contract *contract.Contract, peers *peerSet) {
-	self.contract = contract
+func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet) {
 	self.srvr = srvr
 	self.peers = peers
 	log.Trace("MasternodeManqager start ")
-	mns, err := masternode.NewMasternodeSet(contract)
+	mns, err := masternode.NewMasternodeSet(self.contract)
 	if err != nil {
 		log.Error("masternode.NewMasternodeSet", "error", err)
 	}
