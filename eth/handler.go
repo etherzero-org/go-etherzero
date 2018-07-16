@@ -825,10 +825,9 @@ func (self *ProtocolManager) broadcastPingMsg() {
 	for {
 		select {
 		case msg := <-self.pingCh:
-			fmt.Println("broadcastPingMsg ping masg", self.mm.active.ID)
 			peers := self.peers.markPingWithoutProcess(self.mm.active.ID, msg.Ping.Time)
 			for _, peer := range peers {
-				fmt.Println("broadcastPingMsg xzzxzxzzxxz", peer.id)
+				fmt.Println("broadcastPingMsg to peer", peer.id)
 				if err := peer.SendMasternodePing(msg.Ping); err != nil {
 					fmt.Println("SendMasternodePing", "error", err)
 				}
