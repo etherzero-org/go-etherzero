@@ -61,6 +61,10 @@ type MasternodeManager struct {
 	blockchain   *core.BlockChain
 	scope        event.SubscriptionScope
 	voteFeed     event.Feed
+
+	pingCh       chan core.PingEvent
+	pingSub      event.Subscription
+	pingFeed     event.Feed
 	currentCycle uint64 // Current vote of the block chain
 
 	Lifetime time.Duration // Maximum amount of time vote are queued
@@ -232,6 +236,10 @@ func (mm *MasternodeManager) masternodeLoop() {
 	voting := time.NewTicker(masternode.MASTERNODE_VOTING_ENABLE)
 	defer voting.Stop()
 
+	mm.pingCh = make(chan core.PingEvent, voteChanSize)
+	mm.pingSub = mm.SubscribePingEvent(mm.pingCh)
+	go mm.SubscribePingEvent(mm.pingCh)
+
 	for {
 		select {
 		case join := <-joinCh:
@@ -389,4 +397,10 @@ func (self *MasternodeManager) Register(masternode *masternode.Masternode) error
 
 func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) error {
 	return self.devoteProtocol.Unregister(masternode.ID)
+}
+
+// SubscribePingEvent registers a subscription of PingEvent and
+// starts sending event to the given channel.
+func (self *MasternodeManager) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
+	return self.scope.Track(self.pingFeed.Subscribe(ch))
 }
