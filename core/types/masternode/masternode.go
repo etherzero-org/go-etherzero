@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	MasternodeInit = iota
+	MasternodeInit         = iota
 	MasternodeDisconnected
 	MasternodeExpired
 	MasternodeEnable
@@ -43,11 +43,10 @@ const (
 
 const (
 	MASTERNODE_CHECK_INTERVAL = 30 * time.Second
-	MASTERNODE_PING_TIMEOUT   = 180 * time.Second
-	MASTERNODE_PING_INTERVAL  = 60 * time.Second
+	MASTERNODE_PING_TIMEOUT   = 5 * time.Second
+	MASTERNODE_PING_INTERVAL  = 2 * time.Second
 	MASTERNODE_ONLINE_ENABLE  = 60 * time.Second
 	MASTERNODE_VOTING_ENABLE  = 10 * time.Minute
-
 )
 
 var (
@@ -100,7 +99,7 @@ func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account commo
 }
 
 func (n *Masternode) String() string {
-	return fmt.Sprintf("Account: %s\nNode: %s\n", n.Account.String(), n.Node)
+	return fmt.Sprintf("Node: %s\n", n.Node)
 }
 
 //func (n *Masternode) CalculateScore(block *types.Block) int64 {
@@ -145,7 +144,6 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 		lastId = ctx.pre
 	}
 	ms.contract = contract
-
 	return ms, nil
 }
 
