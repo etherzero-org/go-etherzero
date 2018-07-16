@@ -400,7 +400,7 @@ func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) err
 }
 
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
-	return self.masternodes.GetIdsByBlockNumber(number)
+	return masternode.GetIdsByBlockNumber(self.contract, number)
 }
 
 // SubscribePingEvent registers a subscription of PingEvent and

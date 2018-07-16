@@ -148,7 +148,7 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 	return ms, nil
 }
 
-func (ms *MasternodeSet) GetIdsByBlockNumber(blockNumber *big.Int) ([]string, error) {
+func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
 	opts := new(bind.CallOpts)
 	opts.BlockNumber = blockNumber
 	var (
@@ -156,12 +156,12 @@ func (ms *MasternodeSet) GetIdsByBlockNumber(blockNumber *big.Int) ([]string, er
 		ctx    *MasternodeContext
 		ids []string
 	)
-	lastId, err := ms.contract.LastId(opts)
+	lastId, err := contract.LastId(opts)
 	if err != nil {
 		return ids, err
 	}
 	for lastId != ([8]byte{}) {
-		ctx, err = GetMasternodeContext(opts, ms.contract, lastId)
+		ctx, err = GetMasternodeContext(opts, contract, lastId)
 		if err != nil {
 			log.Error("GetIdsByBlockNumber", "error", err)
 			break
