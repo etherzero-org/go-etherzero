@@ -177,7 +177,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(eth.chainDb, eth.blockchain.CurrentBlock().Header().Protocol)
 
-	if eth.masternodeManager = NewMasternodeManager(devoteProtocol, eth.blockchain); err != nil {
+	contractBackend := NewContractBackend(eth)
+	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
+
+	if eth.masternodeManager = NewMasternodeManager(devoteProtocol, eth.blockchain, contract); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
@@ -474,8 +477,7 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
-	contractBackend := NewContractBackend(s)
-	go s.startMasternode(srvr, contractBackend)
+	go s.startMasternode(srvr)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
@@ -495,7 +497,7 @@ func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscri
 //	return s.masternodeManager.SubscribePingEvent(ch)
 //}
 
-func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBackend) {
+func (s *Ethereum) startMasternode(srvr *p2p.Server) {
 	t := time.NewTimer(10 * time.Second)
 	for {
 		select {
@@ -504,12 +506,7 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBa
 				t.Reset(10 * time.Second)
 				break
 			}
-			contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-			if err != nil {
-				log.Error("startMasternode", "error", err)
-				break
-			}
-			s.masternodeManager.Start(srvr, contract, s.protocolManager.peers)
+			s.masternodeManager.Start(srvr, s.protocolManager.peers)
 			break
 		}
 	}
