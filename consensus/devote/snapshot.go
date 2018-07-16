@@ -55,24 +55,23 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	defer self.mu.Unlock()
 
 	fmt.Printf("****** snapshot .go masternodes init nodes count %d ,value:%s ****** \n", len(nodes), nodes)
-	count := 0
 
 	list := make(map[string]*big.Int)
 
-	if !isFirstCycle {
-		for _,masternode := range nodes {
-			hash:=make([]byte, 8)
-			hash = append(hash, []byte(masternode)...)
-			hash = append(hash,parent.Hash().Bytes()...)
-			weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+	for i := 0; i < len(nodes); i++ {
+		masternode:=nodes[i]
+		hash := make([]byte, 8)
+		hash = append(hash, []byte(masternode)...)
+		hash = append(hash, parent.Hash().Bytes()...)
+		weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
 
-			score :=big.NewInt(0)
-			score.Add(score, big.NewInt(weight))
-			fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), masternode)
-			list[masternode]=score
-		}
+		score := big.NewInt(0)
+		score.Add(score, big.NewInt(weight))
+		fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), masternode)
+		list[masternode] = score
 	}
-	fmt.Printf("controller nodes context:%v count,%d \n", nodes, count)
+
+	fmt.Printf("controller nodes context:%v count,%d \n", nodes)
 	return list, nil
 }
 
@@ -187,7 +186,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < int(safeSize) {
-			return errors.New("too few masternodes")
+			return fmt.Errorf("too few masternodes, current ", "current", len(masternodes), "safesize", safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
