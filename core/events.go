@@ -19,6 +19,7 @@ package core
 import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 // TxPreEvent is posted when a transaction enters the transaction pool.
@@ -28,7 +29,10 @@ type TxPreEvent struct{ Tx *types.Transaction }
 type NewTxsEvent struct{ Txs []*types.Transaction }
 
 // NewVoteEvent is posted when a vote enters the Masternode vote pool.
-type NewVoteEvent struct{ Vote *types.Vote}
+type NewVoteEvent struct{ Vote *types.Vote }
+
+// PingEvent is posted when a ping message is sent.
+type PingEvent struct{ Ping *masternode.PingMsg }
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.
 type PendingLogsEvent struct {

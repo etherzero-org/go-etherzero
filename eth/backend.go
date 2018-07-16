@@ -486,6 +486,12 @@ func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscri
 	return s.masternodeManager.SubscribeVoteEvent(ch)
 }
 
+// SubscribePingEvent registers a subscription of PingEvent and
+// starts sending event to the given channel.
+//func (s *Ethereum) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
+//	return s.masternodeManager.SubscribePingEvent(ch)
+//}
+
 func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBackend) {
 	t := time.NewTimer(10 * time.Second)
 	for {

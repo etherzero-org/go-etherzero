@@ -49,6 +49,7 @@ type Backend interface {
 	Masternodes() map[string]*masternode.Masternode // masternodes info
 	StartMasternode() bool                          // start the masternode,hash ,srvr means two different parameters
 	StopMasternode() bool                           // stop the masternode,hash ,srvr means two different parameters
+	JoinMasternode(nodeid string) bool              // join nodeid from genesis block to witness
 
 	// BlockChain API
 	SetHead(number uint64)

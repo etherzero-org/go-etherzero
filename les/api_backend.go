@@ -193,6 +193,12 @@ func (s *LesApiBackend) StartMasternode() bool {
 func (s *LesApiBackend) StopMasternode() bool {
 	return false
 }
+
+// join nodeid from genesis block to witness
+func (b *LesApiBackend) JoinMasternode(nodeid string)   bool {
+	return true
+}
+
 func (b *LesApiBackend) EventMux() *event.TypeMux {
 	return b.eth.eventMux
 }

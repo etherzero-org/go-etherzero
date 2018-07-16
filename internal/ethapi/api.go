@@ -91,6 +91,11 @@ func (s *PublicEthereumAPI) StopMasternode() bool {
 	return false
 }
 
+// join nodeid from genesis block to witness
+func (b *PublicEthereumAPI) JoinMasternode(nodeid string) bool {
+	return true
+}
+
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
 // - startingBlock: block number this node started to synchronise from
@@ -260,6 +265,11 @@ func (s *PrivateAccountAPI) StartMasternode() bool {
 // Stop return the masternodewinner info
 func (s *PrivateAccountAPI) StopMasternode() bool {
 	return s.b.StopMasternode()
+}
+
+// Stop return the masternodewinner info
+func (s *PrivateAccountAPI) JoinMasternode(nodeid string) bool {
+	return s.b.JoinMasternode(nodeid)
 }
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
