@@ -23,7 +23,6 @@ import (
 	"time"
 )
 
-var errBlockNumberUnsupported = errors.New("ContractBackend cannot access blocks other than the latest block")
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
 
 type ContractBackend struct {
@@ -69,15 +68,34 @@ func (b *ContractBackend) rollback() {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
 }
 
+func(b *ContractBackend) getStateByBlockNumber(blockNumber *big.Int) (*state.StateDB, error) {
+	var statedb *state.StateDB
+	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+		header := b.blockchain.GetHeaderByNumber(blockNumber.Uint64())
+		if header == nil {
+			return nil, errors.New("getStateByBlockNumber: header==nil")
+		}
+		statedb, _ = b.blockchain.StateAt(header.Root)
+
+	}else{
+		statedb, _ = b.blockchain.State()
+	}
+	if statedb == nil {
+		return nil, errors.New("getStateByBlockNumber: statedb==nil")
+	}
+
+	return statedb, nil
+}
+
 // CodeAt returns the code associated with a certain account in the blockchain.
 func (b *ContractBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return nil, errBlockNumberUnsupported
+	statedb, err := b.getStateByBlockNumber(blockNumber)
+	if err != nil {
+		return nil, err
 	}
-	statedb, _ := b.blockchain.State()
 	return statedb.GetCode(contract), nil
 }
 
@@ -86,10 +104,10 @@ func (b *ContractBackend) BalanceAt(ctx context.Context, contract common.Address
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return nil, errBlockNumberUnsupported
+	statedb, err := b.getStateByBlockNumber(blockNumber)
+	if err != nil {
+		return nil, err
 	}
-	statedb, _ := b.blockchain.State()
 	return statedb.GetBalance(contract), nil
 }
 
@@ -98,10 +116,10 @@ func (b *ContractBackend) NonceAt(ctx context.Context, contract common.Address, 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return 0, errBlockNumberUnsupported
+	statedb, err := b.getStateByBlockNumber(blockNumber)
+	if err != nil {
+		return 0, err
 	}
-	statedb, _ := b.blockchain.State()
 	return statedb.GetNonce(contract), nil
 }
 
@@ -110,10 +128,10 @@ func (b *ContractBackend) StorageAt(ctx context.Context, contract common.Address
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return nil, errBlockNumberUnsupported
+	statedb, err := b.getStateByBlockNumber(blockNumber)
+	if err != nil {
+		return nil, err
 	}
-	statedb, _ := b.blockchain.State()
 	val := statedb.GetState(contract, key)
 	return val[:], nil
 }
@@ -137,10 +155,7 @@ func (b *ContractBackend) CallContract(ctx context.Context, call ethereum.CallMs
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
-		return nil, errBlockNumberUnsupported
-	}
-	state, err := b.blockchain.State()
+	state, err := b.getStateByBlockNumber(blockNumber)
 	if err != nil {
 		return nil, err
 	}

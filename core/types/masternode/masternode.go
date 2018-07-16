@@ -32,6 +32,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind"
 )
 
 const (
@@ -135,7 +136,7 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 		return ms, err
 	}
 	for lastId != ([8]byte{}) {
-		ctx, err = GetMasternodeContext(contract, lastId)
+		ctx, err = GetMasternodeContext(nil, contract, lastId)
 		if err != nil {
 			log.Error("Init NodeSet", "error", err)
 			break
@@ -149,19 +150,43 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 	return ms, nil
 }
 
+func (ms *MasternodeSet) GetIdsByBlockNumber(blockNumber *big.Int) ([]string, error) {
+	opts := new(bind.CallOpts)
+	opts.BlockNumber = blockNumber
+	var (
+		lastId [8]byte
+		ctx    *MasternodeContext
+		ids []string
+	)
+	lastId, err := ms.contract.LastId(opts)
+	if err != nil {
+		return ids, err
+	}
+	for lastId != ([8]byte{}) {
+		ctx, err = GetMasternodeContext(opts, ms.contract, lastId)
+		if err != nil {
+			log.Error("GetIdsByBlockNumber", "error", err)
+			break
+		}
+		ids = append(ids, ctx.Node.ID)
+		lastId = ctx.pre
+	}
+	return ids, nil
+}
+
 // Register injects a new node into the working set, or returns an error if the
 // node is already known.
-func (ns *MasternodeSet) Register(n *Masternode) error {
-	ns.lock.Lock()
-	defer ns.lock.Unlock()
+func (ms *MasternodeSet) Register(n *Masternode) error {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
 
-	if ns.closed {
+	if ms.closed {
 		return errClosed
 	}
-	if _, ok := ns.nodes[n.ID]; ok {
+	if _, ok := ms.nodes[n.ID]; ok {
 		return errAlreadyRegistered
 	}
-	ns.nodes[n.ID] = n
+	ms.nodes[n.ID] = n
 	return nil
 }
 
@@ -237,8 +262,7 @@ func (ns *MasternodeSet) Close() {
 }
 
 func (ns *MasternodeSet) NodeJoin(id [8]byte) (*Masternode, error) {
-	fmt.Println("")
-	ctx, err := GetMasternodeContext(ns.contract, id)
+	ctx, err := GetMasternodeContext(nil, ns.contract, id)
 	if err != nil {
 		return &Masternode{}, err
 	}
@@ -313,8 +337,8 @@ type MasternodeContext struct {
 	next [8]byte
 }
 
-func GetMasternodeContext(contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
-	data, err := contract.ContractCaller.GetInfo(nil, id)
+func GetMasternodeContext(opts *bind.CallOpts, contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
+	data, err := contract.ContractCaller.GetInfo(opts, id)
 	if err != nil {
 		return &MasternodeContext{}, err
 	}
