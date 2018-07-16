@@ -50,31 +50,30 @@ func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
 // key   -- nodeid
 // value -- votes count
 
-func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nodes map[string]*big.Int) (map[string]*big.Int, error) {
+func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
 	fmt.Printf("****** snapshot .go masternodes init nodes count %d ,value:%s ****** \n", len(nodes), nodes)
 	count := 0
 
+	list := make(map[string]*big.Int)
+
 	if !isFirstCycle {
-		for masternode, _ := range nodes {
+		for _,masternode := range nodes {
 			hash:=make([]byte, 8)
 			hash = append(hash, []byte(masternode)...)
 			hash = append(hash,parent.Hash().Bytes()...)
 			weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
 
-			score := nodes[masternode]
-			if score == nil{
-				score=big.NewInt(0)
-			}
+			score :=big.NewInt(0)
 			score.Add(score, big.NewInt(weight))
 			fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), masternode)
-			nodes[masternode] = score
+			list[masternode]=score
 		}
 	}
 	fmt.Printf("controller nodes context:%v count,%d \n", nodes, count)
-	return nodes, nil
+	return list, nil
 }
 
 //when a node does't work in the current cycle, delete.
@@ -163,7 +162,7 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 	return id, nil
 }
 
-func (self *Controller) election(genesis, first, parent *types.Header, nodes map[string]*big.Int) error {
+func (self *Controller) election(genesis, first, parent *types.Header, nodes []string) error {
 
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
 	prevCycle := parent.Time.Uint64() / params.CycleInterval

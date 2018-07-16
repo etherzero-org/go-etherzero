@@ -182,6 +182,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.protocolManager.mm = eth.masternodeManager
 
+	if devote, ok := eth.engine.(*devote.Devote); ok {
+		devote.Masternodes(eth.masternodeManager.MasternodeList)
+	}
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 	eth.APIBackend = &EthAPIBackend{eth, nil}
@@ -510,13 +513,7 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBa
 			break
 		}
 	}
-	if devote, ok := s.engine.(*devote.Devote); ok {
-		active := s.masternodeManager.active
-		if active == nil {
-			log.Error("Active Masternode is nil")
-		}
-		devote.Masternodes(s.masternodeManager.MasternodeList)
-	}
+
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the

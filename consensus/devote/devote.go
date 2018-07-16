@@ -37,7 +37,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -137,8 +136,8 @@ type Devote struct {
 	signatures           *lru.ARCCache // Signatures of recent blocks to speed up mining
 	confirmedBlockHeader *types.Header
 	masternodeListFn     MasternodeListFn //get current all masternodes
-	mu   sync.RWMutex
-	stop chan bool
+	mu                   sync.RWMutex
+	stop                 chan bool
 }
 
 func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
@@ -262,17 +261,10 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
-	//masternodes,err:=d.masternodeListFn(parent.Number)
-	//if err != nil{
-	//	return nil,fmt.Errorf("get current masternodes err,err:%s",err)
-	//}
 
-	nodes := make(map[string]*big.Int)
-	masternodeTrie := devoteProtocol.MasternodeTrie()
-	it := trie.NewIterator(masternodeTrie.NodeIterator(nil))
-
-	for it.Next() {
-		nodes[string(it.Key)] = big.NewInt(0)
+	nodes, merr := d.masternodeListFn(parent.Number)
+	if merr != nil {
+		return nil, fmt.Errorf("get current masternodes err,err:%s", merr)
 	}
 
 	genesis := chain.GetHeaderByNumber(0)
