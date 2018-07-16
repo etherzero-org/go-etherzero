@@ -37,8 +37,8 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/hashicorp/golang-lru"
 	"github.com/etherzero/go-etherzero/trie"
+	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -90,6 +90,8 @@ var (
 // []byte,signature
 type SignerFn func(string, []byte) ([]byte, error)
 
+type MasternodeListFn func(number *big.Int) ([]string, error)
+
 type PostVoteFn func(vote *types.Vote)
 
 // NOTE: sigHash was copy from clique
@@ -134,7 +136,7 @@ type Devote struct {
 	signFn               SignerFn      // signature function
 	signatures           *lru.ARCCache // Signatures of recent blocks to speed up mining
 	confirmedBlockHeader *types.Header
-
+	masternodeListFn     MasternodeListFn //get current all masternodes
 	mu   sync.RWMutex
 	stop chan bool
 }
@@ -260,6 +262,10 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
+	//masternodes,err:=d.masternodeListFn(parent.Number)
+	//if err != nil{
+	//	return nil,fmt.Errorf("get current masternodes err,err:%s",err)
+	//}
 
 	nodes := make(map[string]*big.Int)
 	masternodeTrie := devoteProtocol.MasternodeTrie()
@@ -271,14 +277,10 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 
 	genesis := chain.GetHeaderByNumber(0)
 	first := chain.GetHeaderByNumber(1)
-	err := controller.election(genesis, first, parent,nodes)
+	err := controller.election(genesis, first, parent, nodes)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
-	//voterr := devoteProtocol.ApplyVote(votes)
-	//if voterr != nil {
-	//	return nil, fmt.Errorf("got error when process vote ,err:%s", voterr)
-	//}
 	//miner Rolling
 	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 	header.Protocol = devoteProtocol.ProtocolAtomic()
@@ -492,6 +494,12 @@ func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.signer = signer
 	d.signFn = signFn
 	fmt.Printf("devote Authorize signer account: %x\n", signer)
+	d.mu.Unlock()
+}
+
+func (d *Devote) Masternodes(masternodeListFn MasternodeListFn) {
+	d.mu.Lock()
+	d.masternodeListFn = masternodeListFn
 	d.mu.Unlock()
 }
 
