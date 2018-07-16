@@ -67,7 +67,7 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 
 		score := big.NewInt(0)
 		score.Add(score, big.NewInt(weight))
-		fmt.Printf("********* masternodes score value:%d ,vote.poll %s ********* \n", score.Uint64(), masternode)
+		log.Debug("masternodes ", "score",score.Uint64(),"masternode", masternode)
 		list[masternode] = score
 	}
 
