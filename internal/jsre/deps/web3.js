@@ -1,5 +1,28 @@
-require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-        module.exports=[
+require = (function e(t, n, r) {
+    function s(o, u) {
+        if (!n[o]) {
+            if (!t[o]) {
+                var a = typeof require == "function" && require;
+                if (!u && a) return a(o, !0);
+                if (i) return i(o, !0);
+                var f = new Error("Cannot find module '" + o + "'");
+                throw f.code = "MODULE_NOT_FOUND", f
+            }
+            var l = n[o] = {exports: {}};
+            t[o][0].call(l.exports, function (e) {
+                var n = t[o][1][e];
+                return s(n ? n : e)
+            }, l, l.exports, e, t, n, r)
+        }
+        return n[o].exports
+    }
+
+    var i = typeof require == "function" && require;
+    for (var o = 0; o < r.length; o++) s(r[o]);
+    return s
+})({
+    1: [function (require, module, exports) {
+        module.exports = [
             {
                 "constant": true,
                 "inputs": [
@@ -254,8 +277,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
         ]
 
-    },{}],2:[function(require,module,exports){
-        module.exports=[
+    }, {}],
+    2: [function (require, module, exports) {
+        module.exports = [
             {
                 "constant": true,
                 "inputs": [
@@ -364,8 +388,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
         ]
 
-    },{}],3:[function(require,module,exports){
-        module.exports=[
+    }, {}],
+    3: [function (require, module, exports) {
+        module.exports = [
             {
                 "constant": false,
                 "inputs": [
@@ -513,7 +538,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
         ]
 
-    },{}],4:[function(require,module,exports){
+    }, {}],
+    4: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -541,7 +567,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeAddress;
 
-    },{"./formatters":9,"./type":14}],5:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    5: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -569,7 +596,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeBool;
 
-    },{"./formatters":9,"./type":14}],6:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    6: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -600,7 +628,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeBytes;
 
-    },{"./formatters":9,"./type":14}],7:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    7: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -759,7 +788,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     (function () {
                         for (var i = 0; i < encoded.length - 1; i++) {
                             var additionalOffset = result / 2;
-                            result += self.encodeWithOffset(nestedName, solidityType, encoded[i + 1], offset +  additionalOffset);
+                            result += self.encodeWithOffset(nestedName, solidityType, encoded[i + 1], offset + additionalOffset);
                         }
                     })();
 
@@ -823,12 +852,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             var offsets = this.getOffsets(types, solidityTypes);
 
             return solidityTypes.map(function (solidityType, index) {
-                return solidityType.decode(bytes, offsets[index],  types[index], index);
+                return solidityType.decode(bytes, offsets[index], types[index], index);
             });
         };
 
         SolidityCoder.prototype.getOffsets = function (types, solidityTypes) {
-            var lengths =  solidityTypes.map(function (solidityType, index) {
+            var lengths = solidityTypes.map(function (solidityType, index) {
                 return solidityType.staticPartLength(types[index]);
             });
 
@@ -865,7 +894,19 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = coder;
 
-    },{"./address":4,"./bool":5,"./bytes":6,"./dynamicbytes":8,"./formatters":9,"./int":10,"./real":12,"./string":13,"./uint":15,"./ureal":16}],8:[function(require,module,exports){
+    }, {
+        "./address": 4,
+        "./bool": 5,
+        "./bytes": 6,
+        "./dynamicbytes": 8,
+        "./formatters": 9,
+        "./int": 10,
+        "./real": 12,
+        "./string": 13,
+        "./uint": 15,
+        "./ureal": 16
+    }],
+    8: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -887,7 +928,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeDynamicBytes;
 
-    },{"./formatters":9,"./type":14}],9:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    9: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -983,7 +1025,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @returns {SolidityParam}
          */
         var formatInputBool = function (value) {
-            var result = '000000000000000000000000000000000000000000000000000000000000000' + (value ?  '1' : '0');
+            var result = '000000000000000000000000000000000000000000000000000000000000000' + (value ? '1' : '0');
             return new SolidityParam(result);
         };
 
@@ -1141,7 +1183,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             formatOutputAddress: formatOutputAddress
         };
 
-    },{"../utils/config":18,"../utils/utils":20,"./param":11,"bignumber.js":"bignumber.js"}],10:[function(require,module,exports){
+    }, {"../utils/config": 18, "../utils/utils": 20, "./param": 11, "bignumber.js": "bignumber.js"}],
+    10: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -1175,7 +1218,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeInt;
 
-    },{"./formatters":9,"./type":14}],11:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    11: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -1325,11 +1369,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-
         module.exports = SolidityParam;
 
 
-    },{"../utils/utils":20}],12:[function(require,module,exports){
+    }, {"../utils/utils": 20}],
+    12: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -1363,7 +1407,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeReal;
 
-    },{"./formatters":9,"./type":14}],13:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    13: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -1385,7 +1430,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeString;
 
-    },{"./formatters":9,"./type":14}],14:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    14: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityParam = require('./param');
 
@@ -1630,7 +1676,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     var dynamicOffset = parseInt('0x' + bytes.substr(offset * 2, 64));      // in bytes
                     var length = parseInt('0x' + bytes.substr(dynamicOffset * 2, 64));      // in bytes
                     var roundedLength = Math.floor((length + 31) / 32);                     // in int
-                    var param = new SolidityParam(bytes.substr(dynamicOffset * 2, ( 1 + roundedLength) * 64), 0);
+                    var param = new SolidityParam(bytes.substr(dynamicOffset * 2, (1 + roundedLength) * 64), 0);
                     return self._outputFormatter(param, name);
                 })();
             }
@@ -1642,7 +1688,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityType;
 
-    },{"./formatters":9,"./param":11}],15:[function(require,module,exports){
+    }, {"./formatters": 9, "./param": 11}],
+    15: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -1676,7 +1723,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeUInt;
 
-    },{"./formatters":9,"./type":14}],16:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    16: [function (require, module, exports) {
         var f = require('./formatters');
         var SolidityType = require('./type');
 
@@ -1710,7 +1758,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityTypeUReal;
 
-    },{"./formatters":9,"./type":14}],17:[function(require,module,exports){
+    }, {"./formatters": 9, "./type": 14}],
+    17: [function (require, module, exports) {
         'use strict';
 
 // go env doesn't have and need XMLHttpRequest
@@ -1721,7 +1770,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         }
 
 
-    },{}],18:[function(require,module,exports){
+    }, {}],
+    18: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -1795,14 +1845,15 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             ETH_PADDING: 32,
             ETH_SIGNATURE_LENGTH: 4,
             ETH_UNITS: ETH_UNITS,
-            ETH_BIGNUMBER_ROUNDING_MODE: { ROUNDING_MODE: BigNumber.ROUND_DOWN },
-            ETH_POLLING_TIMEOUT: 1000/2,
+            ETH_BIGNUMBER_ROUNDING_MODE: {ROUNDING_MODE: BigNumber.ROUND_DOWN},
+            ETH_POLLING_TIMEOUT: 1000 / 2,
             defaultBlock: 'latest',
             defaultAccount: undefined
         };
 
 
-    },{"bignumber.js":"bignumber.js"}],19:[function(require,module,exports){
+    }, {"bignumber.js": "bignumber.js"}],
+    19: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -1842,7 +1893,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-    },{"crypto-js":59,"crypto-js/sha3":80}],20:[function(require,module,exports){
+    }, {"crypto-js": 59, "crypto-js/sha3": 80}],
+    20: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -1884,33 +1936,33 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         var utf8 = require('utf8');
 
         var unitMap = {
-            'noether':      '0',
-            'wei':          '1',
-            'kwei':         '1000',
-            'Kwei':         '1000',
-            'babbage':      '1000',
-            'femtoether':   '1000',
-            'mwei':         '1000000',
-            'Mwei':         '1000000',
-            'lovelace':     '1000000',
-            'picoether':    '1000000',
-            'gwei':         '1000000000',
-            'Gwei':         '1000000000',
-            'shannon':      '1000000000',
-            'nanoether':    '1000000000',
-            'nano':         '1000000000',
-            'szabo':        '1000000000000',
-            'microether':   '1000000000000',
-            'micro':        '1000000000000',
-            'finney':       '1000000000000000',
-            'milliether':    '1000000000000000',
-            'milli':         '1000000000000000',
-            'ether':        '1000000000000000000',
-            'kether':       '1000000000000000000000',
-            'grand':        '1000000000000000000000',
-            'mether':       '1000000000000000000000000',
-            'gether':       '1000000000000000000000000000',
-            'tether':       '1000000000000000000000000000000'
+            'noether': '0',
+            'wei': '1',
+            'kwei': '1000',
+            'Kwei': '1000',
+            'babbage': '1000',
+            'femtoether': '1000',
+            'mwei': '1000000',
+            'Mwei': '1000000',
+            'lovelace': '1000000',
+            'picoether': '1000000',
+            'gwei': '1000000000',
+            'Gwei': '1000000000',
+            'shannon': '1000000000',
+            'nanoether': '1000000000',
+            'nano': '1000000000',
+            'szabo': '1000000000000',
+            'microether': '1000000000000',
+            'micro': '1000000000000',
+            'finney': '1000000000000000',
+            'milliether': '1000000000000000',
+            'milli': '1000000000000000',
+            'ether': '1000000000000000000',
+            'kether': '1000000000000000000000',
+            'grand': '1000000000000000000000',
+            'mether': '1000000000000000000000000',
+            'gether': '1000000000000000000000000000',
+            'tether': '1000000000000000000000000000000'
         };
 
         /**
@@ -1946,14 +1998,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {String} string in hex
          * @returns {String} ascii string representation of hex value
          */
-        var toUtf8 = function(hex) {
+        var toUtf8 = function (hex) {
 // Find termination
             var str = "";
             var i = 0, l = hex.length;
             if (hex.substring(0, 2) === '0x') {
                 i = 2;
             }
-            for (; i < l; i+=2) {
+            for (; i < l; i += 2) {
                 var code = parseInt(hex.substr(i, 2), 16);
                 if (code === 0)
                     break;
@@ -1970,14 +2022,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {String} string in hex
          * @returns {String} ascii string representation of hex value
          */
-        var toAscii = function(hex) {
+        var toAscii = function (hex) {
 // Find termination
             var str = "";
             var i = 0, l = hex.length;
             if (hex.substring(0, 2) === '0x') {
                 i = 2;
             }
-            for (; i < l; i+=2) {
+            for (; i < l; i += 2) {
                 var code = parseInt(hex.substr(i, 2), 16);
                 str += String.fromCharCode(code);
             }
@@ -1993,10 +2045,10 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Number} optional padding
          * @returns {String} hex representation of input string
          */
-        var fromUtf8 = function(str) {
+        var fromUtf8 = function (str) {
             str = utf8.encode(str);
             var hex = "";
-            for(var i = 0; i < str.length; i++) {
+            for (var i = 0; i < str.length; i++) {
                 var code = str.charCodeAt(i);
                 if (code === 0)
                     break;
@@ -2015,9 +2067,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Number} optional padding
          * @returns {String} hex representation of input string
          */
-        var fromAscii = function(str) {
+        var fromAscii = function (str) {
             var hex = "";
-            for(var i = 0; i < str.length; i++) {
+            for (var i = 0; i < str.length; i++) {
                 var code = str.charCodeAt(i);
                 var n = code.toString(16);
                 hex += n.length < 2 ? '0' + n : n;
@@ -2038,7 +2090,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 return json.name;
             }
 
-            var typeName = json.inputs.map(function(i){return i.type; }).join();
+            var typeName = json.inputs.map(function (i) {
+                return i.type;
+            }).join();
             return json.name + '(' + typeName + ')';
         };
 
@@ -2111,7 +2165,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             if (isString(val)) {
                 if (val.indexOf('-0x') === 0)
                     return fromDecimal(val);
-                else if(val.indexOf('0x') === 0)
+                else if (val.indexOf('0x') === 0)
                     return val;
                 else if (!isFinite(val))
                     return fromAscii(val);
@@ -2158,7 +2212,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {String} unit the unit to convert to, default ether
          * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
          */
-        var fromWei = function(number, unit) {
+        var fromWei = function (number, unit) {
             var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(unit));
 
             return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2186,7 +2240,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {String} unit the unit to convert from, default ether
          * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
          */
-        var toWei = function(number, unit) {
+        var toWei = function (number, unit) {
             var returnValue = toBigNumber(number).times(getValueOfUnit(unit));
 
             return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2199,14 +2253,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Number|String|BigNumber} a number, string, HEX string or BigNumber
          * @return {BigNumber} BigNumber
          */
-        var toBigNumber = function(number) {
+        var toBigNumber = function (number) {
             /*jshint maxcomplexity:5 */
             number = number || 0;
             if (isBigNumber(number))
                 return number;
 
             if (isString(number) && (number.indexOf('0x') === 0 || number.indexOf('-0x') === 0)) {
-                return new BigNumber(number.replace('0x',''), 16);
+                return new BigNumber(number.replace('0x', ''), 16);
             }
 
             return new BigNumber(number.toString(10), 10);
@@ -2267,10 +2321,10 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          */
         var isChecksumAddress = function (address) {
             // Check each case
-            address = address.replace('0x','');
+            address = address.replace('0x', '');
             var addressHash = sha3(address.toLowerCase());
 
-            for (var i = 0; i < 40; i++ ) {
+            for (var i = 0; i < 40; i++) {
                 // the nth letter should be uppercase if the nth digit of casemap is 1
                 if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
                     return false;
@@ -2278,7 +2332,6 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
             return true;
         };
-
 
 
         /**
@@ -2291,11 +2344,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         var toChecksumAddress = function (address) {
             if (typeof address === 'undefined') return '';
 
-            address = address.toLowerCase().replace('0x','');
+            address = address.toLowerCase().replace('0x', '');
             var addressHash = sha3(address);
             var checksumAddress = '0x';
 
-            for (var i = 0; i < address.length; i++ ) {
+            for (var i = 0; i < address.length; i++) {
                 // If ith character is 9 to f then make it uppercase
                 if (parseInt(addressHash[i], 16) > 7) {
                     checksumAddress += address[i].toUpperCase();
@@ -2473,12 +2526,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             isTopic: isTopic,
         };
 
-    },{"./sha3.js":19,"bignumber.js":"bignumber.js","utf8":85}],21:[function(require,module,exports){
-        module.exports={
+    }, {"./sha3.js": 19, "bignumber.js": "bignumber.js", "utf8": 85}],
+    21: [function (require, module, exports) {
+        module.exports = {
             "version": "0.20.1"
         }
 
-    },{}],22:[function(require,module,exports){
+    }, {}],
+    22: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -2527,8 +2582,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         var BigNumber = require('bignumber.js');
 
 
-
-        function Web3 (provider) {
+        function Web3(provider) {
             this._requestManager = new RequestManager(provider);
             this.currentProvider = provider;
             this.eth = new Eth(this);
@@ -2587,7 +2641,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         Web3.prototype.padRight = utils.padRight;
 
 
-        Web3.prototype.sha3 = function(string, options) {
+        Web3.prototype.sha3 = function (string, options) {
             return '0x' + sha3(string, options);
         };
 
@@ -2623,7 +2677,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             ];
         };
 
-        Web3.prototype.isConnected = function(){
+        Web3.prototype.isConnected = function () {
             return (this.currentProvider && this.currentProvider.isConnected());
         };
 
@@ -2634,7 +2688,28 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Web3;
 
 
-    },{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/eth":38,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"./web3/methods/masternode":48,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+    }, {
+        "./utils/sha3": 19,
+        "./utils/utils": 20,
+        "./version.json": 21,
+        "./web3/batch": 24,
+        "./web3/extend": 28,
+        "./web3/httpprovider": 32,
+        "./web3/iban": 33,
+        "./web3/ipcprovider": 34,
+        "./web3/methods/db": 37,
+        "./web3/methods/eth": 38,
+        "./web3/methods/net": 39,
+        "./web3/methods/personal": 40,
+        "./web3/methods/shh": 41,
+        "./web3/methods/swarm": 42,
+        "./web3/property": 45,
+        "./web3/requestmanager": 46,
+        "./web3/settings": 47,
+        "./web3/methods/masternode": 48,
+        "bignumber.js": "bignumber.js"
+    }],
+    23: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -2707,7 +2782,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             if (utils.isFunction(arguments[arguments.length - 1])) {
                 callback = arguments[arguments.length - 1];
-                if(arguments.length === 1)
+                if (arguments.length === 1)
                     options = null;
             }
 
@@ -2724,7 +2799,15 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = AllSolidityEvents;
 
 
-    },{"../utils/sha3":19,"../utils/utils":20,"./event":27,"./filter":29,"./formatters":30,"./methods/watches":43}],24:[function(require,module,exports){
+    }, {
+        "../utils/sha3": 19,
+        "../utils/utils": 20,
+        "./event": 27,
+        "./filter": 29,
+        "./formatters": 30,
+        "./methods/watches": 43
+    }],
+    24: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -2792,7 +2875,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Batch;
 
 
-    },{"./errors":26,"./jsonrpc":35}],25:[function(require,module,exports){
+    }, {"./errors": 26, "./jsonrpc": 35}],
+    25: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -2888,19 +2972,20 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Function} callback
          * @returns {Undefined}
          */
-        var checkForContractAddress = function(contract, callback){
+        var checkForContractAddress = function (contract, callback) {
             var count = 0,
                 callbackFired = false;
 
             // wait for receipt
-            var filter = contract._eth.filter('latest', function(e){
+            var filter = contract._eth.filter('latest', function (e) {
                 if (!e && !callbackFired) {
                     count++;
 
                     // stop watching after 50 blocks (timeout)
                     if (count > 50) {
 
-                        filter.stopWatching(function() {});
+                        filter.stopWatching(function () {
+                        });
                         callbackFired = true;
 
                         if (callback)
@@ -2911,19 +2996,20 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                     } else {
 
-                        contract._eth.getTransactionReceipt(contract.transactionHash, function(e, receipt){
-                            if(receipt && !callbackFired) {
+                        contract._eth.getTransactionReceipt(contract.transactionHash, function (e, receipt) {
+                            if (receipt && !callbackFired) {
 
-                                contract._eth.getCode(receipt.contractAddress, function(e, code){
+                                contract._eth.getCode(receipt.contractAddress, function (e, code) {
                                     /*jshint maxcomplexity: 6 */
 
-                                    if(callbackFired || !code)
+                                    if (callbackFired || !code)
                                         return;
 
-                                    filter.stopWatching(function() {});
+                                    filter.stopWatching(function () {
+                                    });
                                     callbackFired = true;
 
-                                    if(code.length > 3) {
+                                    if (code.length > 3) {
 
                                         // console.log('Contract code deployed!');
 
@@ -2934,11 +3020,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                                         addEventsToContract(contract);
 
                                         // call callback for the second time
-                                        if(callback)
+                                        if (callback)
                                             callback(null, contract);
 
                                     } else {
-                                        if(callback)
+                                        if (callback)
                                             callback(new Error('The contract code couldn\'t be stored, please check your gas amount.'));
                                         else
                                             throw new Error('The contract code couldn\'t be stored, please check your gas amount.');
@@ -3044,7 +3130,6 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 //};
 
 
-
         /**
          * Should be called to get access to existing contract on a blockchain
          *
@@ -3104,7 +3189,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = ContractFactory;
 
-    },{"../solidity/coder":7,"../utils/utils":20,"./allevents":23,"./event":27,"./function":31}],26:[function(require,module,exports){
+    }, {"../solidity/coder": 7, "../utils/utils": 20, "./allevents": 23, "./event": 27, "./function": 31}],
+    26: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -3134,22 +3220,23 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             InvalidNumberOfRPCParams: function () {
                 return new Error('Invalid number of input parameters to RPC method');
             },
-            InvalidConnection: function (host){
-                return new Error('CONNECTION ERROR: Couldn\'t connect to node '+ host +'.');
+            InvalidConnection: function (host) {
+                return new Error('CONNECTION ERROR: Couldn\'t connect to node ' + host + '.');
             },
             InvalidProvider: function () {
                 return new Error('Provider not set or invalid');
             },
-            InvalidResponse: function (result){
+            InvalidResponse: function (result) {
                 var message = !!result && !!result.error && !!result.error.message ? result.error.message : 'Invalid JSON RPC response: ' + JSON.stringify(result);
                 return new Error(message);
             },
-            ConnectionTimeout: function (ms){
+            ConnectionTimeout: function (ms) {
                 return new Error('CONNECTION TIMEOUT: timeout of ' + ms + ' ms achived');
             }
         };
 
-    },{}],27:[function(require,module,exports){
+    }, {}],
+    27: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -3295,7 +3382,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             data.topics = data.topics || [];
 
             var argTopics = this._anonymous ? data.topics : data.topics.slice(1);
-            var indexedData = argTopics.map(function (topics) { return topics.slice(2); }).join("");
+            var indexedData = argTopics.map(function (topics) {
+                return topics.slice(2);
+            }).join("");
             var indexedParams = coder.decodeParams(this.types(true), indexedData);
 
             var notIndexedData = data.data.slice(2);
@@ -3328,9 +3417,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             if (utils.isFunction(arguments[arguments.length - 1])) {
                 callback = arguments[arguments.length - 1];
-                if(arguments.length === 2)
+                if (arguments.length === 2)
                     options = null;
-                if(arguments.length === 1) {
+                if (arguments.length === 1) {
                     options = null;
                     indexed = {};
                 }
@@ -3359,7 +3448,15 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = SolidityEvent;
 
 
-    },{"../solidity/coder":7,"../utils/sha3":19,"../utils/utils":20,"./filter":29,"./formatters":30,"./methods/watches":43}],28:[function(require,module,exports){
+    }, {
+        "../solidity/coder": 7,
+        "../utils/sha3": 19,
+        "../utils/utils": 20,
+        "./filter": 29,
+        "./formatters": 30,
+        "./methods/watches": 43
+    }],
+    28: [function (require, module, exports) {
         var formatters = require('./formatters');
         var utils = require('./../utils/utils');
         var Method = require('./method');
@@ -3405,11 +3502,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-
         module.exports = extend;
 
 
-    },{"./../utils/utils":20,"./formatters":30,"./method":36,"./property":45}],29:[function(require,module,exports){
+    }, {"./../utils/utils": 20, "./formatters": 30, "./method": 36, "./property": 45}],
+    29: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -3445,14 +3542,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Mixed} value
          * @return {String}
          */
-        var toTopic = function(value){
+        var toTopic = function (value) {
 
-            if(value === null || typeof value === 'undefined')
+            if (value === null || typeof value === 'undefined')
                 return null;
 
             value = String(value);
 
-            if(value.indexOf('0x') === 0)
+            if (value.indexOf('0x') === 0)
                 return value;
             else
                 return utils.fromUtf8(value);
@@ -3471,12 +3568,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             options = options || {};
 
 
-            switch(type) {
+            switch (type) {
                 case 'eth':
 
                     // make sure topics, get converted to hex
                     options.topics = options.topics || [];
-                    options.topics = options.topics.map(function(topic){
+                    options.topics = options.topics.map(function (topic) {
                         return (utils.isArray(topic)) ? topic.map(toTopic) : toTopic(topic);
                     });
 
@@ -3500,7 +3597,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          @param {Object} self
          @param {function} callback
          */
-        var getLogsAtStart = function(self, callback){
+        var getLogsAtStart = function (self, callback) {
             // call getFilterLogs for the first watch callback start
             if (!utils.isString(self.options)) {
                 self.get(function (err, messages) {
@@ -3509,7 +3606,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         callback(err);
                     }
 
-                    if(utils.isArray(messages)) {
+                    if (utils.isArray(messages)) {
                         messages.forEach(function (message) {
                             callback(null, message);
                         });
@@ -3524,7 +3621,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          @method pollFilter
          @param {Object} self
          */
-        var pollFilter = function(self) {
+        var pollFilter = function (self) {
 
             var onMessage = function (error, messages) {
                 if (error) {
@@ -3533,7 +3630,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     });
                 }
 
-                if(utils.isArray(messages)) {
+                if (utils.isArray(messages)) {
                     messages.forEach(function (message) {
                         message = self.formatter ? self.formatter(message) : message;
                         self.callbacks.forEach(function (callback) {
@@ -3565,9 +3662,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             this.getLogsCallbacks = [];
             this.pollFilters = [];
             this.formatter = formatter;
-            this.implementation.newFilter(this.options, function(error, id){
-                if(error) {
-                    self.callbacks.forEach(function(cb){
+            this.implementation.newFilter(this.options, function (error, id) {
+                if (error) {
+                    self.callbacks.forEach(function (cb) {
                         cb(error);
                     });
                     if (typeof filterCreationErrorCallback === 'function') {
@@ -3578,20 +3675,20 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                     // check if there are get pending callbacks as a consequence
                     // of calling get() with filterId unassigned.
-                    self.getLogsCallbacks.forEach(function (cb){
+                    self.getLogsCallbacks.forEach(function (cb) {
                         self.get(cb);
                     });
                     self.getLogsCallbacks = [];
 
                     // get filter logs for the already existing watch calls
-                    self.callbacks.forEach(function(cb){
+                    self.callbacks.forEach(function (cb) {
                         getLogsAtStart(self, cb);
                     });
-                    if(self.callbacks.length > 0)
+                    if (self.callbacks.length > 0)
                         pollFilter(self);
 
                     // start to watch immediately
-                    if(typeof callback === 'function') {
+                    if (typeof callback === 'function') {
                         return self.watch(callback);
                     }
                 }
@@ -3603,7 +3700,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         Filter.prototype.watch = function (callback) {
             this.callbacks.push(callback);
 
-            if(this.filterId) {
+            if (this.filterId) {
                 getLogsAtStart(this, callback);
                 pollFilter(this);
             }
@@ -3630,7 +3727,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     // when newFilter() assigns it.
                     this.getLogsCallbacks.push(callback);
                 } else {
-                    this.implementation.getLogs(this.filterId, function(err, res){
+                    this.implementation.getLogs(this.filterId, function (err, res) {
                         if (err) {
                             callback(err);
                         } else {
@@ -3656,7 +3753,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Filter;
 
 
-    },{"../utils/utils":20,"./formatters":30}],30:[function(require,module,exports){
+    }, {"../utils/utils": 20, "./formatters": 30}],
+    30: [function (require, module, exports) {
         'use strict'
 
         /*
@@ -3724,7 +3822,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} transaction options
          * @returns object
          */
-        var inputCallFormatter = function (options){
+        var inputCallFormatter = function (options) {
 
             options.from = options.from || config.defaultAccount;
 
@@ -3738,7 +3836,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
                 return options[key] !== undefined;
-            }).forEach(function(key){
+            }).forEach(function (key) {
                 options[key] = utils.fromDecimal(options[key]);
             });
 
@@ -3752,7 +3850,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} transaction options
          * @returns object
          */
-        var inputTransactionFormatter = function (options){
+        var inputTransactionFormatter = function (options) {
 
             options.from = options.from || config.defaultAccount;
             options.from = inputAddressFormatter(options.from);
@@ -3763,7 +3861,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
                 return options[key] !== undefined;
-            }).forEach(function(key){
+            }).forEach(function (key) {
                 options[key] = utils.fromDecimal(options[key]);
             });
 
@@ -3777,10 +3875,10 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} tx
          * @returns {Object}
          */
-        var outputTransactionFormatter = function (tx){
-            if(tx.blockNumber !== null)
+        var outputTransactionFormatter = function (tx) {
+            if (tx.blockNumber !== null)
                 tx.blockNumber = utils.toDecimal(tx.blockNumber);
-            if(tx.transactionIndex !== null)
+            if (tx.transactionIndex !== null)
                 tx.transactionIndex = utils.toDecimal(tx.transactionIndex);
             tx.nonce = utils.toDecimal(tx.nonce);
             tx.gas = utils.toDecimal(tx.gas);
@@ -3796,16 +3894,16 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} receipt
          * @returns {Object}
          */
-        var outputTransactionReceiptFormatter = function (receipt){
-            if(receipt.blockNumber !== null)
+        var outputTransactionReceiptFormatter = function (receipt) {
+            if (receipt.blockNumber !== null)
                 receipt.blockNumber = utils.toDecimal(receipt.blockNumber);
-            if(receipt.transactionIndex !== null)
+            if (receipt.transactionIndex !== null)
                 receipt.transactionIndex = utils.toDecimal(receipt.transactionIndex);
             receipt.cumulativeGasUsed = utils.toDecimal(receipt.cumulativeGasUsed);
             receipt.gasUsed = utils.toDecimal(receipt.gasUsed);
 
-            if(utils.isArray(receipt.logs)) {
-                receipt.logs = receipt.logs.map(function(log){
+            if (utils.isArray(receipt.logs)) {
+                receipt.logs = receipt.logs.map(function (log) {
                     return outputLogFormatter(log);
                 });
             }
@@ -3820,22 +3918,22 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} block
          * @returns {Object}
          */
-        var outputBlockFormatter = function(block) {
+        var outputBlockFormatter = function (block) {
 
             // transform to number
             block.gasLimit = utils.toDecimal(block.gasLimit);
             block.gasUsed = utils.toDecimal(block.gasUsed);
             block.size = utils.toDecimal(block.size);
             block.timestamp = utils.toDecimal(block.timestamp);
-            if(block.number !== null)
+            if (block.number !== null)
                 block.number = utils.toDecimal(block.number);
 
             block.difficulty = utils.toBigNumber(block.difficulty);
             block.totalDifficulty = utils.toBigNumber(block.totalDifficulty);
 
             if (utils.isArray(block.transactions)) {
-                block.transactions.forEach(function(item){
-                    if(!utils.isString(item))
+                block.transactions.forEach(function (item) {
+                    if (!utils.isString(item))
                         return outputTransactionFormatter(item);
                 });
             }
@@ -3850,12 +3948,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} log object
          * @returns {Object} log
          */
-        var outputLogFormatter = function(log) {
-            if(log.blockNumber)
+        var outputLogFormatter = function (log) {
+            if (log.blockNumber)
                 log.blockNumber = utils.toDecimal(log.blockNumber);
-            if(log.transactionIndex)
+            if (log.transactionIndex)
                 log.transactionIndex = utils.toDecimal(log.transactionIndex);
-            if(log.logIndex)
+            if (log.logIndex)
                 log.logIndex = utils.toDecimal(log.logIndex);
 
             return log;
@@ -3868,7 +3966,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object} transaction object
          * @returns {Object}
          */
-        var inputPostFormatter = function(post) {
+        var inputPostFormatter = function (post) {
 
             // post.payload = utils.toHex(post.payload);
             post.ttl = utils.fromDecimal(post.ttl);
@@ -3881,7 +3979,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
 
             // format the following options
-            post.topics = post.topics.map(function(topic){
+            post.topics = post.topics.map(function (topic) {
                 // convert only if not hex
                 return (topic.indexOf('0x') === 0) ? topic : utils.fromUtf8(topic);
             });
@@ -3896,7 +3994,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @param {Object}
          * @returns {Object}
          */
-        var outputPostFormatter = function(post){
+        var outputPostFormatter = function (post) {
 
             post.expiry = utils.toDecimal(post.expiry);
             post.sent = utils.toDecimal(post.sent);
@@ -3913,7 +4011,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             if (!post.topics) {
                 post.topics = [];
             }
-            post.topics = post.topics.map(function(topic){
+            post.topics = post.topics.map(function (topic) {
                 return utils.toAscii(topic);
             });
 
@@ -3933,7 +4031,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-        var outputSyncingFormatter = function(result) {
+        var outputSyncingFormatter = function (result) {
             if (!result) {
                 return result;
             }
@@ -3966,7 +4064,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-    },{"../utils/config":18,"../utils/utils":20,"./iban":33}],31:[function(require,module,exports){
+    }, {"../utils/config": 18, "../utils/utils": 20, "./iban": 33}],
+    31: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -4019,7 +4118,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
         SolidityFunction.prototype.extractDefaultBlock = function (args) {
-            if (args.length > this._inputTypes.length && !utils.isObject(args[args.length -1])) {
+            if (args.length > this._inputTypes.length && !utils.isObject(args[args.length - 1])) {
                 return formatters.inputDefaultBlockNumberFormatter(args.pop()); // modify the args array!
             }
         };
@@ -4034,7 +4133,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         SolidityFunction.prototype.validateArgs = function (args) {
             var inputArgs = args.filter(function (a) {
                 // filter the options object but not arguments that are arrays
-                return !( (utils.isObject(a) === true) &&
+                return !((utils.isObject(a) === true) &&
                     (utils.isArray(a) === false) &&
                     (utils.isBigNumber(a) === false)
                 );
@@ -4053,7 +4152,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          */
         SolidityFunction.prototype.toPayload = function (args) {
             var options = {};
-            if (args.length > this._inputTypes.length && utils.isObject(args[args.length -1])) {
+            if (args.length > this._inputTypes.length && utils.isObject(args[args.length - 1])) {
                 options = args[args.length - 1];
             }
             this.validateArgs(args);
@@ -4094,7 +4193,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @return {String} output bytes
          */
         SolidityFunction.prototype.call = function () {
-            var args = Array.prototype.slice.call(arguments).filter(function (a) {return a !== undefined; });
+            var args = Array.prototype.slice.call(arguments).filter(function (a) {
+                return a !== undefined;
+            });
             var callback = this.extractCallback(args);
             var defaultBlock = this.extractDefaultBlock(args);
             var payload = this.toPayload(args);
@@ -4127,7 +4228,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          * @method sendTransaction
          */
         SolidityFunction.prototype.sendTransaction = function () {
-            var args = Array.prototype.slice.call(arguments).filter(function (a) {return a !== undefined; });
+            var args = Array.prototype.slice.call(arguments).filter(function (a) {
+                return a !== undefined;
+            });
             var callback = this.extractCallback(args);
             var payload = this.toPayload(args);
 
@@ -4251,7 +4354,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = SolidityFunction;
 
-    },{"../solidity/coder":7,"../utils/sha3":19,"../utils/utils":20,"./errors":26,"./formatters":30}],32:[function(require,module,exports){
+    }, {"../solidity/coder": 7, "../utils/sha3": 19, "../utils/utils": 20, "./errors": 26, "./formatters": 30}],
+    32: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -4321,7 +4425,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             if (this.user && this.password) {
                 var auth = 'Basic ' + new Buffer(this.user + ':' + this.password).toString('base64');
                 request.setRequestHeader('Authorization', auth);
-            } request.setRequestHeader('Content-Type', 'application/json');
+            }
+            request.setRequestHeader('Content-Type', 'application/json');
             return request;
         };
 
@@ -4410,7 +4515,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = HttpProvider;
 
-    },{"./errors":26,"xhr2":86,"xmlhttprequest":17}],33:[function(require,module,exports){
+    }, {"./errors": 26, "xhr2": 86, "xmlhttprequest": 17}],
+    33: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -4456,11 +4562,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             var Z = 'Z'.charCodeAt(0);
 
             iban = iban.toUpperCase();
-            iban = iban.substr(4) + iban.substr(0,4);
+            iban = iban.substr(4) + iban.substr(0, 4);
 
-            return iban.split('').map(function(n){
+            return iban.split('').map(function (n) {
                 var code = n.charCodeAt(0);
-                if (code >= A && code <= Z){
+                if (code >= A && code <= Z) {
                     // A = 10, B = 11, ... Z = 35
                     return code - A + 10;
                 } else {
@@ -4480,7 +4586,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             var remainder = iban,
                 block;
 
-            while (remainder.length > 2){
+            while (remainder.length > 2) {
                 block = remainder.slice(0, 9);
                 remainder = parseInt(block, 10) % 97 + remainder.slice(block.length);
             }
@@ -4639,7 +4745,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Iban;
 
 
-    },{"bignumber.js":"bignumber.js"}],34:[function(require,module,exports){
+    }, {"bignumber.js": "bignumber.js"}],
+    34: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -4675,28 +4782,28 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             this.connection = net.connect({path: this.path});
 
-            this.connection.on('error', function(e){
+            this.connection.on('error', function (e) {
                 console.error('IPC Connection Error', e);
                 _this._timeout();
             });
 
-            this.connection.on('end', function(){
+            this.connection.on('end', function () {
                 _this._timeout();
             });
 
 
             // LISTEN FOR CONNECTION RESPONSES
-            this.connection.on('data', function(data) {
+            this.connection.on('data', function (data) {
                 /*jshint maxcomplexity: 6 */
 
-                _this._parseResponse(data.toString()).forEach(function(result){
+                _this._parseResponse(data.toString()).forEach(function (result) {
 
                     var id = null;
 
                     // get the id which matches the returned id
-                    if(utils.isArray(result)) {
-                        result.forEach(function(load){
-                            if(_this.responseCallbacks[load.id])
+                    if (utils.isArray(result)) {
+                        result.forEach(function (load) {
+                            if (_this.responseCallbacks[load.id])
                                 id = load.id;
                         });
                     } else {
@@ -4704,7 +4811,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     }
 
                     // fire the callback
-                    if(_this.responseCallbacks[id]) {
+                    if (_this.responseCallbacks[id]) {
                         _this.responseCallbacks[id](null, result);
                         delete _this.responseCallbacks[id];
                     }
@@ -4718,22 +4825,22 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          @method _parseResponse
          @param {String} data
          */
-        IpcProvider.prototype._parseResponse = function(data) {
+        IpcProvider.prototype._parseResponse = function (data) {
             var _this = this,
                 returnValues = [];
 
             // DE-CHUNKER
             var dechunkedData = data
-                .replace(/\}[\n\r]?\{/g,'}|--|{') // }{
-                .replace(/\}\][\n\r]?\[\{/g,'}]|--|[{') // }][{
-                .replace(/\}[\n\r]?\[\{/g,'}|--|[{') // }[{
-                .replace(/\}\][\n\r]?\{/g,'}]|--|{') // }]{
+                .replace(/\}[\n\r]?\{/g, '}|--|{') // }{
+                .replace(/\}\][\n\r]?\[\{/g, '}]|--|[{') // }][{
+                .replace(/\}[\n\r]?\[\{/g, '}|--|[{') // }[{
+                .replace(/\}\][\n\r]?\{/g, '}]|--|{') // }]{
                 .split('|--|');
 
-            dechunkedData.forEach(function(data){
+            dechunkedData.forEach(function (data) {
 
                 // prepend the last chunk
-                if(_this.lastChunk)
+                if (_this.lastChunk)
                     data = _this.lastChunk + data;
 
                 var result = null;
@@ -4741,13 +4848,13 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 try {
                     result = JSON.parse(data);
 
-                } catch(e) {
+                } catch (e) {
 
                     _this.lastChunk = data;
 
                     // start timeout to cancel all requests
                     clearTimeout(_this.lastChunkTimeout);
-                    _this.lastChunkTimeout = setTimeout(function(){
+                    _this.lastChunkTimeout = setTimeout(function () {
                         _this._timeout();
                         throw errors.InvalidResponse(data);
                     }, 1000 * 15);
@@ -4759,7 +4866,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 clearTimeout(_this.lastChunkTimeout);
                 _this.lastChunk = null;
 
-                if(result)
+                if (result)
                     returnValues.push(result);
             });
 
@@ -4773,7 +4880,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
          @method _addResponseCallback
          */
-        IpcProvider.prototype._addResponseCallback = function(payload, callback) {
+        IpcProvider.prototype._addResponseCallback = function (payload, callback) {
             var id = payload.id || payload[0].id;
             var method = payload.method || payload[0].method;
 
@@ -4786,9 +4893,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
          @method _timeout
          */
-        IpcProvider.prototype._timeout = function() {
-            for(var key in this.responseCallbacks) {
-                if(this.responseCallbacks.hasOwnProperty(key)){
+        IpcProvider.prototype._timeout = function () {
+            for (var key in this.responseCallbacks) {
+                if (this.responseCallbacks.hasOwnProperty(key)) {
                     this.responseCallbacks[key](errors.InvalidConnection('on IPC'));
                     delete this.responseCallbacks[key];
                 }
@@ -4801,11 +4908,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
          @method isConnected
          */
-        IpcProvider.prototype.isConnected = function() {
+        IpcProvider.prototype.isConnected = function () {
             var _this = this;
 
             // try reconnect, when connection is gone
-            if(!_this.connection.writable)
+            if (!_this.connection.writable)
                 _this.connection.connect({path: _this.path});
 
             return !!this.connection.writable;
@@ -4813,31 +4920,31 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         IpcProvider.prototype.send = function (payload) {
 
-            if(this.connection.writeSync) {
+            if (this.connection.writeSync) {
                 var result;
 
                 // try reconnect, when connection is gone
-                if(!this.connection.writable)
+                if (!this.connection.writable)
                     this.connection.connect({path: this.path});
 
                 var data = this.connection.writeSync(JSON.stringify(payload));
 
                 try {
                     result = JSON.parse(data);
-                } catch(e) {
+                } catch (e) {
                     throw errors.InvalidResponse(data);
                 }
 
                 return result;
 
             } else {
-                throw new Error('You tried to send "'+ payload.method +'" synchronously. Synchronous requests are not supported by the IPC provider.');
+                throw new Error('You tried to send "' + payload.method + '" synchronously. Synchronous requests are not supported by the IPC provider.');
             }
         };
 
         IpcProvider.prototype.sendAsync = function (payload, callback) {
             // try reconnect, when connection is gone
-            if(!this.connection.writable)
+            if (!this.connection.writable)
                 this.connection.connect({path: this.path});
 
 
@@ -4848,7 +4955,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = IpcProvider;
 
 
-    },{"../utils/utils":20,"./errors":26}],35:[function(require,module,exports){
+    }, {"../utils/utils": 20, "./errors": 26}],
+    35: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -4910,7 +5018,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         Jsonrpc.isValidResponse = function (response) {
             return Array.isArray(response) ? response.every(validateSingleMessage) : validateSingleMessage(response);
 
-            function validateSingleMessage(message){
+            function validateSingleMessage(message) {
                 return !!message &&
                     !message.error &&
                     message.jsonrpc === '2.0' &&
@@ -4935,7 +5043,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Jsonrpc;
 
 
-    },{}],36:[function(require,module,exports){
+    }, {}],
+    36: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5071,7 +5180,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }
         };
 
-        Method.prototype.buildCall = function() {
+        Method.prototype.buildCall = function () {
             var method = this;
             var send = function () {
                 var payload = method.toPayload(Array.prototype.slice.call(arguments));
@@ -5101,7 +5210,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Method;
 
-    },{"../utils/utils":20,"./errors":26}],37:[function(require,module,exports){
+    }, {"../utils/utils": 20, "./errors": 26}],
+    37: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5131,7 +5241,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            methods().forEach(function(method) {
+            methods().forEach(function (method) {
                 method.attachToObject(self);
                 method.setRequestManager(web3._requestManager);
             });
@@ -5169,7 +5279,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = DB;
 
-    },{"../method":36}],38:[function(require,module,exports){
+    }, {"../method": 36}],
+    38: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5233,12 +5344,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            methods().forEach(function(method) {
+            methods().forEach(function (method) {
                 method.attachToObject(self);
                 method.setRequestManager(self._requestManager);
             });
 
-            properties().forEach(function(p) {
+            properties().forEach(function (p) {
                 p.attachToObject(self);
                 p.setRequestManager(self._requestManager);
             });
@@ -5303,7 +5414,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 name: 'getBlock',
                 call: blockCall,
                 params: 2,
-                inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
+                inputFormatter: [formatters.inputBlockNumberFormatter, function (val) {
+                    return !!val;
+                }],
                 outputFormatter: formatters.outputBlockFormatter
             });
 
@@ -5548,7 +5661,21 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Eth;
 
-    },{"../../utils/config":18,"../../utils/utils":20,"../contract":25,"../filter":29,"../formatters":30,"../iban":33,"../method":36,"../namereg":44,"../property":45,"../syncing":48,"../transfer":49,"./watches":43}],39:[function(require,module,exports){
+    }, {
+        "../../utils/config": 18,
+        "../../utils/utils": 20,
+        "../contract": 25,
+        "../filter": 29,
+        "../formatters": 30,
+        "../iban": 33,
+        "../method": 36,
+        "../namereg": 44,
+        "../property": 45,
+        "../syncing": 48,
+        "../transfer": 49,
+        "./watches": 43
+    }],
+    39: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5579,7 +5706,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            properties().forEach(function(p) {
+            properties().forEach(function (p) {
                 p.attachToObject(self);
                 p.setRequestManager(web3._requestManager);
             });
@@ -5602,7 +5729,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Net;
 
-    },{"../../utils/utils":20,"../property":45}],40:[function(require,module,exports){
+    }, {"../../utils/utils": 20, "../property": 45}],
+    40: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5637,12 +5765,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            methods().forEach(function(method) {
+            methods().forEach(function (method) {
                 method.attachToObject(self);
                 method.setRequestManager(self._requestManager);
             });
 
-            properties().forEach(function(p) {
+            properties().forEach(function (p) {
                 p.attachToObject(self);
                 p.setRequestManager(self._requestManager);
             });
@@ -5719,7 +5847,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Personal;
 
-    },{"../formatters":30,"../method":36,"../property":45}],41:[function(require,module,exports){
+    }, {"../formatters": 30, "../method": 36, "../property": 45}],
+    41: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5752,7 +5881,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            methods().forEach(function(method) {
+            methods().forEach(function (method) {
                 method.attachToObject(self);
                 method.setRequestManager(self._requestManager);
             });
@@ -5865,7 +5994,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Shh;
 
 
-    },{"../filter":29,"../method":36,"./watches":43}],42:[function(require,module,exports){
+    }, {"../filter": 29, "../method": 36, "./watches": 43}],
+    42: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -5900,12 +6030,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            methods().forEach(function(method) {
+            methods().forEach(function (method) {
                 method.attachToObject(self);
                 method.setRequestManager(self._requestManager);
             });
 
-            properties().forEach(function(p) {
+            properties().forEach(function (p) {
                 p.attachToObject(self);
                 p.setRequestManager(self._requestManager);
             });
@@ -6012,7 +6142,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Swarm;
 
-    },{"../method":36,"../property":45}],43:[function(require,module,exports){
+    }, {"../method": 36, "../property": 45}],
+    43: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -6042,7 +6173,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             var newFilterCall = function (args) {
                 var type = args[0];
 
-                switch(type) {
+                switch (type) {
                     case 'latest':
                         args.shift();
                         this.params = 0;
@@ -6121,7 +6252,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-    },{"../method":36}],44:[function(require,module,exports){
+    }, {"../method": 36}],
+    44: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -6145,7 +6277,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          */
 
         var globalRegistrarAbi = require('../contracts/GlobalRegistrar.json');
-        var icapRegistrarAbi= require('../contracts/ICAPRegistrar.json');
+        var icapRegistrarAbi = require('../contracts/ICAPRegistrar.json');
 
         var globalNameregAddress = '0xc6d9d2cd449a754c494264e1809c50e34d64562b';
         var icapNameregAddress = '0xa1a111bc074c9cfa781f0c38e63bd51c91b8af00';
@@ -6162,7 +6294,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
 
-    },{"../contracts/GlobalRegistrar.json":1,"../contracts/ICAPRegistrar.json":2}],45:[function(require,module,exports){
+    }, {"../contracts/GlobalRegistrar.json": 1, "../contracts/ICAPRegistrar.json": 2}],
+    45: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -6308,7 +6441,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Property;
 
 
-    },{"../utils/utils":20}],46:[function(require,module,exports){
+    }, {"../utils/utils": 20}],
+    46: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -6469,7 +6603,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             delete this.polls[pollId];
 
             // stop polling
-            if(Object.keys(this.polls).length === 0 && this.timeout) {
+            if (Object.keys(this.polls).length === 0 && this.timeout) {
                 clearTimeout(this.timeout);
                 this.timeout = null;
             }
@@ -6486,14 +6620,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             for (var key in this.polls) {
                 // remove all polls, except sync polls,
                 // they need to be removed manually by calling syncing.stopWatching()
-                if(!keepIsSyncing || key.indexOf('syncPoll_') === -1) {
+                if (!keepIsSyncing || key.indexOf('syncPoll_') === -1) {
                     this.polls[key].uninstall();
                     delete this.polls[key];
                 }
             }
 
             // stop polling
-            if(Object.keys(this.polls).length === 0 && this.timeout) {
+            if (Object.keys(this.polls).length === 0 && this.timeout) {
                 clearTimeout(this.timeout);
                 this.timeout = null;
             }
@@ -6532,7 +6666,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             // map the request id to they poll id
             var pollsIdMap = {};
-            payload.forEach(function(load, index){
+            payload.forEach(function (load, index) {
                 pollsIdMap[load.id] = pollsIds[index];
             });
 
@@ -6575,7 +6709,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = RequestManager;
 
 
-    },{"../utils/config":18,"../utils/utils":20,"./errors":26,"./jsonrpc":35}],47:[function(require,module,exports){
+    }, {"../utils/config": 18, "../utils/utils": 20, "./errors": 26, "./jsonrpc": 35}],
+    47: [function (require, module, exports) {
 
 
         var Settings = function () {
@@ -6586,7 +6721,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = Settings;
 
 
-    },{}],48:[function(require,module,exports){
+    }, {}],
+    48: [function (require, module, exports) {
 
         /*
                 This file is part of web3.js.
@@ -6622,12 +6758,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
             var self = this;
 
-            methods().forEach(function(method) {
+            methods().forEach(function (method) {
                 method.attachToObject(self);
                 method.setRequestManager(self._requestManager);
             });
 
-            properties().forEach(function(p) {
+            properties().forEach(function (p) {
                 p.attachToObject(self);
                 p.setRequestManager(self._requestManager);
             });
@@ -6642,9 +6778,16 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 name: 'stopMasternode',
                 call: 'masternode_stopMasternode',
             });
+            var joinMasternode = new Method({
+                name: 'joinMasternode',
+                call: 'masternode_joinMasternode',
+                params: 1,
+                inputFormatter: [formatters.formatInputString],
+            });
             return [
                 startMasternode,
-                stopMasternode
+                stopMasternode,
+                joinMasternode
             ];
         };
 
@@ -6660,7 +6803,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Masternode;
 
-    },{"../formatters":30,"../method":36,"../property":45}],49:[function(require,module,exports){
+    }, {"../formatters": 30, "../method": 36, "../property": 45}],
+    49: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -6694,7 +6838,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
          @method pollSyncing
          @param {Object} self
          */
-        var pollSyncing = function(self) {
+        var pollSyncing = function (self) {
 
             var onMessage = function (error, sync) {
                 if (error) {
@@ -6703,18 +6847,18 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     });
                 }
 
-                if(utils.isObject(sync) && sync.startingBlock)
+                if (utils.isObject(sync) && sync.startingBlock)
                     sync = formatters.outputSyncingFormatter(sync);
 
                 self.callbacks.forEach(function (callback) {
                     if (self.lastSyncState !== sync) {
 
                         // call the callback with true first so the app can stop anything, before receiving the sync data
-                        if(!self.lastSyncState && utils.isObject(sync))
+                        if (!self.lastSyncState && utils.isObject(sync))
                             callback(null, true);
 
                         // call on the next CPU cycle, so the actions of the sync stop can be processes first
-                        setTimeout(function() {
+                        setTimeout(function () {
                             callback(null, sync);
                         }, 0);
 
@@ -6732,7 +6876,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         var IsSyncing = function (requestManager, callback) {
             this.requestManager = requestManager;
-            this.pollId = 'syncPoll_'+ count++;
+            this.pollId = 'syncPoll_' + count++;
             this.callbacks = [];
             this.addCallback(callback);
             this.lastSyncState = false;
@@ -6742,7 +6886,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         };
 
         IsSyncing.prototype.addCallback = function (callback) {
-            if(callback)
+            if (callback)
                 this.callbacks.push(callback);
             return this;
         };
@@ -6755,7 +6899,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = IsSyncing;
 
 
-    },{"../utils/utils":20,"./formatters":30}],49:[function(require,module,exports){
+    }, {"../utils/utils": 20, "./formatters": 30}],
+    49: [function (require, module, exports) {
         /*
     This file is part of web3.js.
 
@@ -6849,9 +6994,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
         module.exports = transfer;
 
 
-    },{"../contracts/SmartExchange.json":3,"./iban":33}],50:[function(require,module,exports){
+    }, {"../contracts/SmartExchange.json": 3, "./iban": 33}],
+    50: [function (require, module, exports) {
 
-    },{}],51:[function(require,module,exports){
+    }, {}],
+    51: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -6917,14 +7064,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         var t = (d[sx] * 0x101) ^ (sx * 0x1010100);
                         SUB_MIX_0[x] = (t << 24) | (t >>> 8);
                         SUB_MIX_1[x] = (t << 16) | (t >>> 16);
-                        SUB_MIX_2[x] = (t << 8)  | (t >>> 24);
+                        SUB_MIX_2[x] = (t << 8) | (t >>> 24);
                         SUB_MIX_3[x] = t;
 
                         // Compute inv sub bytes, inv mix columns tables
                         var t = (x8 * 0x1010101) ^ (x4 * 0x10001) ^ (x2 * 0x101) ^ (x * 0x1010100);
                         INV_SUB_MIX_0[sx] = (t << 24) | (t >>> 8);
                         INV_SUB_MIX_1[sx] = (t << 16) | (t >>> 16);
-                        INV_SUB_MIX_2[sx] = (t << 8)  | (t >>> 24);
+                        INV_SUB_MIX_2[sx] = (t << 8) | (t >>> 24);
                         INV_SUB_MIX_3[sx] = t;
 
                         // Compute next counter
@@ -7030,7 +7177,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         var nRounds = this._nRounds;
 
                         // Get input, add round key
-                        var s0 = M[offset]     ^ keySchedule[0];
+                        var s0 = M[offset] ^ keySchedule[0];
                         var s1 = M[offset + 1] ^ keySchedule[1];
                         var s2 = M[offset + 2] ^ keySchedule[2];
                         var s3 = M[offset + 3] ^ keySchedule[3];
@@ -7060,13 +7207,13 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         var t3 = ((SBOX[s3 >>> 24] << 24) | (SBOX[(s0 >>> 16) & 0xff] << 16) | (SBOX[(s1 >>> 8) & 0xff] << 8) | SBOX[s2 & 0xff]) ^ keySchedule[ksRow++];
 
                         // Set output
-                        M[offset]     = t0;
+                        M[offset] = t0;
                         M[offset + 1] = t1;
                         M[offset + 2] = t2;
                         M[offset + 3] = t3;
                     },
 
-                    keySize: 256/32
+                    keySize: 256 / 32
                 });
 
                 /**
@@ -7084,7 +7231,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.AES;
 
         }));
-    },{"./cipher-core":52,"./core":53,"./enc-base64":54,"./evpkdf":56,"./md5":61}],52:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53, "./enc-base64": 54, "./evpkdf": 56, "./md5": 61}],
+    52: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -7252,9 +7400,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         return finalProcessedData;
                     },
 
-                    keySize: 128/32,
+                    keySize: 128 / 32,
 
-                    ivSize: 128/32,
+                    ivSize: 128 / 32,
 
                     _ENC_XFORM_MODE: 1,
 
@@ -7586,7 +7734,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         return finalProcessedBlocks;
                     },
 
-                    blockSize: 128/32
+                    blockSize: 128 / 32
                 });
 
                 /**
@@ -7713,7 +7861,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             ciphertext.sigBytes -= 16;
                         }
 
-                        return CipherParams.create({ ciphertext: ciphertext, salt: salt });
+                        return CipherParams.create({ciphertext: ciphertext, salt: salt});
                     }
                 };
 
@@ -7855,18 +8003,18 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     execute: function (password, keySize, ivSize, salt) {
                         // Generate random salt
                         if (!salt) {
-                            salt = WordArray.random(64/8);
+                            salt = WordArray.random(64 / 8);
                         }
 
                         // Derive key and IV
-                        var key = EvpKDF.create({ keySize: keySize + ivSize }).compute(password, salt);
+                        var key = EvpKDF.create({keySize: keySize + ivSize}).compute(password, salt);
 
                         // Separate key and IV
                         var iv = WordArray.create(key.words.slice(keySize), ivSize * 4);
                         key.sigBytes = keySize * 4;
 
                         // Return params
-                        return CipherParams.create({ key: key, iv: iv, salt: salt });
+                        return CipherParams.create({key: key, iv: iv, salt: salt});
                     }
                 };
 
@@ -7960,7 +8108,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
 
         }));
-    },{"./core":53}],53:[function(require,module,exports){
+    }, {"./core": 53}],
+    53: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -7984,7 +8133,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 	     * Local polyfil of Object.create
 	     */
                 var create = Object.create || (function () {
-                    function F() {};
+                    function F() {
+                    };
 
                     return function (obj) {
                         var subtype;
@@ -8668,7 +8818,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         return hash;
                     },
 
-                    blockSize: 512/32,
+                    blockSize: 512 / 32,
 
                     /**
                      * Creates a shortcut function to a hasher's object interface.
@@ -8721,7 +8871,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS;
 
         }));
-    },{}],54:[function(require,module,exports){
+    }, {}],
+    54: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -8773,7 +8924,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         // Convert
                         var base64Chars = [];
                         for (var i = 0; i < sigBytes; i += 3) {
-                            var byte1 = (words[i >>> 2]       >>> (24 - (i % 4) * 8))       & 0xff;
+                            var byte1 = (words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
                             var byte2 = (words[(i + 1) >>> 2] >>> (24 - ((i + 1) % 4) * 8)) & 0xff;
                             var byte3 = (words[(i + 2) >>> 2] >>> (24 - ((i + 2) % 4) * 8)) & 0xff;
 
@@ -8857,7 +9008,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.enc.Base64;
 
         }));
-    },{"./core":53}],55:[function(require,module,exports){
+    }, {"./core": 53}],
+    55: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9007,7 +9159,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.enc.Utf16;
 
         }));
-    },{"./core":53}],56:[function(require,module,exports){
+    }, {"./core": 53}],
+    56: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9045,7 +9198,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                      * @property {number} iterations The number of iterations to perform. Default: 1
                      */
                     cfg: Base.extend({
-                        keySize: 128/32,
+                        keySize: 128 / 32,
                         hasher: MD5,
                         iterations: 1
                     }),
@@ -9140,7 +9293,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.EvpKDF;
 
         }));
-    },{"./core":53,"./hmac":58,"./sha1":77}],57:[function(require,module,exports){
+    }, {"./core": 53, "./hmac": 58, "./sha1": 77}],
+    57: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9198,7 +9352,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                      */
                     parse: function (input) {
                         var ciphertext = Hex.parse(input);
-                        return CipherParams.create({ ciphertext: ciphertext });
+                        return CipherParams.create({ciphertext: ciphertext});
                     }
                 };
             }());
@@ -9207,7 +9361,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.format.Hex;
 
         }));
-    },{"./cipher-core":52,"./core":53}],58:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    58: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9351,7 +9506,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
 
         }));
-    },{"./core":53}],59:[function(require,module,exports){
+    }, {"./core": 53}],
+    59: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9370,7 +9526,42 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS;
 
         }));
-    },{"./aes":51,"./cipher-core":52,"./core":53,"./enc-base64":54,"./enc-utf16":55,"./evpkdf":56,"./format-hex":57,"./hmac":58,"./lib-typedarrays":60,"./md5":61,"./mode-cfb":62,"./mode-ctr":64,"./mode-ctr-gladman":63,"./mode-ecb":65,"./mode-ofb":66,"./pad-ansix923":67,"./pad-iso10126":68,"./pad-iso97971":69,"./pad-nopadding":70,"./pad-zeropadding":71,"./pbkdf2":72,"./rabbit":74,"./rabbit-legacy":73,"./rc4":75,"./ripemd160":76,"./sha1":77,"./sha224":78,"./sha256":79,"./sha3":80,"./sha384":81,"./sha512":82,"./tripledes":83,"./x64-core":84}],60:[function(require,module,exports){
+    }, {
+        "./aes": 51,
+        "./cipher-core": 52,
+        "./core": 53,
+        "./enc-base64": 54,
+        "./enc-utf16": 55,
+        "./evpkdf": 56,
+        "./format-hex": 57,
+        "./hmac": 58,
+        "./lib-typedarrays": 60,
+        "./md5": 61,
+        "./mode-cfb": 62,
+        "./mode-ctr": 64,
+        "./mode-ctr-gladman": 63,
+        "./mode-ecb": 65,
+        "./mode-ofb": 66,
+        "./pad-ansix923": 67,
+        "./pad-iso10126": 68,
+        "./pad-iso97971": 69,
+        "./pad-nopadding": 70,
+        "./pad-zeropadding": 71,
+        "./pbkdf2": 72,
+        "./rabbit": 74,
+        "./rabbit-legacy": 73,
+        "./rc4": 75,
+        "./ripemd160": 76,
+        "./sha1": 77,
+        "./sha224": 78,
+        "./sha256": 79,
+        "./sha3": 80,
+        "./sha384": 81,
+        "./sha512": 82,
+        "./tripledes": 83,
+        "./x64-core": 84
+    }],
+    60: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9447,7 +9638,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.lib.WordArray;
 
         }));
-    },{"./core":53}],61:[function(require,module,exports){
+    }, {"./core": 53}],
+    61: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9500,24 +9692,24 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             var M_offset_i = M[offset_i];
 
                             M[offset_i] = (
-                                (((M_offset_i << 8)  | (M_offset_i >>> 24)) & 0x00ff00ff) |
-                                (((M_offset_i << 24) | (M_offset_i >>> 8))  & 0xff00ff00)
+                                (((M_offset_i << 8) | (M_offset_i >>> 24)) & 0x00ff00ff) |
+                                (((M_offset_i << 24) | (M_offset_i >>> 8)) & 0xff00ff00)
                             );
                         }
 
                         // Shortcuts
                         var H = this._hash.words;
 
-                        var M_offset_0  = M[offset + 0];
-                        var M_offset_1  = M[offset + 1];
-                        var M_offset_2  = M[offset + 2];
-                        var M_offset_3  = M[offset + 3];
-                        var M_offset_4  = M[offset + 4];
-                        var M_offset_5  = M[offset + 5];
-                        var M_offset_6  = M[offset + 6];
-                        var M_offset_7  = M[offset + 7];
-                        var M_offset_8  = M[offset + 8];
-                        var M_offset_9  = M[offset + 9];
+                        var M_offset_0 = M[offset + 0];
+                        var M_offset_1 = M[offset + 1];
+                        var M_offset_2 = M[offset + 2];
+                        var M_offset_3 = M[offset + 3];
+                        var M_offset_4 = M[offset + 4];
+                        var M_offset_5 = M[offset + 5];
+                        var M_offset_6 = M[offset + 6];
+                        var M_offset_7 = M[offset + 7];
+                        var M_offset_8 = M[offset + 8];
+                        var M_offset_9 = M[offset + 9];
                         var M_offset_10 = M[offset + 10];
                         var M_offset_11 = M[offset + 11];
                         var M_offset_12 = M[offset + 12];
@@ -9532,73 +9724,73 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         var d = H[3];
 
                         // Computation
-                        a = FF(a, b, c, d, M_offset_0,  7,  T[0]);
-                        d = FF(d, a, b, c, M_offset_1,  12, T[1]);
-                        c = FF(c, d, a, b, M_offset_2,  17, T[2]);
-                        b = FF(b, c, d, a, M_offset_3,  22, T[3]);
-                        a = FF(a, b, c, d, M_offset_4,  7,  T[4]);
-                        d = FF(d, a, b, c, M_offset_5,  12, T[5]);
-                        c = FF(c, d, a, b, M_offset_6,  17, T[6]);
-                        b = FF(b, c, d, a, M_offset_7,  22, T[7]);
-                        a = FF(a, b, c, d, M_offset_8,  7,  T[8]);
-                        d = FF(d, a, b, c, M_offset_9,  12, T[9]);
+                        a = FF(a, b, c, d, M_offset_0, 7, T[0]);
+                        d = FF(d, a, b, c, M_offset_1, 12, T[1]);
+                        c = FF(c, d, a, b, M_offset_2, 17, T[2]);
+                        b = FF(b, c, d, a, M_offset_3, 22, T[3]);
+                        a = FF(a, b, c, d, M_offset_4, 7, T[4]);
+                        d = FF(d, a, b, c, M_offset_5, 12, T[5]);
+                        c = FF(c, d, a, b, M_offset_6, 17, T[6]);
+                        b = FF(b, c, d, a, M_offset_7, 22, T[7]);
+                        a = FF(a, b, c, d, M_offset_8, 7, T[8]);
+                        d = FF(d, a, b, c, M_offset_9, 12, T[9]);
                         c = FF(c, d, a, b, M_offset_10, 17, T[10]);
                         b = FF(b, c, d, a, M_offset_11, 22, T[11]);
-                        a = FF(a, b, c, d, M_offset_12, 7,  T[12]);
+                        a = FF(a, b, c, d, M_offset_12, 7, T[12]);
                         d = FF(d, a, b, c, M_offset_13, 12, T[13]);
                         c = FF(c, d, a, b, M_offset_14, 17, T[14]);
                         b = FF(b, c, d, a, M_offset_15, 22, T[15]);
 
-                        a = GG(a, b, c, d, M_offset_1,  5,  T[16]);
-                        d = GG(d, a, b, c, M_offset_6,  9,  T[17]);
+                        a = GG(a, b, c, d, M_offset_1, 5, T[16]);
+                        d = GG(d, a, b, c, M_offset_6, 9, T[17]);
                         c = GG(c, d, a, b, M_offset_11, 14, T[18]);
-                        b = GG(b, c, d, a, M_offset_0,  20, T[19]);
-                        a = GG(a, b, c, d, M_offset_5,  5,  T[20]);
-                        d = GG(d, a, b, c, M_offset_10, 9,  T[21]);
+                        b = GG(b, c, d, a, M_offset_0, 20, T[19]);
+                        a = GG(a, b, c, d, M_offset_5, 5, T[20]);
+                        d = GG(d, a, b, c, M_offset_10, 9, T[21]);
                         c = GG(c, d, a, b, M_offset_15, 14, T[22]);
-                        b = GG(b, c, d, a, M_offset_4,  20, T[23]);
-                        a = GG(a, b, c, d, M_offset_9,  5,  T[24]);
-                        d = GG(d, a, b, c, M_offset_14, 9,  T[25]);
-                        c = GG(c, d, a, b, M_offset_3,  14, T[26]);
-                        b = GG(b, c, d, a, M_offset_8,  20, T[27]);
-                        a = GG(a, b, c, d, M_offset_13, 5,  T[28]);
-                        d = GG(d, a, b, c, M_offset_2,  9,  T[29]);
-                        c = GG(c, d, a, b, M_offset_7,  14, T[30]);
+                        b = GG(b, c, d, a, M_offset_4, 20, T[23]);
+                        a = GG(a, b, c, d, M_offset_9, 5, T[24]);
+                        d = GG(d, a, b, c, M_offset_14, 9, T[25]);
+                        c = GG(c, d, a, b, M_offset_3, 14, T[26]);
+                        b = GG(b, c, d, a, M_offset_8, 20, T[27]);
+                        a = GG(a, b, c, d, M_offset_13, 5, T[28]);
+                        d = GG(d, a, b, c, M_offset_2, 9, T[29]);
+                        c = GG(c, d, a, b, M_offset_7, 14, T[30]);
                         b = GG(b, c, d, a, M_offset_12, 20, T[31]);
 
-                        a = HH(a, b, c, d, M_offset_5,  4,  T[32]);
-                        d = HH(d, a, b, c, M_offset_8,  11, T[33]);
+                        a = HH(a, b, c, d, M_offset_5, 4, T[32]);
+                        d = HH(d, a, b, c, M_offset_8, 11, T[33]);
                         c = HH(c, d, a, b, M_offset_11, 16, T[34]);
                         b = HH(b, c, d, a, M_offset_14, 23, T[35]);
-                        a = HH(a, b, c, d, M_offset_1,  4,  T[36]);
-                        d = HH(d, a, b, c, M_offset_4,  11, T[37]);
-                        c = HH(c, d, a, b, M_offset_7,  16, T[38]);
+                        a = HH(a, b, c, d, M_offset_1, 4, T[36]);
+                        d = HH(d, a, b, c, M_offset_4, 11, T[37]);
+                        c = HH(c, d, a, b, M_offset_7, 16, T[38]);
                         b = HH(b, c, d, a, M_offset_10, 23, T[39]);
-                        a = HH(a, b, c, d, M_offset_13, 4,  T[40]);
-                        d = HH(d, a, b, c, M_offset_0,  11, T[41]);
-                        c = HH(c, d, a, b, M_offset_3,  16, T[42]);
-                        b = HH(b, c, d, a, M_offset_6,  23, T[43]);
-                        a = HH(a, b, c, d, M_offset_9,  4,  T[44]);
+                        a = HH(a, b, c, d, M_offset_13, 4, T[40]);
+                        d = HH(d, a, b, c, M_offset_0, 11, T[41]);
+                        c = HH(c, d, a, b, M_offset_3, 16, T[42]);
+                        b = HH(b, c, d, a, M_offset_6, 23, T[43]);
+                        a = HH(a, b, c, d, M_offset_9, 4, T[44]);
                         d = HH(d, a, b, c, M_offset_12, 11, T[45]);
                         c = HH(c, d, a, b, M_offset_15, 16, T[46]);
-                        b = HH(b, c, d, a, M_offset_2,  23, T[47]);
+                        b = HH(b, c, d, a, M_offset_2, 23, T[47]);
 
-                        a = II(a, b, c, d, M_offset_0,  6,  T[48]);
-                        d = II(d, a, b, c, M_offset_7,  10, T[49]);
+                        a = II(a, b, c, d, M_offset_0, 6, T[48]);
+                        d = II(d, a, b, c, M_offset_7, 10, T[49]);
                         c = II(c, d, a, b, M_offset_14, 15, T[50]);
-                        b = II(b, c, d, a, M_offset_5,  21, T[51]);
-                        a = II(a, b, c, d, M_offset_12, 6,  T[52]);
-                        d = II(d, a, b, c, M_offset_3,  10, T[53]);
+                        b = II(b, c, d, a, M_offset_5, 21, T[51]);
+                        a = II(a, b, c, d, M_offset_12, 6, T[52]);
+                        d = II(d, a, b, c, M_offset_3, 10, T[53]);
                         c = II(c, d, a, b, M_offset_10, 15, T[54]);
-                        b = II(b, c, d, a, M_offset_1,  21, T[55]);
-                        a = II(a, b, c, d, M_offset_8,  6,  T[56]);
+                        b = II(b, c, d, a, M_offset_1, 21, T[55]);
+                        a = II(a, b, c, d, M_offset_8, 6, T[56]);
                         d = II(d, a, b, c, M_offset_15, 10, T[57]);
-                        c = II(c, d, a, b, M_offset_6,  15, T[58]);
+                        c = II(c, d, a, b, M_offset_6, 15, T[58]);
                         b = II(b, c, d, a, M_offset_13, 21, T[59]);
-                        a = II(a, b, c, d, M_offset_4,  6,  T[60]);
+                        a = II(a, b, c, d, M_offset_4, 6, T[60]);
                         d = II(d, a, b, c, M_offset_11, 10, T[61]);
-                        c = II(c, d, a, b, M_offset_2,  15, T[62]);
-                        b = II(b, c, d, a, M_offset_9,  21, T[63]);
+                        c = II(c, d, a, b, M_offset_2, 15, T[62]);
+                        b = II(b, c, d, a, M_offset_9, 21, T[63]);
 
                         // Intermediate hash value
                         H[0] = (H[0] + a) | 0;
@@ -9621,12 +9813,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         var nBitsTotalH = Math.floor(nBitsTotal / 0x100000000);
                         var nBitsTotalL = nBitsTotal;
                         dataWords[(((nBitsLeft + 64) >>> 9) << 4) + 15] = (
-                            (((nBitsTotalH << 8)  | (nBitsTotalH >>> 24)) & 0x00ff00ff) |
-                            (((nBitsTotalH << 24) | (nBitsTotalH >>> 8))  & 0xff00ff00)
+                            (((nBitsTotalH << 8) | (nBitsTotalH >>> 24)) & 0x00ff00ff) |
+                            (((nBitsTotalH << 24) | (nBitsTotalH >>> 8)) & 0xff00ff00)
                         );
                         dataWords[(((nBitsLeft + 64) >>> 9) << 4) + 14] = (
-                            (((nBitsTotalL << 8)  | (nBitsTotalL >>> 24)) & 0x00ff00ff) |
-                            (((nBitsTotalL << 24) | (nBitsTotalL >>> 8))  & 0xff00ff00)
+                            (((nBitsTotalL << 8) | (nBitsTotalL >>> 24)) & 0x00ff00ff) |
+                            (((nBitsTotalL << 24) | (nBitsTotalL >>> 8)) & 0xff00ff00)
                         );
 
                         data.sigBytes = (dataWords.length + 1) * 4;
@@ -9643,8 +9835,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             // Shortcut
                             var H_i = H[i];
 
-                            H[i] = (((H_i << 8)  | (H_i >>> 24)) & 0x00ff00ff) |
-                                (((H_i << 24) | (H_i >>> 8))  & 0xff00ff00);
+                            H[i] = (((H_i << 8) | (H_i >>> 24)) & 0x00ff00ff) |
+                                (((H_i << 24) | (H_i >>> 8)) & 0xff00ff00);
                         }
 
                         // Return final computed hash
@@ -9716,7 +9908,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.MD5;
 
         }));
-    },{"./core":53}],62:[function(require,module,exports){
+    }, {"./core": 53}],
+    62: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9795,7 +9988,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.mode.CFB;
 
         }));
-    },{"./cipher-core":52,"./core":53}],63:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    63: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9819,35 +10013,29 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             CryptoJS.mode.CTRGladman = (function () {
                 var CTRGladman = CryptoJS.lib.BlockCipherMode.extend();
 
-                function incWord(word)
-                {
+                function incWord(word) {
                     if (((word >> 24) & 0xff) === 0xff) { //overflow
-                        var b1 = (word >> 16)&0xff;
-                        var b2 = (word >> 8)&0xff;
+                        var b1 = (word >> 16) & 0xff;
+                        var b2 = (word >> 8) & 0xff;
                         var b3 = word & 0xff;
 
                         if (b1 === 0xff) // overflow b1
                         {
                             b1 = 0;
-                            if (b2 === 0xff)
-                            {
+                            if (b2 === 0xff) {
                                 b2 = 0;
-                                if (b3 === 0xff)
-                                {
+                                if (b3 === 0xff) {
                                     b3 = 0;
                                 }
-                                else
-                                {
+                                else {
                                     ++b3;
                                 }
                             }
-                            else
-                            {
+                            else {
                                 ++b2;
                             }
                         }
-                        else
-                        {
+                        else {
                             ++b1;
                         }
 
@@ -9856,17 +10044,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         word += (b2 << 8);
                         word += b3;
                     }
-                    else
-                    {
+                    else {
                         word += (0x01 << 24);
                     }
                     return word;
                 }
 
-                function incCounter(counter)
-                {
-                    if ((counter[0] = incWord(counter[0])) === 0)
-                    {
+                function incCounter(counter) {
+                    if ((counter[0] = incWord(counter[0])) === 0) {
                         // encr_data in fileenc.c from  Dr Brian Gladman's counts only with DWORD j < 8
                         counter[1] = incWord(counter[1]);
                     }
@@ -9907,12 +10092,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             }());
 
 
-
-
             return CryptoJS.mode.CTRGladman;
 
         }));
-    },{"./cipher-core":52,"./core":53}],64:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    64: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -9971,7 +10155,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.mode.CTR;
 
         }));
-    },{"./cipher-core":52,"./core":53}],65:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    65: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10012,7 +10197,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.mode.ECB;
 
         }));
-    },{"./cipher-core":52,"./core":53}],66:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    66: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10067,7 +10253,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.mode.OFB;
 
         }));
-    },{"./cipher-core":52,"./core":53}],67:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    67: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10117,7 +10304,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.pad.Ansix923;
 
         }));
-    },{"./cipher-core":52,"./core":53}],68:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    68: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10145,8 +10333,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     var nPaddingBytes = blockSizeBytes - data.sigBytes % blockSizeBytes;
 
                     // Pad
-                    data.concat(CryptoJS.lib.WordArray.random(nPaddingBytes - 1)).
-                    concat(CryptoJS.lib.WordArray.create([nPaddingBytes << 24], 1));
+                    data.concat(CryptoJS.lib.WordArray.random(nPaddingBytes - 1)).concat(CryptoJS.lib.WordArray.create([nPaddingBytes << 24], 1));
                 },
 
                 unpad: function (data) {
@@ -10162,7 +10349,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.pad.Iso10126;
 
         }));
-    },{"./cipher-core":52,"./core":53}],69:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    69: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10203,7 +10391,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.pad.Iso97971;
 
         }));
-    },{"./cipher-core":52,"./core":53}],70:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    70: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10234,7 +10423,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.pad.NoPadding;
 
         }));
-    },{"./cipher-core":52,"./core":53}],71:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    71: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10280,7 +10470,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.pad.ZeroPadding;
 
         }));
-    },{"./cipher-core":52,"./core":53}],72:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53}],
+    72: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10318,7 +10509,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                      * @property {number} iterations The number of iterations to perform. Default: 1
                      */
                     cfg: Base.extend({
-                        keySize: 128/32,
+                        keySize: 128 / 32,
                         hasher: SHA1,
                         iterations: 1
                     }),
@@ -10426,7 +10617,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.PBKDF2;
 
         }));
-    },{"./core":53,"./hmac":58,"./sha1":77}],73:[function(require,module,exports){
+    }, {"./core": 53, "./hmac": 58, "./sha1": 77}],
+    73: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10450,9 +10642,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 var C_algo = C.algo;
 
                 // Reusable objects
-                var S  = [];
+                var S = [];
                 var C_ = [];
-                var G  = [];
+                var G = [];
 
                 /**
                  * Rabbit stream cipher algorithm.
@@ -10507,7 +10699,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             var i0 = (((IV_0 << 8) | (IV_0 >>> 24)) & 0x00ff00ff) | (((IV_0 << 24) | (IV_0 >>> 8)) & 0xff00ff00);
                             var i2 = (((IV_1 << 8) | (IV_1 >>> 24)) & 0x00ff00ff) | (((IV_1 << 24) | (IV_1 >>> 8)) & 0xff00ff00);
                             var i1 = (i0 >>> 16) | (i2 & 0xffff0000);
-                            var i3 = (i2 << 16)  | (i0 & 0x0000ffff);
+                            var i3 = (i2 << 16) | (i0 & 0x0000ffff);
 
                             // Modify counter values
                             C[0] ^= i0;
@@ -10541,17 +10733,17 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                         for (var i = 0; i < 4; i++) {
                             // Swap endian
-                            S[i] = (((S[i] << 8)  | (S[i] >>> 24)) & 0x00ff00ff) |
-                                (((S[i] << 24) | (S[i] >>> 8))  & 0xff00ff00);
+                            S[i] = (((S[i] << 8) | (S[i] >>> 24)) & 0x00ff00ff) |
+                                (((S[i] << 24) | (S[i] >>> 8)) & 0xff00ff00);
 
                             // Encrypt
                             M[offset + i] ^= S[i];
                         }
                     },
 
-                    blockSize: 128/32,
+                    blockSize: 128 / 32,
 
-                    ivSize: 64/32
+                    ivSize: 64 / 32
                 });
 
                 function nextState() {
@@ -10593,13 +10785,13 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                     // Calculate new state values
                     X[0] = (G[0] + ((G[7] << 16) | (G[7] >>> 16)) + ((G[6] << 16) | (G[6] >>> 16))) | 0;
-                    X[1] = (G[1] + ((G[0] << 8)  | (G[0] >>> 24)) + G[7]) | 0;
+                    X[1] = (G[1] + ((G[0] << 8) | (G[0] >>> 24)) + G[7]) | 0;
                     X[2] = (G[2] + ((G[1] << 16) | (G[1] >>> 16)) + ((G[0] << 16) | (G[0] >>> 16))) | 0;
-                    X[3] = (G[3] + ((G[2] << 8)  | (G[2] >>> 24)) + G[1]) | 0;
+                    X[3] = (G[3] + ((G[2] << 8) | (G[2] >>> 24)) + G[1]) | 0;
                     X[4] = (G[4] + ((G[3] << 16) | (G[3] >>> 16)) + ((G[2] << 16) | (G[2] >>> 16))) | 0;
-                    X[5] = (G[5] + ((G[4] << 8)  | (G[4] >>> 24)) + G[3]) | 0;
+                    X[5] = (G[5] + ((G[4] << 8) | (G[4] >>> 24)) + G[3]) | 0;
                     X[6] = (G[6] + ((G[5] << 16) | (G[5] >>> 16)) + ((G[4] << 16) | (G[4] >>> 16))) | 0;
-                    X[7] = (G[7] + ((G[6] << 8)  | (G[6] >>> 24)) + G[5]) | 0;
+                    X[7] = (G[7] + ((G[6] << 8) | (G[6] >>> 24)) + G[5]) | 0;
                 }
 
                 /**
@@ -10617,7 +10809,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.RabbitLegacy;
 
         }));
-    },{"./cipher-core":52,"./core":53,"./enc-base64":54,"./evpkdf":56,"./md5":61}],74:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53, "./enc-base64": 54, "./evpkdf": 56, "./md5": 61}],
+    74: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10641,9 +10834,9 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 var C_algo = C.algo;
 
                 // Reusable objects
-                var S  = [];
+                var S = [];
                 var C_ = [];
-                var G  = [];
+                var G = [];
 
                 /**
                  * Rabbit stream cipher algorithm
@@ -10656,8 +10849,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                         // Swap endian
                         for (var i = 0; i < 4; i++) {
-                            K[i] = (((K[i] << 8)  | (K[i] >>> 24)) & 0x00ff00ff) |
-                                (((K[i] << 24) | (K[i] >>> 8))  & 0xff00ff00);
+                            K[i] = (((K[i] << 8) | (K[i] >>> 24)) & 0x00ff00ff) |
+                                (((K[i] << 24) | (K[i] >>> 8)) & 0xff00ff00);
                         }
 
                         // Generate initial state values
@@ -10700,7 +10893,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             var i0 = (((IV_0 << 8) | (IV_0 >>> 24)) & 0x00ff00ff) | (((IV_0 << 24) | (IV_0 >>> 8)) & 0xff00ff00);
                             var i2 = (((IV_1 << 8) | (IV_1 >>> 24)) & 0x00ff00ff) | (((IV_1 << 24) | (IV_1 >>> 8)) & 0xff00ff00);
                             var i1 = (i0 >>> 16) | (i2 & 0xffff0000);
-                            var i3 = (i2 << 16)  | (i0 & 0x0000ffff);
+                            var i3 = (i2 << 16) | (i0 & 0x0000ffff);
 
                             // Modify counter values
                             C[0] ^= i0;
@@ -10734,17 +10927,17 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                         for (var i = 0; i < 4; i++) {
                             // Swap endian
-                            S[i] = (((S[i] << 8)  | (S[i] >>> 24)) & 0x00ff00ff) |
-                                (((S[i] << 24) | (S[i] >>> 8))  & 0xff00ff00);
+                            S[i] = (((S[i] << 8) | (S[i] >>> 24)) & 0x00ff00ff) |
+                                (((S[i] << 24) | (S[i] >>> 8)) & 0xff00ff00);
 
                             // Encrypt
                             M[offset + i] ^= S[i];
                         }
                     },
 
-                    blockSize: 128/32,
+                    blockSize: 128 / 32,
 
-                    ivSize: 64/32
+                    ivSize: 64 / 32
                 });
 
                 function nextState() {
@@ -10786,13 +10979,13 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                     // Calculate new state values
                     X[0] = (G[0] + ((G[7] << 16) | (G[7] >>> 16)) + ((G[6] << 16) | (G[6] >>> 16))) | 0;
-                    X[1] = (G[1] + ((G[0] << 8)  | (G[0] >>> 24)) + G[7]) | 0;
+                    X[1] = (G[1] + ((G[0] << 8) | (G[0] >>> 24)) + G[7]) | 0;
                     X[2] = (G[2] + ((G[1] << 16) | (G[1] >>> 16)) + ((G[0] << 16) | (G[0] >>> 16))) | 0;
-                    X[3] = (G[3] + ((G[2] << 8)  | (G[2] >>> 24)) + G[1]) | 0;
+                    X[3] = (G[3] + ((G[2] << 8) | (G[2] >>> 24)) + G[1]) | 0;
                     X[4] = (G[4] + ((G[3] << 16) | (G[3] >>> 16)) + ((G[2] << 16) | (G[2] >>> 16))) | 0;
-                    X[5] = (G[5] + ((G[4] << 8)  | (G[4] >>> 24)) + G[3]) | 0;
+                    X[5] = (G[5] + ((G[4] << 8) | (G[4] >>> 24)) + G[3]) | 0;
                     X[6] = (G[6] + ((G[5] << 16) | (G[5] >>> 16)) + ((G[4] << 16) | (G[4] >>> 16))) | 0;
-                    X[7] = (G[7] + ((G[6] << 8)  | (G[6] >>> 24)) + G[5]) | 0;
+                    X[7] = (G[7] + ((G[6] << 8) | (G[6] >>> 24)) + G[5]) | 0;
                 }
 
                 /**
@@ -10810,7 +11003,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.Rabbit;
 
         }));
-    },{"./cipher-core":52,"./core":53,"./enc-base64":54,"./evpkdf":56,"./md5":61}],75:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53, "./enc-base64": 54, "./evpkdf": 56, "./md5": 61}],
+    75: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10870,7 +11064,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         M[offset] ^= generateKeystreamWord.call(this);
                     },
 
-                    keySize: 256/32,
+                    keySize: 256 / 32,
 
                     ivSize: 0
                 });
@@ -10950,7 +11144,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.RC4;
 
         }));
-    },{"./cipher-core":52,"./core":53,"./enc-base64":54,"./evpkdf":56,"./md5":61}],76:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53, "./enc-base64": 54, "./evpkdf": 56, "./md5": 61}],
+    76: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -10987,39 +11182,39 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                 // Constants table
                 var _zl = WordArray.create([
-                    0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
-                    7,  4, 13,  1, 10,  6, 15,  3, 12,  0,  9,  5,  2, 14, 11,  8,
-                    3, 10, 14,  4,  9, 15,  8,  1,  2,  7,  0,  6, 13, 11,  5, 12,
-                    1,  9, 11, 10,  0,  8, 12,  4, 13,  3,  7, 15, 14,  5,  6,  2,
-                    4,  0,  5,  9,  7, 12,  2, 10, 14,  1,  3,  8, 11,  6, 15, 13]);
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                    7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
+                    3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12,
+                    1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2,
+                    4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13]);
                 var _zr = WordArray.create([
-                    5, 14,  7,  0,  9,  2, 11,  4, 13,  6, 15,  8,  1, 10,  3, 12,
-                    6, 11,  3,  7,  0, 13,  5, 10, 14, 15,  8, 12,  4,  9,  1,  2,
-                    15,  5,  1,  3,  7, 14,  6,  9, 11,  8, 12,  2, 10,  0,  4, 13,
-                    8,  6,  4,  1,  3, 11, 15,  0,  5, 12,  2, 13,  9,  7, 10, 14,
-                    12, 15, 10,  4,  1,  5,  8,  7,  6,  2, 13, 14,  0,  3,  9, 11]);
+                    5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12,
+                    6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2,
+                    15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13,
+                    8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14,
+                    12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11]);
                 var _sl = WordArray.create([
-                    11, 14, 15, 12,  5,  8,  7,  9, 11, 13, 14, 15,  6,  7,  9,  8,
-                    7, 6,   8, 13, 11,  9,  7, 15,  7, 12, 15,  9, 11,  7, 13, 12,
-                    11, 13,  6,  7, 14,  9, 13, 15, 14,  8, 13,  6,  5, 12,  7,  5,
-                    11, 12, 14, 15, 14, 15,  9,  8,  9, 14,  5,  6,  8,  6,  5, 12,
-                    9, 15,  5, 11,  6,  8, 13, 12,  5, 12, 13, 14, 11,  8,  5,  6 ]);
+                    11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,
+                    7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,
+                    11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5,
+                    11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12,
+                    9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6]);
                 var _sr = WordArray.create([
-                    8,  9,  9, 11, 13, 15, 15,  5,  7,  7,  8, 11, 14, 14, 12,  6,
-                    9, 13, 15,  7, 12,  8,  9, 11,  7,  7, 12,  7,  6, 15, 13, 11,
-                    9,  7, 15, 11,  8,  6,  6, 14, 12, 13,  5, 14, 13, 13,  7,  5,
-                    15,  5,  8, 11, 14, 14,  6, 14,  6,  9, 12,  9, 12,  5, 15,  8,
-                    8,  5, 12,  9, 12,  5, 14,  6,  8, 13,  6,  5, 15, 13, 11, 11 ]);
+                    8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6,
+                    9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11,
+                    9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5,
+                    15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8,
+                    8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11]);
 
-                var _hl =  WordArray.create([ 0x00000000, 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xA953FD4E]);
-                var _hr =  WordArray.create([ 0x50A28BE6, 0x5C4DD124, 0x6D703EF3, 0x7A6D76E9, 0x00000000]);
+                var _hl = WordArray.create([0x00000000, 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xA953FD4E]);
+                var _hr = WordArray.create([0x50A28BE6, 0x5C4DD124, 0x6D703EF3, 0x7A6D76E9, 0x00000000]);
 
                 /**
                  * RIPEMD160 hash algorithm.
                  */
                 var RIPEMD160 = C_algo.RIPEMD160 = Hasher.extend({
                     _doReset: function () {
-                        this._hash  = WordArray.create([0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0]);
+                        this._hash = WordArray.create([0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0]);
                     },
 
                     _doProcessBlock: function (M, offset) {
@@ -11032,12 +11227,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                             // Swap
                             M[offset_i] = (
-                                (((M_offset_i << 8)  | (M_offset_i >>> 24)) & 0x00ff00ff) |
-                                (((M_offset_i << 24) | (M_offset_i >>> 8))  & 0xff00ff00)
+                                (((M_offset_i << 8) | (M_offset_i >>> 24)) & 0x00ff00ff) |
+                                (((M_offset_i << 24) | (M_offset_i >>> 8)) & 0xff00ff00)
                             );
                         }
                         // Shortcut
-                        var H  = this._hash.words;
+                        var H = this._hash.words;
                         var hl = _hl.words;
                         var hr = _hr.words;
                         var zl = _zl.words;
@@ -11057,42 +11252,42 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         // Computation
                         var t;
                         for (var i = 0; i < 80; i += 1) {
-                            t = (al +  M[offset+zl[i]])|0;
-                            if (i<16){
-                                t +=  f1(bl,cl,dl) + hl[0];
-                            } else if (i<32) {
-                                t +=  f2(bl,cl,dl) + hl[1];
-                            } else if (i<48) {
-                                t +=  f3(bl,cl,dl) + hl[2];
-                            } else if (i<64) {
-                                t +=  f4(bl,cl,dl) + hl[3];
+                            t = (al + M[offset + zl[i]]) | 0;
+                            if (i < 16) {
+                                t += f1(bl, cl, dl) + hl[0];
+                            } else if (i < 32) {
+                                t += f2(bl, cl, dl) + hl[1];
+                            } else if (i < 48) {
+                                t += f3(bl, cl, dl) + hl[2];
+                            } else if (i < 64) {
+                                t += f4(bl, cl, dl) + hl[3];
                             } else {// if (i<80) {
-                                t +=  f5(bl,cl,dl) + hl[4];
+                                t += f5(bl, cl, dl) + hl[4];
                             }
-                            t = t|0;
-                            t =  rotl(t,sl[i]);
-                            t = (t+el)|0;
+                            t = t | 0;
+                            t = rotl(t, sl[i]);
+                            t = (t + el) | 0;
                             al = el;
                             el = dl;
                             dl = rotl(cl, 10);
                             cl = bl;
                             bl = t;
 
-                            t = (ar + M[offset+zr[i]])|0;
-                            if (i<16){
-                                t +=  f5(br,cr,dr) + hr[0];
-                            } else if (i<32) {
-                                t +=  f4(br,cr,dr) + hr[1];
-                            } else if (i<48) {
-                                t +=  f3(br,cr,dr) + hr[2];
-                            } else if (i<64) {
-                                t +=  f2(br,cr,dr) + hr[3];
+                            t = (ar + M[offset + zr[i]]) | 0;
+                            if (i < 16) {
+                                t += f5(br, cr, dr) + hr[0];
+                            } else if (i < 32) {
+                                t += f4(br, cr, dr) + hr[1];
+                            } else if (i < 48) {
+                                t += f3(br, cr, dr) + hr[2];
+                            } else if (i < 64) {
+                                t += f2(br, cr, dr) + hr[3];
                             } else {// if (i<80) {
-                                t +=  f1(br,cr,dr) + hr[4];
+                                t += f1(br, cr, dr) + hr[4];
                             }
-                            t = t|0;
-                            t =  rotl(t,sr[i]) ;
-                            t = (t+er)|0;
+                            t = t | 0;
+                            t = rotl(t, sr[i]);
+                            t = (t + er) | 0;
                             ar = er;
                             er = dr;
                             dr = rotl(cr, 10);
@@ -11100,12 +11295,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             br = t;
                         }
                         // Intermediate hash value
-                        t    = (H[1] + cl + dr)|0;
-                        H[1] = (H[2] + dl + er)|0;
-                        H[2] = (H[3] + el + ar)|0;
-                        H[3] = (H[4] + al + br)|0;
-                        H[4] = (H[0] + bl + cr)|0;
-                        H[0] =  t;
+                        t = (H[1] + cl + dr) | 0;
+                        H[1] = (H[2] + dl + er) | 0;
+                        H[2] = (H[3] + el + ar) | 0;
+                        H[3] = (H[4] + al + br) | 0;
+                        H[4] = (H[0] + bl + cr) | 0;
+                        H[0] = t;
                     },
 
                     _doFinalize: function () {
@@ -11119,8 +11314,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         // Add padding
                         dataWords[nBitsLeft >>> 5] |= 0x80 << (24 - nBitsLeft % 32);
                         dataWords[(((nBitsLeft + 64) >>> 9) << 4) + 14] = (
-                            (((nBitsTotal << 8)  | (nBitsTotal >>> 24)) & 0x00ff00ff) |
-                            (((nBitsTotal << 24) | (nBitsTotal >>> 8))  & 0xff00ff00)
+                            (((nBitsTotal << 8) | (nBitsTotal >>> 24)) & 0x00ff00ff) |
+                            (((nBitsTotal << 24) | (nBitsTotal >>> 8)) & 0xff00ff00)
                         );
                         data.sigBytes = (dataWords.length + 1) * 4;
 
@@ -11137,8 +11332,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             var H_i = H[i];
 
                             // Swap
-                            H[i] = (((H_i << 8)  | (H_i >>> 24)) & 0x00ff00ff) |
-                                (((H_i << 24) | (H_i >>> 8))  & 0xff00ff00);
+                            H[i] = (((H_i << 8) | (H_i >>> 24)) & 0x00ff00ff) |
+                                (((H_i << 24) | (H_i >>> 8)) & 0xff00ff00);
                         }
 
                         // Return final computed hash
@@ -11160,7 +11355,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 }
 
                 function f2(x, y, z) {
-                    return (((x)&(y)) | ((~x)&(z)));
+                    return (((x) & (y)) | ((~x) & (z)));
                 }
 
                 function f3(x, y, z) {
@@ -11168,16 +11363,16 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 }
 
                 function f4(x, y, z) {
-                    return (((x) & (z)) | ((y)&(~(z))));
+                    return (((x) & (z)) | ((y) & (~(z))));
                 }
 
                 function f5(x, y, z) {
-                    return ((x) ^ ((y) |(~(z))));
+                    return ((x) ^ ((y) | (~(z))));
 
                 }
 
-                function rotl(x,n) {
-                    return (x<<n) | (x>>>(32-n));
+                function rotl(x, n) {
+                    return (x << n) | (x >>> (32 - n));
                 }
 
 
@@ -11218,7 +11413,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.RIPEMD160;
 
         }));
-    },{"./core":53}],77:[function(require,module,exports){
+    }, {"./core": 53}],
+    77: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -11369,7 +11565,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.SHA1;
 
         }));
-    },{"./core":53}],78:[function(require,module,exports){
+    }, {"./core": 53}],
+    78: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -11450,7 +11647,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.SHA224;
 
         }));
-    },{"./core":53,"./sha256":79}],79:[function(require,module,exports){
+    }, {"./core": 53, "./sha256": 79}],
+    79: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -11542,23 +11740,23 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                                 W[i] = M[offset + i] | 0;
                             } else {
                                 var gamma0x = W[i - 15];
-                                var gamma0  = ((gamma0x << 25) | (gamma0x >>> 7))  ^
+                                var gamma0 = ((gamma0x << 25) | (gamma0x >>> 7)) ^
                                     ((gamma0x << 14) | (gamma0x >>> 18)) ^
                                     (gamma0x >>> 3);
 
                                 var gamma1x = W[i - 2];
-                                var gamma1  = ((gamma1x << 15) | (gamma1x >>> 17)) ^
+                                var gamma1 = ((gamma1x << 15) | (gamma1x >>> 17)) ^
                                     ((gamma1x << 13) | (gamma1x >>> 19)) ^
                                     (gamma1x >>> 10);
 
                                 W[i] = gamma0 + W[i - 7] + gamma1 + W[i - 16];
                             }
 
-                            var ch  = (e & f) ^ (~e & g);
+                            var ch = (e & f) ^ (~e & g);
                             var maj = (a & b) ^ (a & c) ^ (b & c);
 
                             var sigma0 = ((a << 30) | (a >>> 2)) ^ ((a << 19) | (a >>> 13)) ^ ((a << 10) | (a >>> 22));
-                            var sigma1 = ((e << 26) | (e >>> 6)) ^ ((e << 21) | (e >>> 11)) ^ ((e << 7)  | (e >>> 25));
+                            var sigma1 = ((e << 26) | (e >>> 6)) ^ ((e << 21) | (e >>> 11)) ^ ((e << 7) | (e >>> 25));
 
                             var t1 = h + sigma1 + ch + K[i] + W[i];
                             var t2 = sigma0 + maj;
@@ -11650,7 +11848,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.SHA256;
 
         }));
-    },{"./core":53}],80:[function(require,module,exports){
+    }, {"./core": 53}],
+    80: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -11678,7 +11877,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                 // Constants tables
                 var RHO_OFFSETS = [];
-                var PI_INDEXES  = [];
+                var PI_INDEXES = [];
                 var ROUND_CONSTANTS = [];
 
                 // Compute Constants
@@ -11771,23 +11970,23 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         // Absorb
                         for (var i = 0; i < nBlockSizeLanes; i++) {
                             // Shortcuts
-                            var M2i  = M[offset + 2 * i];
+                            var M2i = M[offset + 2 * i];
                             var M2i1 = M[offset + 2 * i + 1];
 
                             // Swap endian
                             M2i = (
-                                (((M2i << 8)  | (M2i >>> 24)) & 0x00ff00ff) |
-                                (((M2i << 24) | (M2i >>> 8))  & 0xff00ff00)
+                                (((M2i << 8) | (M2i >>> 24)) & 0x00ff00ff) |
+                                (((M2i << 24) | (M2i >>> 8)) & 0xff00ff00)
                             );
                             M2i1 = (
-                                (((M2i1 << 8)  | (M2i1 >>> 24)) & 0x00ff00ff) |
-                                (((M2i1 << 24) | (M2i1 >>> 8))  & 0xff00ff00)
+                                (((M2i1 << 8) | (M2i1 >>> 24)) & 0x00ff00ff) |
+                                (((M2i1 << 24) | (M2i1 >>> 8)) & 0xff00ff00)
                             );
 
                             // Absorb message into state
                             var lane = state[i];
                             lane.high ^= M2i1;
-                            lane.low  ^= M2i;
+                            lane.low ^= M2i;
                         }
 
                         // Rounds
@@ -11805,7 +12004,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                                 // Temporary values
                                 var Tx = T[x];
                                 Tx.high = tMsw;
-                                Tx.low  = tLsw;
+                                Tx.low = tLsw;
                             }
                             for (var x = 0; x < 5; x++) {
                                 // Shortcuts
@@ -11816,11 +12015,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                                 // Mix surrounding columns
                                 var tMsw = Tx4.high ^ ((Tx1Msw << 1) | (Tx1Lsw >>> 31));
-                                var tLsw = Tx4.low  ^ ((Tx1Lsw << 1) | (Tx1Msw >>> 31));
+                                var tLsw = Tx4.low ^ ((Tx1Lsw << 1) | (Tx1Msw >>> 31));
                                 for (var y = 0; y < 5; y++) {
                                     var lane = state[x + 5 * y];
                                     lane.high ^= tMsw;
-                                    lane.low  ^= tLsw;
+                                    lane.low ^= tLsw;
                                 }
                             }
 
@@ -11844,14 +12043,14 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                                 // Transpose lanes
                                 var TPiLane = T[PI_INDEXES[laneIndex]];
                                 TPiLane.high = tMsw;
-                                TPiLane.low  = tLsw;
+                                TPiLane.low = tLsw;
                             }
 
                             // Rho pi at x = y = 0
                             var T0 = T[0];
                             var state0 = state[0];
                             T0.high = state0.high;
-                            T0.low  = state0.low;
+                            T0.low = state0.low;
 
                             // Chi
                             for (var x = 0; x < 5; x++) {
@@ -11865,7 +12064,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                                     // Mix rows
                                     lane.high = TLane.high ^ (~Tx1Lane.high & Tx2Lane.high);
-                                    lane.low  = TLane.low  ^ (~Tx1Lane.low  & Tx2Lane.low);
+                                    lane.low = TLane.low ^ (~Tx1Lane.low & Tx2Lane.low);
                                 }
                             }
 
@@ -11873,7 +12072,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                             var lane = state[0];
                             var roundConstant = ROUND_CONSTANTS[round];
                             lane.high ^= roundConstant.high;
-                            lane.low  ^= roundConstant.low;;
+                            lane.low ^= roundConstant.low;
+                            ;
                         }
                     },
 
@@ -11908,12 +12108,12 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                             // Swap endian
                             laneMsw = (
-                                (((laneMsw << 8)  | (laneMsw >>> 24)) & 0x00ff00ff) |
-                                (((laneMsw << 24) | (laneMsw >>> 8))  & 0xff00ff00)
+                                (((laneMsw << 8) | (laneMsw >>> 24)) & 0x00ff00ff) |
+                                (((laneMsw << 24) | (laneMsw >>> 8)) & 0xff00ff00)
                             );
                             laneLsw = (
-                                (((laneLsw << 8)  | (laneLsw >>> 24)) & 0x00ff00ff) |
-                                (((laneLsw << 24) | (laneLsw >>> 8))  & 0xff00ff00)
+                                (((laneLsw << 8) | (laneLsw >>> 24)) & 0x00ff00ff) |
+                                (((laneLsw << 24) | (laneLsw >>> 8)) & 0xff00ff00)
                             );
 
                             // Squeeze state to retrieve hash
@@ -11974,7 +12174,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.SHA3;
 
         }));
-    },{"./core":53,"./x64-core":84}],81:[function(require,module,exports){
+    }, {"./core": 53, "./x64-core": 84}],
+    81: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -12058,7 +12259,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.SHA384;
 
         }));
-    },{"./core":53,"./sha512":82,"./x64-core":84}],82:[function(require,module,exports){
+    }, {"./core": 53, "./sha512": 82, "./x64-core": 84}],
+    82: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -12208,29 +12410,29 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                             // Extend message
                             if (i < 16) {
-                                var Wih = Wi.high = M[offset + i * 2]     | 0;
-                                var Wil = Wi.low  = M[offset + i * 2 + 1] | 0;
+                                var Wih = Wi.high = M[offset + i * 2] | 0;
+                                var Wil = Wi.low = M[offset + i * 2 + 1] | 0;
                             } else {
                                 // Gamma0
-                                var gamma0x  = W[i - 15];
+                                var gamma0x = W[i - 15];
                                 var gamma0xh = gamma0x.high;
                                 var gamma0xl = gamma0x.low;
-                                var gamma0h  = ((gamma0xh >>> 1) | (gamma0xl << 31)) ^ ((gamma0xh >>> 8) | (gamma0xl << 24)) ^ (gamma0xh >>> 7);
-                                var gamma0l  = ((gamma0xl >>> 1) | (gamma0xh << 31)) ^ ((gamma0xl >>> 8) | (gamma0xh << 24)) ^ ((gamma0xl >>> 7) | (gamma0xh << 25));
+                                var gamma0h = ((gamma0xh >>> 1) | (gamma0xl << 31)) ^ ((gamma0xh >>> 8) | (gamma0xl << 24)) ^ (gamma0xh >>> 7);
+                                var gamma0l = ((gamma0xl >>> 1) | (gamma0xh << 31)) ^ ((gamma0xl >>> 8) | (gamma0xh << 24)) ^ ((gamma0xl >>> 7) | (gamma0xh << 25));
 
                                 // Gamma1
-                                var gamma1x  = W[i - 2];
+                                var gamma1x = W[i - 2];
                                 var gamma1xh = gamma1x.high;
                                 var gamma1xl = gamma1x.low;
-                                var gamma1h  = ((gamma1xh >>> 19) | (gamma1xl << 13)) ^ ((gamma1xh << 3) | (gamma1xl >>> 29)) ^ (gamma1xh >>> 6);
-                                var gamma1l  = ((gamma1xl >>> 19) | (gamma1xh << 13)) ^ ((gamma1xl << 3) | (gamma1xh >>> 29)) ^ ((gamma1xl >>> 6) | (gamma1xh << 26));
+                                var gamma1h = ((gamma1xh >>> 19) | (gamma1xl << 13)) ^ ((gamma1xh << 3) | (gamma1xl >>> 29)) ^ (gamma1xh >>> 6);
+                                var gamma1l = ((gamma1xl >>> 19) | (gamma1xh << 13)) ^ ((gamma1xl << 3) | (gamma1xh >>> 29)) ^ ((gamma1xl >>> 6) | (gamma1xh << 26));
 
                                 // W[i] = gamma0 + W[i - 7] + gamma1 + W[i - 16]
-                                var Wi7  = W[i - 7];
+                                var Wi7 = W[i - 7];
                                 var Wi7h = Wi7.high;
                                 var Wi7l = Wi7.low;
 
-                                var Wi16  = W[i - 16];
+                                var Wi16 = W[i - 16];
                                 var Wi16h = Wi16.high;
                                 var Wi16l = Wi16.low;
 
@@ -12242,21 +12444,21 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                                 var Wih = Wih + Wi16h + ((Wil >>> 0) < (Wi16l >>> 0) ? 1 : 0);
 
                                 Wi.high = Wih;
-                                Wi.low  = Wil;
+                                Wi.low = Wil;
                             }
 
-                            var chh  = (eh & fh) ^ (~eh & gh);
-                            var chl  = (el & fl) ^ (~el & gl);
+                            var chh = (eh & fh) ^ (~eh & gh);
+                            var chl = (el & fl) ^ (~el & gl);
                             var majh = (ah & bh) ^ (ah & ch) ^ (bh & ch);
                             var majl = (al & bl) ^ (al & cl) ^ (bl & cl);
 
-                            var sigma0h = ((ah >>> 28) | (al << 4))  ^ ((ah << 30)  | (al >>> 2)) ^ ((ah << 25) | (al >>> 7));
-                            var sigma0l = ((al >>> 28) | (ah << 4))  ^ ((al << 30)  | (ah >>> 2)) ^ ((al << 25) | (ah >>> 7));
+                            var sigma0h = ((ah >>> 28) | (al << 4)) ^ ((ah << 30) | (al >>> 2)) ^ ((ah << 25) | (al >>> 7));
+                            var sigma0l = ((al >>> 28) | (ah << 4)) ^ ((al << 30) | (ah >>> 2)) ^ ((al << 25) | (ah >>> 7));
                             var sigma1h = ((eh >>> 14) | (el << 18)) ^ ((eh >>> 18) | (el << 14)) ^ ((eh << 23) | (el >>> 9));
                             var sigma1l = ((el >>> 14) | (eh << 18)) ^ ((el >>> 18) | (eh << 14)) ^ ((el << 23) | (eh >>> 9));
 
                             // t1 = h + sigma1 + ch + K[i] + W[i]
-                            var Ki  = K[i];
+                            var Ki = K[i];
                             var Kih = Ki.high;
                             var Kil = Ki.low;
 
@@ -12293,21 +12495,21 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         }
 
                         // Intermediate hash value
-                        H0l = H0.low  = (H0l + al);
+                        H0l = H0.low = (H0l + al);
                         H0.high = (H0h + ah + ((H0l >>> 0) < (al >>> 0) ? 1 : 0));
-                        H1l = H1.low  = (H1l + bl);
+                        H1l = H1.low = (H1l + bl);
                         H1.high = (H1h + bh + ((H1l >>> 0) < (bl >>> 0) ? 1 : 0));
-                        H2l = H2.low  = (H2l + cl);
+                        H2l = H2.low = (H2l + cl);
                         H2.high = (H2h + ch + ((H2l >>> 0) < (cl >>> 0) ? 1 : 0));
-                        H3l = H3.low  = (H3l + dl);
+                        H3l = H3.low = (H3l + dl);
                         H3.high = (H3h + dh + ((H3l >>> 0) < (dl >>> 0) ? 1 : 0));
-                        H4l = H4.low  = (H4l + el);
+                        H4l = H4.low = (H4l + el);
                         H4.high = (H4h + eh + ((H4l >>> 0) < (el >>> 0) ? 1 : 0));
-                        H5l = H5.low  = (H5l + fl);
+                        H5l = H5.low = (H5l + fl);
                         H5.high = (H5h + fh + ((H5l >>> 0) < (fl >>> 0) ? 1 : 0));
-                        H6l = H6.low  = (H6l + gl);
+                        H6l = H6.low = (H6l + gl);
                         H6.high = (H6h + gh + ((H6l >>> 0) < (gl >>> 0) ? 1 : 0));
-                        H7l = H7.low  = (H7l + hl);
+                        H7l = H7.low = (H7l + hl);
                         H7.high = (H7h + hh + ((H7l >>> 0) < (hl >>> 0) ? 1 : 0));
                     },
 
@@ -12342,7 +12544,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         return clone;
                     },
 
-                    blockSize: 1024/32
+                    blockSize: 1024 / 32
                 });
 
                 /**
@@ -12382,7 +12584,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.SHA512;
 
         }));
-    },{"./core":53,"./x64-core":84}],83:[function(require,module,exports){
+    }, {"./core": 53, "./x64-core": 84}],
+    83: [function (require, module, exports) {
         ;(function (root, factory, undef) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -12408,21 +12611,21 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
                 // Permuted Choice 1 constants
                 var PC1 = [
-                    57, 49, 41, 33, 25, 17, 9,  1,
+                    57, 49, 41, 33, 25, 17, 9, 1,
                     58, 50, 42, 34, 26, 18, 10, 2,
                     59, 51, 43, 35, 27, 19, 11, 3,
                     60, 52, 44, 36, 63, 55, 47, 39,
-                    31, 23, 15, 7,  62, 54, 46, 38,
-                    30, 22, 14, 6,  61, 53, 45, 37,
-                    29, 21, 13, 5,  28, 20, 12, 4
+                    31, 23, 15, 7, 62, 54, 46, 38,
+                    30, 22, 14, 6, 61, 53, 45, 37,
+                    29, 21, 13, 5, 28, 20, 12, 4
                 ];
 
                 // Permuted Choice 2 constants
                 var PC2 = [
-                    14, 17, 11, 24, 1,  5,
-                    3,  28, 15, 6,  21, 10,
-                    23, 19, 12, 4,  26, 8,
-                    16, 7,  27, 20, 13, 2,
+                    14, 17, 11, 24, 1, 5,
+                    3, 28, 15, 6, 21, 10,
+                    23, 19, 12, 4, 26, 8,
+                    16, 7, 27, 20, 13, 2,
                     41, 52, 31, 37, 47, 55,
                     30, 40, 51, 45, 33, 48,
                     44, 49, 39, 56, 34, 53,
@@ -12430,7 +12633,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 ];
 
                 // Cumulative bit shift constants
-                var BIT_SHIFTS = [1,  2,  4,  6,  8,  10, 12, 14, 15, 17, 19, 21, 23, 25, 27, 28];
+                var BIT_SHIFTS = [1, 2, 4, 6, 8, 10, 12, 14, 15, 17, 19, 21, 23, 25, 27, 28];
 
                 // SBOXes and round permutation constants
                 var SBOX_P = [
@@ -13035,11 +13238,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         this._rBlock = M[offset + 1];
 
                         // Initial permutation
-                        exchangeLR.call(this, 4,  0x0f0f0f0f);
+                        exchangeLR.call(this, 4, 0x0f0f0f0f);
                         exchangeLR.call(this, 16, 0x0000ffff);
-                        exchangeRL.call(this, 2,  0x33333333);
-                        exchangeRL.call(this, 8,  0x00ff00ff);
-                        exchangeLR.call(this, 1,  0x55555555);
+                        exchangeRL.call(this, 2, 0x33333333);
+                        exchangeRL.call(this, 8, 0x00ff00ff);
+                        exchangeLR.call(this, 1, 0x55555555);
 
                         // Rounds
                         for (var round = 0; round < 16; round++) {
@@ -13063,22 +13266,22 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         this._rBlock = t;
 
                         // Final permutation
-                        exchangeLR.call(this, 1,  0x55555555);
-                        exchangeRL.call(this, 8,  0x00ff00ff);
-                        exchangeRL.call(this, 2,  0x33333333);
+                        exchangeLR.call(this, 1, 0x55555555);
+                        exchangeRL.call(this, 8, 0x00ff00ff);
+                        exchangeRL.call(this, 2, 0x33333333);
                         exchangeLR.call(this, 16, 0x0000ffff);
-                        exchangeLR.call(this, 4,  0x0f0f0f0f);
+                        exchangeLR.call(this, 4, 0x0f0f0f0f);
 
                         // Set output
                         M[offset] = this._lBlock;
                         M[offset + 1] = this._rBlock;
                     },
 
-                    keySize: 64/32,
+                    keySize: 64 / 32,
 
-                    ivSize: 64/32,
+                    ivSize: 64 / 32,
 
-                    blockSize: 64/32
+                    blockSize: 64 / 32
                 });
 
                 // Swap bits across the left and right words
@@ -13131,11 +13334,11 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                         this._des1.decryptBlock(M, offset);
                     },
 
-                    keySize: 192/32,
+                    keySize: 192 / 32,
 
-                    ivSize: 64/32,
+                    ivSize: 64 / 32,
 
-                    blockSize: 64/32
+                    blockSize: 64 / 32
                 });
 
                 /**
@@ -13153,7 +13356,8 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS.TripleDES;
 
         }));
-    },{"./cipher-core":52,"./core":53,"./enc-base64":54,"./evpkdf":56,"./md5":61}],84:[function(require,module,exports){
+    }, {"./cipher-core": 52, "./core": 53, "./enc-base64": 54, "./evpkdf": 56, "./md5": 61}],
+    84: [function (require, module, exports) {
         ;(function (root, factory) {
             if (typeof exports === "object") {
                 // CommonJS
@@ -13458,9 +13662,10 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             return CryptoJS;
 
         }));
-    },{"./core":53}],85:[function(require,module,exports){
+    }, {"./core": 53}],
+    85: [function (require, module, exports) {
         /*! https://mths.be/utf8js v2.1.2 by @mathias */
-        ;(function(root) {
+        ;(function (root) {
 
             // Detect free variables `exports`
             var freeExports = typeof exports == 'object' && exports;
@@ -13533,6 +13738,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                     );
                 }
             }
+
             /*--------------------------------------------------------------------------*/
 
             function createByte(codePoint, shift) {
@@ -13658,6 +13864,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
             var byteArray;
             var byteCount;
             var byteIndex;
+
             function utf8decode(byteString) {
                 byteArray = ucs2decode(byteString);
                 byteCount = byteArray.length;
@@ -13685,10 +13892,10 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
                 typeof define.amd == 'object' &&
                 define.amd
             ) {
-                define(function() {
+                define(function () {
                     return utf8;
                 });
-            }	else if (freeExports && !freeExports.nodeType) {
+            } else if (freeExports && !freeExports.nodeType) {
                 if (freeModule) { // in Node.js or RingoJS v0.8.0+
                     freeModule.exports = utf8;
                 } else { // in Narwhal or RingoJS v0.7.0-
@@ -13704,16 +13911,19 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         }(this));
 
-    },{}],86:[function(require,module,exports){
+    }, {}],
+    86: [function (require, module, exports) {
         module.exports = XMLHttpRequest;
 
-    },{}],"bignumber.js":[function(require,module,exports){
+    }, {}],
+    "bignumber.js": [function (require, module, exports) {
         'use strict';
 
         module.exports = BigNumber; // jshint ignore:line
 
 
-    },{}],"web3":[function(require,module,exports){
+    }, {}],
+    "web3": [function (require, module, exports) {
         var Web3 = require('./lib/web3');
 
 // dont override global variable
@@ -13723,5 +13933,6 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
         module.exports = Web3;
 
-    },{"./lib/web3":22}]},{},["web3"])
+    }, {"./lib/web3": 22}]
+}, {}, ["web3"])
 //# sourceMappingURL=web3-light.js.map

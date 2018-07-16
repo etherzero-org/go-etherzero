@@ -404,3 +404,5 @@ func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) err
 func (self *MasternodeManager) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
 	return self.scope.Track(self.pingFeed.Subscribe(ch))
 }
+
+
