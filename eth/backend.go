@@ -510,6 +510,13 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server, contractBackend *ContractBa
 			break
 		}
 	}
+	if devote, ok := s.engine.(*devote.Devote); ok {
+		active := s.masternodeManager.active
+		if active == nil {
+			log.Error("Active Masternode is nil")
+		}
+		devote.Masternodes(s.masternodeManager.MasternodeList)
+	}
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the

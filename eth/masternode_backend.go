@@ -38,6 +38,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
+	"math/big"
 )
 
 var (
@@ -396,6 +397,10 @@ func (self *MasternodeManager) Register(masternode *masternode.Masternode) error
 
 func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) error {
 	return self.devoteProtocol.Unregister(masternode.ID)
+}
+
+func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
+	return make([]string, 0), nil
 }
 
 // SubscribePingEvent registers a subscription of PingEvent and
