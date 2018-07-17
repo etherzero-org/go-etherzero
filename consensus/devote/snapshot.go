@@ -26,12 +26,12 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/trie"
-	"github.com/etherzero/go-etherzero/common"
 )
 
 type Controller struct {
@@ -55,12 +55,9 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	fmt.Printf("****** snapshot .go masternodes init nodes count %d ,value:%s ****** \n", len(nodes), nodes)
-
 	list := make(map[string]*big.Int)
-
 	for i := 0; i < len(nodes); i++ {
-		masternode:=nodes[i]
+		masternode := nodes[i]
 		hash := make([]byte, 8)
 		hash = append(hash, []byte(masternode)...)
 		hash = append(hash, parent.Hash().Bytes()...)
@@ -68,11 +65,10 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 
 		score := big.NewInt(0)
 		score.Add(score, big.NewInt(weight))
-		log.Debug("masternodes ", "score",score.Uint64(),"masternode", masternode)
+		log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
 		list[masternode] = score
 	}
-
-	fmt.Printf("controller nodes context:%v count,%d \n", nodes)
+	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
 	return list, nil
 }
 
@@ -179,7 +175,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		// if prevCycle is not genesis, uncast not active masternode
 		votes, err := self.masternodes(parent, prevCycleIsGenesis, nodes)
 		if err != nil {
-			log.Error("get masternodes ", "err", err)
+			log.Error("init masternodes ", "err", err)
 			return err
 		}
 		masternodes := sortableAddresses{}
@@ -187,7 +183,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < int(safeSize) {
-			return fmt.Errorf("too few masternodes, current ", "current", len(masternodes), "safesize", safeSize)
+			return fmt.Errorf(" too few masternodes ", "current", len(masternodes), "safesize", safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
@@ -204,11 +200,11 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
+		log.Info("Controller election witnesses ", "sortedWitnesses", sortedWitnesses)
 		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
 		self.devoteProtocol.SetCycle(cycleTrie)
 		self.devoteProtocol.SetWitnesses(sortedWitnesses)
-		log.Info("Come to new cycle", "prev", i, "next", i+1)
+		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
 	}
 	return nil
 }
