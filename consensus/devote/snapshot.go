@@ -31,7 +31,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/trie"
-	"math/rand"
 	"github.com/etherzero/go-etherzero/common"
 )
 
@@ -195,15 +194,15 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 			masternodes = masternodes[:maxWitnessSize]
 		}
 		// disrupt the mastrnodes node to ensure the disorder of the node
-		seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
-		r := rand.New(rand.NewSource(int64(seed)))
-		for i := len(masternodes) - 1; i > 0; i-- {
-			j := int(r.Int31n(int32(i + 1)))
-			masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
-		}
+		//seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
+		//r := rand.New(rand.NewSource(int64(seed)))
+		//for i := len(masternodes) - 1; i > 0; i-- {
+		//	j := int(r.Int31n(int32(i + 1)))
+		//	masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
+		//}
 		var sortedWitnesses []string
-		for _, masternode_ := range masternodes {
-			sortedWitnesses = append(sortedWitnesses, masternode_.nodeid)
+		for _, node := range masternodes {
+			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
 		fmt.Printf("snapshot election witnesses %s\n", sortedWitnesses)
 		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
