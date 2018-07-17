@@ -35,7 +35,6 @@ import (
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
@@ -55,12 +54,11 @@ const (
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
 	b  Backend
-	ms *masternode.MasternodeSet
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
-func NewPublicEthereumAPI(b Backend, m *masternode.MasternodeSet) *PublicEthereumAPI {
-	return &PublicEthereumAPI{b, m}
+func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
+	return &PublicEthereumAPI{b}
 }
 
 // GasPrice returns a suggestion for a gas price.
@@ -76,7 +74,7 @@ func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 
 // Masternodes return masternode info
 // TODO optimize the returned info's format
-func (s *PublicEthereumAPI) Masternodes() map[string]*masternode.Masternode {
+func (s *PublicEthereumAPI) Masternodes() []string {
 	return nil
 	//return s.ms.AllNodes()
 }
@@ -253,7 +251,7 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 }
 
 // Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) List() map[string]*masternode.Masternode {
+func (s *PrivateAccountAPI) List() []string {
 	return s.b.Masternodes()
 }
 

@@ -484,9 +484,9 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 
 // SubscribeVoteEvent registers a subscription of VoteEvent and
 // starts sending event to the given channel.
-func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
-	return s.masternodeManager.SubscribeVoteEvent(ch)
-}
+//func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
+//	return s.masternodeManager.SubscribeVoteEvent(ch)
+//}
 
 // SubscribePingEvent registers a subscription of PingEvent and
 // starts sending event to the given channel.

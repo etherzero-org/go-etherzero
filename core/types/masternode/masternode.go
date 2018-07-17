@@ -18,25 +18,23 @@
 package masternode
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
 	"sync"
 	"time"
 
+	"github.com/etherzero/go-etherzero/accounts/abi/bind"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/accounts/abi/bind"
 )
 
 const (
-	MasternodeInit         = iota
+	MasternodeInit = iota
 	MasternodeDisconnected
 	MasternodeExpired
 	MasternodeEnable
@@ -45,7 +43,7 @@ const (
 const (
 	MASTERNODE_CHECK_INTERVAL = 30 * time.Second
 	MASTERNODE_PING_TIMEOUT   = 180 * time.Second
-	MASTERNODE_PING_INTERVAL  = 60 * time.Second
+	MASTERNODE_PING_INTERVAL  = 10 * time.Second
 	MASTERNODE_ONLINE_ENABLE  = 60 * time.Second
 	MASTERNODE_VOTING_ENABLE  = 10 * time.Minute
 )
@@ -69,51 +67,38 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 type Masternode struct {
-	ID              string
-	Node            *discover.Node
-	Account         common.Address
-	OriginBlock     uint64
-	Height          *big.Int
-	State           int
-	ProtocolVersion uint
-	LastPingTime    uint64
-	UpdateTime      time.Time
-	AccOnlineTime   time.Duration
+	ID          string
+	NodeID      discover.NodeID
+	Account     common.Address
+	OriginBlock *big.Int
+	State       int
+	//ProtocolVersion uint
+	//LastPingTime  uint64
+	//UpdateTime    time.Time
+	//AccOnlineTime time.Duration
 
-	CollateralMinConfBlockHash common.Hash
+	BlockOnlineAcc *big.Int
+	BlockLastPing  *big.Int
 }
 
-func newMasternode(nodeId discover.NodeID, ip net.IP, port uint16, account common.Address, block uint64) *Masternode {
+func newMasternode(nodeId discover.NodeID, account common.Address, block, blockOnlineAcc, blockLastPing *big.Int) *Masternode {
 
 	id := GetMasternodeID(nodeId)
-	n := discover.NewNode(nodeId, ip, 0, port)
 	return &Masternode{
-		ID:                         id,
-		Node:                       n,
-		Account:                    account,
-		OriginBlock:                block,
-		State:                      MasternodeInit,
-		Height:                     big.NewInt(0),
-		ProtocolVersion:            64,
-		CollateralMinConfBlockHash: common.Hash{},
+		ID:          id,
+		NodeID:      nodeId,
+		Account:     account,
+		OriginBlock: block,
+		State:       MasternodeInit,
+		BlockOnlineAcc: blockOnlineAcc,
+		BlockLastPing: blockLastPing,
+		//ProtocolVersion:  64,
 	}
 }
 
 func (n *Masternode) String() string {
-	return fmt.Sprintf("Node: %s\n", n.Node)
+	return fmt.Sprintf("Node: %s\n", n.NodeID.String())
 }
-
-//func (n *Masternode) CalculateScore(block *types.Block) int64 {
-//	blockHash := rlpHash([]interface{}{
-//		block.Hash(),
-//		n.ID,
-//		n.Node,
-//		block.Number(),
-//		n.Account,
-//		n.CollateralMinConfBlockHash,
-//	})
-//	return blockHash.Big().Int64()
-//}
 
 type MasternodeSet struct {
 	nodes    map[string]*Masternode
@@ -149,6 +134,9 @@ func NewMasternodeSet(contract *contract.Contract) (*MasternodeSet, error) {
 }
 
 func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
+	if blockNumber == nil {
+		blockNumber = new(big.Int)
+	}
 	opts := new(bind.CallOpts)
 	opts.BlockNumber = blockNumber
 	var (
@@ -166,8 +154,15 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 			log.Error("GetIdsByBlockNumber", "error", err)
 			break
 		}
-		ids = append(ids, ctx.Node.ID)
 		lastId = ctx.pre
+		if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
+			if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(300)) > 0 {
+				continue
+			}
+		}else if ctx.Node.OriginBlock.Cmp(common.Big0) > 0{
+			continue
+		}
+		ids = append(ids, ctx.Node.ID)
 	}
 	return ids, nil
 }
@@ -212,28 +207,28 @@ func (ns *MasternodeSet) Node(id string) *Masternode {
 	defer ns.lock.RUnlock()
 	return ns.nodes[id]
 }
-
-func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
-	ns.lock.RLock()
-	defer ns.lock.RUnlock()
-
-	n := ns.nodes[id]
-	if n == nil {
-		return
-	}
-
-	if !n.UpdateTime.IsZero() {
-		since := time.Since(n.UpdateTime)
-		if since < MASTERNODE_PING_TIMEOUT {
-			n.AccOnlineTime += time.Since(n.UpdateTime)
-		} else {
-			n.AccOnlineTime = time.Since(n.UpdateTime)
-		}
-	}
-
-	n.UpdateTime = time.Now()
-	n.LastPingTime = t
-}
+//
+//func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
+//	ns.lock.RLock()
+//	defer ns.lock.RUnlock()
+//
+//	n := ns.nodes[id]
+//	if n == nil {
+//		return
+//	}
+//
+//	if !n.UpdateTime.IsZero() {
+//		since := time.Since(n.UpdateTime)
+//		if since < MASTERNODE_PING_TIMEOUT {
+//			n.AccOnlineTime += time.Since(n.UpdateTime)
+//		} else {
+//			n.AccOnlineTime = time.Since(n.UpdateTime)
+//		}
+//	}
+//
+//	n.UpdateTime = time.Now()
+//	n.LastPingTime = t
+//}
 
 func (ns *MasternodeSet) SetState(id string, state int) bool {
 	ns.lock.RLock()
@@ -309,21 +304,21 @@ func (ns *MasternodeSet) Len() int {
 	return 0
 }
 
-func (ns *MasternodeSet) Check() {
-	ns.lock.Lock()
-	defer ns.lock.Unlock()
-	for _, n := range ns.nodes {
-		if !n.UpdateTime.IsZero() {
-			since := time.Since(n.UpdateTime)
-			if since > MASTERNODE_PING_TIMEOUT {
-				n.State = MasternodeExpired
-				n.AccOnlineTime = 0
-			} else if n.State != MasternodeEnable && n.AccOnlineTime >= MASTERNODE_ONLINE_ENABLE {
-				n.State = MasternodeEnable
-			}
-		}
-	}
-}
+//func (ns *MasternodeSet) Check() {
+//	ns.lock.Lock()
+//	defer ns.lock.Unlock()
+//	for _, n := range ns.nodes {
+//		if !n.UpdateTime.IsZero() {
+//			since := time.Since(n.UpdateTime)
+//			if since > MASTERNODE_PING_TIMEOUT {
+//				n.State = MasternodeExpired
+//				n.AccOnlineTime = 0
+//			} else if n.State != MasternodeEnable && n.AccOnlineTime >= MASTERNODE_ONLINE_ENABLE {
+//				n.State = MasternodeEnable
+//			}
+//		}
+//	}
+//}
 
 func GetMasternodeID(ID discover.NodeID) string {
 	return fmt.Sprintf("%x", ID[:8])
@@ -340,11 +335,8 @@ func GetMasternodeContext(opts *bind.CallOpts, contract *contract.Contract, id [
 	if err != nil {
 		return &MasternodeContext{}, err
 	}
-	// version := int(data.Misc[0])
-	var ip net.IP = data.Misc[1:17]
-	port := binary.BigEndian.Uint16(data.Misc[17:19])
 	nodeId, _ := discover.BytesID(append(data.Id1[:], data.Id2[:]...))
-	node := newMasternode(nodeId, ip, port, data.Account, data.BlockNumber.Uint64())
+	node := newMasternode(nodeId, data.Account, data.BlockNumber, data.BlockOnlineAcc, data.BlockLastPing)
 
 	return &MasternodeContext{
 		Node: node,

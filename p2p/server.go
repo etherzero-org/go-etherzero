@@ -143,7 +143,7 @@ type Config struct {
 	Logger log.Logger `toml:",omitempty"`
 
 	// Masternode
-	MasternodeAddr     net.TCPAddr
+	IsMasternode bool
 }
 
 // Server manages all peer connections.
@@ -920,9 +920,7 @@ type NodeInfo struct {
 	} `json:"ports"`
 	ListenAddr string                 `json:"listenAddr"`
 	Protocols  map[string]interface{} `json:"protocols"`
-	Masternode struct {
-		MasternodeAddr     string `json:"masternodeAddr"`
-	} `json:"masternode"`
+	IsMasternode bool `json:"isMasternode"`
 }
 
 // NodeInfo gathers and returns a collection of metadata known about the host.
@@ -940,7 +938,7 @@ func (srv *Server) NodeInfo() *NodeInfo {
 	}
 	info.Ports.Discovery = int(node.UDP)
 	info.Ports.Listener = int(node.TCP)
-	info.Masternode.MasternodeAddr = srv.MasternodeAddr.String()
+	info.IsMasternode = srv.Config.IsMasternode
 
 	// Gather all the running protocol infos (only once per protocol type)
 	for _, proto := range srv.Protocols {

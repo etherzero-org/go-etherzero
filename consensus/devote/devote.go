@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	etherzeroBlockReward = big.NewInt(0.7e+18) // Block reward in wei for successfully mining a block
+	etherzeroBlockReward = big.NewInt(9e+18) // Block reward in wei for successfully mining a block
 	timeOfFirstBlock     = uint64(0)
 	confirmedBlockHead   = []byte("confirmed-block-head")
 	uncleHash            = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
@@ -266,7 +266,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if merr != nil {
 		return nil, fmt.Errorf("get current masternodes err,err:%s", merr)
 	}
-
+	fmt.Printf("&&&&&&&&&  finalize get masternode list parent.Number%d  &&&&&&&&&&&&&&&& \n",parent.Number.Uint64())
+	fmt.Printf("&&&&&&&&&  finalize get masternode list :%v\n",nodes)
 	genesis := chain.GetHeaderByNumber(0)
 	first := chain.GetHeaderByNumber(1)
 	err := controller.election(genesis, first, parent, nodes)
@@ -441,7 +442,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("devote checkWitness lookup witness:%s,devote.signer:%s\n", witness, d.signer)
+	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer)
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
 	}
