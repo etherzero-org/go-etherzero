@@ -327,7 +327,6 @@ func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
 	//	return err
 	//}
 	//id := fmt.Sprintf("%x", key[1:9])
-	//return nil
 	//node := mm.masternodes.Node(id)
 	//if node == nil {
 	//	return fmt.Errorf("error id %s", id)
@@ -383,6 +382,10 @@ func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) err
 
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
+}
+
+func (self *MasternodeManager) PostPingEvent(pingMsg *masternode.PingMsg) {
+	self.pingFeed.Send(core.PingEvent{pingMsg})
 }
 
 // SubscribePingEvent registers a subscription of PingEvent and
