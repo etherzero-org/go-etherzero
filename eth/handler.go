@@ -233,7 +233,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// broadcast ping message
 	pm.pingCh = make(chan core.PingEvent, pingSize)
 	pm.pingSub = pm.mm.SubscribePingEvent(pm.pingCh)
-	go pm.broadcastPingMsg()
+	go pm.broadcastPingLoop()
 
 	// start sync handlers
 	go pm.syncer()
@@ -245,8 +245,8 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	pm.voteSub.Unsubscribe()       //quits voteBroadcastLoop
-
+	pm.voteSub.Unsubscribe()       // quits voteBroadcastLoop
+	pm.pingSub.Unsubscribe()       // quits broadcastPingLoop
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
 	pm.noMorePeers <- struct{}{}
@@ -716,7 +716,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Error("ProcessPingMsg", "error", err)
 			break
 		}
-		//pm.pingCh <- core.PingEvent{Ping: ping}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -823,20 +822,20 @@ func (self *ProtocolManager) voteBroadcastLoop() {
 }
 
 // broadcastPingMsg,
-func (self *ProtocolManager) broadcastPingMsg() {
+func (self *ProtocolManager) broadcastPingLoop() {
 	for {
 		select {
 		case msg := <-self.pingCh:
 			peers := self.peers.markPingWithoutProcess(self.mm.active.ID, msg.Ping.Time)
 			for _, peer := range peers {
-				fmt.Println("xbroadcastPingMsg to peer", peer.id)
+				fmt.Printf("broadcastPingMsg to peer %v\n ", peer.id)
 				if err := peer.SendMasternodePing(msg.Ping); err != nil {
-					fmt.Println("SendMxasternodePing", "error", err)
+					log.Error("SendMasternodePing ", "error", err)
 				}
 			}
 
 		case err := <-self.pingSub.Err():
-			fmt.Println("pingsub error", err)
+			log.Error("pingsub error ", err)
 			return
 		}
 	}
