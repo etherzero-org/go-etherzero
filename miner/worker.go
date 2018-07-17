@@ -240,10 +240,10 @@ func (self *worker) mine(now int64) {
 			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)
-			fmt.Printf("Failed to miner the block, while error:%s\n", err)
+			//fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		default:
 			log.Error("Failed to miner the block", "err", err)
-			fmt.Printf("Failed to miner the block, while error:%s\n", err)
+			//fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		}
 		return
 	}
