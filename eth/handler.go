@@ -716,7 +716,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Error("ProcessPingMsg", "error", err)
 			break
 		}
-		pm.pingCh <- core.PingEvent{Ping: ping}
+		//pm.pingCh <- core.PingEvent{Ping: ping}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -829,9 +829,9 @@ func (self *ProtocolManager) broadcastPingMsg() {
 		case msg := <-self.pingCh:
 			peers := self.peers.markPingWithoutProcess(self.mm.active.ID, msg.Ping.Time)
 			for _, peer := range peers {
-				fmt.Println("broadcastPingMsg to peer", peer.id)
+				fmt.Println("xbroadcastPingMsg to peer", peer.id)
 				if err := peer.SendMasternodePing(msg.Ping); err != nil {
-					fmt.Println("SendMasternodePing", "error", err)
+					fmt.Println("SendMxasternodePing", "error", err)
 				}
 			}
 
