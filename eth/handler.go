@@ -714,7 +714,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		err := pm.mm.ProcessPingMsg(ping)
 		if err != nil {
 			log.Error("ProcessPingMsg", "error", err)
+			break
 		}
+		pm.pingCh <- core.PingEvent{Ping: ping}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -833,8 +835,8 @@ func (self *ProtocolManager) broadcastPingMsg() {
 				}
 			}
 
-		case <-self.pingSub.Err():
-			fmt.Println("yuuyhnbnmhgf")
+		case err := <-self.pingSub.Err():
+			fmt.Println("pingsub error", err)
 			return
 		}
 	}

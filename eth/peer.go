@@ -593,6 +593,6 @@ func (ps *peerSet) markPingWithoutProcess(id string, cur uint64) []*peer {
 		}
 		list = append(list, p)
 	}
-	fmt.Println("listlistlistlist", list)
+	fmt.Println("mark ping message list", list)
 	return list
 }
