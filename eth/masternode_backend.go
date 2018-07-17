@@ -332,7 +332,6 @@ func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
 
 	// mark the ping message
 	for _, v := range mm.peers.peers { //
-		fmt.Printf("id is %v,pm.Time %v\n", id, pm.Time)
 		v.markPingMsg(id, pm.Time)
 	}
 	mm.masternodes.RecvPingMsg(id, pm.Time)
