@@ -21,8 +21,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/rand"
-	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,7 +31,6 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/crypto/secp256k1"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
@@ -66,9 +63,11 @@ type MasternodeManager struct {
 	pingFeed     event.Feed
 	currentCycle uint64        // Current vote of the block chain
 	Lifetime     time.Duration // Maximum amount of time vote are queued
+
+	txPool *core.TxPool
 }
 
-func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain, contract *contract.Contract) *MasternodeManager {
+func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
@@ -79,6 +78,7 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 		beats:          make(map[common.Hash]time.Time),
 		Lifetime:       30 * time.Second,
 		contract:       contract,
+		txPool:         txPool,
 	}
 	return manager
 }
@@ -128,7 +128,7 @@ func (self *MasternodeManager) Process(vote *types.Vote) error {
 		log.Error("masternode not found", "masternodeId", vote.Masternode)
 		return errors.New("masternode not found masternodeId" + vote.Masternode)
 	}
-	pubkey, err := masternode.Node.ID.Pubkey()
+	pubkey, err := masternode.NodeID.Pubkey()
 	if err != nil {
 		log.Error("masternode pubkey not found ", "err", err)
 		return err
@@ -199,18 +199,9 @@ func (mm *MasternodeManager) masternodeLoop() {
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternode check true")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
-		// mm.checkPeers()
-	} else if !mm.srvr.MasternodeAddr.IP.Equal(net.IP{}) {
-		var misc [32]byte
-		misc[0] = 1
-		copy(misc[1:17], mm.srvr.Config.MasternodeAddr.IP)
-		binary.BigEndian.PutUint16(misc[17:19], uint16(mm.srvr.Config.MasternodeAddr.Port))
-
-		var buf bytes.Buffer
-		buf.Write(mm.srvr.Self().ID[:])
-		buf.Write(misc[:])
-		d := "0x4da274fd" + common.Bytes2Hex(buf.Bytes())
-		fmt.Println("Masternode transaction data:", d)
+	} else if mm.srvr.Config.IsMasternode {
+		data := "2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
+		fmt.Println("Masternode transaction data:", data)
 	}
 
 	joinCh := make(chan *contract.ContractJoin, 32)
@@ -227,7 +218,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
-	check := time.NewTimer(masternode.MASTERNODE_CHECK_INTERVAL)
+	//check := time.NewTimer(masternode.MASTERNODE_CHECK_INTERVAL)
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
@@ -247,8 +238,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 						fmt.Println("err when register ", err)
 					}
 					mm.active.Account = node.Account
-				} else {
-					mm.srvr.AddPeer(node.Node)
 				}
 				mm.masternodes.Show()
 			}
@@ -278,25 +267,44 @@ func (mm *MasternodeManager) masternodeLoop() {
 			fmt.Println("eventQuit err", err.Error())
 
 		case <-ping.C:
+			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
 			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
 				break
 			}
-			msg, err := mm.active.NewPingMsg()
-			if err != nil {
-				log.Error("NewPingMsg", "error", err)
+
+			address := crypto.PubkeyToAddress(mm.active.PrivateKey.PublicKey)
+			stateDB, _ := mm.blockchain.State()
+			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
+				fmt.Println("Failed to deposit 0.01 etz to ", address.String())
 				break
 			}
-			peers := mm.peers.peers
-			for _, peer := range peers {
-				fmt.Println("sending ping msg", "peer", peer.id)
-				if err := peer.SendMasternodePing(msg); err != nil {
-					log.Error("SendMasternodePing", "error", err)
-				}
+			if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(big.NewInt(900000)) < 0 {
+				//fmt.Println("insufficient power for ping tx")
+				break
 			}
-			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
-		case <-check.C:
-			mm.masternodes.Check()
-			check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
+			tx := types.NewTransaction(
+				mm.txPool.State().GetNonce(address),
+				params.MasterndeContractAddress,
+				big.NewInt(0),
+				900000,
+				big.NewInt(18e+9),
+				nil,
+			)
+			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.active.PrivateKey)
+			if err != nil {
+				fmt.Println("SignTx error:", err)
+				break
+			}
+
+			if err := mm.txPool.AddLocal(signed); err != nil{
+				fmt.Println("send ping to txpool error:", err)
+				break
+			}
+			fmt.Println("Send ping message ...")
+
+		//case <-check.C:
+		//	mm.masternodes.Check()
+		//	check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
 		case <-report.C:
 			for _, vote := range mm.votes {
 				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
@@ -309,31 +317,31 @@ func (mm *MasternodeManager) masternodeLoop() {
 }
 
 func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
-	if mm.masternodes == nil {
-		return nil
-	}
-	var b [8]byte
-	binary.BigEndian.PutUint64(b[:], pm.Time)
-	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
-	if err != nil || len(key) != 65 {
-		return err
-	}
-	id := fmt.Sprintf("%x", key[1:9])
-	return nil
-	node := mm.masternodes.Node(id)
-	if node == nil {
-		return fmt.Errorf("error id %s", id)
-	}
-
-	if node.LastPingTime > pm.Time {
-		return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
-	}
-
-	// mark the ping message
-	for _, v := range mm.peers.peers { //
-		v.markPingMsg(id, pm.Time)
-	}
-	mm.masternodes.RecvPingMsg(id, pm.Time)
+	//if mm.masternodes == nil {
+	//	return nil
+	//}
+	//var b [8]byte
+	//binary.BigEndian.PutUint64(b[:], pm.Time)
+	//key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
+	//if err != nil || len(key) != 65 {
+	//	return err
+	//}
+	//id := fmt.Sprintf("%x", key[1:9])
+	//return nil
+	//node := mm.masternodes.Node(id)
+	//if node == nil {
+	//	return fmt.Errorf("error id %s", id)
+	//}
+	//
+	//if node.LastPingTime > pm.Time {
+	//	return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
+	//}
+	//
+	//// mark the ping message
+	//for _, v := range mm.peers.peers { //
+	//	v.markPingMsg(id, pm.Time)
+	//}
+	//mm.masternodes.RecvPingMsg(id, pm.Time)
 	return nil
 }
 
@@ -353,32 +361,6 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
 	mm.active.SetState(state)
-}
-
-// If server is masternode, connect one masternode at least
-func (mm *MasternodeManager) checkPeers() {
-	if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
-		return
-	}
-	for _, p := range mm.peers.peers {
-		if p.isMasternode {
-			return
-		}
-	}
-
-	nodes := make(map[int]*masternode.Masternode)
-	var i int = 0
-	for _, p := range mm.masternodes.EnableNodes() {
-		if p.State == masternode.MasternodeEnable && p.ID != mm.active.ID {
-			nodes[i] = p
-			i++
-		}
-	}
-	if i <= 0 {
-		return
-	}
-	key := rand.Intn(i - 1)
-	mm.srvr.AddPeer(nodes[key].Node)
 }
 
 func (self *MasternodeManager) PostVoteEvent(vote *types.Vote) {
