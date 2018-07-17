@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	etherzeroBlockReward = big.NewInt(10e+18) // Block reward in wei for successfully mining a block
+	etherzeroBlockReward = big.NewInt(9e+18) // Block reward in wei for successfully mining a block
 	timeOfFirstBlock     = uint64(0)
 	confirmedBlockHead   = []byte("confirmed-block-head")
 	uncleHash            = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
