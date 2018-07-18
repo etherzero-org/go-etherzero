@@ -25,7 +25,6 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/rlp"
 	"gopkg.in/fatih/set.v0"
@@ -197,9 +196,9 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
-func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
-	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
-}
+//func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
+//	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
+//}
 
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.

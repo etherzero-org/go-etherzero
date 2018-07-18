@@ -65,7 +65,7 @@ const (
 	ReceiptsMsg    = 0x10
 
 	// Protocol messages belonging to etz/64
-	MasternodePingMsg = 0x22
+	//MasternodePingMsg = 0x22
 )
 
 type errCode int

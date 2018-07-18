@@ -193,33 +193,33 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 }
 
-func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
-	//if mm.masternodes == nil {
-	//	return nil
-	//}
-	//var b [8]byte
-	//binary.BigEndian.PutUint64(b[:], pm.Time)
-	//key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
-	//if err != nil || len(key) != 65 {
-	//	return err
-	//}
-	//id := fmt.Sprintf("%x", key[1:9])
-	//node := mm.masternodes.Node(id)
-	//if node == nil {
-	//	return fmt.Errorf("error id %s", id)
-	//}
-	//
-	//if node.LastPingTime > pm.Time {
-	//	return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
-	//}
-	//
-	//// mark the ping message
-	//for _, v := range mm.peers.peers { //
-	//	v.markPingMsg(id, pm.Time)
-	//}
-	//mm.masternodes.RecvPingMsg(id, pm.Time)
-	return nil
-}
+//func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
+//	if mm.masternodes == nil {
+//		return nil
+//	}
+//	var b [8]byte
+//	binary.BigEndian.PutUint64(b[:], pm.Time)
+//	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
+//	if err != nil || len(key) != 65 {
+//		return err
+//	}
+//	id := fmt.Sprintf("%x", key[1:9])
+//	node := mm.masternodes.Node(id)
+//	if node == nil {
+//		return fmt.Errorf("error id %s", id)
+//	}
+//
+//	if node.LastPingTime > pm.Time {
+//		return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
+//	}
+//
+//	// mark the ping message
+//	for _, v := range mm.peers.peers { //
+//		v.markPingMsg(id, pm.Time)
+//	}
+//	mm.masternodes.RecvPingMsg(id, pm.Time)
+//	return nil
+//}
 
 func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
 	var state int

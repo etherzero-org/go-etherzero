@@ -311,9 +311,9 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 
 func masternodeContractAccount(masternodes []string) GenesisAccount {
 	var (
-		data = make(map[common.Hash]common.Hash)
+		data    = make(map[common.Hash]common.Hash)
 		lastKey common.Hash
-		lastId [8]byte
+		lastId  [8]byte
 	)
 
 	for _, n := range masternodes {
