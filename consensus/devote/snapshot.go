@@ -73,24 +73,26 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 
 func (ec *Controller) lookup(now uint64) (witness string, err error) {
 
-	witness = ""
 	offset := now % params.CycleInterval
 	if offset%params.BlockInterval != 0 {
-		return "", ErrInvalidMinerBlockTime
+		err = ErrInvalidMinerBlockTime
+		return
 	}
-	offset /= params.BlockInterval
 
+	offset /= params.BlockInterval
 	witnesses, err := ec.devoteProtocol.GetWitnesses()
 	if err != nil {
-		return "", err
+		return
 	}
+
 	witnessSize := len(witnesses)
 	if witnessSize == 0 {
-		return "", errors.New("failed to lookup witness")
+		err = errors.New("failed to lookup witness")
+		return
 	}
 	offset %= uint64(witnessSize)
-	id := witnesses[offset]
-	return id, nil
+	witness = witnesses[offset]
+	return
 }
 
 func (self *Controller) election(genesis, first, parent *types.Header, nodes []string) error {
