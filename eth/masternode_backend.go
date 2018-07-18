@@ -179,8 +179,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				fmt.Println("send ping to txpool error:", err)
 				break
 			}
-			fmt.Println("Send ping message ...")
-
+			//fmt.Println("Send ping message ...")
 		}
 	}
 }
