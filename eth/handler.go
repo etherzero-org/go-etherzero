@@ -225,11 +225,6 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
-	// broadcast votes
-	pm.voteCh = make(chan core.NewVoteEvent, voteChanSize)
-	pm.voteSub = pm.mm.SubscribeVoteEvent(pm.voteCh)
-	go pm.voteBroadcastLoop()
-
 	// broadcast ping message
 	pm.pingCh = make(chan core.PingEvent, pingSize)
 	pm.pingSub = pm.mm.SubscribePingEvent(pm.pingCh)
@@ -540,7 +535,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		for i, body := range request {
 			transactions[i] = body.Transactions
 			uncles[i] = body.Uncles
-			votes[i] = body.Votes
 		}
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
 		filter := len(transactions) > 0 || len(uncles) > 0
@@ -548,7 +542,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			transactions, uncles = pm.fetcher.FilterBodies(p.id, transactions, votes, uncles, time.Now())
 		}
 		if len(transactions) > 0 || len(uncles) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.id, transactions, uncles, votes)
+			err := pm.downloader.DeliverBodies(p.id, transactions, uncles)
 			if err != nil {
 				log.Debug("Failed to deliver bodies", "err", err)
 			}

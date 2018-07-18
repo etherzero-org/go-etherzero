@@ -258,7 +258,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
-	block := types.NewBlock(head, nil, nil, nil, nil)
+	block := types.NewBlock(head, nil, nil, nil)
 	block.DevoteProtocol = devoteProtocol
 
 	return block
@@ -473,9 +473,6 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *types.DevoteProto
 
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
 		dp.SetWitnesses(g.Config.Devote.Witnesses)
-		for _, witness := range g.Config.Devote.Witnesses {
-			dp.MasternodeTrie().TryUpdate([]byte(witness), common.Address{}.Bytes())
-		}
 	}
 	return dp
 }

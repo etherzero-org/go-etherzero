@@ -193,7 +193,6 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 			self.current.txs,
 			nil,
 			self.current.receipts,
-			self.current.votes,
 		), self.current.state.Copy()
 	}
 
@@ -210,7 +209,6 @@ func (self *worker) pendingBlock() *types.Block {
 			self.current.txs,
 			nil,
 			self.current.receipts,
-			self.current.votes,
 		)
 	}
 
@@ -508,10 +506,6 @@ func (self *worker) commitNewWork() (*Work, error) {
 		return nil, fmt.Errorf("got error when fetch pending transactions, err: %s", err)
 	}
 
-	votes, err := self.eth.Votes()
-	if err != nil {
-		return nil, fmt.Errorf("got error when fetch votes ,err: %s", err)
-	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
@@ -538,7 +532,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol, votes); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 

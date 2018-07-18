@@ -18,9 +18,9 @@ package eth
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,7 +35,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
-	"math/big"
 )
 
 var (
@@ -58,7 +57,6 @@ type MasternodeManager struct {
 	contract     *contract.Contract
 	blockchain   *core.BlockChain
 	scope        event.SubscriptionScope
-	voteFeed     event.Feed
 
 	pingFeed     event.Feed
 	currentCycle uint64        // Current vote of the block chain
@@ -81,44 +79,6 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 		txPool:         txPool,
 	}
 	return manager
-}
-
-func (self *MasternodeManager) Voting() (*types.Vote, error) {
-
-	if self.active == nil {
-		return nil, errors.New("current node is not masternode ")
-	}
-
-	currentCycle := self.blockchain.CurrentBlock().Time().Uint64() / params.CycleInterval
-	nextCycle := currentCycle + 1
-	storeCycle := atomic.LoadUint64(&self.currentCycle)
-	if storeCycle >= nextCycle {
-		log.Debug("this masternode voted in the next cycle ", "cycle", nextCycle)
-		return nil, nil
-	}
-	masternodeID := self.active.ID
-	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, uint64(nextCycle))
-	key = append(key, []byte(masternodeID)...)
-	masternodes := self.masternodes.AllNodes()
-	weight := int64(0)
-	best := self.active.ID
-	for _, masternode := range masternodes {
-		hash := self.blockchain.CurrentBlock().Hash()
-		temp := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash.Bytes())))
-		if temp > weight && masternode.ID != self.active.ID {
-			weight = temp
-			best = masternode.ID
-		}
-	}
-	vote := types.NewVote(nextCycle, best, self.active.ID)
-
-	vote.SignVote(self.active.PrivateKey)
-	log.Info("masternode voting successfully ", "hash", vote.Hash(), "masternode", vote.Masternode, "poll", vote.Poll)
-	//self.Add(vote)
-	atomic.StoreUint64(&self.currentCycle, nextCycle)
-	go self.PostVoteEvent(vote)
-	return vote, nil
 }
 
 func (self *MasternodeManager) Process(vote *types.Vote) error {
@@ -233,10 +193,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
 					mm.updateActiveMasternode()
 					// TODO
-					err := mm.Register(node)
-					if err != nil {
-						fmt.Println("err when register ", err)
-					}
 					mm.active.Account = node.Account
 				}
 				mm.masternodes.Show()
@@ -247,10 +203,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 			fmt.Println("quit", nodeid)
 			node := mm.masternodes.Node(nodeid)
 			if node != nil {
-				err := mm.Unregister(node)
-				if err != nil {
-					fmt.Println("err when register ", err)
-				}
 				mm.masternodes.NodeQuit(quit.Id)
 				if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
 					mm.updateActiveMasternode()
@@ -296,7 +248,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				break
 			}
 
-			if err := mm.txPool.AddLocal(signed); err != nil{
+			if err := mm.txPool.AddLocal(signed); err != nil {
 				fmt.Println("send ping to txpool error:", err)
 				break
 			}
@@ -360,24 +312,6 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
 	}
 	mm.active.SetState(state)
-}
-
-func (self *MasternodeManager) PostVoteEvent(vote *types.Vote) {
-	self.voteFeed.Send(core.NewVoteEvent{vote})
-}
-
-// SubscribeVoteEvent registers a subscription of VoteEvent and
-// starts sending event to the given channel.
-func (self *MasternodeManager) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
-	return self.scope.Track(self.voteFeed.Subscribe(ch))
-}
-
-func (self *MasternodeManager) Register(masternode *masternode.Masternode) error {
-	return self.devoteProtocol.Register(masternode.ID)
-}
-
-func (self *MasternodeManager) Unregister(masternode *masternode.Masternode) error {
-	return self.devoteProtocol.Unregister(masternode.ID)
 }
 
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {

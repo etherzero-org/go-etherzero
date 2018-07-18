@@ -41,7 +41,6 @@ type Backend interface {
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
 
-	Votes() ([]*types.Vote, error)
 	DevoteProtocol() *types.DevoteProtocol
 }
 

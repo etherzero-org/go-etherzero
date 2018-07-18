@@ -148,12 +148,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 		txs[i] = tx.tx
 	}
 
-	// Fill the sender cache of votes in the block.
-	votes := make([]*types.Vote, len(body.Votes))
-	for i, vote := range body.Votes {
-		votes[i] = vote
-	}
-	return types.NewBlockWithHeader(head).WithBody(txs, uncles, votes), nil
+	return types.NewBlockWithHeader(head).WithBody(txs, uncles), nil
 }
 
 // HeaderByHash returns the block header with the given hash.

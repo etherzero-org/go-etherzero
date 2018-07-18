@@ -35,7 +35,6 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -222,14 +221,6 @@ func (b *EthAPIBackend) StopMasternode() bool {
 	return true
 }
 
-// join nodeid from genesis block to witness
-func (b *EthAPIBackend) JoinMasternode(nodeid string) bool {
-	masternode := &masternode.Masternode{
-		ID: nodeid,
-	}
-	b.eth.MastenrodeManager().Register(masternode)
-	return true
-}
 
 func (b *EthAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)

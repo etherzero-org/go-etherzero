@@ -143,7 +143,6 @@ func rlpHash(x interface{}) (h common.Hash) {
 type Body struct {
 	Transactions []*Transaction
 	Uncles       []*Header
-	Votes        []*Vote
 }
 
 // Block represents an entire block in the Ethereum blockchain.
@@ -164,7 +163,6 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt     time.Time
 	ReceivedFrom   interface{}
-	votes          []*Vote
 	DevoteProtocol *DevoteProtocol
 }
 
@@ -206,7 +204,7 @@ type storageblock struct {
 // The values of TxHash, UncleHash, ReceiptHash and Bloom in header
 // are ignored and set to values derived from the given txs, uncles
 // and receipts.
-func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt, votes []*Vote) *Block {
+func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 
 	// TODO: panic if len(txs) != len(receipts)
@@ -234,11 +232,6 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
 	}
-
-	if len(votes) != 0 {
-		b.votes = votes
-	}
-
 	return b
 }
 
@@ -276,7 +269,7 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&eb); err != nil {
 		return err
 	}
-	b.header, b.uncles, b.transactions, b.votes = eb.Header, eb.Uncles, eb.Txs, eb.Votes
+	b.header, b.uncles, b.transactions = eb.Header, eb.Uncles, eb.Txs
 	b.size.Store(common.StorageSize(rlp.ListSize(size)))
 	return nil
 }
@@ -287,7 +280,6 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 		Header: b.header,
 		Txs:    b.transactions,
 		Uncles: b.uncles,
-		Votes:  b.votes,
 	})
 }
 
@@ -297,7 +289,7 @@ func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&sb); err != nil {
 		return err
 	}
-	b.header, b.uncles, b.transactions, b.td, b.votes = sb.Header, sb.Uncles, sb.Txs, sb.TD, sb.Votes
+	b.header, b.uncles, b.transactions, b.td = sb.Header, sb.Uncles, sb.Txs, sb.TD
 	return nil
 }
 
@@ -305,21 +297,11 @@ func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
 
 func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
-func (b *Block) Votes() []*Vote             { return b.votes }
 
 func (b *Block) Transaction(hash common.Hash) *Transaction {
 	for _, transaction := range b.transactions {
 		if transaction.Hash() == hash {
 			return transaction
-		}
-	}
-	return nil
-}
-
-func (b *Block) Vote(hash common.Hash) *Vote {
-	for _, vote := range b.votes {
-		if vote.Hash() == hash {
-			return vote
 		}
 	}
 	return nil
@@ -350,7 +332,7 @@ func (b *Block) Protocol() *DevoteProtocol { return b.DevoteProtocol }
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles, b.votes} }
+func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
 
 func (b *Block) HashNoNonce() common.Hash {
 	return b.header.HashNoNonce()
@@ -388,24 +370,21 @@ func (b *Block) WithSeal(header *Header) *Block {
 		header:         &cpy,
 		transactions:   b.transactions,
 		uncles:         b.uncles,
-		votes:          b.votes,
 		DevoteProtocol: b.DevoteProtocol,
 	}
 }
 
 // WithBody returns a new block with the given transaction and uncle contents.
-func (b *Block) WithBody(transactions []*Transaction, uncles []*Header, votes []*Vote) *Block {
+func (b *Block) WithBody(transactions []*Transaction, uncles []*Header) *Block {
 	block := &Block{
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
 		uncles:       make([]*Header, len(uncles)),
-		votes:        make([]*Vote, len(votes)),
 	}
 	copy(block.transactions, transactions)
 	for i := range uncles {
 		block.uncles[i] = CopyHeader(uncles[i])
 	}
-	copy(block.votes, votes)
 	return block
 }
 

@@ -31,7 +31,6 @@ import (
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/trie"
 )
 
 type Controller struct {
@@ -70,70 +69,6 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	}
 	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
 	return list, nil
-}
-
-//when a node does't work in the current cycle, delete.
-func (ec *Controller) uncast(cycle int64) error {
-
-	witnesses, err := ec.devoteProtocol.GetWitnesses()
-	if err != nil {
-		return fmt.Errorf("failed to get witness: %s", err)
-	}
-	if len(witnesses) == 0 {
-		return errors.New("no witness could be uncast")
-	}
-	cycleDuration := params.CycleInterval
-	// First cycle duration may lt cycle interval,
-	// while the first block time wouldn't always align with cycle interval,
-	// so caculate the first cycle duartion with first block time instead of cycle interval,
-	// prevent the validators were uncast incorrectly.
-	if ec.TimeStamp-timeOfFirstBlock < params.CycleInterval {
-		cycleDuration = ec.TimeStamp - timeOfFirstBlock
-	}
-	needUncastWitnesses := sortableAddresses{}
-	for _, witness := range witnesses {
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, uint64(cycle))
-		// TODO
-		key = append(key, []byte(witness)...)
-		size := uint64(0)
-		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
-			size = binary.BigEndian.Uint64(cntBytes)
-		}
-		if size < cycleDuration/params.BlockInterval/maxWitnessSize/2 {
-			// not active witnesses need uncast
-			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
-		}
-	}
-	// no witnessees need uncast
-	needUncastWitnessCnt := len(needUncastWitnesses)
-	if needUncastWitnessCnt <= 0 {
-		return nil
-	}
-	sort.Sort(sort.Reverse(needUncastWitnesses))
-	masternodeCount := 0
-	iter := trie.NewIterator(ec.devoteProtocol.MasternodeTrie().NodeIterator(nil))
-	for iter.Next() {
-		masternodeCount++
-		if masternodeCount >= needUncastWitnessCnt+int(safeSize) {
-			break
-		}
-	}
-	for i, witness := range needUncastWitnesses {
-		// ensure witness count greater than or equal to safeSize
-		if masternodeCount <= int(safeSize) {
-			log.Info("No more masternode can be uncast", "prevCycleID", cycle, "masternodeCount", masternodeCount,
-				"needUncastCount", len(needUncastWitnesses)-i)
-			return nil
-		}
-		if err := ec.devoteProtocol.Unregister(witness.nodeid); err != nil {
-			return err
-		}
-		// if uncast success, masternode Count minus 1
-		masternodeCount--
-		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.nodeid, "miner count", witness.weight.String())
-	}
-	return nil
 }
 
 func (ec *Controller) lookup(now uint64) (witness string, err error) {
@@ -189,13 +124,6 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
-		// disrupt the mastrnodes node to ensure the disorder of the node
-		//seed := uint64(binary.LittleEndian.Uint32(crypto.Keccak512(parent.Hash().Bytes()))) + i
-		//r := rand.New(rand.NewSource(int64(seed)))
-		//for i := len(masternodes) - 1; i > 0; i-- {
-		//	j := int(r.Int31n(int32(i + 1)))
-		//	masternodes[i], masternodes[j] = masternodes[j], masternodes[i]
-		//}
 		var sortedWitnesses []string
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)

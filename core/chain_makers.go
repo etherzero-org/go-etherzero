@@ -195,7 +195,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 		h.Root = root
 		h.Protocol = parent.Header().Protocol
-		return types.NewBlock(h, b.txs, b.uncles, b.receipts, b.votes), b.receipts
+		return types.NewBlock(h, b.txs, b.uncles, b.receipts), b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))

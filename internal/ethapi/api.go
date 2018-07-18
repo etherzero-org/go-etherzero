@@ -265,10 +265,6 @@ func (s *PrivateAccountAPI) StopMasternode() bool {
 	return s.b.StopMasternode()
 }
 
-// Stop return the masternodewinner info
-func (s *PrivateAccountAPI) JoinMasternode(nodeid string) bool {
-	return s.b.JoinMasternode(nodeid)
-}
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
@@ -887,19 +883,6 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		fields["transactions"] = transactions
 	}
 
-	if inclTx {
-		votesList := []*types.Vote{}
-		for _, v := range b.Votes() {
-			singleVote := &types.Vote{
-				Cycle:      v.Cycle,
-				Sign:       v.Sign,
-				Poll:       v.Poll,
-				Masternode: v.Masternode,
-			}
-			votesList = append(votesList, singleVote)
-		}
-		fields["votes"] = votesList
-	}
 	uncles := b.Uncles()
 	uncleHashes := make([]common.Hash, len(uncles))
 	for i, uncle := range uncles {

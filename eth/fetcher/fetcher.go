@@ -531,7 +531,7 @@ func (f *Fetcher) loop() {
 							matched = true
 
 							if f.getBlock(hash) == nil {
-								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i], task.uncles[i], task.votes[i])
+								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i], task.uncles[i])
 								block.ReceivedAt = task.time
 
 								blocks = append(blocks, block)

@@ -125,16 +125,14 @@ func (p *FakePeer) RequestBodies(hashes []common.Hash) error {
 	var (
 		txs    [][]*types.Transaction
 		uncles [][]*types.Header
-		votes  [][]*types.Vote
 	)
 	for _, hash := range hashes {
 		block := rawdb.ReadBlock(p.db, hash, *p.hc.GetBlockNumber(hash))
 
 		txs = append(txs, block.Transactions())
 		uncles = append(uncles, block.Uncles())
-		votes = append(votes, block.Votes())
 	}
-	p.dl.DeliverBodies(p.id, txs, uncles, votes)
+	p.dl.DeliverBodies(p.id, txs, uncles)
 	return nil
 }
 
