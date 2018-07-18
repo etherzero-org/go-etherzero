@@ -31,7 +31,6 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/eth/fetcher"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -687,14 +686,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
-	case msg.Code == MasternodePingMsg:
-		var ping = &masternode.PingMsg{}
-		msg.Decode(ping)
-		err := pm.mm.ProcessPingMsg(ping)
-		if err != nil {
-			log.Error("ProcessPingMsg", "error", err)
-			break
-		}
+	//case msg.Code == MasternodePingMsg:
+	//	var ping = &masternode.PingMsg{}
+	//	msg.Decode(ping)
+	//	err := pm.mm.ProcessPingMsg(ping)
+	//	if err != nil {
+	//		log.Error("ProcessPingMsg", "error", err)
+	//		break
+	//	}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}

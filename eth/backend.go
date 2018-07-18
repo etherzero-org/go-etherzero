@@ -493,12 +493,12 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 //}
 
 func (s *Ethereum) startMasternode(srvr *p2p.Server) {
-	t := time.NewTimer(10 * time.Second)
+	t := time.NewTimer(5 * time.Second)
 	for {
 		select {
 		case <-t.C:
 			if s.Downloader().Synchronising() {
-				t.Reset(10 * time.Second)
+				t.Reset(5 * time.Second)
 				break
 			}
 			s.masternodeManager.Start(srvr, s.protocolManager.peers)

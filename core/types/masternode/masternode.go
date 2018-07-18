@@ -53,10 +53,10 @@ var (
 	errNotRegistered     = errors.New("masternode is not registered")
 )
 
-type PingMsg struct {
-	Time uint64
-	Sig  []byte
-}
+//type PingMsg struct {
+//	Time uint64
+//	Sig  []byte
+//}
 
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()

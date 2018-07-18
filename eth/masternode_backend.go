@@ -29,7 +29,6 @@ import (
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
-	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
@@ -45,11 +44,9 @@ type MasternodeManager struct {
 
 	devoteProtocol *types.DevoteProtocol
 	active         *masternode.ActiveMasternode
-	masternodes    *masternode.MasternodeSet
 	mu             sync.Mutex
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh    chan *peer
-	peers        *peerSet
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
@@ -66,7 +63,6 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		masternodes:    nil,
 		devoteProtocol: dp,
 		blockchain:     blockchain,
 		beats:          make(map[common.Hash]time.Time),
@@ -85,16 +81,9 @@ func (self *MasternodeManager) Clear() {
 
 func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet) {
 	self.srvr = srvr
-	self.peers = peers
 	log.Trace("MasternodeManqager start ")
-	mns, err := masternode.NewMasternodeSet(self.contract)
-	if err != nil {
-		log.Error("masternode.NewMasternodeSet", "error", err)
-	}
-	self.masternodes = mns
-	self.active = masternode.NewActiveMasternode(srvr, mns)
+	self.active = masternode.NewActiveMasternode(srvr)
 	go self.masternodeLoop()
-
 }
 
 func (self *MasternodeManager) Stop() {
@@ -102,13 +91,20 @@ func (self *MasternodeManager) Stop() {
 }
 
 func (mm *MasternodeManager) masternodeLoop() {
-	mm.updateActiveMasternode()
-	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
-		fmt.Println("masternode check true")
+	var id [8]byte
+	copy(id[:], mm.srvr.Self().ID[0:8])
+	has, err := mm.contract.Has(nil, id)
+	if err != nil {
+		log.Error("contract.Has", "error", err)
+	}
+	if has {
+		fmt.Println("### It's already a masternode! ")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
-	} else if mm.srvr.Config.IsMasternode {
+		mm.updateActiveMasternode(true)
+	}else if mm.srvr.IsMasternode {
+		mm.updateActiveMasternode(false)
 		data := "2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
-		fmt.Println("Masternode transaction data:", data)
+		fmt.Printf("### Masternode Transaction Data: %s\n", data)
 	}
 
 	joinCh := make(chan *contract.ContractJoin, 32)
@@ -125,7 +121,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
-	//check := time.NewTimer(masternode.MASTERNODE_CHECK_INTERVAL)
+	defer ping.Stop()
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
@@ -133,29 +129,15 @@ func (mm *MasternodeManager) masternodeLoop() {
 	for {
 		select {
 		case join := <-joinCh:
-			node, err := mm.masternodes.NodeJoin(join.Id)
-			if err == nil {
-				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
-					mm.updateActiveMasternode()
-					// TODO
-					mm.active.Account = node.Account
-				}
-				mm.masternodes.Show()
+			if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
+				atomic.StoreUint32(&mm.IsMasternode, 1)
+				mm.updateActiveMasternode(true)
 			}
-
 		case quit := <-quitCh:
-			nodeid := common.Bytes2Hex(quit.Id[:])
-			fmt.Println("quit", nodeid)
-			node := mm.masternodes.Node(nodeid)
-			if node != nil {
-				mm.masternodes.NodeQuit(quit.Id)
-				if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
-					mm.updateActiveMasternode()
-				}
+			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
+				atomic.StoreUint32(&mm.IsMasternode, 0)
+				mm.updateActiveMasternode(false)
 			}
-
-			mm.masternodes.Show()
-
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()
 			fmt.Println("eventJoin err", err.Error())
@@ -169,7 +151,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				break
 			}
 
-			address := crypto.PubkeyToAddress(mm.active.PrivateKey.PublicKey)
+			address := mm.active.NodeAccount
 			stateDB, _ := mm.blockchain.State()
 			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
 				fmt.Println("Failed to deposit 0.01 etz to ", address.String())
@@ -199,55 +181,45 @@ func (mm *MasternodeManager) masternodeLoop() {
 			}
 			fmt.Println("Send ping message ...")
 
-		//case <-check.C:
-		//	mm.masternodes.Check()
-		//	check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
 		}
 	}
 }
 
-func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
-	//if mm.masternodes == nil {
-	//	return nil
-	//}
-	//var b [8]byte
-	//binary.BigEndian.PutUint64(b[:], pm.Time)
-	//key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
-	//if err != nil || len(key) != 65 {
-	//	return err
-	//}
-	//id := fmt.Sprintf("%x", key[1:9])
-	//node := mm.masternodes.Node(id)
-	//if node == nil {
-	//	return fmt.Errorf("error id %s", id)
-	//}
-	//
-	//if node.LastPingTime > pm.Time {
-	//	return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
-	//}
-	//
-	//// mark the ping message
-	//for _, v := range mm.peers.peers { //
-	//	v.markPingMsg(id, pm.Time)
-	//}
-	//mm.masternodes.RecvPingMsg(id, pm.Time)
-	return nil
-}
+//func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
+//	if mm.masternodes == nil {
+//		return nil
+//	}
+//	var b [8]byte
+//	binary.BigEndian.PutUint64(b[:], pm.Time)
+//	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
+//	if err != nil || len(key) != 65 {
+//		return err
+//	}
+//	id := fmt.Sprintf("%x", key[1:9])
+//	node := mm.masternodes.Node(id)
+//	if node == nil {
+//		return fmt.Errorf("error id %s", id)
+//	}
+//
+//	if node.LastPingTime > pm.Time {
+//		return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
+//	}
+//
+//	// mark the ping message
+//	for _, v := range mm.peers.peers { //
+//		v.markPingMsg(id, pm.Time)
+//	}
+//	mm.masternodes.RecvPingMsg(id, pm.Time)
+//	return nil
+//}
 
-func (mm *MasternodeManager) updateActiveMasternode() {
+func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
 	var state int
-
-	n := mm.masternodes.Node(mm.active.ID)
-	if n == nil {
-		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-		//} else if int(n.Node.TCP) != mm.active.Addr.Port {
-		//	log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
-		//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-		//} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
-		//	log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
-		//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else {
+	if isMasternode {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
+	} else {
+		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+
 	}
 	mm.active.SetState(state)
 }
