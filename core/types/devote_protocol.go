@@ -176,8 +176,6 @@ func (self *DevoteProtocol) GetWitnesses() ([]string, error) {
 
 // update counts in MinerRollingTrie for the miner of newBlock
 func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, witness string) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
 	currentMinerRollingTrie := self.MinerRollingTrie()
 	currentCycle := parentBlockTime / params.CycleInterval
 	currentCycleBytes := make([]byte, 8)
