@@ -155,13 +155,26 @@ func (self *MasternodeManager) Stop() {
 }
 
 func (mm *MasternodeManager) masternodeLoop() {
-	mm.updateActiveMasternode()
+	var id [8]byte
+	copy(id[:], mm.srvr.Self().ID[0:8])
+	has, err := mm.contract.Has(nil, id)
+	if err != nil {
+		log.Error("contract.Has", "error", err)
+	}
+	if has {
+		fmt.Println("### It's already a masternode! ")
+		atomic.StoreUint32(&mm.IsMasternode, 1)
+		mm.updateActiveMasternode(true)
+	}else{
+		mm.updateActiveMasternode(false)
+		data := "2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
+		fmt.Printf("### Masternode Transaction Data: %s\n", data)
+	}
+
 	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
 		fmt.Println("masternode check true")
-		atomic.StoreUint32(&mm.IsMasternode, 1)
 	} else if mm.srvr.Config.IsMasternode {
-		data := "2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
-		fmt.Println("Masternode transaction data:", data)
+
 	}
 
 	joinCh := make(chan *contract.ContractJoin, 32)
@@ -186,29 +199,16 @@ func (mm *MasternodeManager) masternodeLoop() {
 	for {
 		select {
 		case join := <-joinCh:
-			node, err := mm.masternodes.NodeJoin(join.Id)
-			if err == nil {
-				if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
-					mm.updateActiveMasternode()
-					// TODO
-					mm.active.Account = node.Account
-				}
-				mm.masternodes.Show()
+			if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
+				atomic.StoreUint32(&mm.IsMasternode, 1)
+				mm.updateActiveMasternode(true)
+				mm.active.Account = join.Addr
 			}
-
 		case quit := <-quitCh:
-			nodeid := common.Bytes2Hex(quit.Id[:])
-			fmt.Println("quit", nodeid)
-			node := mm.masternodes.Node(nodeid)
-			if node != nil {
-				mm.masternodes.NodeQuit(quit.Id)
-				if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
-					mm.updateActiveMasternode()
-				}
+			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
+				atomic.StoreUint32(&mm.IsMasternode, 0)
+				mm.updateActiveMasternode(false)
 			}
-
-			mm.masternodes.Show()
-
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()
 			fmt.Println("eventJoin err", err.Error())
@@ -252,9 +252,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 			}
 			fmt.Println("Send ping message ...")
 
-		//case <-check.C:
-		//	mm.masternodes.Check()
-		//	check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
 		case <-report.C:
 			for _, vote := range mm.votes {
 				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
@@ -294,20 +291,13 @@ func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
 	return nil
 }
 
-func (mm *MasternodeManager) updateActiveMasternode() {
+func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
 	var state int
-
-	n := mm.masternodes.Node(mm.active.ID)
-	if n == nil {
-		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-		//} else if int(n.Node.TCP) != mm.active.Addr.Port {
-		//	log.Error("updateActiveMasternode", "Port", n.Node.TCP, "active.Port", mm.active.Addr.Port)
-		//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-		//} else if !n.Node.IP.Equal(mm.active.Addr.IP) {
-		//	log.Error("updateActiveMasternode", "IP", n.Node.IP, "active.IP", mm.active.Addr.IP)
-		//	state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
-	} else {
+	if isMasternode {
 		state = masternode.ACTIVE_MASTERNODE_STARTED
+	} else {
+		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+
 	}
 	mm.active.SetState(state)
 }
