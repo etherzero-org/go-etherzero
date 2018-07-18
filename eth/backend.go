@@ -38,7 +38,6 @@ import (
 	"github.com/etherzero/go-etherzero/core/bloombits"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/eth/filters"
@@ -96,7 +95,6 @@ type Ethereum struct {
 	networkID         uint64
 	netRPCService     *ethapi.PublicNetAPI
 	masternodeManager *MasternodeManager
-	masternodes       *masternode.MasternodeSet
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -179,8 +177,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	contractBackend := NewContractBackend(eth)
 	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-
-	if eth.masternodeManager = NewMasternodeManager(devoteProtocol, eth.blockchain, contract); err != nil {
+	if eth.masternodeManager = NewMasternodeManager(devoteProtocol, eth.blockchain, contract, eth.txPool); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
@@ -270,7 +267,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 // APIs return the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) APIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.APIBackend, s.masternodes)
+	apis := ethapi.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)

@@ -204,8 +204,9 @@ func (b *EthAPIBackend) ProtocolVersion() int {
 }
 
 // Masternodes return masternode info
-func (b *EthAPIBackend) Masternodes() map[string]*masternode.Masternode {
-	return b.eth.masternodeManager.masternodes.AllNodes()
+func (b *EthAPIBackend) Masternodes() []string {
+	list, _ := b.eth.masternodeManager.MasternodeList(b.eth.blockchain.CurrentBlock().Number())
+	return list
 }
 
 // StartMasternode just call the start function of instantx

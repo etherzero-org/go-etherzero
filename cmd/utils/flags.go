@@ -56,7 +56,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 	"gopkg.in/urfave/cli.v1"
-	"net"
 )
 
 var (
@@ -532,10 +531,9 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
-	MasternodeIPFlag = cli.StringFlag{
-		Name:  "masternode.ip",
-		Usage: "Masternode public ip",
-		Value: "",
+	MasternodeFlag = cli.BoolFlag{
+		Name:  "masternode",
+		Usage: "Enable masternode",
 	}
 )
 
@@ -620,11 +618,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 }
 
 func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
-	if ip := ctx.GlobalString(MasternodeIPFlag.Name); len(ip) > 0 {
-		cfg.MasternodeAddr = net.TCPAddr{
-			IP:   net.ParseIP(ip),
-			Port: ctx.GlobalInt(ListenPortFlag.Name),
-		}
+	if ctx.GlobalIsSet(MasternodeFlag.Name) {
+		cfg.IsMasternode = true
 	}
 }
 

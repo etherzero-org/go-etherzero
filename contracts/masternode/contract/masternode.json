@@ -42,10 +42,6 @@
       {
         "name": "id2",
         "type": "bytes32"
-      },
-      {
-        "name": "misc",
-        "type": "bytes32"
       }
     ],
     "name": "register",
@@ -67,20 +63,6 @@
       {
         "name": "id",
         "type": "bytes8"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "governanceAddress",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
       }
     ],
     "payable": false,
@@ -120,10 +102,6 @@
         "type": "bytes32"
       },
       {
-        "name": "misc",
-        "type": "bytes32"
-      },
-      {
         "name": "preId",
         "type": "bytes8"
       },
@@ -138,6 +116,14 @@
       {
         "name": "account",
         "type": "address"
+      },
+      {
+        "name": "blockOnlineAcc",
+        "type": "uint256"
+      },
+      {
+        "name": "blockLastPing",
+        "type": "uint256"
       }
     ],
     "payable": false,
@@ -145,31 +131,31 @@
     "type": "function"
   },
   {
-    "constant": false,
-    "inputs": [
+    "constant": true,
+    "inputs": [],
+    "name": "etzMin",
+    "outputs": [
       {
-        "name": "addr",
-        "type": "address"
+        "name": "",
+        "type": "uint256"
       }
     ],
-    "name": "voteForGovernanceAddress",
-    "outputs": [],
     "payable": false,
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
-    "constant": false,
-    "inputs": [
+    "constant": true,
+    "inputs": [],
+    "name": "blockPingTimeout",
+    "outputs": [
       {
-        "name": "addr",
-        "type": "address"
+        "name": "",
+        "type": "uint256"
       }
     ],
-    "name": "createGovernanceAddressVote",
-    "outputs": [],
-    "payable": true,
-    "stateMutability": "payable",
+    "payable": false,
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -229,6 +215,28 @@
       }
     ],
     "name": "quit",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "id",
+        "type": "bytes8"
+      },
+      {
+        "indexed": false,
+        "name": "blockOnlineAcc",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "blockLastPing",
+        "type": "uint256"
+      }
+    ],
+    "name": "ping",
     "type": "event"
   }
 ]

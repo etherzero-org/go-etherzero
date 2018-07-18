@@ -29,6 +29,7 @@ import (
 	"github.com/etherzero/go-etherzero/crypto/secp256k1"
 	"github.com/etherzero/go-etherzero/log"
 	"golang.org/x/crypto/ripemd160"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -60,6 +61,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 	common.BytesToAddress([]byte{9}): &peeridrecover{},
+	common.BytesToAddress([]byte{11}): &ecrecoverByPublicKey{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -381,3 +383,23 @@ func (c *peeridrecover) Run(input []byte) ([]byte, error) {
 	}
 	return key[1:9], nil
 }
+
+type ecrecoverByPublicKey struct{}
+
+func (c *ecrecoverByPublicKey) RequiredGas(input []byte) uint64 {
+	return params.EcrecoverGas
+}
+
+func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
+	if len(input) < 64 {
+		return nil, nil
+	}
+	NodeID := discover.MustBytesID(input[0:64])
+	key, err := NodeID.Pubkey()
+	if err != nil {
+		return nil, nil
+	}
+	addr := crypto.PubkeyToAddress(*key)
+	return common.LeftPadBytes(addr[:], 32), nil
+}
+

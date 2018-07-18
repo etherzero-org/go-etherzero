@@ -32,7 +32,6 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -46,7 +45,7 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
 	// masternode control api
-	Masternodes() map[string]*masternode.Masternode // masternodes info
+	Masternodes() []string // masternodes info
 	StartMasternode() bool                          // start the masternode,hash ,srvr means two different parameters
 	StopMasternode() bool                           // stop the masternode,hash ,srvr means two different parameters
 	JoinMasternode(nodeid string) bool              // join nodeid from genesis block to witness
@@ -77,13 +76,13 @@ type Backend interface {
 	CurrentBlock() *types.Block
 }
 
-func GetAPIs(apiBackend Backend, ms *masternode.MasternodeSet) []rpc.API {
+func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(apiBackend, ms),
+			Service:   NewPublicEthereumAPI(apiBackend),
 			Public:    true,
 		}, {
 			Namespace: "eth",
