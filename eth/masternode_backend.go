@@ -29,7 +29,6 @@ import (
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
-	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
@@ -83,7 +82,7 @@ func (self *MasternodeManager) Clear() {
 func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet) {
 	self.srvr = srvr
 	log.Trace("MasternodeManqager start ")
-	self.active = masternode.NewActiveMasternode(srvr, self.contract)
+	self.active = masternode.NewActiveMasternode(srvr)
 	go self.masternodeLoop()
 }
 
@@ -102,16 +101,10 @@ func (mm *MasternodeManager) masternodeLoop() {
 		fmt.Println("### It's already a masternode! ")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
 		mm.updateActiveMasternode(true)
-	}else{
+	}else if mm.srvr.IsMasternode {
 		mm.updateActiveMasternode(false)
 		data := "2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
 		fmt.Printf("### Masternode Transaction Data: %s\n", data)
-	}
-
-	if mm.active.State() == masternode.ACTIVE_MASTERNODE_STARTED {
-		fmt.Println("masternode check true")
-	} else if mm.srvr.Config.IsMasternode {
-
 	}
 
 	joinCh := make(chan *contract.ContractJoin, 32)
@@ -128,7 +121,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
-	//check := time.NewTimer(masternode.MASTERNODE_CHECK_INTERVAL)
+	defer ping.Stop()
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
@@ -139,7 +132,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 			if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
 				atomic.StoreUint32(&mm.IsMasternode, 1)
 				mm.updateActiveMasternode(true)
-				mm.active.Account = join.Addr
 			}
 		case quit := <-quitCh:
 			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
@@ -159,7 +151,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				break
 			}
 
-			address := crypto.PubkeyToAddress(mm.active.PrivateKey.PublicKey)
+			address := mm.active.NodeAccount
 			stateDB, _ := mm.blockchain.State()
 			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
 				fmt.Println("Failed to deposit 0.01 etz to ", address.String())
