@@ -265,8 +265,14 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
+	number := params.CycleInterval / params.BlockInterval / 2
 
-	nodes, merr := d.masternodeListFn(parent.Number)
+	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(number)))
+	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
+		stableBlockNumber = big.NewInt(0)
+	}
+
+	nodes, merr := d.masternodeListFn(stableBlockNumber)
 	if merr != nil {
 		return nil, fmt.Errorf("get current masternodes err,err:%s", merr)
 	}
@@ -490,7 +496,7 @@ func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.mu.Lock()
 	d.signer = signer
 	d.signFn = signFn
-	log.Info("devote Authorize ","signer", signer)
+	log.Info("devote Authorize ", "signer", signer)
 	d.mu.Unlock()
 }
 
