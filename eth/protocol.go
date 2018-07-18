@@ -65,7 +65,6 @@ const (
 	ReceiptsMsg    = 0x10
 
 	// Protocol messages belonging to etz/64
-	NewVoteMsg        = 0x21
 	MasternodePingMsg = 0x22
 )
 

@@ -45,7 +45,6 @@ const (
 	MASTERNODE_PING_TIMEOUT   = 180 * time.Second
 	MASTERNODE_PING_INTERVAL  = 10 * time.Second
 	MASTERNODE_ONLINE_ENABLE  = 60 * time.Second
-	MASTERNODE_VOTING_ENABLE  = 10 * time.Minute
 )
 
 var (
