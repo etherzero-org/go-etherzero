@@ -58,7 +58,6 @@ type MasternodeManager struct {
 	blockchain   *core.BlockChain
 	scope        event.SubscriptionScope
 
-	pingFeed     event.Feed
 	currentCycle uint64        // Current vote of the block chain
 	Lifetime     time.Duration // Maximum amount of time vote are queued
 
@@ -314,14 +313,4 @@ func (mm *MasternodeManager) updateActiveMasternode() {
 
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
-}
-
-func (self *MasternodeManager) PostPingEvent(pingMsg *masternode.PingMsg) {
-	self.pingFeed.Send(core.PingEvent{pingMsg})
-}
-
-// SubscribePingEvent registers a subscription of PingEvent and
-// starts sending event to the given channel.
-func (self *MasternodeManager) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
-	return self.scope.Track(self.pingFeed.Subscribe(ch))
 }
