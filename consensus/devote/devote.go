@@ -51,10 +51,12 @@ const (
 )
 
 var (
-	etherzeroBlockReward = big.NewInt(9e+18) // Block reward in wei for successfully mining a block
-	timeOfFirstBlock     = uint64(0)
-	confirmedBlockHead   = []byte("confirmed-block-head")
-	uncleHash            = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+	etherzeroBlockReward = big.NewInt(9e+18) // Block reward in wei to master node account when successfully mining a block
+	rewardToCommunity    = big.NewInt(1e+18) // Block reward in wei to community account when successfully mining a block
+
+	timeOfFirstBlock   = uint64(0)
+	confirmedBlockHead = []byte("confirmed-block-head")
+	uncleHash          = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 )
 
 var (
@@ -90,8 +92,6 @@ var (
 type SignerFn func(string, []byte) ([]byte, error)
 
 type MasternodeListFn func(number *big.Int) ([]string, error)
-
-type PostVoteFn func(vote *types.Vote)
 
 // NOTE: sigHash was copy from clique
 // sigHash returns the hash which is used as input for the proof-of-authority
@@ -237,9 +237,13 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
 
-	// Accumulate the rewards for the miner and any included uncles
+	// Accumulate the rewards for the masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward, header.Number)
+
+	//  Accumulate the rewards to community account
+	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
+	state.AddBalance(params.GovernanceContractAddress, rewardForCommunity, header.Number)
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -266,8 +270,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if merr != nil {
 		return nil, fmt.Errorf("get current masternodes err,err:%s", merr)
 	}
-	fmt.Printf("&&&&&&&&&  finalize get masternode list parent.Number%d  &&&&&&&&&&&&&&&& \n",parent.Number.Uint64())
-	fmt.Printf("&&&&&&&&&  finalize get masternode list :%v\n",nodes)
+	fmt.Printf("&&&&&&&&&  finalize get masternode list parent.Number%d  &&&&&&&&&&&&&&&& \n", parent.Number.Uint64())
+	fmt.Printf("&&&&&&&&&  finalize get masternode list :%v\n", nodes)
 	genesis := chain.GetHeaderByNumber(0)
 	first := chain.GetHeaderByNumber(1)
 	err := controller.election(genesis, first, parent, nodes)

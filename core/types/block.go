@@ -184,7 +184,6 @@ type extblock struct {
 	Header *Header
 	Txs    []*Transaction
 	Uncles []*Header
-	Votes  []*Vote
 }
 
 // [deprecated by eth/63]
@@ -194,7 +193,6 @@ type storageblock struct {
 	Txs    []*Transaction
 	Uncles []*Header
 	TD     *big.Int
-	Votes  []*Vote
 }
 
 // NewBlock creates a new block. The input data is copied,

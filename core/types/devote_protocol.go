@@ -177,12 +177,6 @@ func (self *DevoteProtocol) GetWitnesses() ([]string, error) {
 	return witnesses, nil
 }
 
-func (self *DevoteProtocol) ApplyVote(votes []*Vote) error {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	return nil
-}
-
 // update counts in MinerRollingTrie for the miner of newBlock
 func (self *DevoteProtocol) Rolling(parentBlockTime, currentBlockTime uint64, witness string) {
 	self.mu.Lock()

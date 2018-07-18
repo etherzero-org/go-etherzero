@@ -81,7 +81,6 @@ type Work struct {
 	header    *types.Header
 	txs       []*types.Transaction
 	receipts  []*types.Receipt
-	votes     []*types.Vote
 	createdAt time.Time
 
 	devoteProtocol *types.DevoteProtocol

@@ -51,7 +51,6 @@ var ErrUnknownMasternode = errors.New("unknown masternode")
 type ActiveMasternode struct {
 	ID          string
 	NodeID      discover.NodeID
-	Account     common.Address
 	NodeAccount common.Address
 	PrivateKey  *ecdsa.PrivateKey
 	activeState int
@@ -61,7 +60,7 @@ type ActiveMasternode struct {
 
 }
 
-func NewActiveMasternode(srvr *p2p.Server, mns *MasternodeSet) *ActiveMasternode {
+func NewActiveMasternode(srvr *p2p.Server) *ActiveMasternode {
 	nodeId := srvr.Self().ID
 	id := GetMasternodeID(nodeId)
 	am := &ActiveMasternode{
@@ -70,9 +69,6 @@ func NewActiveMasternode(srvr *p2p.Server, mns *MasternodeSet) *ActiveMasternode
 		activeState: ACTIVE_MASTERNODE_INITIAL,
 		PrivateKey:  srvr.Config.PrivateKey,
 		NodeAccount: crypto.PubkeyToAddress(srvr.Config.PrivateKey.PublicKey),
-	}
-	if n := mns.Node(id); n != nil {
-		am.Account = n.Account
 	}
 	return am
 }

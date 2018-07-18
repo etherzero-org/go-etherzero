@@ -18,7 +18,6 @@ package eth
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -42,23 +41,19 @@ var (
 )
 
 type MasternodeManager struct {
-	votes map[common.Hash]*types.Vote // vote hash -> vote
 	beats map[common.Hash]time.Time   // Last heartbeat from each known vote
 
 	devoteProtocol *types.DevoteProtocol
 	active         *masternode.ActiveMasternode
-	masternodes    *masternode.MasternodeSet
 	mu             sync.Mutex
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh    chan *peer
-	peers        *peerSet
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
 	blockchain   *core.BlockChain
 	scope        event.SubscriptionScope
 
-	pingFeed     event.Feed
 	currentCycle uint64        // Current vote of the block chain
 	Lifetime     time.Duration // Maximum amount of time vote are queued
 
@@ -69,10 +64,8 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		masternodes:    nil,
 		devoteProtocol: dp,
 		blockchain:     blockchain,
-		votes:          make(map[common.Hash]*types.Vote),
 		beats:          make(map[common.Hash]time.Time),
 		Lifetime:       30 * time.Second,
 		contract:       contract,
@@ -81,73 +74,17 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 	return manager
 }
 
-func (self *MasternodeManager) Process(vote *types.Vote) error {
-	h := vote.NosigHash()
-	masternode := self.masternodes.Node(vote.Masternode)
-	if masternode == nil {
-		log.Error("masternode not found", "masternodeId", vote.Masternode)
-		return errors.New("masternode not found masternodeId" + vote.Masternode)
-	}
-	pubkey, err := masternode.NodeID.Pubkey()
-	if err != nil {
-		log.Error("masternode pubkey not found ", "err", err)
-		return err
-	}
-
-	if !vote.Verify(h[:], vote.Sign, pubkey) {
-		return errors.New("vote valid failed")
-	}
-	self.Add(vote)
-	return nil
-}
-
 func (self *MasternodeManager) Clear() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
 }
-func (self *MasternodeManager) Add(vote *types.Vote) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	if self.votes[vote.Hash()] == nil {
-		self.votes[vote.Hash()] = vote
-		self.beats[vote.Hash()] = time.Now()
-	}
-}
-
-func (self *MasternodeManager) RemoveVote(vote *types.Vote) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	if self.votes[vote.Hash()] != nil {
-		delete(self.votes, vote.Hash())
-		delete(self.beats, vote.Hash())
-	}
-}
-func (self *MasternodeManager) Votes() ([]*types.Vote, error) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	var votes []*types.Vote
-
-	for _, vote := range self.votes {
-		votes = append(votes, vote)
-	}
-	return votes, nil
-}
 
 func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet) {
 	self.srvr = srvr
-	self.peers = peers
 	log.Trace("MasternodeManqager start ")
-	mns, err := masternode.NewMasternodeSet(self.contract)
-	if err != nil {
-		log.Error("masternode.NewMasternodeSet", "error", err)
-	}
-	self.masternodes = mns
-	self.active = masternode.NewActiveMasternode(srvr, mns)
+	self.active = masternode.NewActiveMasternode(srvr, self.contract)
 	go self.masternodeLoop()
-
 }
 
 func (self *MasternodeManager) Stop() {
@@ -252,13 +189,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 			}
 			fmt.Println("Send ping message ...")
 
-		case <-report.C:
-			for _, vote := range mm.votes {
-				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
-					log.Debug("clean vote pool", "hash", vote.Hash())
-					mm.RemoveVote(vote)
-				}
-			}
 		}
 	}
 }
@@ -304,14 +234,4 @@ func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
 
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
-}
-
-func (self *MasternodeManager) PostPingEvent(pingMsg *masternode.PingMsg) {
-	self.pingFeed.Send(core.PingEvent{pingMsg})
-}
-
-// SubscribePingEvent registers a subscription of PingEvent and
-// starts sending event to the given channel.
-func (self *MasternodeManager) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
-	return self.scope.Track(self.pingFeed.Subscribe(ch))
 }
