@@ -182,8 +182,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
-	voting := time.NewTicker(masternode.MASTERNODE_VOTING_ENABLE)
-	defer voting.Stop()
 
 	for {
 		select {

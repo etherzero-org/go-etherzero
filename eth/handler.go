@@ -90,9 +90,6 @@ type ProtocolManager struct {
 	eventMux *event.TypeMux
 	txsCh    chan core.NewTxsEvent
 	txsSub   event.Subscription
-	voteCh   chan core.NewVoteEvent
-	voteSub  event.Subscription
-
 	pingCh  chan core.PingEvent //ping message vote
 	pingSub event.Subscription  // ping message subscription
 
@@ -240,7 +237,6 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	pm.voteSub.Unsubscribe()       // quits voteBroadcastLoop
 	pm.pingSub.Unsubscribe()       // quits broadcastPingLoop
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -768,16 +764,6 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	}
 }
 
-// BroadcastVote will propagate a Vote to all Masternodes which are not known to
-// already have the given Vote
-func (self *ProtocolManager) BroadcastVote(hash common.Hash, vote *types.Vote) {
-	peers := self.peers.PeersWithoutVote(hash)
-	for _, peer := range peers {
-		peer.SendNewVote(vote)
-	}
-	log.Trace("Broadcast vote", "hash", hash.String(), "recipients", len(peers))
-}
-
 // Mined broadcast loop
 func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
@@ -798,18 +784,6 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 
 			// Err() channel will be closed when unsubscribing.
 		case <-pm.txsSub.Err():
-			return
-		}
-	}
-}
-
-func (self *ProtocolManager) voteBroadcastLoop() {
-	for {
-		select {
-		case event := <-self.voteCh:
-			self.BroadcastVote(event.Vote.Hash(), event.Vote)
-
-		case <-self.voteSub.Err():
 			return
 		}
 	}

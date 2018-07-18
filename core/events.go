@@ -28,9 +28,6 @@ type TxPreEvent struct{ Tx *types.Transaction }
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.
 type NewTxsEvent struct{ Txs []*types.Transaction }
 
-// NewVoteEvent is posted when a vote enters the Masternode vote pool.
-type NewVoteEvent struct{ Vote *types.Vote }
-
 // PingEvent is posted when a ping message is sent.
 type PingEvent struct{ Ping *masternode.PingMsg }
 

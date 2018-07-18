@@ -202,16 +202,6 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
-// MarkVote marks a vote as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (p *peer) MarkVote(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known vote hash
-	for p.knownVotes.Size() >= maxKnowVotes {
-		p.knownVotes.Pop()
-	}
-	p.knownVotes.Add(hash)
-}
-
 func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
 	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
 }
@@ -223,11 +213,6 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 		p.knownTxs.Add(tx.Hash())
 	}
 	return p2p.Send(p.rw, TxMsg, txs)
-}
-
-// SendNewVote propagates an vote to a remote masternode.
-func (p *peer) SendNewVote(vote *types.Vote) error {
-	return p2p.Send(p.rw, NewVoteMsg, vote)
 }
 
 // AsyncSendTransactions queues list of transactions propagation to a remote
