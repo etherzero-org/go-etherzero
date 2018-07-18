@@ -25,7 +25,6 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/rlp"
 	"gopkg.in/fatih/set.v0"
@@ -95,25 +94,20 @@ type peer struct {
 	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
 	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
 	term        chan struct{}             // Termination channel to stop the broadcaster
-
-	knownVotes   *set.Set          // Set of vote hashes known to be known by this peer
-	knownPingMsg map[string]uint64 // key: nodeid value time
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
-		Peer:         p,
-		rw:           rw,
-		version:      version,
-		id:           fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownTxs:     set.New(),
-		knownBlocks:  set.New(),
-		knownVotes:   set.New(),
-		queuedTxs:    make(chan []*types.Transaction, maxQueuedTxs),
-		queuedProps:  make(chan *propEvent, maxQueuedProps),
-		queuedAnns:   make(chan *types.Block, maxQueuedAnns),
-		knownPingMsg: make(map[string]uint64),
-		term:         make(chan struct{}),
+		Peer:        p,
+		rw:          rw,
+		version:     version,
+		id:          fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		knownTxs:    set.New(),
+		knownBlocks: set.New(),
+		queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps: make(chan *propEvent, maxQueuedProps),
+		queuedAnns:  make(chan *types.Block, maxQueuedAnns),
+		term:        make(chan struct{}),
 	}
 }
 
@@ -202,9 +196,9 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
-func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
-	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
-}
+//func (p *peer) SendMasternodePing(pingMsg *masternode.PingMsg) error {
+//	return p2p.Send(p.rw, MasternodePingMsg, pingMsg)
+//}
 
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
@@ -505,21 +499,6 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 	return list
 }
 
-// PeersWithoutVote retrieves a list of Masternodes that do not have a given Winner Vote
-// in their set of knows hashes.
-func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownVotes.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
 // BestPeer retrieves the known peer with the currently highest total difficulty.
 func (ps *peerSet) BestPeer() *peer {
 	ps.lock.RLock()
@@ -547,37 +526,4 @@ func (ps *peerSet) Close() {
 		p.Disconnect(p2p.DiscQuitting)
 	}
 	ps.closed = true
-}
-
-// mark receive a ping message
-func (p *peer) markPingMsg(id string, cur uint64) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-	p.knownPingMsg[id] = cur
-}
-
-func (p *peer) deletePingMsg(id string) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-	delete(p.knownPingMsg, id)
-}
-
-// mark receive a ping message
-func (ps *peerSet) markPingWithoutProcess(id string, cur uint64) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		v, ok := p.knownPingMsg[id]
-		if ok {
-			if time.Duration(cur-v) > masternode.MASTERNODE_PING_TIMEOUT {
-				p.deletePingMsg(id)
-			}
-			continue
-		}
-		list = append(list, p)
-	}
-	fmt.Printf("mark ping message list %v\n", list)
-	return list
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/eth/fetcher"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -90,9 +89,6 @@ type ProtocolManager struct {
 	eventMux *event.TypeMux
 	txsCh    chan core.NewTxsEvent
 	txsSub   event.Subscription
-	pingCh  chan core.PingEvent //ping message vote
-	pingSub event.Subscription  // ping message subscription
-
 	minedBlockSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
@@ -222,11 +218,6 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
-	// broadcast ping message
-	pm.pingCh = make(chan core.PingEvent, pingSize)
-	pm.pingSub = pm.mm.SubscribePingEvent(pm.pingCh)
-	go pm.broadcastPingLoop()
-
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
@@ -237,7 +228,6 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	pm.pingSub.Unsubscribe()       // quits broadcastPingLoop
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
 	pm.noMorePeers <- struct{}{}
@@ -696,14 +686,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
-	case msg.Code == MasternodePingMsg:
-		var ping = &masternode.PingMsg{}
-		msg.Decode(ping)
-		err := pm.mm.ProcessPingMsg(ping)
-		if err != nil {
-			log.Error("ProcessPingMsg", "error", err)
-			break
-		}
+	//case msg.Code == MasternodePingMsg:
+	//	var ping = &masternode.PingMsg{}
+	//	msg.Decode(ping)
+	//	err := pm.mm.ProcessPingMsg(ping)
+	//	if err != nil {
+	//		log.Error("ProcessPingMsg", "error", err)
+	//		break
+	//	}
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -782,26 +772,6 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 
 			// Err() channel will be closed when unsubscribing.
 		case <-pm.txsSub.Err():
-			return
-		}
-	}
-}
-
-// broadcastPingMsg,
-func (self *ProtocolManager) broadcastPingLoop() {
-	for {
-		select {
-		case msg := <-self.pingCh:
-			peers := self.peers.markPingWithoutProcess(self.mm.active.ID, msg.Ping.Time)
-			for _, peer := range peers {
-				fmt.Printf("broadcastPingMsg to peer %v\n ", peer.id)
-				if err := peer.SendMasternodePing(msg.Ping); err != nil {
-					log.Error("SendMasternodePing ", "error", err)
-				}
-			}
-
-		case err := <-self.pingSub.Err():
-			log.Error("pingsub error ", err)
 			return
 		}
 	}
