@@ -105,9 +105,7 @@ func (d *DevoteProtocol) FromAtomic(dpa *DevoteProtocolAtomic) error {
 type DevoteProtocolAtomic struct {
 	mu               sync.Mutex
 	CycleHash        common.Hash `json:"cycleRoot"         gencodec:"required"`
-	MasternodeHash   common.Hash `json:"masternodeRoot"    gencodec:"required"`
 	MinerRollingHash common.Hash `json:"minerRollingRoot"  gencodec:"required"`
-	VoteCntHash      common.Hash `json:"voteCntRoot"       gencodec:"required"`
 }
 
 func (d *DevoteProtocol) CycleTrie() *trie.Trie        { return d.cycleTrie }
@@ -151,7 +149,6 @@ func (p *DevoteProtocolAtomic) Root() (h common.Hash) {
 
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, p.CycleHash)
-	rlp.Encode(hw, p.MasternodeHash)
 	rlp.Encode(hw, p.MinerRollingHash)
 	hw.Sum(h[:0])
 	return h

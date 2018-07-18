@@ -490,7 +490,7 @@ func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.mu.Lock()
 	d.signer = signer
 	d.signFn = signFn
-	fmt.Printf("devote Authorize signer account: %x\n", signer)
+	log.Info("devote Authorize ","signer", signer)
 	d.mu.Unlock()
 }
 
