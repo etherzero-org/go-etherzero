@@ -18,7 +18,6 @@ package eth
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -42,7 +41,6 @@ var (
 )
 
 type MasternodeManager struct {
-	votes map[common.Hash]*types.Vote // vote hash -> vote
 	beats map[common.Hash]time.Time   // Last heartbeat from each known vote
 
 	devoteProtocol *types.DevoteProtocol
@@ -72,7 +70,6 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 		masternodes:    nil,
 		devoteProtocol: dp,
 		blockchain:     blockchain,
-		votes:          make(map[common.Hash]*types.Vote),
 		beats:          make(map[common.Hash]time.Time),
 		Lifetime:       30 * time.Second,
 		contract:       contract,
@@ -81,59 +78,10 @@ func NewMasternodeManager(dp *types.DevoteProtocol, blockchain *core.BlockChain,
 	return manager
 }
 
-func (self *MasternodeManager) Process(vote *types.Vote) error {
-	h := vote.NosigHash()
-	masternode := self.masternodes.Node(vote.Masternode)
-	if masternode == nil {
-		log.Error("masternode not found", "masternodeId", vote.Masternode)
-		return errors.New("masternode not found masternodeId" + vote.Masternode)
-	}
-	pubkey, err := masternode.NodeID.Pubkey()
-	if err != nil {
-		log.Error("masternode pubkey not found ", "err", err)
-		return err
-	}
-
-	if !vote.Verify(h[:], vote.Sign, pubkey) {
-		return errors.New("vote valid failed")
-	}
-	self.Add(vote)
-	return nil
-}
-
 func (self *MasternodeManager) Clear() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-}
-func (self *MasternodeManager) Add(vote *types.Vote) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	if self.votes[vote.Hash()] == nil {
-		self.votes[vote.Hash()] = vote
-		self.beats[vote.Hash()] = time.Now()
-	}
-}
-
-func (self *MasternodeManager) RemoveVote(vote *types.Vote) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	if self.votes[vote.Hash()] != nil {
-		delete(self.votes, vote.Hash())
-		delete(self.beats, vote.Hash())
-	}
-}
-func (self *MasternodeManager) Votes() ([]*types.Vote, error) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	var votes []*types.Vote
-
-	for _, vote := range self.votes {
-		votes = append(votes, vote)
-	}
-	return votes, nil
 }
 
 func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet) {
@@ -255,13 +203,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 		//case <-check.C:
 		//	mm.masternodes.Check()
 		//	check.Reset(masternode.MASTERNODE_CHECK_INTERVAL)
-		case <-report.C:
-			for _, vote := range mm.votes {
-				if time.Since(mm.beats[vote.Hash()]) > mm.Lifetime {
-					log.Debug("clean vote pool", "hash", vote.Hash())
-					mm.RemoveVote(vote)
-				}
-			}
 		}
 	}
 }

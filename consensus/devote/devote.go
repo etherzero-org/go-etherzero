@@ -91,8 +91,6 @@ type SignerFn func(string, []byte) ([]byte, error)
 
 type MasternodeListFn func(number *big.Int) ([]string, error)
 
-type PostVoteFn func(vote *types.Vote)
-
 // NOTE: sigHash was copy from clique
 // sigHash returns the hash which is used as input for the proof-of-authority
 // signing. It is the hash of the entire header apart from the 65 byte signature

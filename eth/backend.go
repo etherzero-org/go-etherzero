@@ -442,8 +442,6 @@ func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
 func (s *Ethereum) MastenrodeManager() *MasternodeManager { return s.masternodeManager }
-func (s *Ethereum) Votes() ([]*types.Vote, error)         { return s.masternodeManager.Votes() }
-
 func (s *Ethereum) DevoteProtocol() *types.DevoteProtocol { return s.masternodeManager.devoteProtocol }
 
 // Protocols implements node.Service, returning all the currently configured
