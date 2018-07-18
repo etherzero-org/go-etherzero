@@ -53,7 +53,7 @@ const (
 // PublicEthereumAPI provides an API to access Ethereum related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
-	b  Backend
+	b Backend
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
@@ -264,7 +264,6 @@ func (s *PrivateAccountAPI) StartMasternode() bool {
 func (s *PrivateAccountAPI) StopMasternode() bool {
 	return s.b.StopMasternode()
 }
-
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
@@ -889,7 +888,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-
+	fields["witness"] = b.Witness()
 	return fields, nil
 }
 
