@@ -40,7 +40,7 @@ var (
 )
 
 type MasternodeManager struct {
-	beats map[common.Hash]time.Time   // Last heartbeat from each known vote
+	beats map[common.Hash]time.Time // Last heartbeat from each known vote
 
 	devoteProtocol *types.DevoteProtocol
 	active         *masternode.ActiveMasternode
@@ -98,12 +98,12 @@ func (mm *MasternodeManager) masternodeLoop() {
 		log.Error("contract.Has", "error", err)
 	}
 	if has {
-		fmt.Println("### It's already a masternode! ")
+		fmt.Println("### It's already been a masternode! ")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
 		mm.updateActiveMasternode(true)
-	}else if mm.srvr.IsMasternode {
+	} else if mm.srvr.IsMasternode {
 		mm.updateActiveMasternode(false)
-		data := "2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
+		data := "0x2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
 		fmt.Printf("### Masternode Transaction Data: %s\n", data)
 	}
 
