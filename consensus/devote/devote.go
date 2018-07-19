@@ -265,7 +265,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
-	number := params.CycleInterval / params.BlockInterval / 2
+	number := maxWitnessSize
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(number)))
 	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
 		stableBlockNumber = big.NewInt(0)
