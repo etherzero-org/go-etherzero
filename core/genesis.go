@@ -429,6 +429,8 @@ func DefaultGenesisBlock() *Genesis {
 	alloc[common.HexToAddress("0x24c12a78b6e7821bc938D8b4755eED26AA3fb363")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 	alloc[common.HexToAddress("0x5Eb901179eB89024F607722B45f5aD4CbdeF458F")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 
+	alloc[common.HexToAddress("0xb108620d9b0e94757ec4db4e6ea5895a3a27fe56")] = GenesisAccount{Balance: big.NewInt(1234)}
+
 	return &Genesis{
 		Config:     params.DevoteChainConfig,
 		Nonce:      66,
@@ -504,10 +506,11 @@ func decodePrealloc(data string) GenesisAlloc {
 	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
 		panic(err)
 	}
+
 	ga := make(GenesisAlloc, len(p))
-	//for _, account := range p {
-	//	ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
-	//}
+	for _, account := range p {
+		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
+	}
 	return ga
 }
 
