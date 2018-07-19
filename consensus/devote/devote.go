@@ -274,7 +274,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if merr != nil {
 		return nil, fmt.Errorf("get current masternodes err,err:%s", merr)
 	}
-	log.Info("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", nodes)
+	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", nodes)
 	genesis := chain.GetHeaderByNumber(0)
 	first := chain.GetHeaderByNumber(1)
 	err := controller.election(genesis, first, parent, nodes)
@@ -282,7 +282,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
 	//miner Rolling
-	log.Info("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
+	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
 	//devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
