@@ -378,6 +378,7 @@ func DefaultGenesisBlock() *Genesis {
 	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
 		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
 	}
+
 	alloc[common.HexToAddress("0x281A16dbBE7810eDc892DD365eE377CC0Fee9AC9")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 	alloc[common.HexToAddress("0x5a5a12E5AAAD081367301E49d429Eee37EC68B9E")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 	alloc[common.HexToAddress("0x91e51bcb44C9FF0F41d05560936e369027A6942f")] = GenesisAccount{Balance: big.NewInt(1e+16)}
@@ -399,37 +400,6 @@ func DefaultGenesisBlock() *Genesis {
 	alloc[common.HexToAddress("0xbffA822C3D4dE45d82c5dC3db82521c8eeE48048")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 	alloc[common.HexToAddress("0x03F3C1F292c4cD64625D6Ba69529973639D848Cd")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 	alloc[common.HexToAddress("0x0797a068b3f65304104a61E1900e617952E95eCA")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x1a0FB32c69Eba29787222c8BcEd6eB34400c292F")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xbC8bc5f5174b0ef35dCeEd2580adc55d60293A12")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x9685E1FC92B4e2F3CF0aa3F60d452f24Ee3183Ea")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x660ce4453A76F9ddBAaAfbFBC14ABdF5F649d809")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x1d70E279Ec63bB9337595322951A7ffB00F5c6F5")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x84e88AEeAb736197A307Dc77BF39603f46Ecf057")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x0E3E428a03De1C2b1fC323508184677c59c7b0f4")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x9aBa5f9B87f9A9827954a625556F179b70B0ec3e")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x2bBeF61CDe202867db3E9791Ca5145C248671097")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x8C4046188138bc3734010AA673C5642FB534ACA1")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xB7A5b7a0f02f0474484A7FE7DfBccb194c4f57d9")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xb2D44C62C4A6739a42852860D31209BE296D7f61")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x6a16386279970EB96f6ed7e89fc38247f4f16e9c")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x6D1c63063CE29f05D3945f1ae6bFC90852BAeA60")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x23ABd26B04412615b2027214f80e2f31375604DF")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xe9876163BbfecA72501e2B49DcEff65156Ed8c5D")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x9DAAa6F39B6Bd2e88aD35a638422654Dbb1A3aEb")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x9C86eaf255ce9aAAFaA3fD7609D9d336c9fFcdB3")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xee189d07dA1e94A13426C6D96860B22F4CaC6815")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x10057cE9f3b1f900F19f45e519fb6515C39E4310")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xd7d49497DC178e0DB9d391cc5D768156654b7685")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xeD0E228f73a7fca0AcC9b5088BACDdd4eb3323Ca")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x1799aE7E065eC6A46a88b70aB36Bb7ee8ECE1aa3")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xbA9395A257886d0e98D9D0D037Cc87890Eb37634")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x35F3850FA1CeAa07984CD7F248e60C8765DEB27B")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x89e1cb7FA19d75a90836d630581102E3f0F05309")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x953274861F253298A9bf2381d8B556ce09fBfFdd")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x24c12a78b6e7821bc938D8b4755eED26AA3fb363")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x5Eb901179eB89024F607722B45f5aD4CbdeF458F")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-
-	alloc[common.HexToAddress("0xb108620d9b0e94757ec4db4e6ea5895a3a27fe56")] = GenesisAccount{Balance: big.NewInt(1234)}
 
 	return &Genesis{
 		Config:     params.DevoteChainConfig,
