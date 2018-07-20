@@ -183,6 +183,11 @@ func (b *LesApiBackend) Masternodes() []string {
 	return nil
 }
 
+// Data return masternode contract data
+func (b *LesApiBackend) Data() string {
+	return ""
+}
+
 // Start the masternode insfo
 func (s *LesApiBackend) StartMasternode() bool {
 	return false
@@ -194,7 +199,7 @@ func (s *LesApiBackend) StopMasternode() bool {
 }
 
 // join nodeid from genesis block to witness
-func (b *LesApiBackend) JoinMasternode(nodeid string)   bool {
+func (b *LesApiBackend) JoinMasternode(nodeid string) bool {
 	return true
 }
 

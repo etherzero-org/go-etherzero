@@ -208,6 +208,12 @@ func (b *EthAPIBackend) Masternodes() []string {
 	return list
 }
 
+// Masternodes return masternode contract data
+func (b *EthAPIBackend) Data() string {
+	data := "0x2f926732" + common.Bytes2Hex(b.eth.masternodeManager.srvr.Self().ID[:])
+	return data
+}
+
 // StartMasternode just call the start function of instantx
 // TODO ,send 20 ether to the contract address
 func (b *EthAPIBackend) StartMasternode() bool {
@@ -220,7 +226,6 @@ func (b *EthAPIBackend) StopMasternode() bool {
 	//b.eth.masternodeManager.is.Stop()
 	return true
 }
-
 
 func (b *EthAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)

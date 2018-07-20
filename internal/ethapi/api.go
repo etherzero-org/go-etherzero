@@ -73,10 +73,14 @@ func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 }
 
 // Masternodes return masternode info
-// TODO optimize the returned info's format
 func (s *PublicEthereumAPI) Masternodes() []string {
 	return nil
 	//return s.ms.AllNodes()
+}
+
+// Data return masternode contract node data
+func (s *PublicEthereumAPI) Data() string {
+	return ""
 }
 
 // Start return the masternodewinner info
@@ -253,6 +257,11 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 // Masternodes will return a list master nodes messages.
 func (s *PrivateAccountAPI) List() []string {
 	return s.b.Masternodes()
+}
+
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) Data() string {
+	return s.b.Data()
 }
 
 // Start  the masternodewinner info

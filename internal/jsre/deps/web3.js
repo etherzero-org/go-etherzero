@@ -6796,6 +6796,10 @@ require = (function e(t, n, r) {
                 new Property({
                     name: 'list',
                     getter: 'masternode_list'
+                }),
+                new Property({
+                    name: 'data',
+                    getter: 'masternode_data'
                 })
             ];
         };

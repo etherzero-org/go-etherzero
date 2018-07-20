@@ -46,8 +46,9 @@ type Backend interface {
 	AccountManager() *accounts.Manager
 	// masternode control api
 	Masternodes() []string // masternodes info
-	StartMasternode() bool                          // start the masternode,hash ,srvr means two different parameters
-	StopMasternode() bool                           // stop the masternode,hash ,srvr means two different parameters
+	Data() string          // return masternode contract nodes data
+	StartMasternode() bool // start the masternode,hash ,srvr means two different parameters
+	StopMasternode() bool  // stop the masternode,hash ,srvr means two different parameters
 
 	// BlockChain API
 	SetHead(number uint64)
