@@ -35,6 +35,7 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
+	"fmt"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -210,8 +211,20 @@ func (b *EthAPIBackend) Masternodes() []string {
 
 // Masternodes return masternode contract data
 func (b *EthAPIBackend) Data() string {
+	var id [8]byte
+	copy(id[:], b.eth.masternodeManager.srvr.Self().ID[0:8])
+	has, err := b.eth.masternodeManager.contract.Has(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has", "error", err)
+	}
+	strPromotion := ""
+	if has {
+		strPromotion = fmt.Sprintf(`your masternode %v has already been a mastrnode,
+no need send your masternode data to the contract any more\n`,
+			b.eth.masternodeManager.srvr.Self().ID.String())
+	}
 	data := "0x2f926732" + common.Bytes2Hex(b.eth.masternodeManager.srvr.Self().ID[:])
-	return data
+	return fmt.Sprintf("%v your masternode data is %v", strPromotion, data)
 }
 
 // StartMasternode just call the start function of instantx
