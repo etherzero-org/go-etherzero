@@ -132,11 +132,13 @@ func (mm *MasternodeManager) masternodeLoop() {
 			if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
 				atomic.StoreUint32(&mm.IsMasternode, 1)
 				mm.updateActiveMasternode(true)
+				fmt.Println("### It's already been a masternode! ")
 			}
 		case quit := <-quitCh:
 			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
 				atomic.StoreUint32(&mm.IsMasternode, 0)
 				mm.updateActiveMasternode(false)
+				fmt.Println("### Remove masternode! ")
 			}
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()
