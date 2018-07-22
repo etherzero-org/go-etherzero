@@ -84,13 +84,13 @@ func newMasternode(nodeId discover.NodeID, account common.Address, block, blockO
 
 	id := GetMasternodeID(nodeId)
 	return &Masternode{
-		ID:          id,
-		NodeID:      nodeId,
-		Account:     account,
-		OriginBlock: block,
-		State:       MasternodeInit,
+		ID:             id,
+		NodeID:         nodeId,
+		Account:        account,
+		OriginBlock:    block,
+		State:          MasternodeInit,
 		BlockOnlineAcc: blockOnlineAcc,
-		BlockLastPing: blockLastPing,
+		BlockLastPing:  blockLastPing,
 		//ProtocolVersion:  64,
 	}
 }
@@ -158,10 +158,25 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 			if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(300)) > 0 {
 				continue
 			}
-		}else if ctx.Node.OriginBlock.Cmp(common.Big0) > 0{
+		} else if ctx.Node.OriginBlock.Cmp(common.Big0) > 0 {
 			continue
 		}
 		ids = append(ids, ctx.Node.ID)
+	}
+	if len(ids) < 21 {
+		for lastId != ([8]byte{}) {
+			ctx, err = GetMasternodeContext(opts, contract, lastId)
+			if err != nil {
+				log.Error("GetIdsByBlockNumber", "error", err)
+				break
+			}
+			lastId = ctx.pre
+			if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
+				if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(300)) < 0 {
+					ids = append(ids, ctx.Node.ID)
+				}
+			}
+		}
 	}
 	return ids, nil
 }
@@ -206,6 +221,7 @@ func (ns *MasternodeSet) Node(id string) *Masternode {
 	defer ns.lock.RUnlock()
 	return ns.nodes[id]
 }
+
 //
 //func (ns *MasternodeSet) RecvPingMsg(id string, t uint64) {
 //	ns.lock.RLock()
