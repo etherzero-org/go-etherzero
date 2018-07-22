@@ -164,6 +164,10 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 		ids = append(ids, ctx.Node.ID)
 	}
 	if len(ids) < 21 {
+		lastId, err = contract.LastId(opts)
+		if err != nil {
+			return ids, err
+		}
 		for lastId != ([8]byte{}) {
 			ctx, err = GetMasternodeContext(opts, contract, lastId)
 			if err != nil {
