@@ -219,8 +219,7 @@ func (b *EthAPIBackend) Data() string {
 	}
 	strPromotion := ""
 	if has {
-		strPromotion = fmt.Sprintf(`your masternode %v has already been a mastrnode,
-no need send your masternode data to the contract any more\n`,
+		strPromotion = fmt.Sprintf(`your masternode %v has already been a mastrnode,it's not  necessary for you to  send your masternode data to the contract any more`,
 			b.eth.masternodeManager.srvr.Self().ID.String())
 	}
 	data := "0x2f926732" + common.Bytes2Hex(b.eth.masternodeManager.srvr.Self().ID[:])
