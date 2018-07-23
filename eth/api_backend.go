@@ -36,6 +36,8 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
 	"fmt"
+	"encoding/hex"
+	"strings"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -207,6 +209,29 @@ func (b *EthAPIBackend) ProtocolVersion() int {
 func (b *EthAPIBackend) Masternodes() []string {
 	list, _ := b.eth.masternodeManager.MasternodeList(b.eth.blockchain.CurrentBlock().Number())
 	return list
+}
+
+// GetInfo return related info in masternode contract
+func (b *EthAPIBackend) GetInfo(nodeid string) string {
+	var id [8]byte
+	node, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
+	if err != nil {
+		fmt.Printf("err %v\n", err)
+		return ""
+	} else if len(node) != len(id) {
+		return ""
+	}
+	copy(id[:], node)
+	fmt.Println("nodeid ", nodeid)
+
+	info, err := b.eth.masternodeManager.contract.GetInfo(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has", "error", err)
+		return ""
+	}
+	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:%v,NextId:%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
+		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.BytesToHash(info.PreId[:]).String(), common.BytesToHash(info.NextId[:]).String(), info.BlockNumber.String(), info.Account.String(),
+		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
 
 // Masternodes return masternode contract data

@@ -83,6 +83,11 @@ func (s *PublicEthereumAPI) Data() string {
 	return ""
 }
 
+// GetInfo return related info in masternode contract
+func (s *PublicEthereumAPI) GetInfo(nodeid string) string {
+	return ""
+}
+
 // Start return the masternodewinner info
 func (s *PublicEthereumAPI) StartMasternode() bool {
 	return false
@@ -262,6 +267,11 @@ func (s *PrivateAccountAPI) List() []string {
 // Masternodes will return a list master nodes messages.
 func (s *PrivateAccountAPI) Data() string {
 	return s.b.Data()
+}
+
+// GetInfo return related info in masternode contract
+func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
+	return s.b.GetInfo(nodeid)
 }
 
 // Start  the masternodewinner info

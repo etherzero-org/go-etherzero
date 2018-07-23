@@ -6784,10 +6784,17 @@ require = (function e(t, n, r) {
                 params: 1,
                 inputFormatter: [formatters.formatInputString],
             });
+            var getInfo = new Method({
+                name: 'getInfo',
+                call: 'masternode_getInfo',
+                params: 1,
+                inputFormatter: [formatters.formatInputString],
+            });
             return [
                 startMasternode,
                 stopMasternode,
-                joinMasternode
+                joinMasternode,
+                getInfo
             ];
         };
 
