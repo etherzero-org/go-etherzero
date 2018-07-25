@@ -229,8 +229,9 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 		fmt.Errorf("contract.Has", "error", err)
 		return ""
 	}
-	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:%v,NextId:%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
-		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.BytesToHash(info.PreId[:]).String(), common.BytesToHash(info.NextId[:]).String(), info.BlockNumber.String(), info.Account.String(),
+
+	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:0x%v,NextId:0x%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
+		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
 
