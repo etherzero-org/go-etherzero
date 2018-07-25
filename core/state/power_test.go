@@ -16,3 +16,10 @@ func TestPower(t *testing.T){
 		fmt.Println(Power.String())
 	}
 }
+func TestPowerMax(t *testing.T){
+	for i := 0; i < 10; i++ {
+		balance := new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(int64(1000 * 100)))
+		Power := MaxPower(balance)
+		fmt.Println(Power.Div(Power, big.NewInt(1e+15)))
+	}
+}
