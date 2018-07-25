@@ -306,8 +306,12 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	currentBlock := bc.CurrentBlock()
 	currentFastBlock := bc.CurrentFastBlock()
 
-	rawdb.WriteHeadBlockHash(bc.db, currentBlock.Hash())
-	rawdb.WriteHeadFastBlockHash(bc.db, currentFastBlock.Hash())
+	if err := WriteHeadBlockHash(bc.db, currentBlock.Hash()); err != nil {
+		log.Crit("Failed to reset head full block", "err", err)
+	}
+	if err := WriteHeadFastBlockHash(bc.db, currentFastBlock.Hash()); err != nil {
+		log.Crit("Failed to reset head fast block", "err", err)
+	}
 
 	return bc.loadLastState()
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/trie"
 )
 
 type Controller struct {
@@ -71,6 +72,54 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	return list, nil
 }
 
+//when a node does't work in the current cycle, delete.
+func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
+
+	witnesses, err := ec.devoteProtocol.GetWitnesses()
+	if err != nil {
+		return nodes, fmt.Errorf("failed to get witness: %s", err)
+	}
+	if len(witnesses) == 0 {
+		return nodes, errors.New("no witness could be uncast")
+	}
+	needUncastWitnesses := sortableAddresses{}
+	for _, witness := range witnesses {
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, cycle)
+		// TODO
+		key = append(key, []byte(witness)...)
+		size := uint64(0)
+		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
+			size = binary.BigEndian.Uint64(cntBytes)
+		}
+		if size < 1 {
+			// not active witnesses need uncast
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
+		}
+	}
+	// no witnessees need uncast
+	needUncastWitnessCnt := len(needUncastWitnesses)
+	if needUncastWitnessCnt <= 0 {
+		return nodes, nil
+	}
+	for _, witness := range needUncastWitnesses {
+		j := 0
+		for _, s := range nodes {
+			if s != witness.nodeid {
+				nodes[j] = s
+				j++
+			}
+		}
+		//do sth on masternode list
+		//if err := ec.devoteProtocol.Unregister(witness.nodeid); err != nil {
+		//	return err
+		//}
+		// if uncast success, masternode Count minus 1
+		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.nodeid, "miner count", witness.weight.String())
+	}
+	return nodes, nil
+}
+
 func (ec *Controller) lookup(now uint64) (witness string, err error) {
 
 	offset := now % params.CycleInterval
@@ -108,9 +157,18 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
 
+	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
+	//fmt.Printf("election prevCycle :%d ,currentCycle:%d\n", prevCycle, currentCycle)
+
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
-		votes, err := self.masternodes(parent, prevCycleIsGenesis, nodes)
+		list:=make([]string,len(nodes))
+		copy(list,nodes)
+		if !prevCycleIsGenesis && it.Next() {
+			list,_ = self.uncast(prevCycle, nodes)
+		}
+
+		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
 		if err != nil {
 			log.Error("init masternodes ", "err", err)
 			return err

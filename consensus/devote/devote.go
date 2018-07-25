@@ -283,7 +283,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	//miner Rolling
 	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
-	//devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 	header.Protocol = devoteProtocol.ProtocolAtomic()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
@@ -415,7 +415,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return err
 	}
 	if signer != witness {
-		return ErrInvalidBlockWitness
+		return fmt.Errorf("invalid block witness signer: %s,witness: %s\n",signer,witness)
 	}
 	if signer != header.Witness {
 		return ErrMismatchSignerAndWitness
