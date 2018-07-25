@@ -188,6 +188,11 @@ func (b *LesApiBackend) Data() string {
 	return ""
 }
 
+// GetInfo return related info in masternode contract
+func (b *LesApiBackend) GetInfo(nodeid string) string {
+	return ""
+}
+
 // Start the masternode insfo
 func (s *LesApiBackend) StartMasternode() bool {
 	return false

@@ -21,7 +21,16 @@ import (
 
 	"encoding/json"
 	"fmt"
+	"github.com/etherzero/go-etherzero/params"
 )
+
+func Test_MasternodeContractData(t *testing.T){
+	account := masternodeContractAccount(params.MainnetMasternodes)
+
+	for k, v := range account.Storage {
+		fmt.Println(k.Hex(), v.Hex())
+	}
+}
 
 //
 //func TestDefaultGenesisBlock(t *testing.T) {

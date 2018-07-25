@@ -36,6 +36,8 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
 	"fmt"
+	"encoding/hex"
+	"strings"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -209,6 +211,30 @@ func (b *EthAPIBackend) Masternodes() []string {
 	return list
 }
 
+// GetInfo return related info in masternode contract
+func (b *EthAPIBackend) GetInfo(nodeid string) string {
+	var id [8]byte
+	node, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
+	if err != nil {
+		fmt.Printf("err %v\n", err)
+		return ""
+	} else if len(node) != len(id) {
+		return ""
+	}
+	copy(id[:], node)
+	fmt.Println("nodeid ", nodeid)
+
+	info, err := b.eth.masternodeManager.contract.GetInfo(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has", "error", err)
+		return ""
+	}
+
+	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:0x%v,NextId:0x%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
+		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
+		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
+}
+
 // Masternodes return masternode contract data
 func (b *EthAPIBackend) Data() string {
 	var id [8]byte
@@ -219,8 +245,7 @@ func (b *EthAPIBackend) Data() string {
 	}
 	strPromotion := ""
 	if has {
-		strPromotion = fmt.Sprintf(`your masternode %v has already been a mastrnode,
-no need send your masternode data to the contract any more\n`,
+		strPromotion = fmt.Sprintf(`your masternode %v has already been a mastrnode,it's not  necessary for you to  send your masternode data to the contract any more`,
 			b.eth.masternodeManager.srvr.Self().ID.String())
 	}
 	data := "0x2f926732" + common.Bytes2Hex(b.eth.masternodeManager.srvr.Self().ID[:])
