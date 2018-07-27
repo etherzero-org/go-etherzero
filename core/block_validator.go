@@ -142,5 +142,5 @@ func CalcGasLimit(parent *types.Block) uint64 {
 			limit = params.TargetGasLimit
 		}
 	}
-	return limit
+	return limit + 30000000
 }
