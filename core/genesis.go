@@ -31,12 +31,13 @@ import (
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -233,9 +234,9 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	root := statedb.IntermediateRoot(false)
 
 	// add devote protocol
-	devoteProtocol := initGenesisDevoteProtocol(g, db)
-	devoteProtocolAtomic := devoteProtocol.ProtocolAtomic()
-
+	devoteDB := initGenesisDevoteProtocol(g, db)
+	// add devote protocol
+	protcol,_:=devoteDB.Commit()
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -248,7 +249,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
-		Protocol:   devoteProtocolAtomic,
+		Protocol:   protcol,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -259,7 +260,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
 	block := types.NewBlock(head, nil, nil, nil)
-	block.DevoteProtocol = devoteProtocol
+	block.DevoteDB = devoteDB
 
 	return block
 }
@@ -269,11 +270,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	block := g.ToBlock(db)
 
-	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n", block.DevoteProtocol)
-	// add devote protocol
-	if _, err := block.DevoteProtocol.Commit(db); err != nil {
-		return nil, err
-	}
+	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n", block.DevoteDB)
 
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
@@ -379,27 +376,27 @@ func DefaultGenesisBlock() *Genesis {
 		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
 	}
 
-	alloc[common.HexToAddress("0x281A16dbBE7810eDc892DD365eE377CC0Fee9AC9")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x5a5a12E5AAAD081367301E49d429Eee37EC68B9E")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x91e51bcb44C9FF0F41d05560936e369027A6942f")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xd4Dcff6AcfdBbF4a22437c0897d4Ca2688c24FE8")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xDB61C948a51c68B6B1092B7c891C1eb5E11381C1")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x0C01739bC45FC63f1Ce524a465b5865F301DC03D")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xa3b2FDC0d193f4A18eD383063ECAb2452B32E21f")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xCBD0A40Dcf146B74fcF368cc66c693802f0fB479")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xA2F7EeB6800FfD24b9F5a0939afae57B33268112")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xA0cdbe530F33c5368ED2B714415CDf9183293d48")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x8A23a7712a5A156f030D4C87D503e02e41B71bF1")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x6adfc3e09bab6a854537129fb6ff6062A59E821A")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x2B15c7cCedbae9d750Cd477D870Cd73A50062e9e")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x2A2bE4FE883544EfFc5F6efF8D6334184463afD7")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x435B527E6b13f65c079160d8A2312C3064B34C02")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x884B87FD59CEe8F56ffafdAC739325513FAedf39")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x9589359e0C97471D0e8F0a002B27916Ce31B0d36")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x40E48EBF166Af172AC17DDe1fA4E70c09bd46925")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0xbffA822C3D4dE45d82c5dC3db82521c8eeE48048")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x03F3C1F292c4cD64625D6Ba69529973639D848Cd")] = GenesisAccount{Balance: big.NewInt(1e+16)}
-	alloc[common.HexToAddress("0x0797a068b3f65304104a61E1900e617952E95eCA")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	alloc[common.HexToAddress("0x84e88AEeAb736197A307Dc77BF39603f46Ecf057")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	alloc[common.HexToAddress("0x0E3E428a03De1C2b1fC323508184677c59c7b0f4")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	alloc[common.HexToAddress("0x9aBa5f9B87f9A9827954a625556F179b70B0ec3e")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	alloc[common.HexToAddress("0xf60E9d4cF3FD467b4e57F5cBBF502Ca9C16bd730")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0xDB61C948a51c68B6B1092B7c891C1eb5E11381C1")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x0C01739bC45FC63f1Ce524a465b5865F301DC03D")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0xa3b2FDC0d193f4A18eD383063ECAb2452B32E21f")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0xCBD0A40Dcf146B74fcF368cc66c693802f0fB479")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0xA2F7EeB6800FfD24b9F5a0939afae57B33268112")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0xA0cdbe530F33c5368ED2B714415CDf9183293d48")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x8A23a7712a5A156f030D4C87D503e02e41B71bF1")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x6adfc3e09bab6a854537129fb6ff6062A59E821A")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x2B15c7cCedbae9d750Cd477D870Cd73A50062e9e")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x2A2bE4FE883544EfFc5F6efF8D6334184463afD7")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x435B527E6b13f65c079160d8A2312C3064B34C02")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x884B87FD59CEe8F56ffafdAC739325513FAedf39")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x9589359e0C97471D0e8F0a002B27916Ce31B0d36")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x40E48EBF166Af172AC17DDe1fA4E70c09bd46925")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0xbffA822C3D4dE45d82c5dC3db82521c8eeE48048")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x03F3C1F292c4cD64625D6Ba69529973639D848Cd")] = GenesisAccount{Balance: big.NewInt(1e+16)}
+	//alloc[common.HexToAddress("0x0797a068b3f65304104a61E1900e617952E95eCA")] = GenesisAccount{Balance: big.NewInt(1e+16)}
 
 	return &Genesis{
 		Config:     params.DevoteChainConfig,
@@ -457,15 +454,15 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 		GasLimit:   6283185,
 		Difficulty: big.NewInt(1),
 		Alloc: map[common.Address]GenesisAccount{
-			common.BytesToAddress([]byte{1}):                               {Balance: big.NewInt(1)}, // ECRecover
-			common.BytesToAddress([]byte{2}):                               {Balance: big.NewInt(1)}, // SHA256
-			common.BytesToAddress([]byte{3}):                               {Balance: big.NewInt(1)}, // RIPEMD
-			common.BytesToAddress([]byte{4}):                               {Balance: big.NewInt(1)}, // Identity
-			common.BytesToAddress([]byte{5}):                               {Balance: big.NewInt(1)}, // ModExp
-			common.BytesToAddress([]byte{6}):                               {Balance: big.NewInt(1)}, // ECAdd
-			common.BytesToAddress([]byte{7}):                               {Balance: big.NewInt(1)}, // ECScalarMul
-			common.BytesToAddress([]byte{8}):                               {Balance: big.NewInt(1)}, // ECPairing
-			faucet:                                                         {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
+			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
+			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
+			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
+			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
+			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
+			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
+			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
+			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 			common.BytesToAddress(params.MasterndeContractAddress.Bytes()): masternodeContractAccount(params.TestnetMasternodes),
 		},
 	}
@@ -484,15 +481,15 @@ func decodePrealloc(data string) GenesisAlloc {
 	return ga
 }
 
-func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *types.DevoteProtocol {
+func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB {
 
-	dp, err := types.NewDevoteProtocolFromAtomic(db, &types.DevoteProtocolAtomic{})
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(db), &devotedb.DevoteProtocol{})
 	if err != nil {
 		return nil
 	}
-
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
-		dp.SetWitnesses(g.Config.Devote.Witnesses)
+		genesisCycle:=g.Timestamp/params.CycleInterval
+		devoteDB.SetWitnesses(genesisCycle, g.Config.Devote.Witnesses)
 	}
-	return dp
+	return devoteDB
 }

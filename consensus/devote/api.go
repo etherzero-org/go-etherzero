@@ -23,6 +23,8 @@ import (
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/params"
 )
 // API is a user facing RPC API to allow controlling the delegate and voting
 // mechanisms of the delegated-proof-of-stake
@@ -43,14 +45,9 @@ func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]string, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-
-	cycleTrie, err := types.NewCycleTrie(header.Protocol.CycleHash, api.devote.db)
-	if err != nil {
-		return nil, err
-	}
-	devoteProtocol := types.DevoteProtocol{}
-	devoteProtocol.SetCycle(cycleTrie)
-	witnesses, err := devoteProtocol.GetWitnesses()
+	currentcycle:=header.Time.Uint64()/params.CycleInterval
+	devoteDB,_:=devotedb.New(devotedb.NewDatabase(api.devote.db),header.Protocol.CycleHash,header.Protocol.StatsHash)
+	witnesses, err := devoteDB.GetWitnesses(currentcycle)
 	if err != nil {
 		return nil, err
 	}

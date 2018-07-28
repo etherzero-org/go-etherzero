@@ -31,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 // DatabaseReader wraps the Get method of a backing data store.
@@ -233,14 +234,14 @@ func GetBlock(db DatabaseReader, hash common.Hash, number uint64) *types.Block {
 	block := types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
 
 	// add devoteProtocol to block
-	block.DevoteProtocol = getDevoteProtocolTrie(db.(ethdb.Database), header)
+	block.DevoteDB = getDevoteDB(db.(ethdb.Database), header)
 	return block
 }
 
-func getDevoteProtocolTrie(db ethdb.Database, header *types.Header) *types.DevoteProtocol {
+func getDevoteDB(db ethdb.Database, header *types.Header) *devotedb.DevoteDB {
 	devoteContestProto := header.Protocol
 	if devoteContestProto != nil {
-		devoteProtocol, err := types.NewDevoteProtocolFromAtomic(db, devoteContestProto)
+		devoteProtocol, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(db), devoteContestProto)
 		if err != nil {
 			return nil
 		}

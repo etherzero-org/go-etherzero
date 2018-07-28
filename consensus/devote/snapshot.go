@@ -28,21 +28,21 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/trie"
 )
 
 type Controller struct {
-	devoteProtocol *types.DevoteProtocol
-	TimeStamp      uint64
-	mu             sync.Mutex
+	devoteDB  *devotedb.DevoteDB
+	TimeStamp uint64
+	mu        sync.Mutex
 }
 
-func Newcontroller(devoteProtocol *types.DevoteProtocol) *Controller {
+func Newcontroller(devoteDB *devotedb.DevoteDB) *Controller {
 	controller := &Controller{
-		devoteProtocol: devoteProtocol,
+		devoteDB: devoteDB,
 	}
 	return controller
 }
@@ -72,10 +72,10 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	return list, nil
 }
 
-//when a node does't work in the current cycle, delete.
+//when a node does't work in the current cycle, Remove from candidate nodes.
 func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 
-	witnesses, err := ec.devoteProtocol.GetWitnesses()
+	witnesses, err := ec.devoteDB.GetWitnesses(cycle)
 	if err != nil {
 		return nodes, fmt.Errorf("failed to get witness: %s", err)
 	}
@@ -89,9 +89,10 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 		// TODO
 		key = append(key, []byte(witness)...)
 		size := uint64(0)
-		if cntBytes := ec.devoteProtocol.MinerRollingTrie().Get(key); cntBytes != nil {
-			size = binary.BigEndian.Uint64(cntBytes)
-		}
+		hash := common.Hash{}
+		hash.SetBytes(key)
+		size = ec.devoteDB.GetStatsCount(hash)
+
 		if size < 1 {
 			// not active witnesses need uncast
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
@@ -127,9 +128,8 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 		err = ErrInvalidMinerBlockTime
 		return
 	}
-
 	offset /= params.BlockInterval
-	witnesses, err := ec.devoteProtocol.GetWitnesses()
+	witnesses, err := ec.devoteDB.GetWitnesses(ec.devoteDB.GetCycle())
 	if err != nil {
 		return
 	}
@@ -157,15 +157,12 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 	prevCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
 
-	it := trie.NewIterator(self.devoteProtocol.MinerRollingTrie().NodeIterator(prevCycleBytes))
-	//fmt.Printf("election prevCycle :%d ,currentCycle:%d\n", prevCycle, currentCycle)
-
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
-		list:=make([]string,len(nodes))
-		copy(list,nodes)
-		if !prevCycleIsGenesis && it.Next() {
-			list,_ = self.uncast(prevCycle, nodes)
+		list := make([]string, len(nodes))
+		copy(list, nodes)
+		if !prevCycleIsGenesis {
+			list, _ = self.uncast(prevCycle, nodes)
 		}
 
 		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
@@ -178,7 +175,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < int(safeSize) {
-			return fmt.Errorf(" too few masternodes ", "current", len(masternodes), "safesize", safeSize)
+			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
@@ -188,10 +185,11 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Info("Controller election witnesses ", "sortedWitnesses", sortedWitnesses)
-		cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteProtocol.DB())
-		self.devoteProtocol.SetCycle(cycleTrie)
-		self.devoteProtocol.SetWitnesses(sortedWitnesses)
+		log.Info("Controller election witnesses ","currentCycle",currentCycle, "sortedWitnesses", sortedWitnesses)
+		//cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteDB.Database())
+		//self.devoteDB.SetCycleTrie(cycleTrie)
+		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
+		self.devoteDB.Commit()
 		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
 	}
 	return nil

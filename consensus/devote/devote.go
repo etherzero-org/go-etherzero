@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -45,7 +46,7 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	maxWitnessSize uint64 = 21
+	maxWitnessSize uint64 = 4
 	safeSize              = maxWitnessSize*2/3 + 1
 	consensusSize         = maxWitnessSize*2/3 + 1
 )
@@ -249,7 +250,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteProtocol *types.DevoteProtocol) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
 
 	// Accumulate block rewards and commit the final state root
 	AccumulateRewards(chain.Config(), state, header, uncles)
@@ -257,8 +258,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	controller := &Controller{
-		devoteProtocol: devoteProtocol,
-		TimeStamp:      header.Time.Uint64(),
+		devoteDB:  devoteDB,
+		TimeStamp: header.Time.Uint64(),
 	}
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
@@ -283,8 +284,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	//miner Rolling
 	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
-	devoteProtocol.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-	header.Protocol = devoteProtocol.ProtocolAtomic()
+	devoteDB.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+	header.Protocol = devoteDB.Protocol()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -392,13 +393,16 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	} else {
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, parent.Protocol)
+
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
 	if err != nil {
-		log.Debug("devote verifySeal failed ", "cycle Hash", devoteProtocol.CycleTrie())
+		//log.Debug("devote verifySeal failed ", "cycle Hash", devoteProtocol.CycleTrie())
 		return err
 	}
 
-	controller := &Controller{devoteProtocol: devoteProtocol}
+	currentcycle := parent.Time.Uint64() / params.CycleInterval
+	devoteDB.SetCycle(currentcycle)
+	controller := &Controller{devoteDB: devoteDB}
 	witness, err := controller.lookup(header.Time.Uint64())
 	if err != nil {
 		return err
@@ -415,7 +419,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return err
 	}
 	if signer != witness {
-		return fmt.Errorf("invalid block witness signer: %s,witness: %s\n",signer,witness)
+		return fmt.Errorf("invalid block witness signer: %s,witness: %s\n", signer, witness)
 	}
 	if signer != header.Witness {
 		return ErrMismatchSignerAndWitness
@@ -440,12 +444,14 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
 	}
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(d.db, lastBlock.Header().Protocol)
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
 	if err != nil {
 		return err
 	}
+	currentCycle := lastBlock.Time().Uint64() / params.CycleInterval
+	devoteDB.SetCycle(currentCycle)
+	controller := &Controller{devoteDB: devoteDB}
 
-	controller := &Controller{devoteProtocol: devoteProtocol}
 	witness, err := controller.lookup(uint64(now))
 	if err != nil {
 		return err

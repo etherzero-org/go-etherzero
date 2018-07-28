@@ -34,6 +34,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -1475,10 +1476,10 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, bef
 	return p, before, after
 }
 
-func (d *Downloader) syncDevoteProtocolState(protocol *types.DevoteProtocolAtomic) error {
+func (d *Downloader) syncDevoteProtocolState(protocol *devotedb.DevoteProtocol) error {
 	roots := []common.Hash{
 		protocol.CycleHash,
-		protocol.MinerRollingHash,
+		protocol.StatsHash,
 	}
 	for _, root := range roots {
 		if err := d.syncState(root).Wait(); err != nil {

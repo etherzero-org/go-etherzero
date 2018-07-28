@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -85,7 +86,7 @@ type Header struct {
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 
 	Witness  string                `json:"witness"          gencodec:"required"`
-	Protocol *DevoteProtocolAtomic `json:"protocol"          gencodec:"required"`
+	Protocol *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -161,9 +162,9 @@ type Block struct {
 
 	// These fields are used by package eth to track
 	// inter-peer block relay.
-	ReceivedAt     time.Time
-	ReceivedFrom   interface{}
-	DevoteProtocol *DevoteProtocol
+	ReceivedAt   time.Time
+	ReceivedFrom interface{}
+	DevoteDB     *devotedb.DevoteDB
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -325,7 +326,7 @@ func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Ext
 
 func (b *Block) Witness() string { return b.header.Witness }
 
-func (b *Block) Protocol() *DevoteProtocol { return b.DevoteProtocol }
+func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -365,10 +366,10 @@ func (b *Block) WithSeal(header *Header) *Block {
 	cpy := *header
 
 	return &Block{
-		header:         &cpy,
-		transactions:   b.transactions,
-		uncles:         b.uncles,
-		DevoteProtocol: b.DevoteProtocol,
+		header:       &cpy,
+		transactions: b.transactions,
+		uncles:       b.uncles,
+		DevoteDB:     b.DevoteDB,
 	}
 }
 

@@ -22,13 +22,14 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 )
 
 // BlockGen creates blocks for testing.
@@ -46,8 +47,8 @@ type BlockGen struct {
 	receipts []*types.Receipt
 	uncles   []*types.Header
 	votes    []*types.Vote
-	config *params.ChainConfig
-	engine consensus.Engine
+	config   *params.ChainConfig
+	engine   consensus.Engine
 }
 
 // SetCoinbase sets the coinbase of the generated block.
@@ -220,15 +221,15 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 	}
 
 	return &types.Header{
-		Root:        state.IntermediateRoot(config.IsEIP158(parent.Number())),
-		ParentHash:  parent.Hash(),
-		Coinbase:    parent.Coinbase(),
-		Difficulty:  parent.Difficulty(),
-		Protocol: &types.DevoteProtocolAtomic{},
-		GasLimit:    CalcGasLimit(parent),
-		GasUsed:     0,
-		Number:      new(big.Int).Add(parent.Number(), common.Big1),
-		Time:        time,
+		Root:       state.IntermediateRoot(config.IsEIP158(parent.Number())),
+		ParentHash: parent.Hash(),
+		Coinbase:   parent.Coinbase(),
+		Difficulty: parent.Difficulty(),
+		Protocol:   &devotedb.DevoteProtocol{},
+		GasLimit:   CalcGasLimit(parent),
+		GasUsed:    0,
+		Number:     new(big.Int).Add(parent.Number(), common.Big1),
+		Time:       time,
 	}
 }
 

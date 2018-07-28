@@ -103,11 +103,11 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 
 func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	header := block.Header()
-	localRoot := block.Protocol().Root()
+	localRoot := block.DevoteDB.Root()
 	remoteRoot := header.Protocol.Root()
 	if remoteRoot != localRoot {
-		fmt.Printf(" MinerRolling block hash:%x header: hash:%x \n", block.Protocol().MinerRollingTrie().Hash(), header.Protocol.MinerRollingHash)
-		fmt.Printf("Cycle block hash:%x header:  hash:%x \n", block.Protocol().CycleTrie().Hash(), header.Protocol.CycleHash)
+		fmt.Printf(" StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
+		fmt.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
 		fmt.Printf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}

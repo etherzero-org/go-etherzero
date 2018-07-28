@@ -45,6 +45,7 @@ import (
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -904,7 +905,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
 
-	if _, err := block.DevoteProtocol.Commit(bc.db); err != nil {
+	if _, err := block.DevoteDB.Commit(); err != nil {
 		return NonStatTy, err
 	}
 
@@ -1149,7 +1150,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
-		block.DevoteProtocol, err = types.NewDevoteProtocolFromAtomic(bc.db, parent.Header().Protocol)
+		block.DevoteDB, err = devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), parent.Header().Protocol)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}

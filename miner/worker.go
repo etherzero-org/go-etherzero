@@ -37,6 +37,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"gopkg.in/fatih/set.v0"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 const (
@@ -83,7 +84,7 @@ type Work struct {
 	receipts  []*types.Receipt
 	createdAt time.Time
 
-	devoteProtocol *types.DevoteProtocol
+	devoteDB *devotedb.DevoteDB
 }
 
 type Result struct {
@@ -409,7 +410,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	devoteProtocol, err := types.NewDevoteProtocolFromAtomic(self.chainDb, parent.Header().Protocol)
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(self.chainDb), parent.Header().Protocol)
 	if err != nil {
 		return err
 	}
@@ -422,7 +423,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		uncles:         set.New(),
 		header:         header,
 		createdAt:      time.Now(),
-		devoteProtocol: devoteProtocol,
+		devoteDB: devoteDB,
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -531,11 +532,11 @@ func (self *worker) commitNewWork() (*Work, error) {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteProtocol); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteDB); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 
-	work.Block.DevoteProtocol = work.devoteProtocol
+	work.Block.DevoteDB = work.devoteDB
 
 	// update the count for the miner of new block
 	// We only care about logging if we're actually mining.
@@ -648,12 +649,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
-	devoteSnap := env.devoteProtocol.Snapshot()
+	devoteSnap := env.devoteDB.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
-		env.devoteProtocol.RevertToSnapShot(devoteSnap)
+		env.devoteDB.RevertToSnapShot(devoteSnap)
 		return err, nil
 	}
 	env.txs = append(env.txs, tx)
