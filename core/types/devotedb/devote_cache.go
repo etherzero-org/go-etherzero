@@ -119,7 +119,7 @@ func (self *DevoteCache) Rolling(db Database, parentBlockTime, currentBlockTime 
 	currentCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
 
-	cnt := uint64(1)
+	cnt := uint64(0)
 	newCycle := currentBlockTime / params.CycleInterval
 	key := common.Hash{}
 	// still during the currentCycleID
@@ -128,7 +128,7 @@ func (self *DevoteCache) Rolling(db Database, parentBlockTime, currentBlockTime 
 		key.SetBytes(append(currentCycleBytes, []byte(witness)...))
 		if _, ok := self.stats[key]; ok {
 			self.stats[key]++
-			cnt=self.stats[key]
+			cnt = self.stats[key]
 		} else {
 			self.stats[key] = 1
 		}
@@ -142,6 +142,7 @@ func (self *DevoteCache) Rolling(db Database, parentBlockTime, currentBlockTime 
 	if statsTrie == nil {
 		return nil, fmt.Errorf("can't create trie")
 	}
+	fmt.Printf("DevoteCache newCn%d,newCntBytes%x\n", cnt, newCntBytes)
 	err := statsTrie.TryUpdate(append(newCycleBytes, []byte(witness)...), newCntBytes)
 	return statsTrie, err
 }

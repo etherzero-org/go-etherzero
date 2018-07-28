@@ -26,7 +26,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
@@ -88,15 +87,16 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 		binary.BigEndian.PutUint64(key, cycle)
 		// TODO
 		key = append(key, []byte(witness)...)
+
 		size := uint64(0)
-		hash := common.Hash{}
-		hash.SetBytes(key)
-		size = ec.devoteDB.GetStatsCount(hash)
+		fmt.Printf("uncast cycle%d,witness%s\n", cycle, witness)
+		size = ec.devoteDB.GetStatsCount(key)
 
 		if size < 1 {
 			// not active witnesses need uncast
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
 		}
+		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
 	}
 	// no witnessees need uncast
 	needUncastWitnessCnt := len(needUncastWitnesses)
@@ -111,12 +111,6 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 				j++
 			}
 		}
-		//do sth on masternode list
-		//if err := ec.devoteProtocol.Unregister(witness.nodeid); err != nil {
-		//	return err
-		//}
-		// if uncast success, masternode Count minus 1
-		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness.nodeid, "miner count", witness.weight.String())
 	}
 	return nodes, nil
 }
@@ -185,7 +179,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Info("Controller election witnesses ","currentCycle",currentCycle, "sortedWitnesses", sortedWitnesses)
+		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
 		//cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteDB.Database())
 		//self.devoteDB.SetCycleTrie(cycleTrie)
 		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)

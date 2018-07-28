@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 type DevoteDB struct {
@@ -152,7 +153,16 @@ func (d *DevoteDB) SetStatsTrie(trie Trie) {
 	d.statsTrie = trie
 }
 
-func (d *DevoteDB) GetStatsCount(hash common.Hash) uint64 {
+func (d *DevoteDB) GetStatsCount(key []byte) uint64 {
+
+	hash := common.Hash{}
+	hash.SetBytes(key)
+	if len(d.dCache.stats) < 1 {
+		if cntBytes, _:= d.statsTrie.TryGet(key);cntBytes != nil{
+			count := binary.BigEndian.Uint64(cntBytes)
+			return count
+		}
+	}
 	return d.dCache.stats[hash]
 }
 
@@ -234,8 +244,32 @@ func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness str
 	if d.dCache == nil {
 		return
 	}
-	trie, _ := d.dCache.Rolling(d.db, parentBlockTime, currentBlockTime, witness)
-	d.statsTrie = trie
+	currentCycle := parentBlockTime / params.CycleInterval
+	currentCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
+
+	cnt := uint64(1)
+	newCycle := currentBlockTime / params.CycleInterval
+	hash := common.Hash{}
+	// still during the currentCycleID
+	if currentCycle == newCycle {
+		hash.SetBytes(append(currentCycleBytes, []byte(witness)...))
+
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, currentCycle)
+		// TODO
+		key = append(key, []byte(witness)...)
+		if cntBytes, _:= d.statsTrie.TryGet(key);cntBytes != nil {
+			cnt=binary.BigEndian.Uint64(cntBytes)+1
+		}
+	}
+
+	newCntBytes := make([]byte, 8)
+	newCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(newCycleBytes, uint64(newCycle))
+	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
+
+	d.statsTrie.TryUpdate(append(newCycleBytes, []byte(witness)...), newCntBytes)
 }
 
 // Exist reports whether the given Devote hash exists in the state.
