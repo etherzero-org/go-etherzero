@@ -234,8 +234,8 @@ func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness str
 	if d.dCache == nil {
 		return
 	}
-	statsTrie, _ := d.dCache.Rolling(d.db, parentBlockTime, currentBlockTime, witness)
-	d.statsTrie = statsTrie
+	trie, _ := d.dCache.Rolling(d.db, parentBlockTime, currentBlockTime, witness)
+	d.statsTrie = trie
 }
 
 // Exist reports whether the given Devote hash exists in the state.

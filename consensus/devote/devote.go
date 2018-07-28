@@ -285,6 +285,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	//miner Rolling
 	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
 	devoteDB.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+	devoteDB.Commit()
 	header.Protocol = devoteDB.Protocol()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }

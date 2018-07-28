@@ -128,6 +128,7 @@ func (self *DevoteCache) Rolling(db Database, parentBlockTime, currentBlockTime 
 		key.SetBytes(append(currentCycleBytes, []byte(witness)...))
 		if _, ok := self.stats[key]; ok {
 			self.stats[key]++
+			cnt=self.stats[key]
 		} else {
 			self.stats[key] = 1
 		}

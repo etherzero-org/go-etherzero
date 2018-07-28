@@ -1,4 +1,4 @@
-package types
+package devote
 
 import (
 	"testing"

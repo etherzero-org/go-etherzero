@@ -1,4 +1,4 @@
-package types
+package devote
 
 import (
 	"fmt"
@@ -26,7 +26,6 @@ type DevoteProtocol struct {
 	minerRollingTriedb *trie.Database
 
 	diskdb ethdb.Database
-
 	mu sync.Mutex
 }
 
@@ -60,7 +59,6 @@ func NewDevoteProtocolFromAtomic(db ethdb.Database, ctxAtomic *DevoteProtocolAto
 		minerRollingTriedb: trie.NewDatabase(ethdb.NewTable(db, minerRollingPrefix)),
 	}, nil
 }
-
 
 
 func (d *DevoteProtocol) Copy() *DevoteProtocol {
@@ -137,6 +135,7 @@ func (d *DevoteProtocol) Commit(db ethdb.Database) (*DevoteProtocolAtomic, error
 func (d *DevoteProtocol) ProtocolAtomic() *DevoteProtocolAtomic {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
 	return &DevoteProtocolAtomic{
 		CycleHash:        d.cycleTrie.Hash(),
 		MinerRollingHash: d.minerRollingTrie.Hash(),
