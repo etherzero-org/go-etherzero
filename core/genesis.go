@@ -25,19 +25,24 @@ import (
 	"math/big"
 	"strings"
 
+	"bufio"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/common/math"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/trie"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -56,6 +61,7 @@ type Genesis struct {
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
+	StateRoot  common.Hash         `json:"stateRoot"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
@@ -162,6 +168,8 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
 			genesis = DefaultGenesisBlock()
+			root := genesisAccounts(common.Hash{}, db)
+			genesis.StateRoot = root
 		} else {
 			log.Info("Writing custom genesis block")
 		}
@@ -170,7 +178,6 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 	}
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-
 		hash := genesis.ToBlock(nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
@@ -222,7 +229,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if db == nil {
 		db = ethdb.NewMemDatabase()
 	}
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
+
+	statedb, _ := state.New(g.StateRoot, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
 		statedb.AddBalance(addr, account.Balance, big.NewInt(1))
 		statedb.SetCode(addr, account.Code)
@@ -236,7 +244,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	// add devote protocol
 	devoteDB := initGenesisDevoteProtocol(g, db)
 	// add devote protocol
-	protcol,_:=devoteDB.Commit()
+	protcol, _ := devoteDB.Commit()
+
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
@@ -463,7 +472,6 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
 			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
-			common.BytesToAddress(params.MasterndeContractAddress.Bytes()): masternodeContractAccount(params.TestnetMasternodes),
 		},
 	}
 }
@@ -488,8 +496,78 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB
 		return nil
 	}
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
-		genesisCycle:=g.Timestamp/params.CycleInterval
+		genesisCycle := g.Timestamp / params.CycleInterval
 		devoteDB.SetWitnesses(genesisCycle, g.Config.Devote.Witnesses)
 	}
 	return devoteDB
+}
+
+func genesisAccounts(root common.Hash, db ethdb.Database) common.Hash {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		panic(err)
+	}
+	path := strings.Replace(dir, "\\", "/", -1) + "/init.bin"
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	triedb := trie.NewDatabase(db)
+	tr, err := trie.New(root, triedb)
+	if err != nil {
+		panic(err)
+	}
+
+	bufReader := bufio.NewReader(file)
+	buf := make([]byte, 43)
+	accountCount := 0
+	log.Info("Import initial accounts, waitting ...")
+	emptyRoot := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	emptyState := crypto.Keccak256Hash(nil).Bytes()
+	for {
+		readNum, err := bufReader.Read(buf[0:43])
+		if err != nil && err != io.EOF {
+			panic(err)
+		}
+		if 0 == readNum {
+			break
+		}
+		for readNum < 43 {
+			n, err := bufReader.Read(buf[readNum:43])
+			if err != nil && err != io.EOF {
+				panic(err)
+			}
+			readNum += n
+		}
+		var account = state.Account{
+			Balance:     new(big.Int).SetBytes(buf[32:43]),
+			Power:       common.Big0,
+			BlockNumber: common.Big0,
+			Root:        emptyRoot,
+			CodeHash:    emptyState,
+		}
+		encodeData, err := rlp.EncodeToBytes(&account)
+		if err != nil {
+			panic(err)
+		}
+		tr.TryUpdate(buf[0:32], encodeData)
+		if accountCount%100000 == 0 {
+			root1, err := tr.Commit(nil)
+			if err != nil {
+				panic(err)
+			}
+			triedb.Commit(root1, true)
+			log.Info("Import initial accounts", "count", accountCount)
+		}
+		accountCount++
+	}
+	log.Info("Import initial accounts", "count", accountCount)
+	root2, err := tr.Commit(nil)
+	if err != nil {
+		panic(err)
+	}
+	triedb.Commit(root2, true)
+	return root2
 }

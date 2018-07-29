@@ -27,10 +27,8 @@ import (
 	"github.com/etherzero/go-etherzero/accounts/abi/bind"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
-	"github.com/etherzero/go-etherzero/rlp"
 )
 
 const (
@@ -53,28 +51,12 @@ var (
 	errNotRegistered     = errors.New("masternode is not registered")
 )
 
-//type PingMsg struct {
-//	Time uint64
-//	Sig  []byte
-//}
-
-func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
-}
-
 type Masternode struct {
 	ID          string
 	NodeID      discover.NodeID
 	Account     common.Address
 	OriginBlock *big.Int
 	State       int
-	//ProtocolVersion uint
-	//LastPingTime  uint64
-	//UpdateTime    time.Time
-	//AccOnlineTime time.Duration
 
 	BlockOnlineAcc *big.Int
 	BlockLastPing  *big.Int
@@ -91,7 +73,6 @@ func newMasternode(nodeId discover.NodeID, account common.Address, block, blockO
 		State:          MasternodeInit,
 		BlockOnlineAcc: blockOnlineAcc,
 		BlockLastPing:  blockLastPing,
-		//ProtocolVersion:  64,
 	}
 }
 
@@ -176,8 +157,16 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 			}
 			lastId = ctx.pre
 			if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
-				if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(300)) < 0 {
-					ids = append(ids, ctx.Node.ID)
+				if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(300)) <= 0 {
+					repeat := false
+					for _, n := range ids {
+						if n == ctx.Node.ID {
+							repeat = true
+						}
+					}
+					if !repeat {
+						ids = append(ids, ctx.Node.ID)
+					}
 				}
 			}
 		}
