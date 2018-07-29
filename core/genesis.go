@@ -168,7 +168,10 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
 			genesis = DefaultGenesisBlock()
-			root := genesisAccounts(common.Hash{}, db)
+			root, err := genesisAccounts(common.Hash{}, db)
+			if err != nil {
+				return params.DevoteChainConfig, common.Hash{}, err
+			}
 			genesis.StateRoot = root
 		} else {
 			log.Info("Writing custom genesis block")
@@ -502,22 +505,22 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB
 	return devoteDB
 }
 
-func genesisAccounts(root common.Hash, db ethdb.Database) common.Hash {
+func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		panic(err)
+		return common.Hash{}, err
 	}
 	path := strings.Replace(dir, "\\", "/", -1) + "/init.bin"
 	file, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		return common.Hash{}, err
 	}
 	defer file.Close()
 
 	triedb := trie.NewDatabase(db)
 	tr, err := trie.New(root, triedb)
 	if err != nil {
-		panic(err)
+		return common.Hash{}, err
 	}
 
 	bufReader := bufio.NewReader(file)
@@ -569,5 +572,5 @@ func genesisAccounts(root common.Hash, db ethdb.Database) common.Hash {
 		panic(err)
 	}
 	triedb.Commit(root2, true)
-	return root2
+	return root2, nil
 }
