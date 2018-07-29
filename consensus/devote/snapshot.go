@@ -89,7 +89,6 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 		key = append(key, []byte(witness)...)
 
 		size := uint64(0)
-		fmt.Printf("uncast cycle%d,witness%s\n", cycle, witness)
 		size = ec.devoteDB.GetStatsCount(key)
 
 		if size < 1 {
