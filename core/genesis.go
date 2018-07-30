@@ -319,13 +319,37 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 }
 
 func masternodeContractAccount(masternodes []string) GenesisAccount {
+	addresses := []common.Address{
+		common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436"),
+		common.HexToAddress("0x8cba568d021f63465c89c573b8deaa7368adedd4"),
+		common.HexToAddress("0x0198e9b6ad2b83da9cadfe3b1332ace83c7ef409"),
+		common.HexToAddress("0x47bf9d89d79d61aac08322a3d23946476424e6d2"),
+		common.HexToAddress("0x0c3330af31eb804800d1876c9b5fcbadcf146e79"),
+		common.HexToAddress("0x7d6c6fe0fc97a567c5ed7ff9f67c7cbdf5d8b6f5"),
+		common.HexToAddress("0x47d8215f49fbd0ed1f3145fac25b5d1bbefd9e04"),
+		common.HexToAddress("0x99a4e8ab60add45ef834f3e6b5e920bdc71d5a10"),
+		common.HexToAddress("0xa22e4712c2747a3a2fdaf0a457f46c584eeb1d40"),
+		common.HexToAddress("0xb13016d02efc64517e334b91f66357f58d549433"),
+		common.HexToAddress("0x711a659ede41e097c644e382e9cb320e112e4a29"),
+		common.HexToAddress("0x4a59b6f943afd1ce7053482ab69117ed763340fb"),
+		common.HexToAddress("0xd6f6bec1c90dd258eb91bba3a4221fcabad729bf"),
+		common.HexToAddress("0xafd73d8649ac2c500f9dda354963b1a723b27a61"),
+		common.HexToAddress("0x2fa2d38ab70c9af20efc2458e267686206ea4df5"),
+		common.HexToAddress("0xae068e98c621a1fe061ed513822aeb32a6f4a83b"),
+		common.HexToAddress("0x4affc36e567af8986f0a750eb595258052aeaa66"),
+		common.HexToAddress("0xb45ed055a7f748a567219b16184b0ff4d806070f"),
+		common.HexToAddress("0xefc5c57b389974c113ceff29bdb6a79034cdfde1"),
+		common.HexToAddress("0x4c2ea4e923dea28d38a75726d120ff66c0d4edcd"),
+		common.HexToAddress("0x9db9d0b702134b660cec839decbfc686f9952caa"),
+	}
+
 	var (
 		data    = make(map[common.Hash]common.Hash)
 		lastKey common.Hash
 		lastId  [8]byte
 	)
 
-	for _, n := range masternodes {
+	for index, n := range masternodes {
 		node, err := discover.ParseNode(n)
 		if err != nil {
 			panic(err)
@@ -347,14 +371,19 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 		copy(nodeKey[:8], id1[:8])
 		nodeKey[63] = 2
 
+		var contextAddress common.Hash
+		copy(contextAddress[12:32], addresses[index].Bytes())
+		
 		key := new(big.Int).SetBytes(crypto.Keccak256(nodeKey[:]))
 		key1 := common.BytesToHash(key.Bytes())                         // id1
 		key2 := common.BytesToHash(key.Add(key, big.NewInt(1)).Bytes()) // id2
 		key3 := common.BytesToHash(key.Add(key, big.NewInt(1)).Bytes()) // nextId,preId
+		key4 := common.BytesToHash(key.Add(key, big.NewInt(1)).Bytes()) // account
 		lastKey = key3
 		data[key1] = id1
 		data[key2] = id2
 		data[key3] = contextId
+		data[key4] = contextAddress
 
 		pubkey, err := node.ID.Pubkey()
 		if err != nil {
