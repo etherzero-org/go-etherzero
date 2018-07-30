@@ -22,8 +22,8 @@ package devotedb
 import (
 	"fmt"
 	"sync"
-
 	"encoding/binary"
+
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
