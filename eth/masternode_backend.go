@@ -123,6 +123,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
 	defer ping.Stop()
+	minPower := big.NewInt(35e+14)
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
@@ -160,8 +161,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 				fmt.Println("Failed to deposit 0.01 etz to ", address.String())
 				break
 			}
-			if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(big.NewInt(900000)) < 0 {
-				//fmt.Println("insufficient power for ping tx")
+			if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
+				fmt.Println("Insufficient power for ping transaction")
 				break
 			}
 			tx := types.NewTransaction(
