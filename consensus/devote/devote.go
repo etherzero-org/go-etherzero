@@ -52,8 +52,8 @@ const (
 )
 
 var (
-	etherzeroBlockReward = big.NewInt(0.7e+18) // Block reward in wei to master node account when successfully mining a block
-	rewardToCommunity    = big.NewInt(0.3e+18) // Block reward in wei to community account when successfully mining a block
+	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to master node account when successfully mining a block
+	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
 
 	timeOfFirstBlock   = uint64(0)
 	confirmedBlockHead = []byte("confirmed-block-head")
