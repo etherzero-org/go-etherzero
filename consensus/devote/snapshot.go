@@ -90,7 +90,6 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 
 		size := uint64(0)
 		size = ec.devoteDB.GetStatsNumber(key)
-
 		if size < 1 {
 			// not active witnesses need uncast
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
