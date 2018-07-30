@@ -123,7 +123,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
 	defer ping.Stop()
-	minPower := big.NewInt(35e+14)
+	minPower := big.NewInt(20e+14)
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
@@ -162,7 +162,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				break
 			}
 			if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
-				fmt.Println("Insufficient power for ping transaction")
+				fmt.Println("Insufficient power for ping transaction.", address.Hex(), mm.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).String())
 				break
 			}
 			tx := types.NewTransaction(
@@ -170,7 +170,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				params.MasterndeContractAddress,
 				big.NewInt(0),
 				90000,
-				big.NewInt(36e+9),
+				big.NewInt(20e+9),
 				nil,
 			)
 			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.active.PrivateKey)
@@ -183,7 +183,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				fmt.Println("send ping to txpool error:", err)
 				break
 			}
-			//fmt.Println("Send ping message ...")
+			fmt.Println("Send ping message ...")
 		}
 	}
 }
