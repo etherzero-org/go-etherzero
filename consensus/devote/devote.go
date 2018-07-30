@@ -499,16 +499,19 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 
 func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	d.signer = signer
 	d.signFn = signFn
 	log.Info("devote Authorize ", "signer", signer)
-	d.mu.Unlock()
 }
 
 func (d *Devote) Masternodes(masternodeListFn MasternodeListFn) {
 	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	d.masternodeListFn = masternodeListFn
-	d.mu.Unlock()
+
 }
 
 // ecrecover extracts the Masternode account ID from a signed header.

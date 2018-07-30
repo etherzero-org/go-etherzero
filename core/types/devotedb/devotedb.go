@@ -27,10 +27,10 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
-	"github.com/etherzero/go-etherzero/params"
 )
 
 type DevoteDB struct {
@@ -68,7 +68,6 @@ func New(db Database, cycleRoot, statsRoot common.Hash) (*DevoteDB, error) {
 	}
 	cache := newCache(d)
 	d.setDevoteCache(cache)
-
 	return d, nil
 }
 
@@ -82,7 +81,6 @@ func NewDevoteByProtocol(db Database, protocol *DevoteProtocol) (*DevoteDB, erro
 	if err != nil {
 		return nil, err
 	}
-
 	d := &DevoteDB{
 		cycleTrie: cycleTrie,
 		statsTrie: statsTrie,
@@ -158,7 +156,7 @@ func (d *DevoteDB) GetStatsNumber(key []byte) uint64 {
 	hash := common.Hash{}
 	hash.SetBytes(key)
 	if len(d.dCache.stats) < 1 {
-		if cntBytes, _:= d.statsTrie.TryGet(key);cntBytes != nil{
+		if cntBytes, _ := d.statsTrie.TryGet(key); cntBytes != nil {
 			count := binary.BigEndian.Uint64(cntBytes)
 			return count
 		}
@@ -167,13 +165,13 @@ func (d *DevoteDB) GetStatsNumber(key []byte) uint64 {
 }
 
 func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
-	dc := d.dCache
-	if dc != nil {
-		list, err := dc.GetWitnesses(d.db, cycle)
-		if err == nil {
-			return list, nil
-		}
-	}
+	//dc := d.dCache
+	//if dc != nil {
+	//	list, err := dc.GetWitnesses(d.db, cycle)
+	//	if err == nil {
+	//		return list, nil
+	//	}
+	//}
 	key := common.Hash{}
 	newCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(cycle))
@@ -191,7 +189,7 @@ func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	dc.SetWitnesses(cycle, witnesses)
+	//dc.SetWitnesses(cycle, witnesses)
 	return witnesses, nil
 }
 
@@ -259,8 +257,8 @@ func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness str
 		binary.BigEndian.PutUint64(key, currentCycle)
 		// TODO
 		key = append(key, []byte(witness)...)
-		if cntBytes, _:= d.statsTrie.TryGet(key);cntBytes != nil {
-			cnt=binary.BigEndian.Uint64(cntBytes)+1
+		if cntBytes, _ := d.statsTrie.TryGet(key); cntBytes != nil {
+			cnt = binary.BigEndian.Uint64(cntBytes) + 1
 		}
 	}
 
@@ -299,7 +297,7 @@ func (d *DevoteDB) GetCycle() uint64 {
 type DevoteProtocol struct {
 	mu sync.Mutex
 
-	CycleHash common.Hash `json:"cyclehash"         gencodec:"required"`
+	CycleHash common.Hash `json:"cyclehash"  gencodec:"required"`
 	StatsHash common.Hash `json:"statshash"  gencodec:"required"`
 }
 
