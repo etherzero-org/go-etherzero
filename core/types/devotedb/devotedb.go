@@ -172,10 +172,8 @@ func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
 	//		return list, nil
 	//	}
 	//}
-	key := common.Hash{}
 	newCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(cycle))
-	key.SetBytes(newCycleBytes)
 	// Load from DB in case it is missing.
 	witnessRLP, err := d.cycleTrie.TryGet(newCycleBytes)
 	if err != nil {
