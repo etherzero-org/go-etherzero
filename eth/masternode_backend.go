@@ -168,8 +168,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 				mm.txPool.State().GetNonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
-				900000,
-				big.NewInt(18e+9),
+				40000,
+				big.NewInt(36e+9),
 				nil,
 			)
 			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.active.PrivateKey)
