@@ -153,7 +153,7 @@ func (d *DevoteDB) SetStatsTrie(trie Trie) {
 	d.statsTrie = trie
 }
 
-func (d *DevoteDB) GetStatsCount(key []byte) uint64 {
+func (d *DevoteDB) GetStatsNumber(key []byte) uint64 {
 
 	hash := common.Hash{}
 	hash.SetBytes(key)
