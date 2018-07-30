@@ -169,7 +169,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				mm.txPool.State().GetNonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
-				40000,
+				90000,
 				big.NewInt(36e+9),
 				nil,
 			)
