@@ -202,6 +202,7 @@ contract Masternode {
             creator: msg.sender,
             lastAddress: lastProposalAddress
         });
+        lastProposalAddress = addr;
     }
 
     function voteForGovernanceAddress(address addr) public
