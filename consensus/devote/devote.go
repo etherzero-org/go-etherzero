@@ -46,7 +46,7 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	maxWitnessSize uint64 = 21
+	maxWitnessSize uint64 = 4
 	safeSize              = maxWitnessSize*2/3 + 1
 	consensusSize         = maxWitnessSize*2/3 + 1
 )
@@ -94,6 +94,8 @@ type SignerFn func(string, []byte) ([]byte, error)
 
 type MasternodeListFn func(number *big.Int) ([]string, error)
 
+type GetGovernanceContractAddress func(number *big.Int) (common.Address, error)
+
 // NOTE: sigHash was copy from clique
 // sigHash returns the hash which is used as input for the proof-of-authority
 // signing. It is the hash of the entire header apart from the 65 byte signature
@@ -132,13 +134,15 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer               string        // master node nodeid
-	signFn               SignerFn      // signature function
-	signatures           *lru.ARCCache // Signatures of recent blocks to speed up mining
-	confirmedBlockHeader *types.Header
-	masternodeListFn     MasternodeListFn //get current all masternodes
-	mu                   sync.RWMutex
-	stop                 chan bool
+	signer                      string        // master node nodeid
+	signFn                      SignerFn      // signature function
+	signatures                  *lru.ARCCache // Signatures of recent blocks to speed up mining
+	confirmedBlockHeader        *types.Header
+	masternodeListFn            MasternodeListFn             //get current all masternodes
+	governanceContractAddressFn GetGovernanceContractAddress //get current GovernanceContractAddress
+
+	mu   sync.RWMutex
+	stop chan bool
 }
 
 func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
@@ -234,7 +238,7 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	return nil
 }
 
-func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
 
@@ -244,7 +248,7 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 
 	//  Accumulate the rewards to community account
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
-	state.AddBalance(params.GovernanceContractAddress, rewardForCommunity, header.Number)
+	state.AddBalance(govAddress, rewardForCommunity, header.Number)
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -252,11 +256,21 @@ func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
 
+	parent := chain.GetHeaderByHash(header.ParentHash)
+	number := maxWitnessSize
+	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(number)))
+	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
+		stableBlockNumber = big.NewInt(0)
+	}
 	// Accumulate block rewards and commit the final state root
-	AccumulateRewards(chain.Config(), state, header, uncles)
+	govaddress, gerr := d.governanceContractAddressFn(stableBlockNumber)
+	if gerr != nil {
+
+		return nil, fmt.Errorf("get current governance address err:%s", gerr)
+	}
+	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
-	parent := chain.GetHeaderByHash(header.ParentHash)
 	controller := &Controller{
 		devoteDB:  devoteDB,
 		TimeStamp: header.Time.Uint64(),
@@ -266,14 +280,10 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
-	number := maxWitnessSize
-	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(number)))
-	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
-		stableBlockNumber = big.NewInt(0)
-	}
+
 	nodes, merr := d.masternodeListFn(stableBlockNumber)
 	if merr != nil {
-		return nil, fmt.Errorf("get current masternodes err,err:%s", merr)
+		return nil, fmt.Errorf("get current masternodes err:%s", merr)
 	}
 	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", nodes)
 	genesis := chain.GetHeaderByNumber(0)
@@ -511,7 +521,13 @@ func (d *Devote) Masternodes(masternodeListFn MasternodeListFn) {
 	defer d.mu.Unlock()
 
 	d.masternodeListFn = masternodeListFn
+}
 
+func (d *Devote) GetGovernanceContractAddress(goveAddress GetGovernanceContractAddress) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.governanceContractAddressFn = goveAddress
 }
 
 // ecrecover extracts the Masternode account ID from a signed header.

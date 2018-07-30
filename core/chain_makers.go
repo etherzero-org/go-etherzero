@@ -189,7 +189,8 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		if gen != nil {
 			gen(i, b)
 		}
-		devote.AccumulateRewards(config, statedb, h, b.uncles)
+
+		devote.AccumulateRewards(params.GovernanceContractAddress, statedb, h, b.uncles)
 		root, err := statedb.Commit(config.IsEIP158(h.Number))
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))

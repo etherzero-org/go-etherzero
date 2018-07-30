@@ -185,6 +185,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	if devote, ok := eth.engine.(*devote.Devote); ok {
 		devote.Masternodes(eth.masternodeManager.MasternodeList)
+		devote.GetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
 	}
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.ExtraData))

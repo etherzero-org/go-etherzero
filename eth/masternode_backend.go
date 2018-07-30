@@ -230,3 +230,7 @@ func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
 }
+
+func (self *MasternodeManager) GetGovernanceContractAddress(number *big.Int) (common.Address, error) {
+	return masternode.GetGovernanceAddress(self.contract, number)
+}
