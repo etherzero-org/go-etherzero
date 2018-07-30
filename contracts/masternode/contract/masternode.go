@@ -16,10 +16,10 @@ import (
 )
 
 // ContractABI is the input ABI used to generate the binding from.
-const ContractABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"id\",\"type\":\"bytes8\"}],\"name\":\"has\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"id1\",\"type\":\"bytes32\"},{\"name\":\"id2\",\"type\":\"bytes32\"}],\"name\":\"register\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getId\",\"outputs\":[{\"name\":\"id\",\"type\":\"bytes8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"lastId\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"id\",\"type\":\"bytes8\"}],\"name\":\"getInfo\",\"outputs\":[{\"name\":\"id1\",\"type\":\"bytes32\"},{\"name\":\"id2\",\"type\":\"bytes32\"},{\"name\":\"preId\",\"type\":\"bytes8\"},{\"name\":\"nextId\",\"type\":\"bytes8\"},{\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\"},{\"name\":\"blockOnlineAcc\",\"type\":\"uint256\"},{\"name\":\"blockLastPing\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"etzMin\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"blockPingTimeout\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"etzPerNode\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"id\",\"type\":\"bytes8\"},{\"indexed\":false,\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"join\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"id\",\"type\":\"bytes8\"},{\"indexed\":false,\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"quit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"id\",\"type\":\"bytes8\"},{\"indexed\":false,\"name\":\"blockOnlineAcc\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"blockLastPing\",\"type\":\"uint256\"}],\"name\":\"ping\",\"type\":\"event\"}]"
+const ContractABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"id\",\"type\":\"bytes8\"}],\"name\":\"has\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"proposalPeriod\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"id1\",\"type\":\"bytes32\"},{\"name\":\"id2\",\"type\":\"bytes32\"}],\"name\":\"register\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getId\",\"outputs\":[{\"name\":\"id\",\"type\":\"bytes8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"governanceAddress\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"lastId\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"proposalFee\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"id\",\"type\":\"bytes8\"}],\"name\":\"getInfo\",\"outputs\":[{\"name\":\"id1\",\"type\":\"bytes32\"},{\"name\":\"id2\",\"type\":\"bytes32\"},{\"name\":\"preId\",\"type\":\"bytes8\"},{\"name\":\"nextId\",\"type\":\"bytes8\"},{\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"name\":\"account\",\"type\":\"address\"},{\"name\":\"blockOnlineAcc\",\"type\":\"uint256\"},{\"name\":\"blockLastPing\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"etzMin\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getVoteInfo\",\"outputs\":[{\"name\":\"voteCount\",\"type\":\"uint256\"},{\"name\":\"startBlock\",\"type\":\"uint256\"},{\"name\":\"stopBlock\",\"type\":\"uint256\"},{\"name\":\"creator\",\"type\":\"address\"},{\"name\":\"lastAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"blockPingTimeout\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"lastProposalAddress\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"voteForGovernanceAddress\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"createGovernanceAddressVote\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"etzPerNode\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"id\",\"type\":\"bytes8\"},{\"indexed\":false,\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"join\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"id\",\"type\":\"bytes8\"},{\"indexed\":false,\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"quit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"id\",\"type\":\"bytes8\"},{\"indexed\":false,\"name\":\"blockOnlineAcc\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"blockLastPing\",\"type\":\"uint256\"}],\"name\":\"ping\",\"type\":\"event\"}]"
 
 // ContractBin is the compiled bytecode used for deploying new contracts.
-const ContractBin = `0x608060405234801561001057600080fd5b506000805467ffffffffffffffff19168155600155610ca4806100346000396000f3006080604052600436106100985763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd811461061c57806316e7f171146106435780632f9267321461067957806365f68c8914610689578063c1292cc3146106c7578063c4e3ed93146106dc578063c808021c14610755578063e3596ce01461076a578063ff5ecad21461077f575b6000806000806100a6610c3e565b6100ae610c59565b6000808034156100bd57600080fd5b3360009081526004602052604090205460c060020a029850600160c060020a03198916158015906100f257506100f289610794565b156101dc57600160c060020a03198916600090815260026020526040812060060154985088111561017157874303965061012c87111561014e57600160c060020a03198916600090815260026020526040812060050155610171565b600160c060020a0319891660009081526002602052604090206005018054880190555b600160c060020a03198916600081815260026020908152604091829020436006820181905560059091015483519485529184019190915282820152517fb620b17a993c1ab2769ca9e6d72d178499b0cd9b800d62e9b3d502e01bca76c29181900360600190a1610611565b3360009081526003602090815260408083205460c060020a02600160c060020a0319811684526002909252909120549099509550341580156102275750600160c060020a0319891615155b801561023257508515155b801561024857506801156abf16a40f0000303110155b801561025657506000600154115b151561026157600080fd5b858552600160c060020a031989166000908152600260209081526040822060010154818801529085906080908890600b600019f115156102a057600080fd5b50508151600160a060020a0381166000908152600460209081526040808320805467ffffffffffffffff19169055600160c060020a03198b811684526002928390529220015491925060c060020a80830292680100000000000000009004029082161561034f57600160c060020a0319821660009081526002602081905260409091200180546fffffffffffffffff000000000000000019166801000000000000000060c060020a8404021790555b600160c060020a031981161561039857600160c060020a03198116600090815260026020819052604090912001805467ffffffffffffffff191660c060020a84041790556103b2565b6000805467ffffffffffffffff191660c060020a84041790555b6101006040519081016040528060006001026000191681526020016000600102600019168152602001600060c060020a02600160c060020a0319168152602001600060c060020a02600160c060020a03191681526020016000600160a060020a0316815260200160008152602001600081526020016000815250600260008b600160c060020a031916600160c060020a0319168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908360c060020a9004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908360c060020a9004021790555060808201518160030160006101000a815481600160a060020a030219169083600160a060020a0316021790555060a0820151816004015560c0820151816005015560e08201518160060155905050600060c060020a026003600033600160a060020a0316600160a060020a0316815260200190815260200160002060006101000a81548167ffffffffffffffff021916908360c060020a90040217905550600180600082825403925050819055507f86d1ab9dbf33cb06567fbeb4b47a6a365cf66f632380589591255187f5ca09cd89336040518083600160c060020a031916600160c060020a031916815260200182600160a060020a0316600160a060020a031681526020019250505060405180910390a160405133906000906801156abf16a40f00009082818181858883f1935050505015801561060f573d6000803e3d6000fd5b505b505050505050505050005b34801561062857600080fd5b506106316107b2565b60408051918252519081900360200190f35b34801561064f57600080fd5b50610665600160c060020a031960043516610794565b604080519115158252519081900360200190f35b6106876004356024356107b8565b005b34801561069557600080fd5b506106aa600160a060020a0360043516610b8d565b60408051600160c060020a03199092168252519081900360200190f35b3480156106d357600080fd5b506106aa610bae565b3480156106e857600080fd5b506106fe600160c060020a031960043516610bba565b604080519889526020890197909752600160c060020a0319958616888801529390941660608701526080860191909152600160a060020a031660a085015260c084019190915260e083015251908190036101000190f35b34801561076157600080fd5b50610631610c20565b34801561077657600080fd5b50610631610c2b565b34801561078b57600080fd5b50610631610c31565b600160c060020a031916600090815260026020526040902054151590565b60015481565b60006107c2610c3e565b6107ca610c59565b849250600083158015906107dd57508415155b80156107f25750600160c060020a0319841615155b801561081b57503360009081526003602052604090205460c060020a02600160c060020a031916155b801561083e5750600160c060020a03198416600090815260026020526040902054155b801561085257506801158e460913d0000034145b151561085d57600080fd5b8583526020808401869052826080856000600b600019f1151561087f57600080fd5b508051600160a060020a038116151561089757600080fd5b836003600033600160a060020a0316600160a060020a0316815260200190815260200160002060006101000a81548167ffffffffffffffff021916908360c060020a900402179055506101006040519081016040528087600019168152602001866000191681526020016000809054906101000a900460c060020a02600160c060020a0319168152602001600060c060020a02600160c060020a031916815260200133600160a060020a031681526020014381526020016000815260200160008152506002600086600160c060020a031916600160c060020a0319168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908360c060020a9004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908360c060020a9004021790555060808201518160030160006101000a815481600160a060020a030219169083600160a060020a0316021790555060a0820151816004015560c0820151816005015560e08201518160060155905050600060c060020a02600160c060020a0319166000809054906101000a900460c060020a02600160c060020a031916141515610acf5760008054600160c060020a031960c060020a918202168252600260208190526040909220909101805491860468010000000000000000026fffffffffffffffff0000000000000000199092169190911790555b6000805460c060020a860467ffffffffffffffff19918216811783556001805481019055600160a060020a03841680845260046020526040808520805490941690921790925551909190662386f26fc100009082818181858883f19350505050158015610b40573d6000803e3d6000fd5b5060408051600160c060020a03198616815233602082015281517ff19f694d42048723a415f5eed7c402ce2c2e5dc0c41580c3f80e220db85ac389929181900390910190a1505050505050565b600160a060020a031660009081526003602052604090205460c060020a0290565b60005460c060020a0281565b600160c060020a03191660009081526002602081905260409091208054600182015492820154600483015460038401546005850154600690950154939660c060020a808502966801000000000000000090950402949293600160a060020a039092169290565b662386f26fc1000081565b61012c81565b6801158e460913d0000081565b60408051808201825290600290829080388339509192915050565b60206040519081016040528060019060208202803883395091929150505600a165627a7a7230582033d3d5f99c0734a675392bcaa3f4666c0ba838fc173a91f8e0ddeeaf4ce11bb00029`
+const ContractBin = `608060405234801561001057600080fd5b5060007801000000000000000000000000000000000000000000000000026000806101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060006001819055506127048061007e6000396000f3006080604052600436106100e6576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd14610dab57806316e7f17114610dd65780632c103c7914610e365780632f92673214610e6157806365f68c8914610e93578063795053d314610f20578063c1292cc314610f77578063c27cabb514610fd8578063c4e3ed9314611003578063c808021c14611138578063dc1e30da14611163578063e3596ce01461122e578063e7b895b614611259578063e8c74af2146112b0578063f834f524146112f3578063ff5ecad214611329575b6000806000806100f4612693565b6100fc6126b5565b6000806000803414151561010f57600080fd5b600460003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060009054906101000a90047801000000000000000000000000000000000000000000000000029850600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168977ffffffffffffffffffffffffffffffffffffffffffffffff1916141580156101dd57506101dc89611354565b5b1561041b57600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060060154975060008811156102fc578743039650610e108711156102a0576000600260008b77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600501819055506102fb565b86600260008b77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600501600082825401925050819055505b5b43600260008b77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600601819055507fb620b17a993c1ab2769ca9e6d72d178499b0cd9b800d62e9b3d502e01bca76c289600260008c77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206005015443604051808477ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001838152602001828152602001935050505060405180910390a1610da0565b600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060009054906101000a90047801000000000000000000000000000000000000000000000000029850600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060000154955060003414801561053357508877ffffffffffffffffffffffffffffffffffffffffffffffff1916600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191614155b801561054b5750856000191660006001026000191614155b80156105805750662386f26fc100006801158e460913d00000033073ffffffffffffffffffffffffffffffffffffffff163110155b801561058e57506000600154115b151561059957600080fd5b858560006002811015156105a957fe5b60200201906000191690816000191681525050600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206001015485600160028110151561061857fe5b602002019060001916908160001916815250506020846080876000600b600019f1151561064457600080fd5b83600060018110151561065357fe5b60200201516001900492506000780100000000000000000000000000000000000000000000000002600460008573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548167ffffffffffffffff0219169083780100000000000000000000000000000000000000000000000090040217905550600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160009054906101000a90047801000000000000000000000000000000000000000000000000029150600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160089054906101000a90047801000000000000000000000000000000000000000000000000029050600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168277ffffffffffffffffffffffffffffffffffffffffffffffff19161415156108bb5780600260008477ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160086101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505b600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168177ffffffffffffffffffffffffffffffffffffffffffffffff19161415156109a05781600260008377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055506109db565b816000806101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505b6101006040519081016040528060006001026000191681526020016000600102600019168152602001600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001600073ffffffffffffffffffffffffffffffffffffffff16815260200160008152602001600081526020016000815250600260008b77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060808201518160030160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060a0820151816004015560c0820151816005015560e082015181600601559050506000780100000000000000000000000000000000000000000000000002600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548167ffffffffffffffff0219169083780100000000000000000000000000000000000000000000000090040217905550600180600082825403925050819055507f86d1ab9dbf33cb06567fbeb4b47a6a365cf66f632380589591255187f5ca09cd8933604051808377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390a13373ffffffffffffffffffffffffffffffffffffffff166108fc662386f26fc100006801158e460913d00000039081150290604051600060405180830381858888f19350505050158015610d9e573d6000803e3d6000fd5b505b505050505050505050005b348015610db757600080fd5b50610dc06113b8565b6040518082815260200191505060405180910390f35b348015610de257600080fd5b50610e1c600480360381019080803577ffffffffffffffffffffffffffffffffffffffffffffffff19169060200190929190505050611354565b604051808215151515815260200191505060405180910390f35b348015610e4257600080fd5b50610e4b6113be565b6040518082815260200191505060405180910390f35b610e91600480360381019080803560001916906020019092919080356000191690602001909291905050506113c5565b005b348015610e9f57600080fd5b50610ed4600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050611bde565b604051808277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200191505060405180910390f35b348015610f2c57600080fd5b50610f35611c4c565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b348015610f8357600080fd5b50610f8c611c72565b604051808277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200191505060405180910390f35b348015610fe457600080fd5b50610fed611c9c565b6040518082815260200191505060405180910390f35b34801561100f57600080fd5b50611049600480360381019080803577ffffffffffffffffffffffffffffffffffffffffffffffff19169060200190929190505050611ca8565b60405180896000191660001916815260200188600019166000191681526020018777ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018581526020018473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018381526020018281526020019850505050505050505060405180910390f35b34801561114457600080fd5b5061114d611fa1565b6040518082815260200191505060405180910390f35b34801561116f57600080fd5b506111a4600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050611fac565b604051808681526020018581526020018481526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019550505050505060405180910390f35b34801561123a57600080fd5b50611243612156565b6040518082815260200191505060405180910390f35b34801561126557600080fd5b5061126e61215c565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b3480156112bc57600080fd5b506112f1600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050612182565b005b611327600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050612467565b005b34801561133557600080fd5b5061133e612686565b6040518082815260200191505060405180910390f35b60008060010260001916600260008477ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600001546000191614159050919050565b60015481565b62124f8081565b60006113cf612693565b6113d76126b5565b60008593508560001916600060010260001916141580156114045750846000191660006001026000191614155b801561146257508377ffffffffffffffffffffffffffffffffffffffffffffffff1916600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191614155b80156115235750600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916145b80156115865750600260008577ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206000015460001916600060010260001916145b801561159a57506801158e460913d0000034145b15156115a557600080fd5b858360006002811015156115b557fe5b60200201906000191690816000191681525050848360016002811015156115d857fe5b602002019060001916908160001916815250506020826080856000600b600019f1151561160457600080fd5b81600060018110151561161357fe5b6020020151600190049050600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff161415151561165a57600080fd5b83600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055506101006040519081016040528087600019168152602001866000191681526020016000809054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191681526020013373ffffffffffffffffffffffffffffffffffffffff168152602001438152602001600081526020016000815250600260008677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060808201518160030160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060a0820151816004015560c0820151816005015560e08201518160060155905050600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19166000809054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916141515611a255783600260008060009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160086101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505b836000806101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055506001806000828254019250508190555083600460008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055508073ffffffffffffffffffffffffffffffffffffffff166108fc662386f26fc100009081150290604051600060405180830381858888f19350505050158015611b34573d6000803e3d6000fd5b507ff19f694d42048723a415f5eed7c402ce2c2e5dc0c41580c3f80e220db85ac3898433604051808377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390a1505050505050565b6000600360008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060009054906101000a90047801000000000000000000000000000000000000000000000000029050919050565b600560009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000809054906101000a900478010000000000000000000000000000000000000000000000000281565b678ac7230489e8000081565b600080600080600080600080600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600001549750600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600101549650600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160009054906101000a90047801000000000000000000000000000000000000000000000000029550600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160089054906101000a90047801000000000000000000000000000000000000000000000000029450600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600401549350600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060030160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff169250600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600501549150600260008a77ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600601549050919395975091939597565b662386f26fc1000081565b6000806000806000600860008773ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600001549450600860008773ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600101549350600860008773ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600201549250600860008773ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060030160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff169150600860008773ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060040160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905091939590929450565b610e1081565b600660009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b600080600860008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002091506121cf33611bde565b9050600082600101541180156121e85750816001015443115b80156121f75750816002015443105b80156122555750600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168177ffffffffffffffffffffffffffffffffffffffffffffffff191614155b80156122b1575062124f80600260008377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600401544303115b801561234a575060001515600760008573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060009054906101000a900460ff161515145b151561235557600080fd5b6001600760008573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548160ff02191690831515021790555060018260000160008282540192505081905550600260015481151561240b57fe5b04826000015411156124625743826002018190555082600560006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505b505050565b6000600860008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600001541480156124fb57506000600860008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010154145b801561250e5750678ac7230489e8000034145b151561251957600080fd5b60a0604051908101604052806000815260200143815260200162124f80430181526020013373ffffffffffffffffffffffffffffffffffffffff168152602001600660009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815250600860008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060008201518160000155602082015181600101556040820151816002015560608201518160030160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060808201518160040160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555090505050565b6801158e460913d0000081565b6040805190810160405280600290602082028038833980820191505090505090565b6020604051908101604052806001906020820280388339808201915050905050905600a165627a7a72305820404e2868f2203a2d8fc30cc0ca3d80fbd3b1c3ad8e4078fcf1dccbd36e744bbf0029`
 
 // DeployContract deploys a new Ethereum contract, binding an instance of Contract to it.
 func DeployContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Contract, error) {
@@ -366,6 +366,80 @@ func (_Contract *ContractCallerSession) GetInfo(id [8]byte) (struct {
 	return _Contract.Contract.GetInfo(&_Contract.CallOpts, id)
 }
 
+// GetVoteInfo is a free data retrieval call binding the contract method 0xdc1e30da.
+//
+// Solidity: function getVoteInfo(addr address) constant returns(voteCount uint256, startBlock uint256, stopBlock uint256, creator address, lastAddress address)
+func (_Contract *ContractCaller) GetVoteInfo(opts *bind.CallOpts, addr common.Address) (struct {
+	VoteCount   *big.Int
+	StartBlock  *big.Int
+	StopBlock   *big.Int
+	Creator     common.Address
+	LastAddress common.Address
+}, error) {
+	ret := new(struct {
+		VoteCount   *big.Int
+		StartBlock  *big.Int
+		StopBlock   *big.Int
+		Creator     common.Address
+		LastAddress common.Address
+	})
+	out := ret
+	err := _Contract.contract.Call(opts, out, "getVoteInfo", addr)
+	return *ret, err
+}
+
+// GetVoteInfo is a free data retrieval call binding the contract method 0xdc1e30da.
+//
+// Solidity: function getVoteInfo(addr address) constant returns(voteCount uint256, startBlock uint256, stopBlock uint256, creator address, lastAddress address)
+func (_Contract *ContractSession) GetVoteInfo(addr common.Address) (struct {
+	VoteCount   *big.Int
+	StartBlock  *big.Int
+	StopBlock   *big.Int
+	Creator     common.Address
+	LastAddress common.Address
+}, error) {
+	return _Contract.Contract.GetVoteInfo(&_Contract.CallOpts, addr)
+}
+
+// GetVoteInfo is a free data retrieval call binding the contract method 0xdc1e30da.
+//
+// Solidity: function getVoteInfo(addr address) constant returns(voteCount uint256, startBlock uint256, stopBlock uint256, creator address, lastAddress address)
+func (_Contract *ContractCallerSession) GetVoteInfo(addr common.Address) (struct {
+	VoteCount   *big.Int
+	StartBlock  *big.Int
+	StopBlock   *big.Int
+	Creator     common.Address
+	LastAddress common.Address
+}, error) {
+	return _Contract.Contract.GetVoteInfo(&_Contract.CallOpts, addr)
+}
+
+// GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
+//
+// Solidity: function governanceAddress() constant returns(address)
+func (_Contract *ContractCaller) GovernanceAddress(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Contract.contract.Call(opts, out, "governanceAddress")
+	return *ret0, err
+}
+
+// GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
+//
+// Solidity: function governanceAddress() constant returns(address)
+func (_Contract *ContractSession) GovernanceAddress() (common.Address, error) {
+	return _Contract.Contract.GovernanceAddress(&_Contract.CallOpts)
+}
+
+// GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
+//
+// Solidity: function governanceAddress() constant returns(address)
+func (_Contract *ContractCallerSession) GovernanceAddress() (common.Address, error) {
+	return _Contract.Contract.GovernanceAddress(&_Contract.CallOpts)
+}
+
 // Has is a free data retrieval call binding the contract method 0x16e7f171.
 //
 // Solidity: function has(id bytes8) constant returns(bool)
@@ -418,6 +492,105 @@ func (_Contract *ContractCallerSession) LastId() ([8]byte, error) {
 	return _Contract.Contract.LastId(&_Contract.CallOpts)
 }
 
+// LastProposalAddress is a free data retrieval call binding the contract method 0xe7b895b6.
+//
+// Solidity: function lastProposalAddress() constant returns(address)
+func (_Contract *ContractCaller) LastProposalAddress(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Contract.contract.Call(opts, out, "lastProposalAddress")
+	return *ret0, err
+}
+
+// LastProposalAddress is a free data retrieval call binding the contract method 0xe7b895b6.
+//
+// Solidity: function lastProposalAddress() constant returns(address)
+func (_Contract *ContractSession) LastProposalAddress() (common.Address, error) {
+	return _Contract.Contract.LastProposalAddress(&_Contract.CallOpts)
+}
+
+// LastProposalAddress is a free data retrieval call binding the contract method 0xe7b895b6.
+//
+// Solidity: function lastProposalAddress() constant returns(address)
+func (_Contract *ContractCallerSession) LastProposalAddress() (common.Address, error) {
+	return _Contract.Contract.LastProposalAddress(&_Contract.CallOpts)
+}
+
+// ProposalFee is a free data retrieval call binding the contract method 0xc27cabb5.
+//
+// Solidity: function proposalFee() constant returns(uint256)
+func (_Contract *ContractCaller) ProposalFee(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Contract.contract.Call(opts, out, "proposalFee")
+	return *ret0, err
+}
+
+// ProposalFee is a free data retrieval call binding the contract method 0xc27cabb5.
+//
+// Solidity: function proposalFee() constant returns(uint256)
+func (_Contract *ContractSession) ProposalFee() (*big.Int, error) {
+	return _Contract.Contract.ProposalFee(&_Contract.CallOpts)
+}
+
+// ProposalFee is a free data retrieval call binding the contract method 0xc27cabb5.
+//
+// Solidity: function proposalFee() constant returns(uint256)
+func (_Contract *ContractCallerSession) ProposalFee() (*big.Int, error) {
+	return _Contract.Contract.ProposalFee(&_Contract.CallOpts)
+}
+
+// ProposalPeriod is a free data retrieval call binding the contract method 0x2c103c79.
+//
+// Solidity: function proposalPeriod() constant returns(uint256)
+func (_Contract *ContractCaller) ProposalPeriod(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Contract.contract.Call(opts, out, "proposalPeriod")
+	return *ret0, err
+}
+
+// ProposalPeriod is a free data retrieval call binding the contract method 0x2c103c79.
+//
+// Solidity: function proposalPeriod() constant returns(uint256)
+func (_Contract *ContractSession) ProposalPeriod() (*big.Int, error) {
+	return _Contract.Contract.ProposalPeriod(&_Contract.CallOpts)
+}
+
+// ProposalPeriod is a free data retrieval call binding the contract method 0x2c103c79.
+//
+// Solidity: function proposalPeriod() constant returns(uint256)
+func (_Contract *ContractCallerSession) ProposalPeriod() (*big.Int, error) {
+	return _Contract.Contract.ProposalPeriod(&_Contract.CallOpts)
+}
+
+// CreateGovernanceAddressVote is a paid mutator transaction binding the contract method 0xf834f524.
+//
+// Solidity: function createGovernanceAddressVote(addr address) returns()
+func (_Contract *ContractTransactor) CreateGovernanceAddressVote(opts *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "createGovernanceAddressVote", addr)
+}
+
+// CreateGovernanceAddressVote is a paid mutator transaction binding the contract method 0xf834f524.
+//
+// Solidity: function createGovernanceAddressVote(addr address) returns()
+func (_Contract *ContractSession) CreateGovernanceAddressVote(addr common.Address) (*types.Transaction, error) {
+	return _Contract.Contract.CreateGovernanceAddressVote(&_Contract.TransactOpts, addr)
+}
+
+// CreateGovernanceAddressVote is a paid mutator transaction binding the contract method 0xf834f524.
+//
+// Solidity: function createGovernanceAddressVote(addr address) returns()
+func (_Contract *ContractTransactorSession) CreateGovernanceAddressVote(addr common.Address) (*types.Transaction, error) {
+	return _Contract.Contract.CreateGovernanceAddressVote(&_Contract.TransactOpts, addr)
+}
+
 // Register is a paid mutator transaction binding the contract method 0x2f926732.
 //
 // Solidity: function register(id1 bytes32, id2 bytes32) returns()
@@ -437,6 +610,27 @@ func (_Contract *ContractSession) Register(id1 [32]byte, id2 [32]byte) (*types.T
 // Solidity: function register(id1 bytes32, id2 bytes32) returns()
 func (_Contract *ContractTransactorSession) Register(id1 [32]byte, id2 [32]byte) (*types.Transaction, error) {
 	return _Contract.Contract.Register(&_Contract.TransactOpts, id1, id2)
+}
+
+// VoteForGovernanceAddress is a paid mutator transaction binding the contract method 0xe8c74af2.
+//
+// Solidity: function voteForGovernanceAddress(addr address) returns()
+func (_Contract *ContractTransactor) VoteForGovernanceAddress(opts *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "voteForGovernanceAddress", addr)
+}
+
+// VoteForGovernanceAddress is a paid mutator transaction binding the contract method 0xe8c74af2.
+//
+// Solidity: function voteForGovernanceAddress(addr address) returns()
+func (_Contract *ContractSession) VoteForGovernanceAddress(addr common.Address) (*types.Transaction, error) {
+	return _Contract.Contract.VoteForGovernanceAddress(&_Contract.TransactOpts, addr)
+}
+
+// VoteForGovernanceAddress is a paid mutator transaction binding the contract method 0xe8c74af2.
+//
+// Solidity: function voteForGovernanceAddress(addr address) returns()
+func (_Contract *ContractTransactorSession) VoteForGovernanceAddress(addr common.Address) (*types.Transaction, error) {
+	return _Contract.Contract.VoteForGovernanceAddress(&_Contract.TransactOpts, addr)
 }
 
 // ContractJoinIterator is returned from FilterJoin and is used to iterate over the raw logs and unpacked data for Join events raised by the Contract contract.

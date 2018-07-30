@@ -4,7 +4,7 @@ contract Masternode {
 
     uint public constant etzPerNode = 20 * 10 ** 18;
     uint public constant etzMin = 10 ** 16;
-    uint public constant blockPingTimeout = 300;
+    uint public constant blockPingTimeout = 3600;
 
     bytes8 public lastId;
     uint public count;
@@ -24,6 +24,21 @@ contract Masternode {
     mapping (bytes8 => node) nodes;
     mapping (address => bytes8) ids;
     mapping (address => bytes8) nodeAddressToId;
+
+    uint public constant proposalPeriod = 1200000;
+    uint public constant proposalFee = 10 * 10 ** 18;
+    address public governanceAddress;
+    address public lastProposalAddress;
+    struct vote {
+        uint voteCount;
+        uint startBlock;
+        uint stopBlock;
+        address creator;
+        address lastAddress;
+    }
+
+    mapping(address => mapping(address => bool)) voters;
+    mapping (address => vote) votes;
 
     event join(bytes8 id, address addr);
     event quit(bytes8 id, address addr);
@@ -173,5 +188,53 @@ contract Masternode {
     function has(bytes8 id) constant public returns (bool)
     {
         return nodes[id].id1 != bytes32(0);
+    }
+
+    function createGovernanceAddressVote(address addr) payable public
+    {
+        require(votes[addr].voteCount == 0
+        && votes[addr].startBlock == 0
+        && msg.value == proposalFee);
+        votes[addr] = vote({
+            voteCount: 0,
+            startBlock: block.number,
+            stopBlock: block.number + proposalPeriod,
+            creator: msg.sender,
+            lastAddress: lastProposalAddress
+        });
+    }
+
+    function voteForGovernanceAddress(address addr) public
+    {
+        vote storage v = votes[addr];
+        bytes8 id = getId(msg.sender);
+        require(v.startBlock > 0
+        && block.number > v.startBlock
+        && block.number < v.stopBlock
+        && id != bytes8(0)
+        && (block.number - nodes[id].block) > proposalPeriod
+        && voters[addr][msg.sender] == false);
+        voters[addr][msg.sender] = true;
+        v.voteCount += 1;
+        if (v.voteCount > (count / 2))
+        {
+            v.stopBlock = block.number;
+            governanceAddress = addr;
+        }
+    }
+
+    function getVoteInfo(address addr) constant public returns (
+        uint voteCount,
+        uint startBlock,
+        uint stopBlock,
+        address creator,
+        address lastAddress
+    )
+    {
+        voteCount = votes[addr].voteCount;
+        startBlock = votes[addr].startBlock;
+        stopBlock = votes[addr].stopBlock;
+        creator = votes[addr].creator;
+        lastAddress = votes[addr].lastAddress;
     }
 }

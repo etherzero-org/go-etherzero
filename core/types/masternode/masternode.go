@@ -112,6 +112,16 @@ func (n *Masternode) String() string {
 //	return ms, nil
 //}
 
+func GetGovernanceAddress(contract *contract.Contract, blockNumber *big.Int) (common.Address, error) {
+	if blockNumber == nil {
+		blockNumber = new(big.Int)
+	}
+	opts := new(bind.CallOpts)
+	opts.BlockNumber = blockNumber
+	addr, err := contract.GovernanceAddress(opts)
+	return addr, err
+}
+
 func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
 	if blockNumber == nil {
 		blockNumber = new(big.Int)
