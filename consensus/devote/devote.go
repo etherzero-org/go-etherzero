@@ -46,7 +46,7 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	maxWitnessSize uint64 = 4
+	maxWitnessSize uint64 = 21
 	safeSize              = maxWitnessSize*2/3 + 1
 	consensusSize         = maxWitnessSize*2/3 + 1
 )

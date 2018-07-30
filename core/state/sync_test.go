@@ -47,7 +47,7 @@ func makeTestState() (Database, common.Hash, []*testAccount) {
 		obj := state.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		acc := &testAccount{address: common.BytesToAddress([]byte{i})}
 
-		obj.AddBalance(big.NewInt(int64(11 * i)))
+		obj.AddBalance(big.NewInt(int64(11 * i)), common.Big0)
 		acc.balance = big.NewInt(int64(11 * i))
 
 		obj.SetNonce(uint64(42 * i))

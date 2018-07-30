@@ -117,7 +117,6 @@ func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 // CalcGasLimit computes the gas limit of the next block after parent.
 // This is miner strategy, not consensus protocol.
 func CalcGasLimit(parent *types.Block) uint64 {
-	return 30000000
 	// contrib = (parentGasUsed * 3 / 2) / 1024
 	contrib := (parent.GasUsed() + parent.GasUsed()/2) / params.GasLimitBoundDivisor
 

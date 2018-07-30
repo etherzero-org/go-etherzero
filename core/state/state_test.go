@@ -39,11 +39,11 @@ var toAddr = common.BytesToAddress
 func (s *StateSuite) TestDump(c *checker.C) {
 	// generate a few entries
 	obj1 := s.state.GetOrNewStateObject(toAddr([]byte{0x01}))
-	obj1.AddBalance(big.NewInt(22))
+	obj1.AddBalance(big.NewInt(22), common.Big0)
 	obj2 := s.state.GetOrNewStateObject(toAddr([]byte{0x01, 0x02}))
 	obj2.SetCode(crypto.Keccak256Hash([]byte{3, 3, 3, 3, 3, 3, 3}), []byte{3, 3, 3, 3, 3, 3, 3})
 	obj3 := s.state.GetOrNewStateObject(toAddr([]byte{0x02}))
-	obj3.SetBalance(big.NewInt(44))
+	obj3.SetBalance(big.NewInt(44), common.Big0)
 
 	// write some of them to the trie
 	s.state.updateStateObject(obj1)
@@ -147,7 +147,7 @@ func TestSnapshot2(t *testing.T) {
 
 	// db, trie are already non-empty values
 	so0 := state.getStateObject(stateobjaddr0)
-	so0.SetBalance(big.NewInt(42))
+	so0.SetBalance(big.NewInt(42), common.Big0)
 	so0.SetNonce(43)
 	so0.SetCode(crypto.Keccak256Hash([]byte{'c', 'a', 'f', 'e'}), []byte{'c', 'a', 'f', 'e'})
 	so0.suicided = false
@@ -159,7 +159,7 @@ func TestSnapshot2(t *testing.T) {
 
 	// and one with deleted == true
 	so1 := state.getStateObject(stateobjaddr1)
-	so1.SetBalance(big.NewInt(52))
+	so1.SetBalance(big.NewInt(52), common.Big0)
 	so1.SetNonce(53)
 	so1.SetCode(crypto.Keccak256Hash([]byte{'c', 'a', 'f', 'e', '2'}), []byte{'c', 'a', 'f', 'e', '2'})
 	so1.suicided = true
