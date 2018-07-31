@@ -234,7 +234,7 @@ func (self *worker) mine(now int64) {
 	if err != nil {
 		switch err {
 		case devote.ErrWaitForPrevBlock,
-			devote.ErrMintFutureBlock,
+			devote.ErrMinerFutureBlock,
 			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)

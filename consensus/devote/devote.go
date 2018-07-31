@@ -52,7 +52,7 @@ const (
 )
 
 var (
-	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to master node account when successfully mining a block
+	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
 	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
 
 	timeOfFirstBlock   = uint64(0)
@@ -79,12 +79,12 @@ var (
 	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
 	// the previous block's timestamp + the minimum block period.
 	ErrInvalidTimestamp         = errors.New("invalid timestamp")
-	ErrWaitForPrevBlock         = errors.New("wait for last block arrived")
-	ErrMintFutureBlock          = errors.New("miner the future block")
-	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
 	ErrInvalidBlockWitness      = errors.New("invalid block witness")
-	ErrInvalidMinerBlockTime    = errors.New("invalid time to miner the block")
+	ErrMinerFutureBlock         = errors.New("miner the future block")
+	ErrWaitForPrevBlock         = errors.New("wait for last block arrived")
 	ErrNilBlockHeader           = errors.New("nil block header returned")
+	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
+	ErrInvalidMinerBlockTime    = errors.New("invalid time to miner the block")
 )
 
 // SignerFn
@@ -238,6 +238,8 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	return nil
 }
 
+// AccumulateRewards credits the coinbase of the given block with the mining
+// reward.  The devote consensus allowed uncle block .
 func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
@@ -442,7 +444,7 @@ func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
 	prevSlot := PrevSlot(now)
 	nextSlot := NextSlot(now)
 	if lastBlock.Time().Uint64() >= nextSlot {
-		return ErrMintFutureBlock
+		return ErrMinerFutureBlock
 	}
 	// last block was arrived, or time's up
 	if lastBlock.Time().Uint64() == prevSlot || nextSlot-now <= 1 {
