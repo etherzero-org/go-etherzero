@@ -23,10 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/tests"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/tests"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -38,6 +38,8 @@ var stateTestCommand = cli.Command{
 	ArgsUsage: "<file>",
 }
 
+// StatetestResult contains the execution status after running a state test, any
+// error that might have occurred and a dump of the final state if requested.
 type StatetestResult struct {
 	Name  string      `json:"name"`
 	Pass  bool        `json:"pass"`

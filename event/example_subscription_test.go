@@ -19,7 +19,7 @@ package event_test
 import (
 	"fmt"
 
-	"github.com/ethzero/go-ethzero/event"
+	"github.com/etherzero/go-etherzero/event"
 )
 
 func ExampleNewSubscription() {

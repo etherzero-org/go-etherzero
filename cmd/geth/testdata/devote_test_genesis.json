@@ -1,0 +1,105 @@
+{
+  "config": {
+    "chainId": 8888,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "devote": {
+      "witnesses": [
+        {
+          "id": "9413a43cfde0af8e",
+          "addr": "0xc5c5b2c89e61d8e129f5f53a6697ae3b96d04204"
+        },
+        {
+          "id": "e461a6789f12dc8b",
+          "addr": "0x3fa48df4fd64da0737b1c2cbb4e01013ed86b643"
+        },
+        {
+          "id": "e461a6789f12dc2a",
+          "addr": "0xab2e146f1e261cb42038fdd672d035dd1e002c78"
+        },
+        {
+          "id": "e461a6789f12dcdf",
+          "addr": "0xb040353ec0f2c113d5639444f7253681aecda1f8"
+        },
+        {
+          "id": "e461a6789f12df8a",
+          "addr": "0x14432e15f21237013017fa6ee90fc99433dec82c"
+        },
+        {
+          "id": "e461a6789faddc8a",
+          "addr": "0x9f30d0e5c9c88cade54cd1adecf6bc2c7e0e5af6"
+        },
+        {
+          "id": "e461a6789fbcdc8a",
+          "addr": "0x743415d0e979dc6e426bc8189e40beb65bf5ac1d"
+        },
+        {
+          "id": "e461a6ab9f12dc8a",
+          "addr": "0x2cdbe87a1bd7ee60dd6fe97f7b2d1efbacd5d95d"
+        },
+        {
+          "id": "e461a6099f12af8a",
+          "addr": "0x8da3c5aedaf106c61cfee6d8483e1f255fdd60c0"
+        },
+        {
+          "id": "e461a6139f12dc8a",
+          "addr": "0x5b76fff970bf8a351c1c9ebfb5e5a9493e956ddd"
+        },
+        {
+          "id": "e461a6722f12dc8a",
+          "addr": "0x646ba1fa42eb940aac67103a71e9a908ef484ec3"
+        },
+        {
+          "id": "e461a6744f12dc8a",
+          "addr": "0x751b484bd5296f8d267a8537d33f25a848f7f7af"
+        },
+        {
+          "id": "e461a6119f12dc8a",
+          "addr": "0xf78b011e639ce6d8b76f97712118f3fe4a12dd95"
+        },
+        {
+          "id": "e461a6349f12dc8a",
+          "addr": "0x34d4a8d9f6b53a8f5e674516cb8ad66c843b2801"
+        },
+        {
+          "id": "e461a6789f42dc8a",
+          "addr": "0x8db3b6c801dddd624d6ddc2088aa64b5a2493661"
+        },
+        {
+          "id": "e461a6789f10dc8a",
+          "addr": "0x6f99d97a394fa7a623fdf84fdc7446b99c3cb335"
+        },
+        {
+          "id": "e461a67a2f12dc8a",
+          "addr": "0xabde197e97398864ba74511f02832726edad5967"
+        },
+        {
+          "id": "e461a6790f12dc8a",
+          "addr": "0x9d9667c71bb09d6ca7c3ed12bfe5e7be24e2ffe1"
+        },
+        {
+          "id": "e461a6099f12dc8a",
+          "addr": "0xbcfcb3fa8250be4f2bf2b1e70e1da500c668377b"
+        },
+        {
+          "id": "e461a0989f12dc8a",
+          "addr": "0x56cc452e450551b7b9cffe25084a069e8c1e9441"
+        },
+        {
+          "id": "e461a6724f12dc8a",
+          "addr": "0xd83b44a3719720ec54cdb9f54c0202de68f1ebcb"
+        }
+      ]
+    }
+  },
+  "nonce": "0x0000000000000042",
+  "difficulty": "0x020000",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "timestamp": "0x00",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "extraData": "0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa",
+  "gasLimit": "0x500000",
+  "alloc": {}
+}

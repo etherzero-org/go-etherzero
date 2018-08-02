@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-etherzero/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,6 +55,23 @@ var unpackTests = []unpackTest{
 		def:  `[{ "type": "bool" }]`,
 		enc:  "0000000000000000000000000000000000000000000000000000000000000001",
 		want: true,
+	},
+	{
+		def:  `[{ "type": "bool" }]`,
+		enc:  "0000000000000000000000000000000000000000000000000000000000000000",
+		want: false,
+	},
+	{
+		def:  `[{ "type": "bool" }]`,
+		enc:  "0000000000000000000000000000000000000000000000000001000000000001",
+		want: false,
+		err:  "abi: improperly encoded boolean value",
+	},
+	{
+		def:  `[{ "type": "bool" }]`,
+		enc:  "0000000000000000000000000000000000000000000000000000000000000003",
+		want: false,
+		err:  "abi: improperly encoded boolean value",
 	},
 	{
 		def:  `[{"type": "uint32"}]`,

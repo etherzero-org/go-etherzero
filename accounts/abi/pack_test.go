@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 func TestPack(t *testing.T) {

@@ -21,10 +21,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted
@@ -56,7 +56,7 @@ func newTxJournal(path string) *txJournal {
 
 // load parses a transaction journal dump from disk, loading its contents into
 // the specified pool.
-func (journal *txJournal) load(add func(*types.Transaction) error) error {
+func (journal *txJournal) load(add func([]*types.Transaction) []error) error {
 	// Skip the parsing if the journal file doens't exist at all
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
@@ -76,7 +76,21 @@ func (journal *txJournal) load(add func(*types.Transaction) error) error {
 	stream := rlp.NewStream(input, 0)
 	total, dropped := 0, 0
 
-	var failure error
+	// Create a method to load a limited batch of transactions and bump the
+	// appropriate progress counters. Then use this method to load all the
+	// journalled transactions in small-ish batches.
+	loadBatch := func(txs types.Transactions) {
+		for _, err := range add(txs) {
+			if err != nil {
+				log.Debug("Failed to add journaled transaction", "err", err)
+				dropped++
+			}
+		}
+	}
+	var (
+		failure error
+		batch   types.Transactions
+	)
 	for {
 		// Parse the next transaction and terminate on error
 		tx := new(types.Transaction)
@@ -84,14 +98,17 @@ func (journal *txJournal) load(add func(*types.Transaction) error) error {
 			if err != io.EOF {
 				failure = err
 			}
+			if batch.Len() > 0 {
+				loadBatch(batch)
+			}
 			break
 		}
-		// Import the transaction and bump the appropriate progress counters
+		// New transaction parsed, queue up for later, import if threnshold is reached
 		total++
-		if err = add(tx); err != nil {
-			log.Debug("Failed to add journaled transaction", "err", err)
-			dropped++
-			continue
+
+		if batch = append(batch, tx); batch.Len() > 1024 {
+			loadBatch(batch)
+			batch = batch[:0]
 		}
 	}
 	log.Info("Loaded local transaction journal", "transactions", total, "dropped", dropped)

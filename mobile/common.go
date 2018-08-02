@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.

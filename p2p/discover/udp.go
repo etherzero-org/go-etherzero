@@ -25,11 +25,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/p2p/nat"
-	"github.com/ethzero/go-ethzero/p2p/netutil"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p/nat"
+	"github.com/etherzero/go-etherzero/p2p/netutil"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 const Version = 4
@@ -49,7 +49,6 @@ var (
 // Timeouts
 const (
 	respTimeout = 500 * time.Millisecond
-	sendTimeout = 500 * time.Millisecond
 	expiration  = 20 * time.Second
 
 	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP

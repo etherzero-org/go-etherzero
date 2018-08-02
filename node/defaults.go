@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/ethzero/go-ethzero/p2p"
-	"github.com/ethzero/go-ethzero/p2p/nat"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/nat"
 )
 
 const (
@@ -55,11 +55,11 @@ func DefaultDataDir() string {
 	home := homeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", "Ethzero")
+			return filepath.Join(home, "Library", "Etherzero")
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Ethzero")
+			return filepath.Join(home, "AppData", "Roaming", "Etherzero")
 		} else {
-			return filepath.Join(home, ".ethzero")
+			return filepath.Join(home, ".etherzero")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later

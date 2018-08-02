@@ -25,7 +25,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // ethstatsDockerfile is the Dockerfile required to build an ethstats backend

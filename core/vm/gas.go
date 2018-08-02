@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 const (

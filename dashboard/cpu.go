@@ -21,7 +21,7 @@ package dashboard
 import (
 	"syscall"
 
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 // getProcessCPUTime retrieves the process' CPU time since program startup.

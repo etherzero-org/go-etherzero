@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/ethzero/go-ethzero/core/asm"
+	"github.com/etherzero/go-etherzero/core/asm"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-etherzero/common"
 	"golang.org/x/crypto/pbkdf2"
 )
 

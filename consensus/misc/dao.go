@@ -21,9 +21,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 var (
@@ -73,13 +73,13 @@ func VerifyDAOHeaderExtraData(config *params.ChainConfig, header *types.Header) 
 // contract.
 func ApplyDAOHardFork(statedb *state.StateDB) {
 	// Retrieve the contract to refund balances into
-	if !statedb.Exist(params.DAORefundContract) {
-		statedb.CreateAccount(params.DAORefundContract)
-	}
+	//if !statedb.Exist(params.DAORefundContract) {
+	//	statedb.CreateAccount(params.DAORefundContract)
+	//}
 
 	// Move every DAO account and extra-balance account funds into the refund contract
-	for _, addr := range params.DAODrainList() {
-		statedb.AddBalance(params.DAORefundContract, statedb.GetBalance(addr))
-		statedb.SetBalance(addr, new(big.Int))
-	}
+	//for _, addr := range params.DAODrainList() {
+	//	statedb.AddBalance(params.DAORefundContract, statedb.GetBalance(addr))
+	//	statedb.SetBalance(addr, new(big.Int))
+	//}
 }

@@ -29,7 +29,7 @@ import (
 	"net"
 	"sort"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 const (
@@ -38,7 +38,6 @@ const (
 	hashBits   = len(common.Hash{}) * 8
 	nBuckets   = hashBits + 1 // Number of buckets
 
-	maxBondingPingPongs = 16
 	maxFindnodeFailures = 5
 )
 

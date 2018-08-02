@@ -21,27 +21,29 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 // Constants to match up protocol versions and messages
 const (
 	eth62 = 62
 	eth63 = 63
+	etz64 = 64
 )
 
-// Official short name of the protocol used during capability negotiation.
-var ProtocolName = "etz"
+// ProtocolName is the official short name of the protocol used during capability negotiation.
 
-// Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
+var ProtocolName = "etz0731"
 
-// Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+// ProtocolVersions are the upported versions of the eth protocol (first is primary).
+var ProtocolVersions = []uint{etz64, eth63, eth62}
+
+// ProtocolLengths are the number of implemented message corresponding to different protocol versions.
+var ProtocolLengths = []uint64{35, 17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -62,12 +64,15 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	// Protocol messages belonging to etz/64
+	//MasternodePingMsg = 0x22
 )
 
 type errCode int
 
 const (
-	ErrMsgTooLarge = iota
+	ErrMsgTooLarge             = iota
 	ErrDecode
 	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
@@ -103,9 +108,9 @@ type txPool interface {
 	// The slice should be modifiable by the caller.
 	Pending() (map[common.Address]types.Transactions, error)
 
-	// SubscribeTxPreEvent should return an event subscription of
-	// TxPreEvent and send events to the given channel.
-	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
+	// SubscribeNewTxsEvent should return an event subscription of
+	// NewTxsEvent and send events to the given channel.
+	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
 // statusData is the network packet for the status message.
@@ -175,7 +180,7 @@ type newBlockData struct {
 
 // blockBody represents the data content of a single block.
 type blockBody struct {
-	Transactions []*types.Transaction // Transactions contained within a block
+	Transactions []*types.Transaction   // Transactions contained within a block
 	Uncles       []*types.Header      // Uncles contained within a block
 }
 

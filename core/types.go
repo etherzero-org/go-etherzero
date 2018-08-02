@@ -17,9 +17,9 @@
 package core
 
 import (
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/vm"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It
@@ -33,6 +33,9 @@ type Validator interface {
 	// ValidateState validates the given statedb and optionally the receipts and
 	// gas used.
 	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error
+
+	// ValidateDposState validates the given dpos state
+	ValidateDevoteState(block *types.Block) error
 }
 
 // Processor is an interface for processing blocks using a given initial state.

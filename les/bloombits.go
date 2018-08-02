@@ -19,8 +19,8 @@ package les
 import (
 	"time"
 
-	"github.com/ethzero/go-ethzero/common/bitutil"
-	"github.com/ethzero/go-ethzero/light"
+	"github.com/etherzero/go-etherzero/common/bitutil"
+	"github.com/etherzero/go-etherzero/light"
 )
 
 const (
@@ -72,13 +72,3 @@ func (eth *LightEthereum) startBloomHandlers() {
 		}()
 	}
 }
-
-const (
-	// bloomConfirms is the number of confirmation blocks before a bloom section is
-	// considered probably final and its rotated bits are calculated.
-	bloomConfirms = 256
-
-	// bloomThrottling is the time to wait between processing two consecutive index
-	// sections. It's useful during chain upgrades to prevent disk overload.
-	bloomThrottling = 100 * time.Millisecond
-)

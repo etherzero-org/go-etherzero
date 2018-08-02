@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/math"
-	"github.com/ethzero/go-ethzero/core/vm"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/math"
+	"github.com/etherzero/go-etherzero/core/vm"
 )
 
 type JSONLogger struct {
@@ -32,6 +32,8 @@ type JSONLogger struct {
 	cfg     *vm.LogConfig
 }
 
+// NewJSONLogger creates a new EVM tracer that prints execution steps as JSON objects
+// into the provided stream.
 func NewJSONLogger(cfg *vm.LogConfig, writer io.Writer) *JSONLogger {
 	return &JSONLogger{json.NewEncoder(writer), cfg}
 }

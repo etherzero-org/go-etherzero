@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/log"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -275,14 +275,4 @@ func (stats serverStats) render() {
 		}
 	}
 	table.Render()
-}
-
-// protips contains a collection of network infos to report pro-tips
-// based on.
-type protips struct {
-	genesis   string
-	network   int64
-	bootFull  []string
-	bootLight []string
-	ethstats  string
 }

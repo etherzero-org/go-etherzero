@@ -25,11 +25,11 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/accounts/abi/bind"
-	"github.com/ethzero/go-ethzero/accounts/abi/bind/backends"
-	"github.com/ethzero/go-ethzero/contracts/chequebook/contract"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/crypto"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind"
+	"github.com/etherzero/go-etherzero/accounts/abi/bind/backends"
+	"github.com/etherzero/go-etherzero/contracts/chequebook/contract"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 var (

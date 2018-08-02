@@ -19,8 +19,8 @@
 package whisperv6
 
 import (
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
 )
 
 // TopicType represents a cryptographically secure, probabilistic partial

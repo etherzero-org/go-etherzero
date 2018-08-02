@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common/mclock"
+	"github.com/etherzero/go-etherzero/common/mclock"
 )
 
 const fcTimeConst = time.Millisecond

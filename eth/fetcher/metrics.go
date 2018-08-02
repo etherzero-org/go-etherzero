@@ -19,7 +19,7 @@
 package fetcher
 
 import (
-	"github.com/ethzero/go-ethzero/metrics"
+	"github.com/etherzero/go-etherzero/metrics"
 )
 
 var (

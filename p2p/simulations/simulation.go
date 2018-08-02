@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ethzero/go-ethzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 // Simulation provides a framework for running actions in a simulated network

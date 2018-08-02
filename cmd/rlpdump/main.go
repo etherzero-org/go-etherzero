@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 var (

@@ -19,8 +19,8 @@ package miner
 import (
 	"testing"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/core/types"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/types"
 )
 
 // noopHeaderRetriever is an implementation of headerRetriever that always

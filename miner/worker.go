@@ -24,25 +24,27 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/consensus"
-	"github.com/ethzero/go-ethzero/consensus/misc"
-	"github.com/ethzero/go-ethzero/core"
-	"github.com/ethzero/go-ethzero/core/state"
-	"github.com/ethzero/go-ethzero/core/types"
-	"github.com/ethzero/go-ethzero/core/vm"
-	"github.com/ethzero/go-ethzero/ethdb"
-	"github.com/ethzero/go-ethzero/event"
-	"github.com/ethzero/go-ethzero/log"
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
+	"github.com/etherzero/go-etherzero/consensus/misc"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/params"
 	"gopkg.in/fatih/set.v0"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 const (
 	resultQueueSize  = 10
 	miningLogAtDepth = 5
 
-	// txChanSize is the size of channel listening to TxPreEvent.
+	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
@@ -50,7 +52,7 @@ const (
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
 
-	gaspoolvalue = 90000000
+	voteChanSize = 4096
 )
 
 // Agent can register themself with the worker
@@ -73,14 +75,16 @@ type Work struct {
 	family    *set.Set       // family set (used for checking uncle invalidity)
 	uncles    *set.Set       // uncle set
 	tcount    int            // tx count in cycle
+	gasPool   *core.GasPool  // available gas used to pack transactions
 
 	Block *types.Block // the new block
 
-	header   *types.Header
-	txs      []*types.Transaction
-	receipts []*types.Receipt
-
+	header    *types.Header
+	txs       []*types.Transaction
+	receipts  []*types.Receipt
 	createdAt time.Time
+
+	devoteDB *devotedb.DevoteDB
 }
 
 type Result struct {
@@ -96,9 +100,10 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent
-	txSub        event.Subscription
+	mux    *event.TypeMux
+	txsCh  chan core.NewTxsEvent
+	txsSub event.Subscription
+
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
@@ -119,6 +124,8 @@ type worker struct {
 	currentMu sync.Mutex
 	current   *Work
 
+	snapshotMu sync.RWMutex
+
 	uncleMu        sync.Mutex
 	possibleUncles map[common.Hash]*types.Block
 
@@ -127,6 +134,9 @@ type worker struct {
 	// atomic status counters
 	mining int32
 	atWork int32
+
+	quitCh  chan struct{}
+	stopper chan struct{}
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
@@ -135,9 +145,8 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		engine:         engine,
 		eth:            eth,
 		mux:            mux,
-		txCh:           make(chan core.TxPreEvent, txChanSize),
+		txsCh:          make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
 		chainDb:        eth.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
@@ -146,12 +155,14 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		quitCh:         make(chan struct{}, 1),
+		stopper:        make(chan struct{}, 1),
 	}
-	// Subscribe TxPreEvent for tx pool
-	worker.txSub = eth.TxPool().SubscribeTxPreEvent(worker.txCh)
+	// Subscribe NewTxsEvent for tx pool
+	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+
 	go worker.update()
 
 	go worker.wait()
@@ -184,6 +195,7 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 			self.current.receipts,
 		), self.current.state.Copy()
 	}
+
 	return self.current.Block, self.current.state.Copy()
 }
 
@@ -199,6 +211,7 @@ func (self *worker) pendingBlock() *types.Block {
 			self.current.receipts,
 		)
 	}
+
 	return self.current.Block
 }
 
@@ -207,25 +220,73 @@ func (self *worker) start() {
 	defer self.mu.Unlock()
 
 	atomic.StoreInt32(&self.mining, 1)
+	go self.mineLoop()
+}
 
-	// spin up agents
-	for agent := range self.agents {
-		agent.Start()
+func (self *worker) mine(now int64) {
+	engine, ok := self.engine.(*devote.Devote)
+	if !ok {
+		log.Error("Only the devote engine was allowed")
+		return
+	}
+
+	err := engine.CheckWitness(self.chain.CurrentBlock(), now)
+	if err != nil {
+		switch err {
+		case devote.ErrWaitForPrevBlock,
+			devote.ErrMinerFutureBlock,
+			devote.ErrInvalidBlockWitness,
+			devote.ErrInvalidMinerBlockTime:
+			log.Debug("Failed to miner the block, while ", "err", err)
+			//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+		default:
+			log.Error("Failed to miner the block", "err", err)
+			//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+		}
+		return
+	}
+	work, err := self.commitNewWork()
+	if err != nil {
+		log.Error("Failed to create the new work", "err", err)
+		return
+	}
+
+	result, err := self.engine.Seal(self.chain, work.Block, self.quitCh)
+	if err != nil {
+		log.Error("Failed to seal the block", "err", err)
+		return
+	}
+	self.recv <- &Result{work, result}
+}
+
+func (self *worker) mineLoop() {
+	ticker := time.NewTicker(time.Second).C
+	for {
+		select {
+		case now := <-ticker:
+			self.mine(now.Unix())
+		case <-self.stopper:
+			close(self.quitCh)
+			self.quitCh = make(chan struct{}, 1)
+			self.stopper = make(chan struct{}, 1)
+			return
+		}
 	}
 }
 
 func (self *worker) stop() {
+	if atomic.LoadInt32(&self.mining) == 0 {
+		return
+	}
+
 	self.wg.Wait()
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	if atomic.LoadInt32(&self.mining) == 1 {
-		for agent := range self.agents {
-			agent.Stop()
-		}
-	}
+
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.atWork, 0)
+	close(self.stopper)
 }
 
 func (self *worker) register(agent Agent) {
@@ -243,9 +304,8 @@ func (self *worker) unregister(agent Agent) {
 }
 
 func (self *worker) update() {
-	defer self.txSub.Unsubscribe()
+	defer self.txsSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
-	defer self.chainSideSub.Unsubscribe()
 
 	for {
 		// A real event arrived, process interesting content
@@ -254,21 +314,21 @@ func (self *worker) update() {
 		case <-self.chainHeadCh:
 			self.commitNewWork()
 
-		// Handle ChainSideEvent
-		case ev := <-self.chainSideCh:
-			self.uncleMu.Lock()
-			self.possibleUncles[ev.Block.Hash()] = ev.Block
-			self.uncleMu.Unlock()
-
-		// Handle TxPreEvent
-		case ev := <-self.txCh:
-			// Apply transaction to the pending state if we're not mining
+		// Handle NewTxsEvent
+		case ev := <-self.txsCh:
+			// Apply transactions to the pending state if we're not mining.
+			//
+			// Note all transactions received may not be continuous with transactions
+			// already included in the current mining block. These transactions will
+			// be automatically eliminated.
 			if atomic.LoadInt32(&self.mining) == 0 {
 				self.currentMu.Lock()
-				acc, _ := types.Sender(self.current.signer, ev.Tx)
-				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
+				txs := make(map[common.Address]types.Transactions)
+				for _, tx := range ev.Txs {
+					acc, _ := types.Sender(self.current.signer, tx)
+					txs[acc] = append(txs[acc], tx)
+				}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.currentMu.Unlock()
 			} else {
@@ -279,11 +339,9 @@ func (self *worker) update() {
 			}
 
 		// System stopped
-		case <-self.txSub.Err():
+		case <-self.txsSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
-			return
-		case <-self.chainSideSub.Err():
 			return
 		}
 	}
@@ -291,7 +349,6 @@ func (self *worker) update() {
 
 func (self *worker) wait() {
 	for {
-		mustCommitNewWork := true
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
 
@@ -316,11 +373,6 @@ func (self *worker) wait() {
 				log.Error("Failed writing block to chain", "err", err)
 				continue
 			}
-			// check if canon block and write transactions
-			if stat == core.CanonStatTy {
-				// implicit by posting ChainHeadEvent
-				mustCommitNewWork = false
-			}
 			// Broadcast the block and announce chain insertion event
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
@@ -335,10 +387,6 @@ func (self *worker) wait() {
 
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
-
-			if mustCommitNewWork {
-				self.commitNewWork()
-			}
 		}
 	}
 }
@@ -362,22 +410,20 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-
-	var work *Work
-
-	if !self.config.IsEthzeroGenesisBlock(parent.Number()) && !self.config.IsEthzeroTOSBlock(parent.Number()) {
-		self.config.ChainId = big.NewInt(1)
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(self.chainDb), parent.Header().Protocol)
+	if err != nil {
+		return err
 	}
-
-	work = &Work{
-		config:    self.config,
-		signer:    types.NewEIP155Signer(self.config.ChainId),
-		state:     state,
-		ancestors: set.New(),
-		family:    set.New(),
-		uncles:    set.New(),
-		header:    header,
-		createdAt: time.Now(),
+	work := &Work{
+		config:         self.config,
+		signer:         types.NewEIP155Signer(self.config.ChainID),
+		state:          state,
+		ancestors:      set.New(),
+		family:         set.New(),
+		uncles:         set.New(),
+		header:         header,
+		createdAt:      time.Now(),
+		devoteDB: devoteDB,
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -395,7 +441,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() {
+func (self *worker) commitNewWork() (*Work, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -430,8 +476,7 @@ func (self *worker) commitNewWork() {
 		header.Coinbase = self.coinbase
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
-		return
+		return nil, fmt.Errorf("got error when preparing header, err: %s", err)
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
 	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
@@ -449,8 +494,7 @@ func (self *worker) commitNewWork() {
 	// Could potentially happen if starting to mine in an odd state.
 	err := self.makeCurrent(parent, header)
 	if err != nil {
-		log.Error("Failed to create mining context", "err", err)
-		return
+		return nil, fmt.Errorf("got error when create mining context, err: %s", err)
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
@@ -459,9 +503,9 @@ func (self *worker) commitNewWork() {
 	}
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-		return
+		return nil, fmt.Errorf("got error when fetch pending transactions, err: %s", err)
 	}
+
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
@@ -488,16 +532,19 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
-		log.Error("Failed to finalize block for sealing", "err", err)
-		return
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteDB); err != nil {
+		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
+
+	work.Block.DevoteDB = work.devoteDB
+
+	// update the count for the miner of new block
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
-	self.push(work)
+	return work, nil
 }
 
 func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
@@ -516,14 +563,16 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
-	//gp := new(core.GasPool).AddGas(env.header.GasLimit)
-	gp := new(core.GasPool).AddGas(gaspoolvalue)
+	if env.gasPool == nil {
+		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
+	}
+
 	var coalescedLogs []*types.Log
 
 	for {
 		// If we don't have enough gas for any further transactions then we're done
-		if gp.Gas() < params.TxGas {
-			log.Trace("Not enough gas for further transactions", "gp", gp)
+		if env.gasPool.Gas() < params.TxGas {
+			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
 			break
 		}
 		// Retrieve the next transaction and abort if all done
@@ -538,16 +587,16 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		from, _ := types.Sender(env.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-		if tx.Protected() && !env.config.IsEthzeroTOSBlock(env.header.Number) {
-			//log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
+			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+
 			txs.Pop()
 			continue
 		}
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
-		err, logs := env.commitTransaction(tx, bc, coinbase, gp)
+		err, logs := env.commitTransaction(tx, bc, coinbase, env.gasPool)
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
@@ -600,10 +649,12 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
+	devoteSnap := env.devoteDB.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
+		env.devoteDB.RevertToSnapShot(devoteSnap)
 		return err, nil
 	}
 	env.txs = append(env.txs, tx)

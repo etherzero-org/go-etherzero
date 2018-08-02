@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 // destinations stores one map per contract (keyed by hash of code).

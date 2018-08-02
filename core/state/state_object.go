@@ -22,9 +22,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethzero/go-ethzero/common"
-	"github.com/ethzero/go-ethzero/crypto"
-	"github.com/ethzero/go-ethzero/rlp"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -85,9 +85,7 @@ type stateObject struct {
 	// during the "update" phase of the state transition.
 	dirtyCode bool // true if the code was updated
 	suicided  bool
-	touched   bool
 	deleted   bool
-	onDirty   func(addr common.Address) // Callback method to mark a state object newly dirty
 }
 
 // empty returns whether the account is considered empty.
@@ -98,16 +96,24 @@ func (s *stateObject) empty() bool {
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage trie
-	CodeHash []byte
+	Nonce       uint64
+	Balance     *big.Int
+	Power       *big.Int
+	BlockNumber *big.Int
+	Root        common.Hash // merkle root of the storage trie
+	CodeHash    []byte
 }
 
 // newObject creates a state object.
-func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address)) *stateObject {
+func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	if data.Balance == nil {
 		data.Balance = new(big.Int)
+	}
+	if data.Power == nil {
+		data.Power = new(big.Int)
+	}
+	if data.BlockNumber == nil {
+		data.BlockNumber = new(big.Int)
 	}
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
@@ -119,7 +125,6 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		data:          data,
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
-		onDirty:       onDirty,
 	}
 }
 
@@ -137,23 +142,17 @@ func (self *stateObject) setError(err error) {
 
 func (self *stateObject) markSuicided() {
 	self.suicided = true
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
-	}
 }
 
 func (c *stateObject) touch() {
-	c.db.journal = append(c.db.journal, touchChange{
-		account:   &c.address,
-		prev:      c.touched,
-		prevDirty: c.onDirty == nil,
+	c.db.journal.append(touchChange{
+		account: &c.address,
 	})
-	if c.onDirty != nil {
-		c.onDirty(c.Address())
-		c.onDirty = nil
+	if c.address == ripemd {
+		// Explicitly put it in the dirty-cache, which is otherwise generated from
+		// flattened journals.
+		c.db.journal.dirty(c.address)
 	}
-	c.touched = true
 }
 
 func (c *stateObject) getTrie(db Database) Trie {
@@ -187,15 +186,13 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 		}
 		value.SetBytes(content)
 	}
-	if (value != common.Hash{}) {
-		self.cachedStorage[key] = value
-	}
+	self.cachedStorage[key] = value
 	return value
 }
 
 // SetState updates a value in account storage.
 func (self *stateObject) SetState(db Database, key, value common.Hash) {
-	self.db.journal = append(self.db.journal, storageChange{
+	self.db.journal.append(storageChange{
 		account:  &self.address,
 		key:      key,
 		prevalue: self.GetState(db, key),
@@ -206,11 +203,6 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 func (self *stateObject) setState(key, value common.Hash) {
 	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
-
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
-	}
 }
 
 // updateTrie writes cached storage modifications into the object's storage trie.
@@ -251,7 +243,7 @@ func (self *stateObject) CommitTrie(db Database) error {
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
-func (c *stateObject) AddBalance(amount *big.Int) {
+func (c *stateObject) AddBalance(amount *big.Int, blockNumber *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
 	if amount.Sign() == 0 {
@@ -261,39 +253,89 @@ func (c *stateObject) AddBalance(amount *big.Int) {
 
 		return
 	}
-	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
+	c.UpdatePower(blockNumber)
+	c.SetBalance(new(big.Int).Add(c.Balance(), amount), blockNumber)
+}
+
+// AddBalance removes amount from c's balance.
+// It is used to add funds to the destination account of a transfer.
+func (c *stateObject) AddPower(amount *big.Int) {
+	// EIP158: We must check emptiness for the objects such that the account
+	// clearing (0,0,0 objects) can take effect.
+	if amount.Sign() == 0 {
+		if c.empty() {
+			c.touch()
+		}
+
+		return
+	}
+	c.SetPower(new(big.Int).Add(c.Power(), amount))
 }
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (c *stateObject) SubBalance(amount *big.Int) {
+func (c *stateObject) SubBalance(amount *big.Int, blockNumber *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
-	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
+	c.SetBalance(new(big.Int).Sub(c.Balance(), amount), blockNumber)
 }
 
-func (self *stateObject) SetBalance(amount *big.Int) {
-	self.db.journal = append(self.db.journal, balanceChange{
+func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
+	if amount.Sign() == 0 {
+		return
+	}
+	c.UpdatePower(blockNumber)
+	c.SetPower(new(big.Int).Sub(c.Power(), amount))
+}
+
+func (self *stateObject) SetBalance(amount, blockNumber *big.Int) {
+	self.UpdatePower(blockNumber)
+	self.db.journal.append(balanceChange{
 		account: &self.address,
 		prev:    new(big.Int).Set(self.data.Balance),
 	})
 	self.setBalance(amount)
 }
 
+func (self *stateObject) SetPower(amount *big.Int) {
+	self.db.journal.append(powerChange{
+		account: &self.address,
+		prev:    new(big.Int).Set(self.data.Power),
+	})
+	self.setPower(amount)
+}
+
+func (self *stateObject) UpdatePower(blockNumber *big.Int) {
+	prevpower := self.data.Power
+	prevblock := self.data.BlockNumber
+	power := CalculatePower(prevblock, blockNumber, prevpower, self.data.Balance)
+	self.db.journal.append(blockChange{
+		account:   &self.address,
+		prevpower: prevpower,
+		prevblock: prevblock,
+	})
+	self.setPowerAndBlock(power, blockNumber)
+}
+
 func (self *stateObject) setBalance(amount *big.Int) {
 	self.data.Balance = amount
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
-	}
+}
+
+func (self *stateObject) setPower(amount *big.Int) {
+	self.data.Power = amount
+}
+
+func (self *stateObject) setPowerAndBlock(amount *big.Int, blockNumber *big.Int) {
+	self.data.Power = amount
+	self.data.BlockNumber = blockNumber
 }
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}
 
-func (self *stateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *stateObject {
-	stateObject := newObject(db, self.address, self.data, onDirty)
+func (self *stateObject) deepCopy(db *StateDB) *stateObject {
+	stateObject := newObject(db, self.address, self.data)
 	if self.trie != nil {
 		stateObject.trie = db.db.CopyTrie(self.trie)
 	}
@@ -333,7 +375,7 @@ func (self *stateObject) Code(db Database) []byte {
 
 func (self *stateObject) SetCode(codeHash common.Hash, code []byte) {
 	prevcode := self.Code(self.db.db)
-	self.db.journal = append(self.db.journal, codeChange{
+	self.db.journal.append(codeChange{
 		account:  &self.address,
 		prevhash: self.CodeHash(),
 		prevcode: prevcode,
@@ -345,14 +387,10 @@ func (self *stateObject) setCode(codeHash common.Hash, code []byte) {
 	self.code = code
 	self.data.CodeHash = codeHash[:]
 	self.dirtyCode = true
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
-	}
 }
 
 func (self *stateObject) SetNonce(nonce uint64) {
-	self.db.journal = append(self.db.journal, nonceChange{
+	self.db.journal.append(nonceChange{
 		account: &self.address,
 		prev:    self.data.Nonce,
 	})
@@ -361,10 +399,6 @@ func (self *stateObject) SetNonce(nonce uint64) {
 
 func (self *stateObject) setNonce(nonce uint64) {
 	self.data.Nonce = nonce
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
-	}
 }
 
 func (self *stateObject) CodeHash() []byte {
@@ -373,6 +407,14 @@ func (self *stateObject) CodeHash() []byte {
 
 func (self *stateObject) Balance() *big.Int {
 	return self.data.Balance
+}
+
+func (self *stateObject) Power() *big.Int {
+	return self.data.Power
+}
+
+func (self *stateObject) BlockNumber() *big.Int {
+	return self.data.BlockNumber
 }
 
 func (self *stateObject) Nonce() uint64 {

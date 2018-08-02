@@ -19,7 +19,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/ethzero/go-ethzero/params"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 func makeStackFunc(pop, push int) stackValidationFunc {
