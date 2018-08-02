@@ -40,7 +40,7 @@ const (
 const (
 	MASTERNODE_CHECK_INTERVAL = 30 * time.Second
 	MASTERNODE_PING_TIMEOUT   = 180 * time.Second
-	MASTERNODE_PING_INTERVAL  = 300 * time.Second
+	MASTERNODE_PING_INTERVAL  = 1200 * time.Second
 	MASTERNODE_ONLINE_ENABLE  = 60 * time.Second
 )
 

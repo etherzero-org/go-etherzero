@@ -8,11 +8,15 @@
 .PHONY: geth-darwin geth-darwin-386 geth-darwin-amd64
 .PHONY: geth-windows geth-windows-386 geth-windows-amd64
 
+ROOTDIR = $(shell pwd)
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
+	cp ${ROOTDIR}/init.bin.1 $(GOBIN)/init.bin.1
+	cp ${ROOTDIR}/init.bin.2 $(GOBIN)/init.bin.2
+	cp ${ROOTDIR}/init.bin.3 $(GOBIN)/init.bin.3
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 

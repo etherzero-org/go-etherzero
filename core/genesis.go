@@ -39,10 +39,11 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/trie"
 	"io"
 	"os"
 	"path/filepath"
+	"github.com/etherzero/go-etherzero/trie"
+	"strconv"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -320,27 +321,27 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 
 func masternodeContractAccount(masternodes []string) GenesisAccount {
 	addresses := []common.Address{
-		common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436"),
-		common.HexToAddress("0x8cba568d021f63465c89c573b8deaa7368adedd4"),
-		common.HexToAddress("0x0198e9b6ad2b83da9cadfe3b1332ace83c7ef409"),
-		common.HexToAddress("0x47bf9d89d79d61aac08322a3d23946476424e6d2"),
-		common.HexToAddress("0x0c3330af31eb804800d1876c9b5fcbadcf146e79"),
-		common.HexToAddress("0x7d6c6fe0fc97a567c5ed7ff9f67c7cbdf5d8b6f5"),
-		common.HexToAddress("0x47d8215f49fbd0ed1f3145fac25b5d1bbefd9e04"),
-		common.HexToAddress("0x99a4e8ab60add45ef834f3e6b5e920bdc71d5a10"),
-		common.HexToAddress("0xa22e4712c2747a3a2fdaf0a457f46c584eeb1d40"),
-		common.HexToAddress("0xb13016d02efc64517e334b91f66357f58d549433"),
-		common.HexToAddress("0x711a659ede41e097c644e382e9cb320e112e4a29"),
-		common.HexToAddress("0x4a59b6f943afd1ce7053482ab69117ed763340fb"),
-		common.HexToAddress("0xd6f6bec1c90dd258eb91bba3a4221fcabad729bf"),
-		common.HexToAddress("0xafd73d8649ac2c500f9dda354963b1a723b27a61"),
-		common.HexToAddress("0x2fa2d38ab70c9af20efc2458e267686206ea4df5"),
-		common.HexToAddress("0xae068e98c621a1fe061ed513822aeb32a6f4a83b"),
-		common.HexToAddress("0x4affc36e567af8986f0a750eb595258052aeaa66"),
-		common.HexToAddress("0xb45ed055a7f748a567219b16184b0ff4d806070f"),
-		common.HexToAddress("0xefc5c57b389974c113ceff29bdb6a79034cdfde1"),
-		common.HexToAddress("0x4c2ea4e923dea28d38a75726d120ff66c0d4edcd"),
-		common.HexToAddress("0x9db9d0b702134b660cec839decbfc686f9952caa"),
+		common.HexToAddress("0xa534296d6039880af6f98dc29a2b753892f4df84"),
+		common.HexToAddress("0xec38fc2dd43b359ece76747ef90a244a8d9160af"),
+		common.HexToAddress("0x35fddfbf6896e4d99366ee9ac7260b101a64563a"),
+		common.HexToAddress("0x4ecdec67d14b90dd7e4f95ac06ec81951ee3b1f3"),
+		common.HexToAddress("0x8d9387535ac19893809f30f2045bb9a8d7d225ba"),
+		common.HexToAddress("0x967aee8c4df96861a3c679535d37c029ee59a1b3"),
+		common.HexToAddress("0x91230b5e1b73a8fdb7906960ea153de46eb04409"),
+		common.HexToAddress("0xef4a50c497dd34d2bd545bdfaf260464e3ab26cb"),
+		common.HexToAddress("0x3bd5602718db17d49d424e828ed96c9356928b52"),
+		common.HexToAddress("0x332d8b4041949e6c626e5e65c382bb2830d16429"),
+		common.HexToAddress("0xba4dfa654238fb1317da5d3040a3adc762030a3a"),
+		common.HexToAddress("0xe8ae0962ffcf86cad403d1392dbe8e01f82c7172"),
+		common.HexToAddress("0x3c2198e33b3bf3aea383ab69757925d0f962a769"),
+		common.HexToAddress("0x89bafa10e35e57abbec8ef4a3c5605aa46cc97ea"),
+		common.HexToAddress("0xa4c708122af36c44ca059888594bb20393b297ac"),
+		common.HexToAddress("0x4ad1b3189b8a48c67a0573d9e36d30f2f217a520"),
+		common.HexToAddress("0xc8ab75086a9aebb84bc6797c50c93ea876541268"),
+		common.HexToAddress("0x26505a19344378d7668be76dc918daecbf2480e0"),
+		common.HexToAddress("0x5a904adfcad6552896c963d3cacdebf7e2b13d45"),
+		common.HexToAddress("0xc7e8c4efa4bccc127609d8d868d17f8c0f25d82a"),
+		common.HexToAddress("0x1cff0450190e5d72a4d4393212f3c76f3a68af24"),
 	}
 
 	var (
@@ -452,7 +453,6 @@ func DefaultGenesisBlock() *Genesis {
 		Config:     params.DevoteChainConfig,
 		Nonce:      66,
 		Timestamp:  1531551970,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   30000000,
 		Difficulty: big.NewInt(1),
 		Alloc:      alloc,
@@ -548,12 +548,6 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, err
 	}
-	path := strings.Replace(dir, "\\", "/", -1) + "/init.bin"
-	file, err := os.Open(path)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	defer file.Close()
 
 	triedb := trie.NewDatabase(db)
 	tr, err := trie.New(root, triedb)
@@ -561,53 +555,64 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
-	bufReader := bufio.NewReader(file)
 	buf := make([]byte, 43)
 	accountCount := 0
-	log.Info("Import initial accounts, waitting ...")
 	emptyRoot := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 	emptyState := crypto.Keccak256Hash(nil).Bytes()
-	for {
-		readNum, err := bufReader.Read(buf[0:43])
-		if err != nil && err != io.EOF {
-			panic(err)
+
+	var i int = 0
+	for i = 1; i <= 3; i++ {
+		path := strings.Replace(dir, "\\", "/", -1) + "/init.bin." + strconv.Itoa(i)
+		file, err := os.Open(path)
+		if err != nil {
+			return common.Hash{}, err
 		}
-		if 0 == readNum {
-			break
-		}
-		for readNum < 43 {
-			n, err := bufReader.Read(buf[readNum:43])
+		defer file.Close()
+		bufReader := bufio.NewReader(file)
+
+		for {
+			readNum, err := bufReader.Read(buf[0:43])
 			if err != nil && err != io.EOF {
 				panic(err)
 			}
-			readNum += n
-		}
-		var account = state.Account{
-			Balance:     new(big.Int).SetBytes(buf[32:43]),
-			Power:       common.Big0,
-			BlockNumber: common.Big0,
-			Root:        emptyRoot,
-			CodeHash:    emptyState,
-		}
-		encodeData, err := rlp.EncodeToBytes(&account)
-		if err != nil {
-			panic(err)
-		}
-		tr.TryUpdate(buf[0:32], encodeData)
-		if accountCount%100000 == 0 {
-			root1, err := tr.Commit(nil)
+			if 0 == readNum {
+				break
+			}
+			for readNum < 43 {
+				n, err := bufReader.Read(buf[readNum:43])
+				if err != nil && err != io.EOF {
+					panic(err)
+				}
+				readNum += n
+			}
+			var account = state.Account{
+				Balance:     new(big.Int).SetBytes(buf[32:43]),
+				Power:       common.Big0,
+				BlockNumber: common.Big0,
+				Root:        emptyRoot,
+				CodeHash:    emptyState,
+			}
+			encodeData, err := rlp.EncodeToBytes(&account)
 			if err != nil {
 				panic(err)
 			}
-			triedb.Commit(root1, true)
-			log.Info("Import initial accounts", "count", accountCount)
+			tr.TryUpdate(buf[0:32], encodeData)
+			if accountCount%100000 == 0 {
+				root1, err := tr.Commit(nil)
+				if err != nil {
+					panic(err)
+				}
+				triedb.Commit(root1, true)
+				log.Info("Import initial accounts", "count", accountCount)
+			}
+			accountCount++
 		}
-		accountCount++
 	}
-	log.Info("Import initial accounts", "count", accountCount)
+
+	log.Info("Import initial accounts done!", "count", accountCount)
 	root2, err := tr.Commit(nil)
 	if err != nil {
-		panic(err)
+		return common.Hash{}, err
 	}
 	triedb.Commit(root2, true)
 	return root2, nil
