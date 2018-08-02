@@ -93,7 +93,7 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 		if size < 1 {
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
 		}
-		log.Info("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
+		log.Debug("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
 	}
 	// no witnessees need uncast
 	needUncastWitnessCnt := len(needUncastWitnesses)
@@ -177,8 +177,6 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
 		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
-		//cycleTrie, _ := types.NewCycleTrie(common.Hash{}, self.devoteDB.Database())
-		//self.devoteDB.SetCycleTrie(cycleTrie)
 		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
 		self.devoteDB.Commit()
 		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
