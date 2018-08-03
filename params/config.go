@@ -34,7 +34,7 @@ var (
 
 var (
 	DevoteChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(100),
+		ChainID:        big.NewInt(90),
 		EtherzeroBlock: big.NewInt(0),
 		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
@@ -74,7 +74,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(101),
+		ChainID:             big.NewInt(91),
 		EtherzeroBlock:      big.NewInt(0),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
