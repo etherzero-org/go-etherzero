@@ -11,6 +11,9 @@ FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
+COPY init.bin.1 /root/
+COPY init.bin.2 /root/
+COPY init.bin.3 /root/
 
 EXPOSE 9646 8546 21212 21212/udp 21213/udp
 #ENTRYPOINT ["geth"]
