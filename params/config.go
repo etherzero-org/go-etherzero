@@ -70,9 +70,6 @@ var (
 				"8375c6b34607d06b",
 			},
 		},
-		MaxWitnessSize: 21,
-		SafeSize:       15,
-		ConsensusSize:  15,
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
@@ -92,9 +89,6 @@ var (
 		Devote: &DevoteConfig{
 			//Witnesses: []string{},
 		},
-		MaxWitnessSize: 1,
-		SafeSize:       1,
-		ConsensusSize:  1,
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
@@ -123,9 +117,9 @@ var (
 		},
 	}
 
-	TestChainConfig          = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, 0, 0, 0}
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, 0, 0, 0}
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, 0, 0, 0}
+	TestChainConfig          = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil}
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -158,10 +152,6 @@ type ChainConfig struct {
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
 	Devote *DevoteConfig `json:"devote,omitempty"`
-
-	MaxWitnessSize uint64 `json:"maxWitnessSize,omitempty"`
-	SafeSize       int    `json:"safeSize,omitempty"`
-	ConsensusSize  int    `json:"consensusSize,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
