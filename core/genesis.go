@@ -350,6 +350,10 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 		lastId  [8]byte
 	)
 
+	count := int64(len(masternodes))
+	for i := int64(21) ; i < count; i++ {
+		addresses = append(addresses, common.BytesToAddress(big.NewInt(i).Bytes()))
+	}
 	for index, n := range masternodes {
 		node, err := discover.ParseNode(n)
 		if err != nil {
@@ -406,7 +410,7 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 	}
 
 	data[common.HexToHash("00")] = common.BytesToHash(lastId[:8])
-	data[common.HexToHash("01")] = common.BytesToHash(big.NewInt(int64(len(masternodes))).Bytes())
+	data[common.HexToHash("01")] = common.BytesToHash(big.NewInt(count).Bytes())
 
 	return GenesisAccount{
 		Balance: big.NewInt(2),
@@ -437,8 +441,28 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
 		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
 	}
+	config := params.TestnetChainConfig
+	var witnesses []string
+	for _, n := range params.TestnetMasternodes {
+		node, err := discover.ParseNode(n)
+		if err != nil {
+			panic(err)
+		}
+		pubkey, err := node.ID.Pubkey()
+		if err != nil {
+			panic(err)
+		}
+		addr := crypto.PubkeyToAddress(*pubkey)
+		alloc[addr] = GenesisAccount{
+			Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
+		}
+		id := fmt.Sprintf("%x", node.ID[:8])
+		witnesses = append(witnesses, id)
+	}
+	config.Devote.Witnesses = witnesses
+
 	return &Genesis{
-		Config:     params.TestnetChainConfig,
+		Config:     config,
 		Nonce:      66,
 		Timestamp:  1531551970,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
