@@ -64,9 +64,13 @@ var MainnetMasternodes = []string{
 	"enode://8375c6b34607d06b5d5b4df1a375cecc1df1237f420cb201c37900f856260e7b90d6fe8f64a30a01a4216c9c9627e22baa0089dee385f27aa0398f6fd2f085e4", // [21]
 }
 
-var TestnetBootnodes = []string{}
+var TestnetBootnodes = []string{
+	"enode://59ca967b2c9c1442e81026f5ffc2b24f4b3787512194a41e4ab14dfac97e75b700988cac80f973641d40cd65f775f41955b93d2e843ebb03555b16dd9bf983d4@127.0.0.1:9646",
+}
 
-var TestnetMasternodes = []string{}
+var TestnetMasternodes = []string{
+	"enode://59ca967b2c9c1442e81026f5ffc2b24f4b3787512194a41e4ab14dfac97e75b700988cac80f973641d40cd65f775f41955b93d2e843ebb03555b16dd9bf983d4@127.0.0.1:9646",
+}
 
 // RinkebyBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Rinkeby test network.

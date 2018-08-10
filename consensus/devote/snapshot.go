@@ -135,7 +135,7 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 	return
 }
 
-func (self *Controller) election(genesis, first, parent *types.Header, nodes []string) error {
+func (self *Controller) election(genesis, first, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) error {
 
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
 	prevCycle := parent.Time.Uint64() / params.CycleInterval
@@ -165,7 +165,7 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		for masternode, cnt := range votes {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
-		if len(masternodes) < int(safeSize) {
+		if len(masternodes) < safeSize {
 			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)

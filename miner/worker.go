@@ -125,6 +125,8 @@ type worker struct {
 	current   *Work
 
 	snapshotMu sync.RWMutex
+	snapshotBlock *types.Block
+	snapshotState *state.StateDB
 
 	uncleMu        sync.Mutex
 	possibleUncles map[common.Hash]*types.Block
@@ -184,6 +186,14 @@ func (self *worker) setExtra(extra []byte) {
 }
 
 func (self *worker) pending() (*types.Block, *state.StateDB) {
+	if atomic.LoadInt32(&self.mining) == 0 {
+		// return a snapshot to avoid contention on currentMu mutex
+		self.snapshotMu.RLock()
+		defer self.snapshotMu.RUnlock()
+		return self.snapshotBlock, self.snapshotState.Copy()
+	}
+
+
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
@@ -200,6 +210,13 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 }
 
 func (self *worker) pendingBlock() *types.Block {
+	if atomic.LoadInt32(&self.mining) == 0 {
+		// return a snapshot to avoid contention on currentMu mutex
+		self.snapshotMu.RLock()
+		defer self.snapshotMu.RUnlock()
+		return self.snapshotBlock
+	}
+
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
@@ -314,7 +331,7 @@ func (self *worker) update() {
 		case <-self.chainHeadCh:
 			self.commitNewWork()
 
-		// Handle NewTxsEvent
+			// Handle NewTxsEvent
 		case ev := <-self.txsCh:
 			// Apply transactions to the pending state if we're not mining.
 			//
@@ -330,6 +347,7 @@ func (self *worker) update() {
 				}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
+				self.updateSnapshot()
 				self.currentMu.Unlock()
 			} else {
 				// If we're mining, but nothing is being processed, wake on new transactions
@@ -338,7 +356,7 @@ func (self *worker) update() {
 				}
 			}
 
-		// System stopped
+			// System stopped
 		case <-self.txsSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
@@ -544,6 +562,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
+	self.updateSnapshot()
 	return work, nil
 }
 
@@ -560,6 +579,19 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	}
 	work.uncles.Add(uncle.Hash())
 	return nil
+}
+
+func (self *worker) updateSnapshot() {
+	self.snapshotMu.Lock()
+	defer self.snapshotMu.Unlock()
+
+	self.snapshotBlock = types.NewBlock(
+		self.current.header,
+		self.current.txs,
+		nil,
+		self.current.receipts,
+	)
+	self.snapshotState = self.current.state.Copy()
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
@@ -646,6 +678,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}(cpy, env.tcount)
 	}
 }
+
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()

@@ -46,9 +46,9 @@ const (
 	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
-	maxWitnessSize uint64 = 21
-	safeSize              = maxWitnessSize*2/3 + 1
-	consensusSize         = maxWitnessSize*2/3 + 1
+	//maxWitnessSize uint64 = 0
+	//safeSize              = maxWitnessSize*2/3 + 1
+	//consensusSize         = maxWitnessSize*2/3 + 1
 )
 
 var (
@@ -169,6 +169,10 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	curHeader := chain.CurrentHeader()
 	cycle := uint64(0)
 	witnessMap := make(map[string]bool)
+	consensusSize := int(15)
+	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
+		consensusSize = 1
+	}
 	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
 		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
 		curCycle := curHeader.Time.Uint64() / params.CycleInterval
@@ -179,12 +183,12 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 		// fast return
 		// if block number difference less consensusSize-witnessNum
 		// there is no need to check block is confirmed
-		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(int(consensusSize)-len(witnessMap)) {
+		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(consensusSize-len(witnessMap)) {
 			log.Debug("Devote fast return", "current", curHeader.Number.String(), "confirmed", d.confirmedBlockHeader.Number.String(), "witnessCount", len(witnessMap))
 			return nil
 		}
 		witnessMap[curHeader.Witness] = true
-		if len(witnessMap) >= int(consensusSize) {
+		if len(witnessMap) >= consensusSize {
 			d.confirmedBlockHeader = curHeader
 			if err := d.storeConfirmedBlockHeader(d.db); err != nil {
 				return err
@@ -257,7 +261,12 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
-
+	maxWitnessSize := uint64(21)
+	safeSize := int(15)
+	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
+		maxWitnessSize = 1
+		safeSize = 1
+	}
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	number := maxWitnessSize
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(number)))
@@ -290,7 +299,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", nodes)
 	genesis := chain.GetHeaderByNumber(0)
 	first := chain.GetHeaderByNumber(1)
-	err := controller.election(genesis, first, parent, nodes)
+	err := controller.election(genesis, first, parent, nodes, safeSize, maxWitnessSize)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}

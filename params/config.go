@@ -87,11 +87,7 @@ var (
 		ConstantinopleBlock: nil,
 		Ethash:              new(EthashConfig),
 		Devote: &DevoteConfig{
-			Witnesses: []string{
-				"c34c967d399d38f0",
-				"ffb14ca8e65770b4",
-				"de4e2e0521f16469",
-			},
+			//Witnesses: []string{},
 		},
 	}
 
