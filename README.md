@@ -72,7 +72,7 @@ This command will:
    This too is optional and if you leave it out you can always attach to an already running Geth instance
    with `geth attach`.
 
-### Full node on the Etherzero test network
+### Etherzero test network for development
 
 Transitioning towards developers, if you'd like to play around with creating Etherzero contracts, you
 almost certainly would like to do that without any real money involved until you get the hang of the
@@ -80,7 +80,8 @@ entire system. In other words, instead of attaching to the main network, you wan
 network with your node, which is fully equivalent to the main network, but with play-Ether only.
 
 ```
-$ geth --testnet console
+$ geth --testnet --masternode --nodekeyhex "a9b50794ab7a9987aa416c455c13aa6cc8c0448c501a3ce8e4840efe47cb5c29" --rpc --rpcvhosts "*" --rpccorsdomain "*" console
+> miner.start()
 ```
 
 The `console` subcommand have the exact same meaning as above and they are equally useful on the
@@ -101,13 +102,6 @@ over between the main network and test network, you should make sure to always u
 for play-money and real-money. Unless you manually move accounts, Geth will by default correctly
 separate the two networks and will not make any accounts available between them.*
 
-### Full node on the Rinkeby test network
-
-The above test network is a cross client one based on the ethash proof-of-work consensus algorithm. As such, it has certain extra overhead and is more susceptible to reorganization attacks due to the network's low difficulty / security. Go Etherzero also supports connecting to a proof-of-authority based test network called [*Rinkeby*](https://www.rinkeby.io) (operated by members of the community). This network is lighter, more secure, but is only supported by go-ethereum.
-
-```
-$ geth --rinkeby console
-```
 
 ### Configuration
 
