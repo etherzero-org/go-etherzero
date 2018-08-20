@@ -34,6 +34,7 @@ import (
 
 const (
 	ACTIVE_MASTERNODE_INITIAL         = 0 // initial state
+	ACTIVE_MASTERNODE_SYNCING         = 2
 	ACTIVE_MASTERNODE_NOT_CAPABLE     = 3
 	ACTIVE_MASTERNODE_STARTED         = 4
 )
@@ -74,21 +75,6 @@ func (am *ActiveMasternode) State() int {
 func (am *ActiveMasternode) SetState(state int) {
 	am.activeState = state
 }
-
-//func (am *ActiveMasternode) NewPingMsg() (*PingMsg, error) {
-//	sec := uint64(time.Now().Unix())
-//	var b [8]byte
-//	binary.BigEndian.PutUint64(b[:], sec)
-//	sig, err := crypto.Sign(crypto.Keccak256(b[:]), am.PrivateKey)
-//	if err != nil {
-//		log.Error("Can't sign PingMsg packet", "err", err)
-//		return nil, err
-//	}
-//	return &PingMsg{
-//		Time: sec,
-//		Sig:  sig,
-//	}, nil
-//}
 
 // SignHash calculates a ECDSA signature for the given hash. The produced
 // signature is in the [R || S || V] format where V is 0 or 1.

@@ -503,7 +503,7 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server) {
 				t.Reset(5 * time.Second)
 				break
 			}
-			s.masternodeManager.Start(srvr, s.protocolManager.peers)
+			s.masternodeManager.Start(srvr, s.protocolManager.peers, s.Downloader())
 			break
 		}
 	}
