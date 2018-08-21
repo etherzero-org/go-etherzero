@@ -20,9 +20,9 @@
 package devotedb
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sync"
-	"encoding/binary"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"

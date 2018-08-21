@@ -34,6 +34,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/eth/downloader"
 )
 
 var (
@@ -58,6 +59,8 @@ type MasternodeManager struct {
 	Lifetime     time.Duration // Maximum amount of time vote are queued
 
 	txPool *core.TxPool
+
+	downloader *downloader.Downloader
 }
 
 func NewMasternodeManager(dp *devotedb.DevoteDB, blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
@@ -80,8 +83,9 @@ func (self *MasternodeManager) Clear() {
 
 }
 
-func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet) {
+func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet, downloader *downloader.Downloader) {
 	self.srvr = srvr
+	self.downloader = downloader
 	log.Trace("MasternodeManqager start ")
 	self.active = masternode.NewActiveMasternode(srvr)
 	go self.masternodeLoop()
@@ -154,6 +158,9 @@ func (mm *MasternodeManager) masternodeLoop() {
 			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
 				break
 			}
+			if mm.downloader.Synchronising() {
+				break
+			}
 
 			address := mm.active.NodeAccount
 			stateDB, _ := mm.blockchain.State()
@@ -187,34 +194,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 		}
 	}
 }
-
-//func (mm *MasternodeManager) ProcessPingMsg(pm *masternode.PingMsg) error {
-//	if mm.masternodes == nil {
-//		return nil
-//	}
-//	var b [8]byte
-//	binary.BigEndian.PutUint64(b[:], pm.Time)
-//	key, err := secp256k1.RecoverPubkey(crypto.Keccak256(b[:]), pm.Sig)
-//	if err != nil || len(key) != 65 {
-//		return err
-//	}
-//	id := fmt.Sprintf("%x", key[1:9])
-//	node := mm.masternodes.Node(id)
-//	if node == nil {
-//		return fmt.Errorf("error id %s", id)
-//	}
-//
-//	if node.LastPingTime > pm.Time {
-//		return fmt.Errorf("error ping time: %d > %d", node.LastPingTime, pm.Time)
-//	}
-//
-//	// mark the ping message
-//	for _, v := range mm.peers.peers { //
-//		v.markPingMsg(id, pm.Time)
-//	}
-//	mm.masternodes.RecvPingMsg(id, pm.Time)
-//	return nil
-//}
 
 func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
 	var state int

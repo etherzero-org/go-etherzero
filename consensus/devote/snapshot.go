@@ -203,5 +203,4 @@ func (p sortableAddresses) Less(i, j int) bool {
 	} else {
 		return p[i].nodeid > p[j].nodeid
 	}
-	return true
 }
