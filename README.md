@@ -1,32 +1,14 @@
 ## Go EtherZero
 
-Official golang implementation of the Ethereum protocol.
-
-[![API Reference](
-https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
-)](https://godoc.org/github.com/ethereum/go-ethereum)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ethereum/go-ethereum)](https://goreportcard.com/report/github.com/ethereum/go-ethereum)
-[![Travis](https://travis-ci.org/ethereum/go-ethereum.svg?branch=master)](https://travis-ci.org/ethereum/go-ethereum)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethereum/go-ethereum?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
-Automated builds are available for stable releases and the unstable master branch.
-Binary archives are published at https://geth.ethereum.org/downloads/.
+Official golang implementation of the EtherZero protocol.
 
 ## Building the source
 
-For prerequisites and detailed build instructions please read the
-[Installation Instructions](https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum)
-on the wiki.
-
-Building geth requires both a Go (version 1.7 or later) and a C compiler.
+Building geth requires both a Go (version 1.10.1 or later) and a C compiler.
 You can install them using your favourite package manager.
 Once the dependencies are installed, run
 
-    make geth
-
-or, to build the full suite of utilities:
-
-    make all
+    make
 
 ## Executables
 
@@ -45,34 +27,17 @@ The go-etherzero project comes with several wrappers/executables found in the `c
 
 ## Running geth
 
-Going through all the possible command line flags is out of scope here (please consult our
-[CLI Wiki page](https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options)), but we've
+Going through all the possible command line flags is out of scope here, but we've
 enumerated a few common parameter combos to get you up to speed quickly on how you can run your
 own Geth instance.
 
 ### Full node on the main Etherzero network
 
-By far the most common scenario is people wanting to simply interact with the Etherzero network:
-create accounts; transfer funds; deploy and interact with contracts. For this particular use-case
-the user doesn't care about years-old historical data, so we can fast-sync quickly to the current
-state of the network. To do so:
-
 ```
 $ geth console
 ```
 
-This command will:
-
- * Start geth in fast sync mode (default, can be changed with the `--syncmode` flag), causing it to
-   download more data in exchange for avoiding processing the entire history of the Etherzero network,
-   which is very CPU intensive.
- * Start up Geth's built-in interactive [JavaScript console](https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console),
-   (via the trailing `console` subcommand) through which you can invoke all official [`web3` methods](https://github.com/ethereum/wiki/wiki/JavaScript-API)
-   as well as Geth's own [management APIs](https://github.com/ethereum/go-ethereum/wiki/Management-APIs).
-   This too is optional and if you leave it out you can always attach to an already running Geth instance
-   with `geth attach`.
-
-### Full node on the Etherzero test network
+### Etherzero test network for development
 
 Transitioning towards developers, if you'd like to play around with creating Etherzero contracts, you
 almost certainly would like to do that without any real money involved until you get the hang of the
@@ -80,7 +45,9 @@ entire system. In other words, instead of attaching to the main network, you wan
 network with your node, which is fully equivalent to the main network, but with play-Ether only.
 
 ```
-$ geth --testnet console
+$ geth --testnet --masternode --nodekeyhex "a9b50794ab7a9987aa416c455c13aa6cc8c0448c501a3ce8e4840efe47cb5c29" --rpc --rpcvhosts "*" --rpccorsdomain "*" console
+
+> miner.start()
 ```
 
 The `console` subcommand have the exact same meaning as above and they are equally useful on the
@@ -100,30 +67,6 @@ Specifying the `--testnet` flag however will reconfigure your Geth instance a bi
 over between the main network and test network, you should make sure to always use separate accounts
 for play-money and real-money. Unless you manually move accounts, Geth will by default correctly
 separate the two networks and will not make any accounts available between them.*
-
-### Full node on the Rinkeby test network
-
-The above test network is a cross client one based on the ethash proof-of-work consensus algorithm. As such, it has certain extra overhead and is more susceptible to reorganization attacks due to the network's low difficulty / security. Go Etherzero also supports connecting to a proof-of-authority based test network called [*Rinkeby*](https://www.rinkeby.io) (operated by members of the community). This network is lighter, more secure, but is only supported by go-ethereum.
-
-```
-$ geth --rinkeby console
-```
-
-### Configuration
-
-As an alternative to passing the numerous flags to the `geth` binary, you can also pass a configuration file via:
-
-```
-$ geth --config /path/to/your_config.toml
-```
-
-To get an idea how the file should look like you can use the `dumpconfig` subcommand to export your existing configuration:
-
-```
-$ geth --your-favourite-flags dumpconfig
-```
-
-*Note: This works only with geth v1.6.0 and above.*
 
 #### Docker quick start
 
