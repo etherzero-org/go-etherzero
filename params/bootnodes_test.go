@@ -30,6 +30,16 @@ func Test_MasterodeRegParams(t *testing.T) {
 	}
 }
 
+func Test_MasterodeRegParamsForTX(t *testing.T) {
+	for i, n := range TestnetMasternodes {
+		node, err := discover.ParseNode(n)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("[%d] 0x2f926732%x\n", i, node.ID[:])
+	}
+}
+
 func Test_PrintAllocCode(t *testing.T) {
 	for _, n := range MainnetMasternodes {
 		node, err := discover.ParseNode(n)
