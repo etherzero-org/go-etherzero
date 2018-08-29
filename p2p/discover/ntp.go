@@ -61,10 +61,9 @@ func checkClockDrift() {
 
 var (
 	nanoDrift = int64(0)
-	times     = uint8(3)
 )
 
-func NanoDrift() int64{
+func NanoDrift() int64 {
 	return atomic.LoadInt64(&nanoDrift)
 }
 
@@ -80,6 +79,7 @@ func CheckClockDrift() {
 	}()
 
 	for {
+	times := uint8(3)
 	begin:
 		drift, err := sntpDrift(ntpChecks)
 		if err != nil {
@@ -91,14 +91,12 @@ func CheckClockDrift() {
 			time.Sleep((1 << (uint8(times + 1 - times))) * time.Second) //1,2,4
 			goto begin
 		}
-		if drift < -etherzerodriftThreshold || drift > etherzerodriftThreshold {
-			atomic.StoreInt64(&nanoDrift, int64(drift))
-			log.Warn("NTP sanity set done", "drift is ", drift, "drift int64", int64(drift))
-		} else {
-			log.Warn("NTP sanity check done", "drift", drift, "drift int64", int64(drift))
-		}
+		atomic.StoreInt64(&nanoDrift, int64(drift))
+		log.Warn("NTP sanity set done", "drift is ", drift, "drift int64", int64(drift))
+
 		break
 	}
+
 }
 
 // sntpDrift does a naive time resolution against an NTP server and returns the
