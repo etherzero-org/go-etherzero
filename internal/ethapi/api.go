@@ -83,6 +83,10 @@ func (s *PublicEthereumAPI) Data() string {
 	return ""
 }
 
+func (s *PublicEthereumAPI) Ns() int64 {
+	return 0
+}
+
 // GetInfo return related info in masternode contract
 func (s *PublicEthereumAPI) GetInfo(nodeid string) string {
 	return ""
@@ -267,6 +271,10 @@ func (s *PrivateAccountAPI) List() []string {
 // Masternodes will return a list master nodes messages.
 func (s *PrivateAccountAPI) Data() string {
 	return s.b.Data()
+}
+
+func (s *PrivateAccountAPI) Ns() int64 {
+	return s.b.Ns()
 }
 
 // GetInfo return related info in masternode contract
