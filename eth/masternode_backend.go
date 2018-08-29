@@ -35,6 +35,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 var (
@@ -127,6 +128,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	ping := time.NewTimer(masternode.MASTERNODE_PING_INTERVAL)
 	defer ping.Stop()
+	ntp := time.NewTimer(time.Second)
+	defer ntp.Stop()
 	minPower := big.NewInt(20e+14)
 
 	report := time.NewTicker(statsReportInterval)
@@ -153,6 +156,10 @@ func (mm *MasternodeManager) masternodeLoop() {
 			quitSub.Unsubscribe()
 			fmt.Println("eventQuit err", err.Error())
 
+		case <-ntp.C:
+			fmt.Println("ntp.server")
+			ntp.Reset(10 * time.Minute)
+		    go discover.CheckClockDrift()
 		case <-ping.C:
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
 			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
