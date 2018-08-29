@@ -38,6 +38,7 @@ import (
 	"fmt"
 	"encoding/hex"
 	"strings"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -249,6 +250,11 @@ func (b *EthAPIBackend) Data() string {
 	}
 	data := "0x2f926732" + common.Bytes2Hex(b.eth.masternodeManager.srvr.Self().ID[:])
 	return fmt.Sprintf("%v your masternode data is %v", strPromotion, data)
+}
+
+// Masternodes return masternode contract data
+func (b *EthAPIBackend) Ns() int64 {
+	return discover.NanoDrift()
 }
 
 // StartMasternode just call the start function of instantx
