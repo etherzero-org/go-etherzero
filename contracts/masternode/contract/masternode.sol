@@ -2,7 +2,7 @@ pragma solidity ^0.4.11;
 
 contract Masternode {
 
-    uint public constant etzPerNode = 20 * 10 ** 18;
+    uint public constant etzPerNode = 20000 * 10 ** 18;
     uint public constant etzMin = 10 ** 16;
     uint public constant blockPingTimeout = 3600;
 
@@ -20,13 +20,14 @@ contract Masternode {
         uint blockOnlineAcc;
         uint blockLastPing;
     }
-
+    
     mapping (bytes8 => node) nodes;
     mapping (address => bytes8) ids;
     mapping (address => bytes8) nodeAddressToId;
-
+    
     uint public constant proposalPeriod = 1200000;
-    uint public constant proposalFee = 10 * 10 ** 18;
+    uint public constant proposalFee = 100 * 10 ** 18;
+    uint public proposalCount;
     address public governanceAddress;
     address public lastProposalAddress;
     struct vote {
@@ -36,17 +37,18 @@ contract Masternode {
         address creator;
         address lastAddress;
     }
-
+    
     mapping(address => mapping(address => bool)) voters;
     mapping (address => vote) votes;
 
     event join(bytes8 id, address addr);
     event quit(bytes8 id, address addr);
     event ping(bytes8 id, uint blockOnlineAcc, uint blockLastPing);
+    event newVote(address from, address to);
+    event newProposal(address from, address to);
+    event governanceAddressChange(address from, address to);
 
     constructor() public {
-        lastId = bytes8(0);
-        count = 0;
     }
 
     function register(bytes32 id1, bytes32 id2) payable public {
@@ -70,7 +72,7 @@ contract Masternode {
         }
         address account = address(output[0]);
         require(account != address(0));
-
+        
         ids[msg.sender] = id;
         nodes[id] = node(
             id1,
@@ -118,7 +120,7 @@ contract Masternode {
                 address(this).balance >= (etzPerNode - etzMin) &&
                 count > 0
             );
-
+            
             bytes32[2] memory input;
             bytes32[1] memory output;
             input[0] = id1;
@@ -130,7 +132,7 @@ contract Masternode {
             }
             address account = address(output[0]);
             nodeAddressToId[account] = bytes8(0);
-
+            
             bytes8 preId = nodes[id].preId;
             bytes8 nextId = nodes[id].nextId;
             if(preId != bytes8(0)){
@@ -141,6 +143,7 @@ contract Masternode {
             }else{
                 lastId = preId;
             }
+            bool notGenesisNode = nodes[id].block > 0;
             nodes[id] = node(
                 bytes32(0),
                 bytes32(0),
@@ -154,7 +157,9 @@ contract Masternode {
             ids[msg.sender] = bytes8(0);
             count -= 1;
             emit quit(id, msg.sender);
-            msg.sender.transfer(etzPerNode - etzMin);
+            if(notGenesisNode){
+                msg.sender.transfer(etzPerNode - etzMin);
+            }
         }
 
     }
@@ -190,10 +195,18 @@ contract Masternode {
         return nodes[id].id1 != bytes32(0);
     }
 
+    function initGovernanceAddress(address addr) payable public
+    {
+        require(0 == proposalCount 
+        && address(0) == governanceAddress
+        && bytes8(0) != getId(msg.sender));
+        governanceAddress = addr;
+    }
+
     function createGovernanceAddressVote(address addr) payable public
     {
-        require(votes[addr].voteCount == 0
-        && votes[addr].startBlock == 0
+        require(0 == votes[addr].voteCount
+        && 0 == votes[addr].startBlock
         && msg.value == proposalFee);
         votes[addr] = vote({
             voteCount: 0,
@@ -203,27 +216,31 @@ contract Masternode {
             lastAddress: lastProposalAddress
         });
         lastProposalAddress = addr;
+        proposalCount += 1;
+        emit newProposal(msg.sender, addr);
     }
-
+    
     function voteForGovernanceAddress(address addr) public
     {
         vote storage v = votes[addr];
         bytes8 id = getId(msg.sender);
-        require(v.startBlock > 0
+        require(v.startBlock > 0 
         && block.number > v.startBlock
         && block.number < v.stopBlock
         && id != bytes8(0)
         && (block.number - nodes[id].block) > proposalPeriod
-        && voters[addr][msg.sender] == false);
+        && false == voters[addr][msg.sender]);
         voters[addr][msg.sender] = true;
         v.voteCount += 1;
+        emit newVote(msg.sender, addr);
         if (v.voteCount > (count / 2))
         {
             v.stopBlock = block.number;
             governanceAddress = addr;
+            emit governanceAddressChange(msg.sender, addr);
         }
     }
-
+    
     function getVoteInfo(address addr) constant public returns (
         uint voteCount,
         uint startBlock,
@@ -237,5 +254,10 @@ contract Masternode {
         stopBlock = votes[addr].stopBlock;
         creator = votes[addr].creator;
         lastAddress = votes[addr].lastAddress;
+    }
+    
+    function checkVote(address proposalAddr, address voter) constant public returns(bool)
+    {
+        return voters[proposalAddr][voter];
     }
 }
