@@ -39,6 +39,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 const (
@@ -503,7 +504,9 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		case <-time.After(time.Duration(delay) * time.Second):
 		}
 	}
-	block.Header().Time.SetInt64(time.Now().Unix())
+	drift := time.Duration(discover.NanoDrift())
+	blockTime:=time.Now().Add(-drift).Unix()
+	block.Header().Time.SetInt64(blockTime)
 
 	// time's up, sign the block
 	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())

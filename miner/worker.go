@@ -31,13 +31,14 @@ import (
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"gopkg.in/fatih/set.v0"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 const (
@@ -124,7 +125,7 @@ type worker struct {
 	currentMu sync.Mutex
 	current   *Work
 
-	snapshotMu sync.RWMutex
+	snapshotMu    sync.RWMutex
 	snapshotBlock *types.Block
 	snapshotState *state.StateDB
 
@@ -192,7 +193,6 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 		defer self.snapshotMu.RUnlock()
 		return self.snapshotBlock, self.snapshotState.Copy()
 	}
-
 
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
@@ -281,7 +281,8 @@ func (self *worker) mineLoop() {
 	for {
 		select {
 		case now := <-ticker:
-			self.mine(now.Unix())
+			drift := time.Duration(discover.NanoDrift())
+			self.mine(now.Add(-drift).Unix())
 		case <-self.stopper:
 			close(self.quitCh)
 			self.quitCh = make(chan struct{}, 1)
@@ -433,15 +434,15 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := &Work{
-		config:         self.config,
-		signer:         types.NewEIP155Signer(self.config.ChainID),
-		state:          state,
-		ancestors:      set.New(),
-		family:         set.New(),
-		uncles:         set.New(),
-		header:         header,
-		createdAt:      time.Now(),
-		devoteDB: devoteDB,
+		config:    self.config,
+		signer:    types.NewEIP155Signer(self.config.ChainID),
+		state:     state,
+		ancestors: set.New(),
+		family:    set.New(),
+		uncles:    set.New(),
+		header:    header,
+		createdAt: time.Now(),
+		devoteDB:  devoteDB,
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -678,7 +679,6 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}(cpy, env.tcount)
 	}
 }
-
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()

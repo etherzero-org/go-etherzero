@@ -188,6 +188,11 @@ func (b *LesApiBackend) Data() string {
 	return ""
 }
 
+
+func (b *LesApiBackend) Ns() int64 {
+	return 0
+}
+
 // GetInfo return related info in masternode contract
 func (b *LesApiBackend) GetInfo(nodeid string) string {
 	return ""
