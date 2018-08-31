@@ -73,7 +73,7 @@ func NanoDrift() int64 {
 func CheckClockDrift() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Warn("CheckClockDrift failed:", err)
+			log.Warn("CheckClockDrift recover","err", err)
 			debug.PrintStack()
 		}
 	}()
@@ -83,7 +83,7 @@ func CheckClockDrift() {
 	begin:
 		drift, err := sntpDrift(ntpChecks)
 		if err != nil {
-			log.Warn("err", err)
+			log.Warn("When NTP drift","err", err)
 			times--
 			if times == 0 {
 				return
