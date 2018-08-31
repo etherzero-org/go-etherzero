@@ -93,7 +93,7 @@ func CheckClockDrift() {
 		}
 		atomic.StoreInt64(&nanoDrift, int64(drift))
 		if (drift) >= time.Second {
-			log.Warn("NTP drift is bigger than one second", "drift ", drift)
+			log.Warn("NTP drift is bigger than one second", "drift", drift)
 		}
 		break
 	}
