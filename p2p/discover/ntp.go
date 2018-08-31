@@ -73,17 +73,17 @@ func NanoDrift() int64 {
 func CheckClockDrift() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Warn("CheckClockDrift failed:", err)
+			log.Warn("CheckClockDrift recover", "err", err)
 			debug.PrintStack()
 		}
 	}()
 
 	for {
-	times := uint8(3)
+		times := uint8(3)
 	begin:
 		drift, err := sntpDrift(ntpChecks)
 		if err != nil {
-			log.Warn("err", err)
+			log.Warn("When NTP drift", "err", err)
 			times--
 			if times == 0 {
 				return
@@ -92,8 +92,9 @@ func CheckClockDrift() {
 			goto begin
 		}
 		atomic.StoreInt64(&nanoDrift, int64(drift))
-		log.Warn("NTP sanity set done", "drift is ", drift, "drift int64", int64(drift))
-
+		if (drift) >= time.Second {
+			log.Warn("NTP drift is bigger than one second", "drift ", drift)
+		}
 		break
 	}
 
