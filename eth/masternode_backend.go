@@ -157,7 +157,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 			fmt.Println("eventQuit err", err.Error())
 
 		case <-ntp.C:
-			fmt.Println("ntp.server")
 			ntp.Reset(10 * time.Minute)
 		    go discover.CheckClockDrift()
 		case <-ping.C:
