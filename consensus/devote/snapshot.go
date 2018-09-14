@@ -130,6 +130,8 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 		err = errors.New("failed to lookup witness")
 		return
 	}
+	//sort.Strings(witnesses)
+
 	offset %= uint64(witnessSize)
 	witness = witnesses[offset]
 	return
@@ -182,6 +184,55 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
 	}
 	return nil
+}
+
+func (c *Controller) offset(lastblock *types.Block, signer string) int {
+
+	witnesses, err := c.devoteDB.GetWitnesses(c.devoteDB.GetCycle())
+	if err != nil {
+		return -1
+	}
+	lastsigner := lastblock.Witness()
+
+	signers, index, self := witnesses, 0, 0
+	for _,_ = range  signers {
+		if signers[index] != lastsigner{
+			index++
+		}
+		if signers[self] != signer {
+			self ++
+		}
+	}
+	ret := index -self
+	offset := (ret ^ ret>>31) - ret>>31
+	return offset
+}
+
+func (c *Controller) nextSigner(lastblock *types.Block) (signer string, err error) {
+
+	witnesses, err := c.devoteDB.GetWitnesses(c.devoteDB.GetCycle())
+	if err != nil {
+		return
+	}
+	witnessSize := len(witnesses)
+	if witnessSize == 0 {
+		err = errors.New("failed to lookup witness")
+		return
+	}
+	lastsigner := lastblock.Witness()
+	signers, index := witnesses, 0
+	for index < len(signers) && signers[index] != lastsigner {
+		index++
+	}
+	index++
+	index %= len(signers)
+	signer = witnesses[index]
+	return
+}
+
+func (c *Controller) Witnesses(cycle uint64) (witnesses []string, err error) {
+
+	return c.devoteDB.GetWitnesses(cycle)
 }
 
 // nodeid  masternode nodeid

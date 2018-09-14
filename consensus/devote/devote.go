@@ -35,11 +35,12 @@ import (
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/hashicorp/golang-lru"
-	"github.com/etherzero/go-etherzero/p2p/discover"
+	"math/rand"
 )
 
 const (
@@ -50,6 +51,7 @@ const (
 	//maxWitnessSize uint64 = 0
 	//safeSize              = maxWitnessSize*2/3 + 1
 	//consensusSize         = maxWitnessSize*2/3 + 1
+	wiggleTime = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 )
 
 var (
@@ -142,6 +144,8 @@ type Devote struct {
 	masternodeListFn            MasternodeListFn             //get current all masternodes
 	governanceContractAddressFn GetGovernanceContractAddress //get current GovernanceContractAddress
 
+	blockTimes map[common.Hash][]int64 //save arrived system time of lastblock
+
 	mu   sync.RWMutex
 	stop chan bool
 }
@@ -152,6 +156,7 @@ func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
 		config:     config,
 		db:         db,
 		signatures: signatures,
+		blockTimes: make(map[common.Hash][]int64),
 	}
 }
 
@@ -426,6 +431,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	currentcycle := parent.Time.Uint64() / params.CycleInterval
 	devoteDB.SetCycle(currentcycle)
 	controller := &Controller{devoteDB: devoteDB}
+
 	witness, err := controller.lookup(header.Time.Uint64())
 	if err != nil {
 		return err
@@ -442,7 +448,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return err
 	}
 	if signer != witness {
-		return fmt.Errorf("invalid block witness signer: %s,witness: %s\n", signer, witness)
+		return fmt.Errorf("invalid block witness signer: %s,witness: %s,time:%d \n", signer, witness, header.Time)
 	}
 	if signer != header.Witness {
 		return ErrMismatchSignerAndWitness
@@ -463,7 +469,19 @@ func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
 	return ErrWaitForPrevBlock
 }
 
+func (d *Devote) saveNextBlockTime(lastBlock *types.Block) int64 {
+
+	if _, ok := d.blockTimes[lastBlock.Hash()]; !ok {
+		d.blockTimes[lastBlock.Hash()]=append(d.blockTimes[lastBlock.Hash()], time.Now().UnixNano())
+	}
+	i:=len(d.blockTimes[lastBlock.Hash()])
+	return d.blockTimes[lastBlock.Hash()][0]-d.blockTimes[lastBlock.Hash()][i]
+}
+
 func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
+	stop := make(chan struct{})
+	//offset := lastBlock.Time().Uint64() % params.CycleInterval
+	//gap := offset - uint64(index)
 	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
 	}
@@ -474,15 +492,44 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	currentCycle := lastBlock.Time().Uint64() / params.CycleInterval
 	devoteDB.SetCycle(currentCycle)
 	controller := &Controller{devoteDB: devoteDB}
+	witnesses, error := controller.Witnesses(currentCycle)
+	if error != nil {
+		return error
+	}
+	for i, s := range witnesses {
+		if s == d.signer {
+			log.Info("self is index in witnesses ", "index", i, "witness", d.signer, "count", len(witnesses))
+			break
+		}
+	}
 
+	pnow := lastBlock.Time().Uint64() + params.BlockInterval
+	// Sweet, the protocol permits us to sign the block, wait for our time
+	signer,_:=controller.nextSigner(lastBlock)
+	if signer != d.signer{
+		delay := time.Unix(lastBlock.Time().Int64(), 0).Sub(time.Now()) // nolint: gosimple
+		// It's not our turn explicitly to sign, delay it a bit
+		wiggle := time.Duration(len(witnesses)/2+1) * wiggleTime
+		delay += time.Duration(rand.Int63n(int64(wiggle)))
+		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+		log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
+
+		select {
+		case <-stop:
+			return nil
+		case <-time.After(delay):
+		}
+	}
 	witness, err := controller.lookup(uint64(now))
 	if err != nil {
 		return err
 	}
-	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer)
+
+	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "time", uint64(pnow))
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
 	}
+
 	return nil
 }
 
@@ -496,7 +543,9 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errUnknownBlock
 	}
 	now := time.Now().Unix()
-	delay := int64(NextSlot(uint64(now))) - now
+	NextSlot := int64(NextSlot(uint64(now)))
+	delay := NextSlot - now
+	log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)
 	if delay > 0 {
 		select {
 		case <-stop:
@@ -505,7 +554,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		}
 	}
 	drift := time.Duration(discover.NanoDrift())
-	blockTime:=time.Now().Add(-drift).Unix()
+	blockTime := time.Now().Add(-drift).Unix()
 	block.Header().Time.SetInt64(blockTime)
 
 	// time's up, sign the block
