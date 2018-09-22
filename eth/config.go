@@ -35,7 +35,7 @@ import (
 
 // DefaultConfig contains default settings for use on the Ethereum main net.
 var DefaultConfig = Config{
-	SyncMode: downloader.FullSync,
+	SyncMode: downloader.FastSync,
 	Ethash: ethash.Config{
 		CacheDir:       "ethash",
 		CachesInMem:    2,
@@ -95,11 +95,11 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Etherbase    common.Address `toml:",omitempty"`
-	Witness      string `toml:",omitempty"`
+	Etherbase common.Address `toml:",omitempty"`
+	Witness   string         `toml:",omitempty"`
 
-	MinerThreads int            `toml:",omitempty"`
-	ExtraData    []byte         `toml:",omitempty"`
+	MinerThreads int    `toml:",omitempty"`
+	ExtraData    []byte `toml:",omitempty"`
 	GasPrice     *big.Int
 
 	// Ethash options
@@ -117,7 +117,6 @@ type Config struct {
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
 	Devote  bool   `toml:"-"`
-
 }
 
 type configMarshaling struct {
