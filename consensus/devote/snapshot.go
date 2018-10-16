@@ -26,24 +26,132 @@ import (
 	"sort"
 	"sync"
 
+	"encoding/json"
+	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/hashicorp/golang-lru"
 )
 
 type Controller struct {
 	devoteDB  *devotedb.DevoteDB
 	TimeStamp uint64
-	mu        sync.Mutex
+
+	mu       sync.Mutex
+	sigcache *lru.ARCCache       // Cache of recent block signatures to speed up ecrecover
+	Hash     common.Hash         //Block hash where the snapshot was created
+	Number   uint64              //Cycle number where the snapshot was created
+	Cycle    uint64              //Cycle number where the snapshot was created
+	Signers  map[string]struct{} //Set of authorized masternodes at this cycle
+	Recents  map[uint64]string   // set of recent masternodes for spam protections
+
 }
 
-func Newcontroller(devoteDB *devotedb.DevoteDB) *Controller {
+func newController(number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Controller {
+
 	controller := &Controller{
-		devoteDB: devoteDB,
+		Signers:  make(map[string]struct{}),
+		Recents:  make(map[uint64]string),
+		Number:   number,
+		Cycle:    cycle,
+		Hash:     hash,
+		sigcache: signatures,
 	}
+	for i := 0; i < len(signers); i++ {
+		signer := signers[i]
+		controller.Signers[signer] = struct{}{}
+	}
+	fmt.Printf("snapshot newController signers size:%d,value%s\n", len(signers), controller.Signers)
 	return controller
+}
+
+// loadSnapshot loads an existing snapshot from the database.
+func loadSnapshot(sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Controller, error) {
+	blob, err := db.Get(append([]byte("devote-"), hash[:]...))
+	if err != nil {
+		return nil, err
+	}
+	snap := new(Controller)
+	if err := json.Unmarshal(blob, snap); err != nil {
+		return nil, err
+	}
+	snap.sigcache = sigcache
+
+	return snap, nil
+}
+
+// copy creates a deep copy of the snapshot, though not the individual votes.
+func (s *Controller) copy() *Controller {
+	cpy := &Controller{
+		sigcache: s.sigcache,
+		Number:   s.Number,
+		Hash:     s.Hash,
+		Signers:  make(map[string]struct{}),
+		Recents:  make(map[uint64]string),
+	}
+	for signer := range s.Signers {
+		cpy.Signers[signer] = struct{}{}
+	}
+	for block, signer := range s.Recents {
+		cpy.Recents[block] = signer
+	}
+
+	return cpy
+}
+
+// apply creates a new authorization snapshot by applying the given headers to
+// the original one.
+func (s *Controller) apply(headers []*types.Header) (*Controller, error) {
+	// Allow passing in no headers for cleaner code
+	if len(headers) == 0 {
+		return s, nil
+	}
+	// Sanity check that the headers can be applied
+	for i := 0; i < len(headers)-1; i++ {
+		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
+			return nil, errInvalidVotingChain
+		}
+	}
+	if headers[0].Number.Uint64() != s.Number+1 {
+		return nil, errInvalidVotingChain
+	}
+	// Iterate through the headers and create a new snapshot
+	snap := s.copy()
+
+	for _, header := range headers {
+		// Remove any votes on checkpoint blocks
+		number := header.Number.Uint64()
+
+		// Delete the oldest signer from the recent list to allow it signing again
+		if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
+			delete(snap.Recents, number-limit)
+		}
+		// Resolve the authorization key and check against signers
+		signer, err := ecrecover(header, s.sigcache)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := snap.Signers[signer]; !ok {
+			return nil, errUnauthorized
+		}
+		//fmt.Printf("apply recents size:%d \n",len(snap.Recents))
+		for _, recent := range snap.Recents {
+			if recent == signer {
+				return nil, errUnauthorized
+			}
+		}
+		snap.Recents[number] = signer
+
+	}
+	fmt.Printf("&&&&&&&&&&&&&&&  snapshot apply headers size:%d &&&&&&&&&&&&&&& \n",len(headers))
+	snap.Number += uint64(len(headers))
+	snap.Hash = headers[len(headers)-1].Hash()
+
+	return snap, nil
 }
 
 // masternodes return  masternode list in the Cycle.
@@ -113,6 +221,8 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 }
 
 func (ec *Controller) lookup(now uint64) (witness string, err error) {
+	ec.mu.Lock()
+	defer ec.mu.Unlock()
 
 	offset := now % params.CycleInterval
 	if offset%params.BlockInterval != 0 {
@@ -131,7 +241,7 @@ func (ec *Controller) lookup(now uint64) (witness string, err error) {
 		return
 	}
 	//sort.Strings(witnesses)
-
+	//log.Info("snapshot lookup outcome", "offset", offset)
 	offset %= uint64(witnessSize)
 	witness = witnesses[offset]
 	return
@@ -178,12 +288,24 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
+		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "recents size", len(self.Recents), "sortedWitnesses", sortedWitnesses)
 		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
 		self.devoteDB.Commit()
+		for seen, signer := range self.Recents {
+			log.Info("Controller new Eclection witnesses", "seen", seen, "signer", signer)
+		}
 		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
 	}
 	return nil
+}
+
+// store inserts the snapshot into the database.
+func (c *Controller) store(db ethdb.Database) error {
+	blob, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	return db.Put(append([]byte("devote-"), c.Hash[:]...), blob)
 }
 
 func (c *Controller) offset(lastblock *types.Block, signer string) int {
@@ -195,15 +317,15 @@ func (c *Controller) offset(lastblock *types.Block, signer string) int {
 	lastsigner := lastblock.Witness()
 
 	signers, index, self := witnesses, 0, 0
-	for _,_ = range  signers {
-		if signers[index] != lastsigner{
+	for _, _ = range signers {
+		if signers[index] != lastsigner {
 			index++
 		}
 		if signers[self] != signer {
-			self ++
+			self++
 		}
 	}
-	ret := index -self
+	ret := index - self
 	offset := (ret ^ ret>>31) - ret>>31
 	return offset
 }
@@ -233,6 +355,20 @@ func (c *Controller) nextSigner(lastblock *types.Block) (signer string, err erro
 func (c *Controller) Witnesses(cycle uint64) (witnesses []string, err error) {
 
 	return c.devoteDB.GetWitnesses(cycle)
+}
+
+// inturn returns if a signer at a given block height is in-turn or not.
+func (c *Controller) inturn(number uint64, signer string) bool {
+
+	signers, err := c.Witnesses(c.Cycle)
+	if err != nil {
+		return false
+	}
+	offset := 0
+	for offset < len(signers) && signers[offset] != signer {
+		offset++
+	}
+	return (number % uint64(len(signers))) == uint64(offset)
 }
 
 // nodeid  masternode nodeid

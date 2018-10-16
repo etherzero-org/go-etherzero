@@ -36,7 +36,6 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"gopkg.in/fatih/set.v0"
 )
@@ -240,6 +239,18 @@ func (self *worker) start() {
 	go self.mineLoop()
 }
 
+func (self *worker) seal(work *Work) {
+	if result, err := self.engine.Seal(self.chain, work.Block, self.quitCh); result != nil {
+		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash(), "diff", result.Difficulty())
+		self.recv <- &Result{work, result}
+	} else {
+		if err != nil {
+			log.Warn("Block sealing failed", "err", err)
+		}
+		self.recv <- nil
+	}
+}
+
 func (self *worker) mine(now int64) {
 	engine, ok := self.engine.(*devote.Devote)
 	if !ok {
@@ -255,25 +266,29 @@ func (self *worker) mine(now int64) {
 			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)
-			//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+			fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		default:
 			log.Error("Failed to miner the block", "err", err)
-			//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+			fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		}
 		return
 	}
+
 	work, err := self.commitNewWork()
 	if err != nil {
+		log.Info("error Failed to create the new work", "err", err)
 		log.Error("Failed to create the new work", "err", err)
 		return
 	}
-
-	result, err := self.engine.Seal(self.chain, work.Block, self.quitCh)
-	if err != nil {
-		log.Error("Failed to seal the block", "err", err)
-		return
+	self.mu.Lock()
+	if self.quitCh != nil {
+		close(self.quitCh)
 	}
-	self.recv <- &Result{work, result}
+	self.quitCh = make(chan struct{})
+	log.Info("worker.go befor engine seal")
+	go self.seal(work)
+
+	self.mu.Unlock()
 }
 
 func (self *worker) mineLoop() {
@@ -281,8 +296,8 @@ func (self *worker) mineLoop() {
 	for {
 		select {
 		case now := <-ticker:
-			drift := time.Duration(discover.NanoDrift())
-			self.mine(now.Add(-drift).Unix())
+			//	drift := time.Duration(discover.NanoDrift())
+			self.mine(now.Unix())
 		case <-self.stopper:
 			close(self.quitCh)
 			self.quitCh = make(chan struct{}, 1)
@@ -555,6 +570,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 
+	log.Info("worker.go after engine finalize ")
 	work.Block.DevoteDB = work.devoteDB
 
 	// update the count for the miner of new block
@@ -563,7 +579,11 @@ func (self *worker) commitNewWork() (*Work, error) {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
+	log.Info("worker.go before engine finalize ")
+
 	self.updateSnapshot()
+	log.Info("worker.go after engine finalize ")
+
 	return work, nil
 }
 
