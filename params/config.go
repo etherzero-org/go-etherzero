@@ -47,10 +47,10 @@ var (
 
 		Devote: &DevoteConfig{
 			Witnesses: []string{
-				"7ecb965c04f679e7",
-				"b456a7f8e8abfb23",
-				"00dc5262bc8696a4",
-				"7504619a3cb82702",
+				"6a141170ab3f5167",
+				"5997275b402be19a",
+				"171af8c152b17713",
+				//"7504619a3cb82702",
 				//"b553bcf51ae5f42b",
 				//"bbdf34418a2630cf",
 				//"7f0dcd95f323b9f2",
@@ -110,9 +110,9 @@ var (
 		},
 		Devote: &DevoteConfig{
 			Witnesses: []string{
-				"c34c967d399d38f0",
-				"ffb14ca8e65770b4",
-				"de4e2e0521f16469",
+				"6a141170ab3f5167",
+				"5997275b402be19a",
+				"171af8c152b17713",
 			},
 		},
 	}
