@@ -147,7 +147,7 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer string   // master node nodeid
+	signer string   // masternode nodeid
 	signFn SignerFn // signature function
 
 	recents                     *lru.ARCCache // Snapshots for recent block to speed up reorgs
