@@ -138,16 +138,15 @@ func (s *Controller) apply(headers []*types.Header) (*Controller, error) {
 		if _, ok := snap.Signers[signer]; !ok {
 			return nil, errUnauthorized
 		}
-		//fmt.Printf("apply recents size:%d \n",len(snap.Recents))
+		fmt.Printf("apply recents size:%d ,head 's signer  \n",len(snap.Recents),signer)
 		for _, recent := range snap.Recents {
 			if recent == signer {
 				return nil, errUnauthorized
 			}
 		}
 		snap.Recents[number] = signer
-
 	}
-	fmt.Printf("&&&&&&&&&&&&&&&  snapshot apply headers size:%d &&&&&&&&&&&&&&& \n",len(headers))
+	fmt.Printf("&&&&&&&&&&&&&&&  snapshot apply headers size:%d %s &&&&&&&&&&&&&&& \n",len(headers))
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
