@@ -373,7 +373,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
 	maxWitnessSize := uint64(20)
-	safeSize := int(11)
+	safeSize := int(2)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
 		safeSize = 1
