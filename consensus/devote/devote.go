@@ -421,7 +421,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	devoteDB.Commit()
 	header.Protocol = devoteDB.Protocol()
 	//controller.Recents[header.Number.Uint64()] = header.Witness
-	fmt.Printf("devote 's Finalize recode last number of signer :number %d,signer :%s,Rencts size:%d \n", header.Number.Uint64(), header.Witness, len(controller.Recents))
+	//fmt.Printf("devote 's Finalize recode last number of signer :number %d,signer :%s,Rencts size:%d \n", header.Number.Uint64(), header.Witness, len(controller.Recents))
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -561,14 +561,14 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 
 	if _, ok := snap.Signers[header.Witness]; !ok {
-		fmt.Printf("devote verifySeal snap.Signers size:%d,value:%s \n ", len(snap.Signers), snap.Signers)
+		//fmt.Printf("devote verifySeal snap.Signers size:%d,value:%s \n ", len(snap.Signers), snap.Signers)
 		return errUnauthorized
 	}
 	for seen, recent := range snap.Recents {
 		if recent == witness {
 			// Signer is among recents, only fail if the current block doesn't shift it out
 			if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
-				fmt.Printf("devote verifySeal snap.Signers size:%d,limit%d \n ", len(snap.Signers), limit)
+				//fmt.Printf("devote verifySeal snap.Signers size:%d,limit%d \n ", len(snap.Signers), limit)
 				return errUnauthorized
 			}
 		}
@@ -685,11 +685,11 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 	snap, e := d.snapshot(chain, number-1, currentCycle, signers, header.ParentHash, nil)
 	if e != nil {
-		fmt.Printf(" create snapshot err%s\n", e)
+		//fmt.Printf(" create snapshot err%s\n", e)
 		return nil, e
 	}
 	for seen, recent := range snap.Recents {
-		fmt.Printf("devote Seal signer's %s in Recents Recents size %d \n", recent, len(snap.Recents))
+		//fmt.Printf("devote Seal signer's %s in Recents Recents size %d \n", recent, len(snap.Recents))
 		if recent == d.signer {
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
@@ -716,7 +716,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, nil
 	case <-time.After(delay):
 	}
-	fmt.Printf("devote Seal signer's in Recents Recents  after stop\n")
+	//fmt.Printf("devote Seal signer's in Recents Recents  after stop\n")
 	// time's up, sign the block
 	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())
 	if err != nil {

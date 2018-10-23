@@ -65,7 +65,7 @@ func newController(number uint64, cycle uint64, signatures *lru.ARCCache, hash c
 		signer := signers[i]
 		controller.Signers[signer] = struct{}{}
 	}
-	fmt.Printf("snapshot newController signers size:%d,value%s\n", len(signers), controller.Signers)
+	//fmt.Printf("snapshot newController signers size:%d,value%s\n", len(signers), controller.Signers)
 	return controller
 }
 
@@ -138,7 +138,7 @@ func (s *Controller) apply(headers []*types.Header) (*Controller, error) {
 		if _, ok := snap.Signers[signer]; !ok {
 			return nil, errUnauthorized
 		}
-		fmt.Printf("apply recents size:%d ,head 's signer  \n",len(snap.Recents),signer)
+		//fmt.Printf("apply recents size:%d ,head 's signer  \n",len(snap.Recents),signer)
 		for _, recent := range snap.Recents {
 			if recent == signer {
 				return nil, errUnauthorized
@@ -146,7 +146,7 @@ func (s *Controller) apply(headers []*types.Header) (*Controller, error) {
 		}
 		snap.Recents[number] = signer
 	}
-	fmt.Printf("&&&&&&&&&&&&&&&  snapshot apply headers size:%d %s &&&&&&&&&&&&&&& \n",len(headers))
+	//fmt.Printf("&&&&&&&&&&&&&&&  snapshot apply headers size:%d %s &&&&&&&&&&&&&&& \n",len(headers))
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
