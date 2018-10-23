@@ -574,9 +574,13 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		}
 	}
 
-	//if err := d.verifyBlockSigner(witness, header); err != nil {
-	//	return err
-	//}
+	inturn := snap.inturn(header.Number.Uint64(), witness)
+	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
+		return errInvalidDifficulty
+	}
+	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
+		return errInvalidDifficulty
+	}
 	return d.updateConfirmedBlockHeader(chain)
 }
 
@@ -649,17 +653,6 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errUnknownBlock
 	}
 	now := time.Now().Unix()
-	//NextSlot := int64(NextSlot(uint64(now)))
-	//delay := NextSlot - now
-	//
-	//log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)
-	//if delay > 0 {
-	//	select {
-	//	case <-stop:
-	//		return nil, nil
-	//	case <-time.After(time.Duration(delay) * time.Second):
-	//	}
-	//}
 	drift := time.Duration(discover.NanoDrift())
 	log.Info("Devote Seal delay time :", "NextSlot", NextSlot, "now", now, "drift", drift)
 	blockTime := time.Now().Add(-drift).Unix()
@@ -672,20 +665,13 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	currentCycle := uint64(header.Time.Uint64()) / params.CycleInterval
 	devoteDB.SetCycle(currentCycle)
 
-	//	c := Controller{devoteDB: devoteDB}
-	//signers, err := c.Witnesses(currentCycle)
-	//if err != nil {
-	//	return nil, err
-	//}
 	signers, err := devoteDB.GetWitnesses(currentCycle)
 	if err != nil {
-		fmt.Printf("get witnesses err :%s\n", err)
 		return nil, err
 	}
 
 	snap, e := d.snapshot(chain, number-1, currentCycle, signers, header.ParentHash, nil)
 	if e != nil {
-		//fmt.Printf(" create snapshot err%s\n", e)
 		return nil, e
 	}
 	for seen, recent := range snap.Recents {
@@ -716,7 +702,6 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, nil
 	case <-time.After(delay):
 	}
-	//fmt.Printf("devote Seal signer's in Recents Recents  after stop\n")
 	// time's up, sign the block
 	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())
 	if err != nil {
@@ -727,16 +712,25 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 }
 
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	return big.NewInt(1)
-	//currentCycle := uint64(chain.CurrentHeader().Time.Uint64()) / params.CycleInterval
-	//snap, err := d.snapshot(chain, parent.Number.Uint64(),currentCycle, parent.Hash(), nil)
-	//if err != nil {
-	//	return nil
-	//}
-	//if snap.inturn(snap.Number+1, d.signer) {
-	//	return new(big.Int).Set(diffInTurn)
-	//}
-	//return new(big.Int).Set(diffNoTurn)
+
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
+	if err != nil {
+		return big.NewInt(0)
+	}
+	currentCycle := uint64(parent.Time.Uint64()) / params.CycleInterval
+	devoteDB.SetCycle(currentCycle)
+
+	signers, err := devoteDB.GetWitnesses(currentCycle)
+	if err != nil {
+		return big.NewInt(0)
+	}
+	number:=new(big.Int).Sub(parent.Number,big.NewInt(1))
+	snap, err := d.snapshot(chain, parent.Number.Uint64(),currentCycle,signers, parent.Hash(), nil)
+
+	if snap.inturn(number.Uint64()+1, parent.Witness) {
+		return new(big.Int).Set(diffInTurn)
+	}
+	return new(big.Int).Set(diffNoTurn)
 }
 
 func (d *Devote) Authorize(signer string, signFn SignerFn) {

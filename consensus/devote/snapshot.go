@@ -359,16 +359,18 @@ func (c *Controller) Witnesses(cycle uint64) (witnesses []string, err error) {
 // inturn returns if a signer at a given block height is in-turn or not.
 func (c *Controller) inturn(number uint64, signer string) bool {
 
-	signers, err := c.Witnesses(c.Cycle)
-	if err != nil {
-		return false
+	var signers []string
+	for signer := range c.Signers {
+		signers= append(signers, signer)
 	}
+
 	offset := 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
 	return (number % uint64(len(signers))) == uint64(offset)
 }
+
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid
