@@ -27,8 +27,8 @@ import (
 type StateDB interface {
 	CreateAccount(common.Address)
 
-	SubBalance(common.Address, *big.Int, *big.Int)
-	AddBalance(common.Address, *big.Int, *big.Int)
+	SubBalance(common.Address, *big.Int)
+	AddBalance(common.Address, *big.Int)
 	GetBalance(common.Address) *big.Int
 
 	SubPower(common.Address, *big.Int, *big.Int)
@@ -44,8 +44,10 @@ type StateDB interface {
 	GetCodeSize(common.Address) int
 
 	AddRefund(uint64)
+	SubRefund(uint64)
 	GetRefund() uint64
 
+	GetCommittedState(common.Address, common.Hash) common.Hash
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 

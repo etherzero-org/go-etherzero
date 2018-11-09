@@ -174,6 +174,17 @@ func (self *StateDB) AddRefund(gas uint64) {
 	self.refund += gas
 }
 
+// SubRefund removes gas from the refund counter.
+// This method will panic if the refund counter goes below zero
+func (self *StateDB) SubRefund(gas uint64) {
+	self.journal.append(refundChange{prev: self.refund})
+	if gas > self.refund {
+		panic("Refund counter below zero")
+	}
+	self.refund -= gas
+}
+
+
 // Exist reports whether the given account address exists in the state.
 // Notably this also returns true for suicided accounts.
 func (self *StateDB) Exist(addr common.Address) bool {
@@ -252,6 +263,15 @@ func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Has
 	return common.Hash{}
 }
 
+// GetCommittedState retrieves a value from the given account's committed storage trie.
+func (self *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCommittedState(self.db, hash)
+	}
+	return common.Hash{}
+}
+
 // Database retrieves the low level database supporting the lower level trie ops.
 func (self *StateDB) Database() Database {
 	return self.db
@@ -280,11 +300,11 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
  * SETTERS
  */
 
-// AddBalance adds amount to the account associated with addr
-func (self *StateDB) AddBalance(addr common.Address, amount *big.Int, blockNumber *big.Int) {
+// AddBalance adds amount to the account associated with addr.
+func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddBalance(amount, blockNumber)
+		stateObject.AddBalance(amount)
 	}
 }
 
@@ -295,11 +315,11 @@ func (self *StateDB) AddPower(addr common.Address, amount *big.Int) {
 	}
 }
 
-// SubBalance subtracts amount from the account associated with addr
-func (self *StateDB) SubBalance(addr common.Address, amount, blockNumber *big.Int) {
+// SubBalance subtracts amount from the account associated with addr.
+func (self *StateDB) SubBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubBalance(amount, blockNumber)
+		stateObject.SubBalance(amount)
 	}
 }
 
@@ -310,10 +330,10 @@ func (self *StateDB) SubPower(addr common.Address, amount, blockNumber *big.Int)
 	}
 }
 
-func (self *StateDB) SetBalance(addr common.Address, amount, blockNumber *big.Int) {
+func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetBalance(amount, blockNumber)
+		stateObject.SetBalance(amount)
 	}
 }
 

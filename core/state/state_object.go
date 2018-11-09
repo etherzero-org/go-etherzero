@@ -77,6 +77,7 @@ type stateObject struct {
 	trie Trie // storage trie, which becomes non-nil on first access
 	code Code // contract bytecode, which gets set when code is loaded
 
+	originStorage Storage // Storage cache of original entries to dedup rewrites
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
@@ -166,6 +167,29 @@ func (c *stateObject) getTrie(db Database) Trie {
 	}
 	return c.trie
 }
+// GetCommittedState retrieves a value from the committed account storage trie.
+func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.Hash {
+	// If we have the original value cached, return that
+	value, cached := self.originStorage[key]
+	if cached {
+		return value
+	}
+	// Otherwise load the value from the database
+	enc, err := self.getTrie(db).TryGet(key[:])
+	if err != nil {
+		self.setError(err)
+		return common.Hash{}
+	}
+	if len(enc) > 0 {
+		_, content, _, err := rlp.Split(enc)
+		if err != nil {
+			self.setError(err)
+		}
+		value.SetBytes(content)
+	}
+	self.originStorage[key] = value
+	return value
+}
 
 // GetState returns a value in account storage.
 func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
@@ -243,7 +267,7 @@ func (self *stateObject) CommitTrie(db Database) error {
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
-func (c *stateObject) AddBalance(amount *big.Int, blockNumber *big.Int) {
+func (c *stateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
 	if amount.Sign() == 0 {
@@ -253,8 +277,7 @@ func (c *stateObject) AddBalance(amount *big.Int, blockNumber *big.Int) {
 
 		return
 	}
-	c.UpdatePower(blockNumber)
-	c.SetBalance(new(big.Int).Add(c.Balance(), amount), blockNumber)
+	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 }
 
 // AddBalance removes amount from c's balance.
@@ -274,11 +297,11 @@ func (c *stateObject) AddPower(amount *big.Int) {
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (c *stateObject) SubBalance(amount *big.Int, blockNumber *big.Int) {
+func (c *stateObject) SubBalance(amount *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
-	c.SetBalance(new(big.Int).Sub(c.Balance(), amount), blockNumber)
+	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
 }
 
 func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
@@ -289,8 +312,7 @@ func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
 	c.SetPower(new(big.Int).Sub(c.Power(), amount))
 }
 
-func (self *stateObject) SetBalance(amount, blockNumber *big.Int) {
-	self.UpdatePower(blockNumber)
+func (self *stateObject) SetBalance(amount *big.Int) {
 	self.db.journal.append(balanceChange{
 		account: &self.address,
 		prev:    new(big.Int).Set(self.data.Balance),
