@@ -19,6 +19,7 @@ package miner
 
 import (
 	"fmt"
+	"time"
 	"sync/atomic"
 
 	"github.com/etherzero/go-etherzero/accounts"
@@ -33,7 +34,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
-	"time"
 )
 
 // Backend wraps all methods required for mining.
