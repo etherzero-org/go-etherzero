@@ -42,7 +42,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/p2p/discv5"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/rpc"
+	rpc "github.com/etherzero/go-etherzero/rpc"
 )
 
 type LightEthereum struct {

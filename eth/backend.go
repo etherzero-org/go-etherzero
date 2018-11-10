@@ -24,14 +24,12 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/clique"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/ethash"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/bloombits"
@@ -51,7 +49,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 type LesServer interface {
@@ -90,11 +87,9 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
-	witness   string
 
-	networkID         uint64
-	netRPCService     *ethapi.PublicNetAPI
-	masternodeManager *MasternodeManager
+	networkID     uint64
+	netRPCService *ethapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -262,6 +257,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
@@ -338,34 +334,32 @@ func (s *Ethereum) Etherbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
 }
 
-// SetEtherbase sets the mining reward address.
-func (s *Ethereum) SetEtherbase(etherbase common.Address) {
-	s.lock.Lock()
-	s.etherbase = etherbase
-	s.lock.Unlock()
-
-	s.miner.SetEtherbase(etherbase)
-}
-
-func (s *Ethereum) Witness() (witness string, err error) {
+// isLocalBlock checks whether the specified block is mined
+// by local miner accounts.
+//
+// We regard two types of accounts as local miner account: etherbase
+// and accounts specified via `txpool.locals` flag.
+func (s *Ethereum) isLocalBlock(block *types.Block) bool {
+	author, err := s.engine.Author(block.Header())
+	if err != nil {
+		log.Warn("Failed to retrieve block author", "number", block.NumberU64(), "hash", block.Hash(), "err", err)
+		return false
+	}
+	// Check whether the given address is etherbase.
 	s.lock.RLock()
-	witness = s.witness
+	etherbase := s.etherbase
 	s.lock.RUnlock()
-
-	if witness != "" {
-		return witness, nil
+	if author == etherbase {
+		return true
 	}
-	//if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
-	//	if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-	//		fmt.Printf("backend Witness accounts: %x \n", accounts[0].Address)
-	//		return accounts[0].Address, nil
-	//	}
-	//}
-	if s.masternodeManager.active != nil {
-		fmt.Printf("backend Witness accounts: %x \n", s.masternodeManager.active.ID)
-		return s.masternodeManager.active.ID, nil
+	// Check whether the given address is specified by `txpool.local`
+	// CLI flag.
+	for _, account := range s.config.TxPool.Locals {
+		if account == author {
+			return true
+		}
 	}
-	return "", fmt.Errorf("Witness  must be explicitly specified")
+	return false
 }
 
 // shouldPreserve checks whether we should preserve the given block
@@ -394,56 +388,75 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 	return s.isLocalBlock(block)
 }
 
-// set in js console via admin interface or wrapper from cli flags
-func (self *Ethereum) SetWitness(witness string) {
-	self.lock.Lock()
-	self.witness = witness
-	self.lock.Unlock()
+// SetEtherbase sets the mining reward address.
+func (s *Ethereum) SetEtherbase(etherbase common.Address) {
+	s.lock.Lock()
+	s.etherbase = etherbase
+	s.lock.Unlock()
+
+	s.miner.SetEtherbase(etherbase)
 }
 
-func (s *Ethereum) StartMining(local bool) error {
-	witness, err := s.Witness()
-	fmt.Printf("backend StartMining witness:%s\n", witness)
-	if err != nil {
-		log.Error("Cannot start mining without Witness", "err", err)
-		return fmt.Errorf("Witness missing: %v", err)
+// StartMining starts the miner with the given number of CPU threads. If mining
+// is already running, this method adjust the number of threads allowed to use
+// and updates the minimum price required by the transaction pool.
+func (s *Ethereum) StartMining(threads int) error {
+	// Update the thread count within the consensus engine
+	type threaded interface {
+		SetThreads(threads int)
 	}
-	//if clique, ok := s.engine.(*clique.Clique); ok {
-	//	wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
-	//	if wallet == nil || err != nil {
-	//		log.Error("Etherbase account unavailable locally", "err", err)
-	//		return fmt.Errorf("signer missing: %v", err)
-	//	}
-	//	clique.Authorize(witness, wallet.SignHash)
-	//}
-	eb, err := s.Etherbase()
-	if devote, ok := s.engine.(*devote.Devote); ok {
-		//wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
-		//if wallet == nil || err != nil {
-		//	log.Error("Coinbase account unavailable locally", "err", err)
-		//	return fmt.Errorf("signer missing: %v", err)
-		//}
-
-		active := s.masternodeManager.active
-		if active == nil {
-			log.Error("Active Masternode is nil")
-			return fmt.Errorf("signer missing: %v", errors.New("Active Masternode is nil"))
+	if th, ok := s.engine.(threaded); ok {
+		log.Info("Updated mining threads", "threads", threads)
+		if threads == 0 {
+			threads = -1 // Disable the miner from within
 		}
-		devote.Authorize(witness, active.SignHash)
+		th.SetThreads(threads)
 	}
+	// If the miner was not running, initialize it
+	if !s.IsMining() {
+		// Propagate the initial price point to the transaction pool
+		s.lock.RLock()
+		price := s.gasPrice
+		s.lock.RUnlock()
+		s.txPool.SetGasPrice(price)
 
-	if local {
-		// If local (CPU) mining is started, we can disable the transaction rejection
-		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
-		// so none will ever hit this path, whereas marking sync done on CPU mining
-		// will ensure that private networks work in single miner mode too.
+		// Configure the local mining address
+		eb, err := s.Etherbase()
+		if err != nil {
+			log.Error("Cannot start mining without etherbase", "err", err)
+			return fmt.Errorf("etherbase missing: %v", err)
+		}
+		if clique, ok := s.engine.(*clique.Clique); ok {
+			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+			if wallet == nil || err != nil {
+				log.Error("Etherbase account unavailable locally", "err", err)
+				return fmt.Errorf("signer missing: %v", err)
+			}
+			clique.Authorize(eb, wallet.SignHash)
+		}
+		// If mining is started, we can disable the transaction rejection mechanism
+		// introduced to speed sync times.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+
+		go s.miner.Start(eb)
 	}
-	go s.miner.Start(eb)
 	return nil
 }
 
-func (s *Ethereum) StopMining()         { s.miner.Stop() }
+// StopMining terminates the miner, both at the consensus engine level as well as
+// at the block creation level.
+func (s *Ethereum) StopMining() {
+	// Update the thread count within the consensus engine
+	type threaded interface {
+		SetThreads(threads int)
+	}
+	if th, ok := s.engine.(threaded); ok {
+		th.SetThreads(-1)
+	}
+	// Stop the block creating itself
+	s.miner.Stop()
+}
+
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 
@@ -457,9 +470,6 @@ func (s *Ethereum) IsListening() bool                  { return true } // Always
 func (s *Ethereum) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-
-func (s *Ethereum) MastenrodeManager() *MasternodeManager { return s.masternodeManager }
-func (s *Ethereum) DevoteDB() *devotedb.DevoteDB { return s.masternodeManager.devoteDB }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
@@ -489,40 +499,10 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
-	go s.startMasternode(srvr)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
-
 	return nil
-}
-
-// SubscribeVoteEvent registers a subscription of VoteEvent and
-// starts sending event to the given channel.
-//func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
-//	return s.masternodeManager.SubscribeVoteEvent(ch)
-//}
-
-// SubscribePingEvent registers a subscription of PingEvent and
-// starts sending event to the given channel.
-//func (s *Ethereum) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
-//	return s.masternodeManager.SubscribePingEvent(ch)
-//}
-
-func (s *Ethereum) startMasternode(srvr *p2p.Server) {
-	t := time.NewTimer(5 * time.Second)
-	for {
-		select {
-		case <-t.C:
-			if s.Downloader().Synchronising() {
-				t.Reset(5 * time.Second)
-				break
-			}
-			s.masternodeManager.Start(srvr, s.protocolManager.peers, s.Downloader())
-			break
-		}
-	}
-
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
@@ -530,6 +510,7 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server) {
 func (s *Ethereum) Stop() error {
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
+	s.engine.Close()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()
@@ -540,34 +521,5 @@ func (s *Ethereum) Stop() error {
 
 	s.chainDb.Close()
 	close(s.shutdownChan)
-
 	return nil
-}
-
-// isLocalBlock checks whether the specified block is mined
-// by local miner accounts.
-//
-// We regard two types of accounts as local miner account: etherbase
-// and accounts specified via `txpool.locals` flag.
-func (s *Ethereum) isLocalBlock(block *types.Block) bool {
-	author, err := s.engine.Author(block.Header())
-	if err != nil {
-		log.Warn("Failed to retrieve block author", "number", block.NumberU64(), "hash", block.Hash(), "err", err)
-		return false
-	}
-	// Check whether the given address is etherbase.
-	s.lock.RLock()
-	etherbase := s.etherbase
-	s.lock.RUnlock()
-	if author == etherbase {
-		return true
-	}
-	// Check whether the given address is specified by `txpool.local`
-	// CLI flag.
-	for _, account := range s.config.TxPool.Locals {
-		if account == author {
-			return true
-		}
-	}
-	return false
 }

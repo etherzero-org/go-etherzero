@@ -103,15 +103,6 @@ type (
 		account *common.Address
 		prev    *big.Int
 	}
-	powerChange struct {
-		account *common.Address
-		prev    *big.Int
-	}
-	blockChange struct {
-		account   *common.Address
-		prevpower *big.Int
-		prevblock *big.Int
-	}
 	nonceChange struct {
 		account *common.Address
 		prev    uint64
@@ -185,22 +176,6 @@ func (ch balanceChange) revert(s *StateDB) {
 }
 
 func (ch balanceChange) dirtied() *common.Address {
-	return ch.account
-}
-
-func (ch powerChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setPower(ch.prev)
-}
-
-func (ch powerChange) dirtied() *common.Address {
-	return ch.account
-}
-
-func (ch blockChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setPowerAndBlock(ch.prevpower, ch.prevblock)
-}
-
-func (ch blockChange) dirtied() *common.Address {
 	return ch.account
 }
 

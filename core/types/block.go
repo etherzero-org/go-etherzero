@@ -87,6 +87,7 @@ type Header struct {
 
 	Witness  string                `json:"witness"          gencodec:"required"`
 	Protocol *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
+
 }
 
 // field type overrides for gencodec
@@ -104,26 +105,6 @@ type headerMarshaling struct {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	return rlpHash(h)
-}
-
-// HashNoNonce returns the hash which is used as input for the proof-of-work search.
-func (h *Header) HashNoNonce() common.Hash {
-	return rlpHash([]interface{}{
-		h.ParentHash,
-		h.UncleHash,
-		h.Coinbase,
-		h.Root,
-		h.TxHash,
-		h.ReceiptHash,
-		h.Bloom,
-		h.Difficulty,
-		h.Number,
-		h.GasLimit,
-		h.GasUsed,
-		h.Witness,
-		h.Time,
-		h.Extra,
-	})
 }
 
 // Size returns the approximate memory used by all internal contents. It is used
@@ -164,7 +145,6 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
-	DevoteDB     *devotedb.DevoteDB
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -231,6 +211,7 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
 	}
+
 	return b
 }
 
@@ -324,18 +305,10 @@ func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
-func (b *Block) Witness() string { return b.header.Witness }
-
-func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }
-
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
-
-func (b *Block) HashNoNonce() common.Hash {
-	return b.header.HashNoNonce()
-}
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.
@@ -369,7 +342,6 @@ func (b *Block) WithSeal(header *Header) *Block {
 		header:       &cpy,
 		transactions: b.transactions,
 		uncles:       b.uncles,
-		DevoteDB:     b.DevoteDB,
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 )
 
+// Gas costs
 const (
 	GasQuickStep   uint64 = 2
 	GasFastestStep uint64 = 3

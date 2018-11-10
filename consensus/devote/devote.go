@@ -22,9 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sync"
 	"time"
-	"math/rand"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
@@ -185,13 +185,13 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, cycle uint
 		// If an in-memory snapshot was found, use that
 		if s, ok := d.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-			log.Info("Locaded voting snapshot from cache ", "number", snap.Number, "hash", snap.Hash)
+			log.Info("Locaded snapshot from cache ", "number", snap.Number, "hash", snap.Hash)
 			break
 		}
 		h := chain.GetHeaderByNumber(number)
 		if h != nil {
 			// If an on-disk checkpoint snapshot can be found, use that
-			if number%params.CycleInterval == 0 {
+			if number%params.CycleInterval != 0 {
 				if s, err := loadSnapshot(d.signatures, d.db, hash); err == nil {
 					log.Info("Loaded voting snapshot from disk", "number", number, "hash", hash)
 					snap = s
@@ -222,7 +222,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, cycle uint
 			if err := snap.store(d.db); err != nil {
 				return nil, err
 			}
-			log.Info("Stored genesis voting snapshot to disk")
+			log.Info("Stored genesis snapshot to disk")
 			break
 		}
 		// No snapshot for this header, gather the header and move backward

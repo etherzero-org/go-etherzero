@@ -29,18 +29,18 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/hashicorp/golang-lru/simplelru"
-	"sync/atomic"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")

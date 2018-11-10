@@ -47,7 +47,7 @@ import (
 )
 
 const (
-	defaultGasPrice = 50 * params.Shannon
+	defaultGasPrice = params.GWei
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -70,41 +70,6 @@ func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) 
 // ProtocolVersion returns the current Ethereum protocol version this node supports
 func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
-}
-
-// Masternodes return masternode info
-func (s *PublicEthereumAPI) Masternodes() []string {
-	return nil
-	//return s.ms.AllNodes()
-}
-
-// Data return masternode contract node data
-func (s *PublicEthereumAPI) Data() string {
-	return ""
-}
-
-func (s *PublicEthereumAPI) Ns() int64 {
-	return 0
-}
-
-// GetInfo return related info in masternode contract
-func (s *PublicEthereumAPI) GetInfo(nodeid string) string {
-	return ""
-}
-
-// Start return the masternodewinner info
-func (s *PublicEthereumAPI) StartMasternode() bool {
-	return false
-}
-
-// Stop return the masternodewinner info
-func (s *PublicEthereumAPI) StopMasternode() bool {
-	return false
-}
-
-// join nodeid from genesis block to witness
-func (b *PublicEthereumAPI) JoinMasternode(nodeid string) bool {
-	return true
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -261,35 +226,6 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 		}
 	}
 	return addresses
-}
-
-// Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) List() []string {
-	return s.b.Masternodes()
-}
-
-// Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) Data() string {
-	return s.b.Data()
-}
-
-func (s *PrivateAccountAPI) Ns() int64 {
-	return s.b.Ns()
-}
-
-// GetInfo return related info in masternode contract
-func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
-	return s.b.GetInfo(nodeid)
-}
-
-// Start  the masternodewinner info
-func (s *PrivateAccountAPI) StartMasternode() bool {
-	return s.b.StartMasternode()
-}
-
-// Stop return the masternodewinner info
-func (s *PrivateAccountAPI) StopMasternode() bool {
-	return s.b.StopMasternode()
 }
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
@@ -513,7 +449,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // addr = ecrecover(hash, signature)
 //
 // Note, the signature must conform to the secp256k1 curve R, S and V values, where
-// the V value must be be 27 or 28 for legacy reasons.
+// the V value must be 27 or 28 for legacy reasons.
 //
 // https://github.com/etherzero/go-etherzero/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
@@ -564,16 +500,6 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 		return nil, err
 	}
 	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
-}
-
-func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
-	if state == nil || err != nil {
-		return nil, err
-	}
-	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
-	b := state.GetPower(address, header.Number)
-	return b, state.Error()
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -915,7 +841,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-	fields["witness"] = b.Witness()
+
 	return fields, nil
 }
 
@@ -1323,7 +1249,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 //
 // The account associated with addr must be unlocked.
 //
-// https://github.com/etherzero/wiki/wiki/JSON-RPC#eth_sign
+// https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
 func (s *PublicTransactionPoolAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}

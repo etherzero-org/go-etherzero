@@ -40,8 +40,6 @@ type CallOpts struct {
 	From    common.Address // Optional the sender address, otherwise the first account is used
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
-
-	BlockNumber *big.Int
 }
 
 // TransactOpts is the collection of authorization data required to create a
@@ -150,10 +148,10 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			}
 		}
 	} else {
-		output, err = c.caller.CallContract(ctx, msg, opts.BlockNumber)
+		output, err = c.caller.CallContract(ctx, msg, nil)
 		if err == nil && len(output) == 0 {
 			// Make sure we have a contract to operate on, and bail out otherwise.
-			if code, err = c.caller.CodeAt(ctx, c.address, opts.BlockNumber); err != nil {
+			if code, err = c.caller.CodeAt(ctx, c.address, nil); err != nil {
 				return err
 			} else if len(code) == 0 {
 				return ErrNoCode

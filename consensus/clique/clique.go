@@ -18,7 +18,6 @@
 package clique
 
 import (
-	"fmt"
 	"bytes"
 	"errors"
 	"math/big"
@@ -489,8 +488,6 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("clique verifySeal snap.Signers size:%d,list:%s \n",len(snap.Signers),snap.Signers)
-
 	if _, ok := snap.Signers[signer]; !ok {
 		return errUnauthorizedSigner
 	}
@@ -612,8 +609,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, results c
 		return errUnknownBlock
 	}
 	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
-	if c.config.Period == 0 {
-		//if c.config.Period == 0 && len(block.Transactions()) == 0 {
+	if c.config.Period == 0 && len(block.Transactions()) == 0 {
 		log.Info("Sealing paused, waiting for transactions")
 		return nil
 	}
@@ -627,8 +623,6 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, results c
 	if err != nil {
 		return err
 	}
-	fmt.Printf("clique verifySeal snap.Signers size:%d,list:%x \n",len(snap.Signers),snap.Signers)
-
 	if _, authorized := snap.Signers[signer]; !authorized {
 		return errUnauthorizedSigner
 	}
