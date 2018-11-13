@@ -88,6 +88,8 @@ const (
 
 	CycleInterval           uint64 = 600
 	BlockInterval           uint64 = 1
+
+	PeeridrecoverGas        uint64 = 3000   // Peer id recovery gas price
 )
 
 var (

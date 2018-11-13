@@ -31,6 +31,10 @@ type StateDB interface {
 	AddBalance(common.Address, *big.Int)
 	GetBalance(common.Address) *big.Int
 
+	SubPower(common.Address, *big.Int, *big.Int)
+	AddPower(common.Address, *big.Int)
+	GetPower(common.Address, *big.Int) *big.Int
+
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
 
