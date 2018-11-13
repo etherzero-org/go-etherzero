@@ -95,8 +95,8 @@ var (
 		ByzantiumBlock:      big.NewInt(1035301),
 		ConstantinopleBlock: nil,
 		Clique: &CliqueConfig{
-			Period: 15,
-			Epoch:  30000,
+			Period: 1,
+			Epoch:  600,
 		},
 	}
 
