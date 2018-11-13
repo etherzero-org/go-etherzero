@@ -27,6 +27,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/rlp"
 	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 // A Nonce is a 64-bit hash which proves (combined with the mix-hash) that
@@ -114,6 +115,8 @@ func (h *Header) GetExtra() []byte       { return h.header.Extra }
 func (h *Header) GetMixDigest() *Hash    { return &Hash{h.header.MixDigest} }
 func (h *Header) GetNonce() *Nonce       { return &Nonce{h.header.Nonce} }
 func (h *Header) GetHash() *Hash         { return &Hash{h.header.Hash()} }
+
+func (h *Header) GetProtocol() *devotedb.DevoteProtocol { return h.header.Protocol}
 
 // Headers represents a slice of headers.
 type Headers struct{ headers []*types.Header }

@@ -40,6 +40,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 const (
@@ -166,6 +167,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
+		header.Protocol.Root(),
 	})
 	hasher.Sum(hash[:0])
 	return hash
@@ -584,6 +586,11 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
 
+	protocol:=&devotedb.DevoteProtocol{
+		CycleHash: header.Root,
+		StatsHash: header.Root,
+	}
+	header.Protocol=protocol
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
