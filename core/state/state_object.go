@@ -267,7 +267,7 @@ func (self *stateObject) CommitTrie(db Database) error {
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
-func (c *stateObject) AddBalance(amount *big.Int) {
+func (c *stateObject) AddBalance(amount *big.Int, blockNumber *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
 	if amount.Sign() == 0 {
@@ -277,7 +277,8 @@ func (c *stateObject) AddBalance(amount *big.Int) {
 
 		return
 	}
-	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
+	c.UpdatePower(blockNumber)
+	c.SetBalance(new(big.Int).Add(c.Balance(), amount), blockNumber)
 }
 
 // AddPower removes amount from c's power.
@@ -294,11 +295,11 @@ func (c *stateObject) AddPower(amount *big.Int) {
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (c *stateObject) SubBalance(amount *big.Int) {
+func (c *stateObject) SubBalance(amount *big.Int, blockNumber *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
-	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
+	c.SetBalance(new(big.Int).Sub(c.Balance(), amount), blockNumber)
 }
 
 // SubPower removes amount from c's power.
@@ -310,7 +311,8 @@ func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
 	c.SetPower(new(big.Int).Sub(c.Power(), amount))
 }
 
-func (self *stateObject) SetBalance(amount *big.Int) {
+func (self *stateObject) SetBalance(amount, blockNumber *big.Int) {
+	self.UpdatePower(blockNumber)
 	self.db.journal.append(balanceChange{
 		account: &self.address,
 		prev:    new(big.Int).Set(self.data.Balance),
