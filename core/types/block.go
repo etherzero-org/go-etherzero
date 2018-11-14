@@ -28,9 +28,9 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -85,9 +85,8 @@ type Header struct {
 	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 
-	Witness  string                `json:"witness"          gencodec:"required"`
+	Witness  string                   `json:"witness"          gencodec:"required"`
 	Protocol *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
-
 }
 
 // field type overrides for gencodec
