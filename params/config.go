@@ -34,6 +34,46 @@ var (
 )
 
 var (
+	DevoteChainConfig = &ChainConfig{
+		ChainID:        big.NewInt(90),
+		EtherzeroBlock: big.NewInt(0),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   nil,
+		DAOForkSupport: false,
+		EIP150Block:    big.NewInt(0),
+		EIP150Hash:     common.Hash{},
+		EIP155Block:    big.NewInt(0),
+		EIP158Block:    big.NewInt(0),
+		ByzantiumBlock: big.NewInt(0),
+
+		Devote: &DevoteConfig{
+			Period: 1,
+			Epoch:  600,
+			Witnesses: []string{
+				"7ecb965c04f679e7",
+				"b456a7f8e8abfb23",
+				"00dc5262bc8696a4",
+				"7504619a3cb82702",
+				//"b553bcf51ae5f42b",
+				//"bbdf34418a2630cf",
+				//"7f0dcd95f323b9f2",
+				//"35b680724f0cdfed",
+				//"65fed3a560cd231a",
+				//"2cbd44f1b7b4d8be",
+				//"3b9639dadd18a258",
+				//"53da176be1538aed",
+				//"017c131b2ae66403",
+				//"4fa67b7657947783",
+				//"4717417a9605535d",
+				//"b371992843eaf7cd",
+				//"98da296630899f29",
+				//"3beabd9d5fceccf6",
+				//"6f5381470fb24553",
+				//"3b9471c1b4d93a45",
+				//"8375c6b34607d06b",
+			},
+		},
+	}
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainID:        big.NewInt(90),
@@ -96,8 +136,8 @@ var (
 		ByzantiumBlock:      big.NewInt(1035301),
 		ConstantinopleBlock: nil,
 		Clique: &CliqueConfig{
-			Period: 15,
-			Epoch:  30000,
+			Period: 1,
+			Epoch:  600,
 		},
 	}
 
@@ -115,16 +155,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0),big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, &DevoteConfig{Period: 1, Epoch: 600}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0),big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, &DevoteConfig{Period: 1, Epoch: 600}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0),big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -147,9 +187,9 @@ type TrustedCheckpoint struct {
 // set of configuration options.
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
+	EtherzeroBlock *big.Int `json:"EtherzeroBlock,omitempty"` // Etherzero switch block (nil = no fork, 0 = already on Etherzero)
 
 	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
-
 	DAOForkBlock   *big.Int `json:"daoForkBlock,omitempty"`   // TheDAO hard-fork switch block (nil = no fork)
 	DAOForkSupport bool     `json:"daoForkSupport,omitempty"` // Whether the nodes supports or opposes the DAO hard-fork
 
@@ -194,6 +234,7 @@ func (c *CliqueConfig) String() string {
 type DevoteConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+
 	Witnesses []string `json:"witnesses"` // Genesis witness list
 }
 

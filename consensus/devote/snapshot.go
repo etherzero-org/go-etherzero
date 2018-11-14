@@ -42,6 +42,7 @@ const (
 )
 
 type Snapshot struct {
+	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
 	TimeStamp uint64
 
 	mu       sync.Mutex
@@ -54,9 +55,10 @@ type Snapshot struct {
 
 }
 
-func newSnapshot(number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Snapshot {
+func newSnapshot(config *params.DevoteConfig,number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Snapshot {
 
 	snapshot := &Snapshot{
+		config:config,
 		Signers:  make(map[string]struct{}),
 		Recents:  make(map[uint64]string),
 		Number:   number,
@@ -72,7 +74,7 @@ func newSnapshot(number uint64, cycle uint64, signatures *lru.ARCCache, hash com
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte("devote-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -138,11 +140,11 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			return nil, err
 		}
 		if _, ok := snap.Signers[signer]; !ok {
-			return nil, errUnauthorized
+			return nil, errUnauthorizedSigner
 		}
 		for _, recent := range snap.Recents {
 			if recent == signer {
-				return nil, errUnauthorized
+				return nil, errUnauthorizedSigner
 			}
 		}
 		snap.Recents[number] = signer
@@ -260,6 +262,13 @@ func (c *Snapshot) inturn(number uint64, signer string) bool {
 		offset++
 	}
 	return (number % uint64(len(signers))) == uint64(offset)
+}
+
+// validVote returns whether it makes sense to cast the specified vote in the
+// given snapshot context (e.g. don't try to add an already authorized signer).
+func (s *Snapshot) validWitness(witness string, authorize bool) bool {
+	_, signer := s.Signers[witness]
+	return (signer && !authorize) || (!signer && authorize)
 }
 
 
