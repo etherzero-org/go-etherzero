@@ -28,7 +28,6 @@ import (
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
@@ -45,7 +44,6 @@ var (
 type MasternodeManager struct {
 	beats map[common.Hash]time.Time // Last heartbeat from each known vote
 
-	devoteDB *devotedb.DevoteDB
 	active   *masternode.ActiveMasternode
 	mu       sync.Mutex
 	// channels for fetcher, syncer, txsyncLoop
@@ -64,11 +62,10 @@ type MasternodeManager struct {
 	downloader *downloader.Downloader
 }
 
-func NewMasternodeManager(dp *devotedb.DevoteDB, blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
+func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		devoteDB:   dp,
 		blockchain: blockchain,
 		beats:      make(map[common.Hash]time.Time),
 		Lifetime:   30 * time.Second,

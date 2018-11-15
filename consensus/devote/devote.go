@@ -737,6 +737,12 @@ func (d *Devote) Masternodes(masternodeListFn MasternodeListFn) {
 	d.masternodeListFn = masternodeListFn
 }
 
+func (d *Devote) GetGovernanceContractAddress(goveAddress GetGovernanceContractAddress) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	d.governanceContractAddressFn = goveAddress
+}
 
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *Devote) SealHash(header *types.Header) common.Hash {

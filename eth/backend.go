@@ -92,10 +92,8 @@ type Ethereum struct {
 
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
-
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
-
 	masternodeManager *MasternodeManager
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -180,15 +178,15 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+	contractBackend := NewContractBackend(eth)
+	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
+	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, eth.txPool); err != nil {
+		return nil, err
+	}
+
 	if devote, ok := eth.engine.(*devote.Devote); ok {
 		devote.Masternodes(eth.masternodeManager.MasternodeList)
 		devote.GetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
-	}
-
-	contractBackend := NewContractBackend(eth)
-	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(devoteDB, eth.blockchain, contract, eth.txPool); err != nil {
-		return nil, err
 	}
 
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine, config.MinerRecommit, config.MinerGasFloor, config.MinerGasCeil, eth.isLocalBlock)
