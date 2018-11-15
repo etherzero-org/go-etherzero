@@ -730,6 +730,14 @@ func CalcDifficulty(snap *Snapshot, signer string) *big.Int {
 	return new(big.Int).Set(diffNoTurn)
 }
 
+func (d *Devote) Masternodes(masternodeListFn MasternodeListFn) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	d.masternodeListFn = masternodeListFn
+}
+
+
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *Devote) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
