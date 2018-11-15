@@ -50,6 +50,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/etherzero/go-etherzero/consensus/devote"
+	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 )
 
 type LesServer interface {
@@ -93,6 +94,8 @@ type Ethereum struct {
 	netRPCService *ethapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+
+	masternodeManager *MasternodeManager
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -180,6 +183,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if devote, ok := eth.engine.(*devote.Devote); ok {
 		devote.Masternodes(eth.masternodeManager.MasternodeList)
 		devote.GetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
+	}
+
+	contractBackend := NewContractBackend(eth)
+	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
+	if eth.masternodeManager = NewMasternodeManager(devoteDB, eth.blockchain, contract, eth.txPool); err != nil {
+		return nil, err
 	}
 
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine, config.MinerRecommit, config.MinerGasFloor, config.MinerGasCeil, eth.isLocalBlock)

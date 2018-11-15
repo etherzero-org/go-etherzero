@@ -26,10 +26,10 @@ import (
 	"errors"
 
 	"github.com/etherzero/go-etherzero/p2p"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/common"
 
+	"fmt"
 )
 
 const (
@@ -46,7 +46,7 @@ var ErrUnknownMasternode = errors.New("unknown masternode")
 //Responsible for activating the Masternode and pinging the network
 type ActiveMasternode struct {
 	ID          string
-	NodeID      discover.NodeID
+	NodeID      [64]byte
 	NodeAccount common.Address
 	PrivateKey  *ecdsa.PrivateKey
 	activeState int
@@ -56,11 +56,11 @@ type ActiveMasternode struct {
 }
 
 func NewActiveMasternode(srvr *p2p.Server) *ActiveMasternode {
-	nodeId := srvr.GetNodeID()
-	id := GetMasternodeID(nodeId)
+	x8 := srvr.Self().X8()
+	id := fmt.Sprintf("%x", x8[:])
 	am := &ActiveMasternode{
 		ID:          id,
-		NodeID:      nodeId,
+		NodeID:      srvr.Self().XY(),
 		activeState: ACTIVE_MASTERNODE_INITIAL,
 		PrivateKey:  srvr.Config.PrivateKey,
 		NodeAccount: crypto.PubkeyToAddress(srvr.Config.PrivateKey.PublicKey),
