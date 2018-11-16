@@ -101,11 +101,13 @@ type Config struct {
 	Etherbase      common.Address `toml:",omitempty"`
 	MinerNotify    []string       `toml:",omitempty"`
 	MinerExtraData []byte         `toml:",omitempty"`
-	MinerGasFloor  uint64
-	MinerGasCeil   uint64
-	MinerGasPrice  *big.Int
-	MinerRecommit  time.Duration
-	MinerNoverify  bool
+	Witness        string         `toml:",omitempty"`
+
+	MinerGasFloor uint64
+	MinerGasCeil  uint64
+	MinerGasPrice *big.Int
+	MinerRecommit time.Duration
+	MinerNoverify bool
 
 	// Ethash options
 	Ethash ethash.Config

@@ -257,6 +257,7 @@ func (c *Snapshot) inturn(number uint64, signer string) bool {
 	for signer := range c.Signers {
 		signers= append(signers, signer)
 	}
+	sort.Strings(signers)
 	offset := 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
