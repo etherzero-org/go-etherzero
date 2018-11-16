@@ -137,7 +137,6 @@ var (
 	errRecentlySigned = errors.New("recently signed")
 
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
-
 )
 
 // SignerFn is a signer callback function to request a hash to be signed by a
@@ -317,17 +316,17 @@ func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 		return errMissingSignature
 	}
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - extraVanity - extraSeal
-	if !checkpoint && signersBytes != 0 {
-		return errExtraSigners
-	}
-	if checkpoint && signersBytes%common.AddressLength != 0 {
-		return errInvalidCheckpointSigners
-	}
-	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != (common.Hash{}) {
-		return errInvalidMixDigest
-	}
+	//signersBytes := len(header.Extra) - extraVanity - extraSeal
+	//if !checkpoint && signersBytes != 0 {
+	//	return errExtraSigners
+	//}
+	//if checkpoint && signersBytes%common.AddressLength != 0 {
+	//	return errInvalidCheckpointSigners
+	//}
+	//// Ensure that the mix digest is zero as we don't have fork protection currently
+	//if header.MixDigest != (common.Hash{}) {
+	//	return errInvalidMixDigest
+	//}
 	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
 	if header.UncleHash != uncleHash {
 		return errInvalidUncleHash
@@ -370,21 +369,21 @@ func (c *Devote) verifyCascadingFields(chain consensus.ChainReader, header *type
 		return ErrInvalidTimestamp
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
+	//snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	//if err != nil {
+	//	return err
+	//}
 	// If the block is a checkpoint block, verify the signer list
-	if number%c.config.Epoch == 0 {
-		signers := make([]byte, len(snap.Signers)*common.AddressLength)
-		for i, signer := range snap.signers() {
-			copy(signers[i*common.AddressLength:], signer[:])
-		}
-		extraSuffix := len(header.Extra) - extraSeal
-		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
-			return errMismatchingCheckpointSigners
-		}
-	}
+	//if number%c.config.Epoch == 0 {
+	//	signers := make([]byte, len(snap.Signers)*common.AddressLength)
+	//	for i, signer := range snap.signers() {
+	//		copy(signers[i*common.AddressLength:], signer[:])
+	//	}
+	//	extraSuffix := len(header.Extra) - extraSeal
+	//	if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
+	//		return errMismatchingCheckpointSigners
+	//	}
+	//}
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents)
 }
@@ -405,7 +404,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
 			if s, err := loadSnapshot(d.config, d.signatures, d.db, hash); err == nil {
-				log.Trace("Loaded voting snapshot from disk", "number", number, "hash", hash)
+				log.Info("Loaded voting snapshot from disk", "number", number, "hash", hash)
 				snap = s
 				break
 			}
@@ -424,6 +423,12 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				for i := 0; i < len(signers) && i < len(masternodes); i++ {
 					signers[i] = masternodes[i]
 				}
+				context := []interface{}{
+					"cycle", cycle,
+					"signers", signers,
+					"hash", hash,
+				}
+				log.Info("Elected new cycle signers cycle", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, signers)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
@@ -466,7 +471,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		log.Info("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
 }
@@ -635,7 +640,6 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 	}
 	return nil
 }
-
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
