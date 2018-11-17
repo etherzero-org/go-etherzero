@@ -65,6 +65,9 @@ var (
 
 	uncleHash = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 
+	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
+	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
+
 	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
 	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
 )
@@ -615,9 +618,25 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	return nil
 }
 
+// AccumulateRewards credits the coinbase of the given block with the mining
+// reward.  The devote consensus allowed uncle block .
+func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+	// Select the correct block reward based on chain progression
+	blockReward := etherzeroBlockReward
+
+	// Accumulate the rewards for the masternode and any included uncles
+	reward := new(big.Int).Set(blockReward)
+	state.AddBalance(header.Coinbase, reward, header.Number)
+
+	//  Accumulate the rewards to community account
+	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
+	state.AddBalance(govAddress, rewardForCommunity, header.Number)
+}
+
+
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
-func (c *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -627,6 +646,14 @@ func (c *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		StatsHash: header.Root,
 	}
 	header.Protocol = protocol
+	// Accumulate block rewards and commit the final state root
+	govaddress, gerr := d.governanceContractAddressFn(header.Number)
+	if gerr != nil {
+
+		return nil, fmt.Errorf("get current governance address err:%s", gerr)
+	}
+	AccumulateRewards(govaddress, state, header, uncles)
+
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
