@@ -647,11 +647,11 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	header.Protocol = protocol
 	// Accumulate block rewards and commit the final state root
-	govaddress, gerr := d.governanceContractAddressFn(header.Number)
-	if gerr != nil {
-
-		return nil, fmt.Errorf("get current governance address err:%s", gerr)
-	}
+	govaddress, _ := d.governanceContractAddressFn(header.Number)
+	govaddress = common.Address{}
+	//if gerr != nil {
+	//	return nil, fmt.Errorf("get current governance address err:%s", gerr)
+	//}
 	AccumulateRewards(govaddress, state, header, uncles)
 
 	// Assemble and return the final block for sealing
