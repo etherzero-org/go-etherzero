@@ -629,14 +629,23 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	state.AddBalance(header.Coinbase, reward, header.Number)
 
 	//  Accumulate the rewards to community account
-	//rewardForCommunity := new(big.Int).Set(rewardToCommunity)
-	//state.AddBalance(govAddress, rewardForCommunity, header.Number)
+	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
+	state.AddBalance(govAddress, rewardForCommunity, header.Number)
 }
 
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+
+	// Accumulate block rewards and commit the final state root
+	govaddress, _ := d.governanceContractAddressFn(header.Number)
+	govaddress = common.Address{}
+	//if gerr != nil {
+	//	return nil, fmt.Errorf("get current governance address err:%s", gerr)
+	//}
+	AccumulateRewards(govaddress, state, header, uncles)
+
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -646,13 +655,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		StatsHash: header.Root,
 	}
 	header.Protocol = protocol
-	// Accumulate block rewards and commit the final state root
-	govaddress, _ := d.governanceContractAddressFn(header.Number)
-	govaddress = common.Address{}
-	//if gerr != nil {
-	//	return nil, fmt.Errorf("get current governance address err:%s", gerr)
-	//}
-	AccumulateRewards(govaddress, state, header, uncles)
 
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
