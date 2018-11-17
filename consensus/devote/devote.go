@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"encoding/binary"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/consensus"
@@ -41,13 +42,14 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	lru "github.com/hashicorp/golang-lru"
+	"sort"
 )
 
 const (
 	checkpointInterval = 600  // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
-
+	maxSignersSize  =21    // Number of max singers in current cycle
 	wiggleTime = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 )
 
@@ -349,7 +351,7 @@ func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (c *Devote) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (d *Devote) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -365,27 +367,27 @@ func (c *Devote) verifyCascadingFields(chain consensus.ChainReader, header *type
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time.Uint64()+c.config.Period > header.Time.Uint64() {
+	if parent.Time.Uint64()+d.config.Period > header.Time.Uint64() {
 		return ErrInvalidTimestamp
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
-	//snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
-	//if err != nil {
-	//	return err
-	//}
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, parents)
+	if err != nil {
+		return err
+	}
 	// If the block is a checkpoint block, verify the signer list
-	//if number%c.config.Epoch == 0 {
-	//	signers := make([]byte, len(snap.Signers)*common.AddressLength)
-	//	for i, signer := range snap.signers() {
-	//		copy(signers[i*common.AddressLength:], signer[:])
-	//	}
-	//	extraSuffix := len(header.Extra) - extraSeal
-	//	if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
-	//		return errMismatchingCheckpointSigners
-	//	}
-	//}
+	if number%d.config.Epoch == 0 {
+		signers := make([]string, len(snap.Signers))
+		for i, signer := range snap.signers() {
+			signers[i] = signer
+		}
+		//extraSuffix := len(header.Extra) - extraSeal
+		//if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
+		//	return errMismatchingCheckpointSigners
+		//}
+	}
 	// All basic checks passed, verify the seal and return
-	return c.verifySeal(chain, header, parents)
+	return d.verifySeal(chain, header, parents)
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -409,27 +411,39 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				break
 			}
 		}
+		if number%d.config.Epoch == 0 {
+			fmt.Printf("devote snapshot number %d , head hash:%x \n",number,chain.GetHeaderByNumber(number).Hash())
+		}
 		// If we're at an checkpoint block, make a snapshot if it's known
-		if number == 0 || (number%d.config.Epoch == 0 && chain.GetHeaderByNumber(number-1) == nil) {
+		if number == 0 || number%d.config.Epoch == 0 {
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
 				cycle := number / d.config.Epoch
-				signers := make([]string, 21)
-				masternodes, merr := d.masternodeListFn(big.NewInt(int64(number)))
-				if merr != nil {
-					return nil, fmt.Errorf("get current masternodes err:%s", merr)
+				all, err := d.masternodeListFn(big.NewInt(int64(number)))
+				if err != nil {
+					return nil, fmt.Errorf("get current masternodes err:%s", err)
 				}
-				for i := 0; i < len(signers) && i < len(masternodes); i++ {
-					signers[i] = masternodes[i]
+				result,err := masternodes(hash, all)
+				masternodes := sortableAddresses{}
+				for masternode, cnt := range result {
+					masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
+				}
+				sort.Sort(masternodes)
+				if len(masternodes) > int(maxSignersSize) {
+					masternodes = masternodes[:maxSignersSize]
+				}
+				var sortedWitnesses []string
+				for _, node := range masternodes {
+					sortedWitnesses = append(sortedWitnesses, node.nodeid)
 				}
 				context := []interface{}{
 					"cycle", cycle,
-					"signers", signers,
+					"signers", sortedWitnesses,
 					"hash", hash,
 				}
-				log.Info("Elected new cycle signers cycle", context...)
-				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, signers)
+				log.Info("Elected new cycle signers", context...)
+				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
@@ -746,6 +760,27 @@ func (d *Devote) GetGovernanceContractAddress(goveAddress GetGovernanceContractA
 	defer d.lock.Unlock()
 
 	d.governanceContractAddressFn = goveAddress
+}
+
+// masternodes return  masternode list in the Cycle.
+// key   -- nodeid
+// value -- votes count
+func masternodes(hash common.Hash, nodes []string) (map[string]*big.Int, error) {
+
+	result := make(map[string]*big.Int)
+	for i := 0; i < len(nodes); i++ {
+		masternode := nodes[i]
+		bytes := make([]byte, 8)
+		bytes = append(bytes, []byte(masternode)...)
+		bytes = append(bytes, hash[:]...)
+		weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(bytes)))
+
+		score := big.NewInt(0)
+		score.Add(score, big.NewInt(weight))
+		result[masternode] = score
+	}
+	log.Debug("snapshot nodes ", "context", nodes, "count", len(nodes))
+	return result, nil
 }
 
 // SealHash returns the hash of a block prior to it being sealed.

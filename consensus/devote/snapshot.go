@@ -19,8 +19,6 @@
 package devote
 
 import (
-	"encoding/binary"
-	"fmt"
 	"math/big"
 	"sort"
 	"sync"
@@ -29,9 +27,7 @@ import (
 	"encoding/json"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
-	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/hashicorp/golang-lru"
 )
@@ -153,76 +149,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	snap.Hash = headers[len(headers)-1].Hash()
 
 	return snap, nil
-}
-
-// masternodes return  masternode list in the Cycle.
-// key   -- nodeid
-// value -- votes count
-func (self *Snapshot) masternodes(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	list := make(map[string]*big.Int)
-	for i := 0; i < len(nodes); i++ {
-		masternode := nodes[i]
-		hash := make([]byte, 8)
-		hash = append(hash, []byte(masternode)...)
-		hash = append(hash, parent.Hash().Bytes()...)
-		weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
-
-		score := big.NewInt(0)
-		score.Add(score, big.NewInt(weight))
-		log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
-		list[masternode] = score
-	}
-	log.Debug("snapshot nodes ", "context", nodes, "count", len(nodes))
-	return list, nil
-}
-
-func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) error {
-
-	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
-	prevCycle := parent.Time.Uint64() / params.CycleInterval
-	currentCycle := self.TimeStamp / params.CycleInterval
-
-	prevCycleIsGenesis := (prevCycle == genesisCycle)
-	if prevCycleIsGenesis && prevCycle < currentCycle {
-		prevCycle = currentCycle - 1
-	}
-	prevCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
-
-	for i := prevCycle; i < currentCycle; i++ {
-		// if prevCycle is not genesis, uncast not active masternode
-		list := make([]string, len(nodes))
-		copy(list, nodes)
-		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
-		if err != nil {
-			log.Error("init masternodes ", "err", err)
-			return err
-		}
-		masternodes := sortableAddresses{}
-		for masternode, cnt := range votes {
-			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
-		}
-		if len(masternodes) < safeSize {
-			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
-		}
-		sort.Sort(masternodes)
-		if len(masternodes) > int(maxWitnessSize) {
-			masternodes = masternodes[:maxWitnessSize]
-		}
-		var sortedWitnesses []string
-		for _, node := range masternodes {
-			sortedWitnesses = append(sortedWitnesses, node.nodeid)
-		}
-		log.Info("snapshot election witnesses ", "currentCycle", currentCycle, "recents size", len(self.Recents), "sortedWitnesses", sortedWitnesses)
-		for seen, signer := range self.Recents {
-			log.Info("snapshot new Eclection witnesses", "seen", seen, "signer", signer)
-		}
-		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
-	}
-	return nil
 }
 
 // store inserts the snapshot into the database.
