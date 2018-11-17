@@ -629,8 +629,8 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	state.AddBalance(header.Coinbase, reward, header.Number)
 
 	//  Accumulate the rewards to community account
-	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
-	state.AddBalance(govAddress, rewardForCommunity, header.Number)
+	//rewardForCommunity := new(big.Int).Set(rewardToCommunity)
+	//state.AddBalance(govAddress, rewardForCommunity, header.Number)
 }
 
 
