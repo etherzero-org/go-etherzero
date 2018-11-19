@@ -61,6 +61,7 @@ type Masternode struct {
 }
 
 func newMasternode(nodeId discv5.NodeID, account common.Address, block, blockOnlineAcc, blockLastPing *big.Int) *Masternode {
+
 	id := GetMasternodeID(nodeId)
 	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
 	p.X.SetBytes(nodeId[:32])
@@ -69,9 +70,6 @@ func newMasternode(nodeId discv5.NodeID, account common.Address, block, blockOnl
 		return &Masternode{}
 	}
 	node := enode.NewV4(p, nil, 0, 0)
-	x8 := node.X8()
-	fmt.Println("id:", id, common.Bytes2Hex(x8[:]), "nodeId:", nodeId.String())
-
 	return &Masternode{
 		ENode:          node,
 		ID:             id,
@@ -99,6 +97,7 @@ func GetGovernanceAddress(contract *contract.Contract, blockNumber *big.Int) (co
 }
 
 func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
+	fmt.Println("GetIdsByBlockNumber blockNumber", blockNumber.String())
 	if blockNumber == nil {
 		blockNumber = new(big.Int)
 	}
@@ -170,6 +169,7 @@ type MasternodeContext struct {
 }
 
 func GetMasternodeContext(opts *bind.CallOpts, contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
+	fmt.Println("GetMasternodeContext blockNumber", opts.BlockNumber.String())
 	data, err := contract.ContractCaller.GetInfo(opts, id)
 	if err != nil {
 		return &MasternodeContext{}, err
