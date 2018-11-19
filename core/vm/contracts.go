@@ -29,7 +29,6 @@ import (
 	"golang.org/x/crypto/ripemd160"
 	"github.com/etherzero/go-etherzero/crypto/secp256k1"
 	"crypto/ecdsa"
-	"fmt"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -387,7 +386,6 @@ func (c *ecrecoverByPublicKey) RequiredGas(input []byte) uint64 {
 }
 
 func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
-	fmt.Println("ecrecoverByPublicKey input:", common.Bytes2Hex(input[:]))
 	if len(input) < 64 {
 		return nil, nil
 	}
@@ -397,10 +395,8 @@ func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
 	p.X.SetBytes(id[:half])
 	p.Y.SetBytes(id[half:])
 	if !p.Curve.IsOnCurve(p.X, p.Y) {
-		fmt.Println("ecrecoverByPublicKey ERROR")
 		return nil, nil
 	}
 	addr := crypto.PubkeyToAddress(*p)
-	fmt.Println("ecrecoverByPublicKey addr:", addr.Hex())
 	return common.LeftPadBytes(addr[:], 32), nil
 }
