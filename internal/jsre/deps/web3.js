@@ -5274,7 +5274,13 @@ var methods = function () {
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: formatters.outputBigNumberFormatter
     });
-
+    var getPower = new Method({
+        name: 'getPower',
+        call: 'eth_getPower',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
     var getStorageAt = new Method({
         name: 'getStorageAt',
         call: 'eth_getStorageAt',
@@ -5433,6 +5439,7 @@ var methods = function () {
 
     return [
         getBalance,
+        getPower,
         getStorageAt,
         getCode,
         getBlock,

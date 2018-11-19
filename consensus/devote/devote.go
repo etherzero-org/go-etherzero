@@ -46,11 +46,11 @@ import (
 )
 
 const (
-	checkpointInterval = 600  // Number of blocks after which to save the vote snapshot to the database
-	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
-	maxSignersSize  =21    // Number of max singers in current cycle
-	wiggleTime = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
+	checkpointInterval = 600                    // Number of blocks after which to save the vote snapshot to the database
+	inmemorySnapshots  = 128                    // Number of recent vote snapshots to keep in memory
+	inmemorySignatures = 4096                   // Number of recent block signatures to keep in memory
+	maxSignersSize     = 21                     // Number of max singers in current cycle
+	wiggleTime         = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 )
 
 // Clique proof-of-authority protocol constants.
@@ -303,9 +303,6 @@ func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
 	checkpoint := (number % c.config.Epoch) == 0
-	if checkpoint && header.Coinbase != (common.Address{}) {
-		return errInvalidCheckpointBeneficiary
-	}
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
 	if !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
 		return errInvalidVote
@@ -415,7 +412,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			}
 		}
 		if number%d.config.Epoch == 0 {
-			fmt.Printf("devote snapshot number %d , head hash:%x \n",number,chain.GetHeaderByNumber(number).Hash())
+			fmt.Printf("devote snapshot number %d , head hash:%x \n", number, chain.GetHeaderByNumber(number).Hash())
 		}
 		// If we're at an checkpoint block, make a snapshot if it's known
 		if number == 0 || number%d.config.Epoch == 0 {
@@ -427,7 +424,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				if err != nil {
 					return nil, fmt.Errorf("get current masternodes err:%s", err)
 				}
-				result,err := masternodes(hash, all)
+				result, err := masternodes(hash, all)
 				masternodes := sortableAddresses{}
 				for masternode, cnt := range result {
 					masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
@@ -557,7 +554,6 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 // header for running the transactions on top.
 func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
-	header.Coinbase = common.Address{}
 	header.Nonce = types.BlockNonce{}
 
 	number := header.Number.Uint64()
@@ -589,6 +585,7 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	}
 	// Set the correct difficulty
 	header.Difficulty = CalcDifficulty(snap, c.signer)
+	header.Witness = c.signer
 
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < extraVanity {
@@ -623,27 +620,28 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
-
 	// Accumulate the rewards for the masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward, header.Number)
+	//fmt.Printf("devote AccumulateRewards coinbase:%x,header.number%d,reward%d \n", header.Coinbase, header.Number, reward)
 
 	//  Accumulate the rewards to community account
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
 	state.AddBalance(govAddress, rewardForCommunity, header.Number)
 }
 
-
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
+	//fmt.Printf("devote finalize header.number %d",header.Number)
 	// Accumulate block rewards and commit the final state root
 	govaddress, _ := d.governanceContractAddressFn(header.Number)
-	govaddress = common.Address{}
-	//if gerr != nil {
-	//	return nil, fmt.Errorf("get current governance address err:%s", gerr)
+	//if err != nil {
+	//	return nil, fmt.Errorf("get current governance address err:%s", err)
 	//}
+	govaddress = common.Address{}
+
 	AccumulateRewards(govaddress, state, header, uncles)
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
