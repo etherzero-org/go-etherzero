@@ -423,6 +423,16 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
+	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0xb0217add567c450037b3a8c0688c2fb045c4fc7b")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0xF9037710C273d0321ddd1B6042D211c3703829Db")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+
 	config := params.MainnetChainConfig
 	var witnesses []string
 	for _, n := range params.MainnetMasternodes {
