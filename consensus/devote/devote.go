@@ -588,6 +588,7 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	}
 	// Set the correct difficulty
 	header.Difficulty = CalcDifficulty(snap, c.signer)
+	header.Witness = c.signer
 
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < extraVanity {
