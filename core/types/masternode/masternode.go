@@ -97,7 +97,6 @@ func GetGovernanceAddress(contract *contract.Contract, blockNumber *big.Int) (co
 }
 
 func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
-	fmt.Println("GetIdsByBlockNumber blockNumber", blockNumber.String())
 	if blockNumber == nil {
 		blockNumber = new(big.Int)
 	}
