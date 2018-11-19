@@ -45,6 +45,15 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
 
+	// masternode control api
+	Masternodes() []string        // masternodes info
+	Data() string                 // return masternode contract nodes data
+	GetInfo(nodeid string) string // return related info in masternode contract
+	StartMasternode() bool        // start the masternode,hash ,srvr means two different parameters
+	StopMasternode() bool         // stop the masternode,hash ,srvr means two different parameters
+	Ns() int64                    // nanoseconds
+
+
 	// BlockChain API
 	SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
