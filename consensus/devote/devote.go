@@ -526,17 +526,11 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	if err != nil {
 		return err
 	}
+
 	if _, ok := snap.Signers[signer]; !ok {
+		fmt.Printf("devote verifySeal signers%s\n",snap.Signers)
 		return errUnauthorizedSigner
 	}
-	//for seen, recent := range snap.Recents {
-	//	if recent == signer {
-	//		// Signer is among recents, only fail if the current block doesn't shift it out
-	//		if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
-	//			return errRecentlySigned
-	//		}
-	//	}
-	//}
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
 	if !c.fakeDiff {
 		inturn := snap.inturn(header.Number.Uint64(), signer)
