@@ -168,7 +168,7 @@ type MasternodeContext struct {
 }
 
 func GetMasternodeContext(opts *bind.CallOpts, contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
-	fmt.Println("GetMasternodeContext blockNumber", opts.BlockNumber.String())
+
 	data, err := contract.ContractCaller.GetInfo(opts, id)
 	if err != nil {
 		return &MasternodeContext{}, err

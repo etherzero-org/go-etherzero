@@ -137,11 +137,11 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			return nil, err
 		}
 		if _, ok := snap.Signers[signer]; !ok {
-			fmt.Printf("devote verifySeal signers%s\n",snap.Signers)
 			return nil, errUnauthorizedSigner
 		}
 		for _, recent := range snap.Recents {
 			if recent == signer {
+				fmt.Printf("devote verifySeal signer:%x  not in signers ,%s\n",snap.Recents)
 				return nil, errUnauthorizedSigner
 			}
 		}
