@@ -200,3 +200,38 @@ func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
 }
+
+
+// Masternodes return masternode info
+// TODO LesApiBackend interface does not implemente this api for now(2018-05-30)
+func (b *LesApiBackend) Masternodes() []string {
+	return nil
+}
+
+// Data return masternode contract data
+func (b *LesApiBackend) Data() string {
+	return ""
+}
+
+
+func (b *LesApiBackend) Ns() int64 {
+	return 0
+}
+
+// GetInfo return related info in masternode contract
+func (b *LesApiBackend) GetInfo(nodeid string) string {
+	return ""
+}
+
+// Start the masternode insfo
+func (s *LesApiBackend) StartMasternode() bool {
+	return false
+}
+
+// Stop the masternode insfo
+func (s *LesApiBackend) StopMasternode() bool {
+	return false
+}
+
+
+

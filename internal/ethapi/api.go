@@ -228,6 +228,35 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 	return addresses
 }
 
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) List() []string {
+	return s.b.Masternodes()
+}
+
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) Data() string {
+	return s.b.Data()
+}
+
+func (s *PrivateAccountAPI) Ns() int64 {
+	return s.b.Ns()
+}
+
+// GetInfo return related info in masternode contract
+func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
+	return s.b.GetInfo(nodeid)
+}
+
+// Start  the masternodewinner info
+func (s *PrivateAccountAPI) StartMasternode() bool {
+	return s.b.StartMasternode()
+}
+
+// Stop return the masternodewinner info
+func (s *PrivateAccountAPI) StopMasternode() bool {
+	return s.b.StopMasternode()
+}
+
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
 type rawWallet struct {
