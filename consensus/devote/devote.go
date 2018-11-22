@@ -415,7 +415,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			fmt.Printf("devote snapshot number %d , head hash:%x \n", number, chain.GetHeaderByNumber(number).Hash())
 		}
 		// If we're at an checkpoint block, make a snapshot if it's known
-		if number == 0 || (number%d.config.Epoch == 0 && chain.GetHeaderByNumber(number-1) == nil) {
+		if number == 0 || number%d.config.Epoch == 0 {
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
