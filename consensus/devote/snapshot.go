@@ -67,6 +67,7 @@ func newSnapshot(config *params.DevoteConfig,number uint64, cycle uint64, signat
 		signer := signers[i]
 		snapshot.Signers[signer] = struct{}{}
 	}
+	fmt.Printf("newSnapshot snapshot.signers:%s,recents:%s \n ",snapshot.Signers,snapshot.Recents)
 	return snapshot
 }
 
