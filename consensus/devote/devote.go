@@ -398,22 +398,6 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		snap    *Snapshot
 	)
 	for snap == nil {
-		// If an in-memory snapshot was found, use that
-		if s, ok := d.recents.Get(hash); ok {
-			snap = s.(*Snapshot)
-			break
-		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(d.config, d.signatures, d.db, hash); err == nil {
-				log.Info("Loaded voting snapshot from disk", "number", number, "hash", hash)
-				snap = s
-				break
-			}
-		}
-		if number%d.config.Epoch == 0 {
-			fmt.Printf("devote snapshot number %d , head hash:%x \n", number, chain.GetHeaderByNumber(number).Hash())
-		}
 		// If we're at an checkpoint block, make a snapshot if it's known
 		if number == 0 || number%d.config.Epoch == 0 {
 			checkpoint := chain.GetHeaderByNumber(number)
@@ -447,9 +431,17 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
+				d.recents.Add(snap.Hash, snap)
 				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
+		}
+
+		// If an in-memory snapshot was found, use that
+		if s, ok := d.recents.Get(hash); ok {
+			snap = s.(*Snapshot)
+			fmt.Printf("devote snapshot get Snapshot from recents number,%d,hash:%x,", number, hash)
+			break
 		}
 		// No snapshot for this header, gather the header and move backward
 		var header *types.Header
@@ -474,11 +466,12 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
+	fmt.Printf("devote assembly snapshot headers count:%d\n", len(headers))
 	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
 	}
-	d.recents.Add(snap.Hash, snap)
+	//d.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
