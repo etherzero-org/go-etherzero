@@ -702,12 +702,14 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 	}
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {
+		fmt.Println("Devote seal recents ","signer",signer, "seen", seen, "recent", recent)
 		if recent == signer {
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Signed recently, must wait for others")
+				log.Info("Signed recently, must wait for others, ", "signer",signer,"seend", seen, "number", number, "limit", limit)
 				return nil
 			}
+			log.Info("Passed Signed recently, ", "signer",signer,"seend", seen, "number", number, "limit", uint64(len(snap.Signers)/2+1))
 		}
 	}
 	// Sweet, the protocol permits us to sign the block, wait for our time
