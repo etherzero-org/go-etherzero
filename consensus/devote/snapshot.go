@@ -30,7 +30,6 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/hashicorp/golang-lru"
-	"fmt"
 )
 
 const (
@@ -141,7 +140,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 		for _, recent := range snap.Recents {
 			if recent == signer {
-				fmt.Printf("devote verifySeal signer:%x  not in signers ,%s\n",snap.Recents)
+				//fmt.Printf("devote verifySeal signer:%x  not in signers ,%s\n",snap.Recents)
 				return nil, errUnauthorizedSigner
 			}
 		}
@@ -150,7 +149,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
-	fmt.Printf("snapshot.go apply recents %s \n",snap.Recents)
+	//fmt.Printf("snapshot.go apply recents %s \n",snap.Recents)
 	return snap, nil
 }
 

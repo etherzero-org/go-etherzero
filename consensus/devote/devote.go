@@ -421,18 +421,18 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				for _, node := range masternodes {
 					sortedWitnesses = append(sortedWitnesses, node.nodeid)
 				}
-				context := []interface{}{
-					"cycle", cycle,
-					"signers", sortedWitnesses,
-					"hash", hash,
-				}
-				log.Info("Elected new cycle signers", context...)
+				//context := []interface{}{
+				//	"cycle", cycle,
+				//	"signers", sortedWitnesses,
+				//	"hash", hash,
+				//}
+				//log.Info("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
 				d.recents.Add(snap.Hash, snap)
-				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+				//log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
 		}
@@ -440,7 +440,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		// If an in-memory snapshot was found, use that
 		if s, ok := d.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-			fmt.Printf("devote snapshot get Snapshot from recents number,%d,hash:%x,", number, hash)
+			//fmt.Printf("devote snapshot get Snapshot from recents number,%d,hash:%x,", number, hash)
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
@@ -466,7 +466,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	fmt.Printf("devote assembly snapshot headers count:%d\n", len(headers))
+	//fmt.Printf("devote assembly snapshot headers count:%d\n", len(headers))
 	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
