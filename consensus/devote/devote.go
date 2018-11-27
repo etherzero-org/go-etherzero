@@ -471,7 +471,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	if err != nil {
 		return nil, err
 	}
-	//d.recents.Add(snap.Hash, snap)
+	d.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
@@ -706,10 +706,10 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 		if recent == signer {
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Signed recently, must wait for others, ", "signer",signer,"seend", seen, "number", number, "limit", limit)
+				log.Info("Signed recently, must wait for others, ", "signer",signer,"seen", seen, "number", number, "limit", limit)
 				return nil
 			}
-			log.Info("Passed Signed recently, ", "signer",signer,"seend", seen, "number", number, "limit", uint64(len(snap.Signers)/2+1))
+			log.Info("Passed Signed recently, ", "signer",signer,"seen", seen, "number", number, "limit", uint64(len(snap.Signers)/2+1))
 		}
 	}
 	// Sweet, the protocol permits us to sign the block, wait for our time
