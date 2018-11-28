@@ -38,6 +38,7 @@ import (
 	"strings"
 	"fmt"
 	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/aux"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -257,6 +258,63 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:0x%v,NextId:0x%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
 		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
+}
+
+// GetEnode named by id
+func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
+	if b.eth.masternodeManager.enodeinfoContract == nil {
+		enodeinfo = "wait for 10 seconds util finish initializing"
+		return
+	}
+
+	var id [8]byte
+	nodebyte, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
+	if err != nil {
+		fmt.Printf("err %v\n", err)
+		enodeinfo = fmt.Sprintf("nodeid is illegal  %v", nodeid)
+		return
+	}
+	fmt.Printf("nodebyte is %v", len(nodebyte))
+
+	if nodebyte[:] == nil || len(nodebyte) != int(8) {
+		enodeinfo = fmt.Sprintf("nodeid is illegal  %v\n", nodebyte)
+		return
+	}
+
+	copy(id[:], nodebyte)
+	fmt.Printf("nodeid %v \n", id)
+
+	data, err := b.eth.masternodeManager.enodeinfoContract.GetSingleEnode(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has error %v", err)
+		return
+	}
+	fmt.Printf("data.Id1 %v ,data.Id2 %v,data.IpPort %v\n", data.Id1, data.Id2, data.Ipport)
+
+	if data.Id1 == [32]byte{} ||
+		data.Id2 == [32]byte{} ||
+		len(data.Id1) != 32 ||
+		len(data.Id2) != 32 ||
+		data.Ipport == uint64(0) {
+		enodeinfo = fmt.Sprintf("No enodeinfo storaged for nodeid %v", nodeid)
+		return
+	}
+	// masternode.getEnode("0x7ec780bcd5488bcf")
+	// personal.unlockAccount("0xf9037710c273d0321ddd1b6042d211c3703829db","123",0)
+	// miner.start()
+	// txpool.content
+	// masternode.list
+	// miner.stop()
+	// eth.mining
+	//str := common.Bytes2Hex(data.Ipport[:])
+	//ip_int, err := strconv.Atoi(str)
+	//if err != nil {
+	//	fmt.Printf("strconv.Atoistrconv.Atoistrconv.Atoistrconv.Atoi %v", err)
+	//	return
+	//}
+	node := aux.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
+
+	return node.String()
 }
 
 // Masternodes return masternode contract data

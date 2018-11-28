@@ -247,6 +247,12 @@ func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
 	return s.b.GetInfo(nodeid)
 }
 
+// GetEnode return discover.Node in enodeinfo contract
+func (s *PrivateAccountAPI) GetEnode(nodeid string) string {
+	return s.b.GetEnode(nodeid)
+}
+
+
 // Start  the masternodewinner info
 func (s *PrivateAccountAPI) StartMasternode() bool {
 	return s.b.StartMasternode()

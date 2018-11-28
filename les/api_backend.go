@@ -223,6 +223,12 @@ func (b *LesApiBackend) GetInfo(nodeid string) string {
 	return ""
 }
 
+// GetEnode return related Enodeinfo in enodeinfo contract
+func (b *LesApiBackend) GetEnode(nodeid string) string {
+	return ""
+}
+
+
 // Start the masternode insfo
 func (s *LesApiBackend) StartMasternode() bool {
 	return false

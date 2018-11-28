@@ -33,13 +33,13 @@ import (
 	"github.com/etherzero/go-etherzero/accounts/keystore"
 	"github.com/etherzero/go-etherzero/cmd/utils"
 	"github.com/etherzero/go-etherzero/console"
-	"github.com/etherzero/go-etherzero/eth"
 	"github.com/etherzero/go-etherzero/ethclient"
 	"github.com/etherzero/go-etherzero/internal/debug"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/etherzero/go-etherzero/eth"
 )
 
 const (
@@ -129,6 +129,7 @@ var (
 		utils.MetricsEnabledFlag,
 		utils.FakePoWFlag,
 		utils.NoCompactionFlag,
+		utils.MasternodeIP,
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
 		utils.EWASMInterpreterFlag,
@@ -332,28 +333,30 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
-		// Mining only makes sense if a full Ethereum node is running
-		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
-			utils.Fatalf("Light clients do not support mining")
-		}
-		var ethereum *eth.Ethereum
-		if err := stack.Service(&ethereum); err != nil {
-			utils.Fatalf("Ethereum service not running: %v", err)
-		}
-		// Set the gas price to the limits from the CLI and start mining
-		gasprice := utils.GlobalBig(ctx, utils.MinerLegacyGasPriceFlag.Name)
-		if ctx.IsSet(utils.MinerGasPriceFlag.Name) {
-			gasprice = utils.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
-		}
-		ethereum.TxPool().SetGasPrice(gasprice)
+	time.AfterFunc(100*time.Second, func() {
+		if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+			// Mining only makes sense if a full Ethereum node is running
+			if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
+				utils.Fatalf("Light clients do not support mining")
+			}
+			var ethereum *eth.Ethereum
+			if err := stack.Service(&ethereum); err != nil {
+				utils.Fatalf("Ethereum service not running: %v", err)
+			}
+			// Set the gas price to the limits from the CLI and start mining
+			gasprice := utils.GlobalBig(ctx, utils.MinerLegacyGasPriceFlag.Name)
+			if ctx.IsSet(utils.MinerGasPriceFlag.Name) {
+				gasprice = utils.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
+			}
+			ethereum.TxPool().SetGasPrice(gasprice)
 
-		threads := ctx.GlobalInt(utils.MinerLegacyThreadsFlag.Name)
-		if ctx.GlobalIsSet(utils.MinerThreadsFlag.Name) {
-			threads = ctx.GlobalInt(utils.MinerThreadsFlag.Name)
+			threads := ctx.GlobalInt(utils.MinerLegacyThreadsFlag.Name)
+			if ctx.GlobalIsSet(utils.MinerThreadsFlag.Name) {
+				threads = ctx.GlobalInt(utils.MinerThreadsFlag.Name)
+			}
+			if err := ethereum.StartMining(threads); err != nil {
+				utils.Fatalf("Failed to start mining: %v", err)
+			}
 		}
-		if err := ethereum.StartMining(threads); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
-		}
-	}
+	})
 }

@@ -51,6 +51,7 @@ import (
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
+	contract2 "github.com/etherzero/go-etherzero/contracts/enodeinfo/contract"
 	"time"
 )
 
@@ -87,14 +88,14 @@ type Ethereum struct {
 
 	APIBackend *EthAPIBackend
 
-	miner     *miner.Miner
-	gasPrice  *big.Int
-	etherbase common.Address
-	witness   string
-	networkID     uint64
-	netRPCService *ethapi.PublicNetAPI
+	miner             *miner.Miner
+	gasPrice          *big.Int
+	etherbase         common.Address
+	witness           string
+	networkID         uint64
+	netRPCService     *ethapi.PublicNetAPI
 	masternodeManager *MasternodeManager
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+	lock              sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -180,9 +181,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
+	contractBackendEnodeInfo := NewContractBackend(eth)
+	contractEnodeInfo, err := contract2.NewContract(params.EnodeinfoAddress, contractBackendEnodeInfo)
+
 	contractBackend := NewContractBackend(eth)
 	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, eth.txPool); err != nil {
+	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, contractEnodeInfo, eth.txPool); err != nil {
 		return nil, err
 	}
 
@@ -436,7 +440,6 @@ func (self *Ethereum) SetWitness(witness string) {
 	self.witness = witness
 	self.lock.Unlock()
 }
-
 
 // StartMining starts the miner with the given number of CPU threads. If mining
 // is already running, this method adjust the number of threads allowed to use
