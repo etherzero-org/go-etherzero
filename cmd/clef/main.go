@@ -183,6 +183,7 @@ func init() {
 		utils.LightKDFFlag,
 		utils.NoUSBFlag,
 		utils.RPCListenAddrFlag,
+		utils.MasternodeIP,
 		utils.RPCVirtualHostsFlag,
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,

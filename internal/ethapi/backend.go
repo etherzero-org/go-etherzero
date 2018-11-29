@@ -52,7 +52,7 @@ type Backend interface {
 	StartMasternode() bool        // start the masternode,hash ,srvr means two different parameters
 	StopMasternode() bool         // stop the masternode,hash ,srvr means two different parameters
 	Ns() int64                    // nanoseconds
-
+	GetEnode(nodeid string) string // GetEnode named by enode id
 
 	// BlockChain API
 	SetHead(number uint64)

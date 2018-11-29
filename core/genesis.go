@@ -432,6 +432,15 @@ func DefaultGenesisBlock() *Genesis {
 	alloc[common.HexToAddress("0xF9037710C273d0321ddd1B6042D211c3703829Db")] = GenesisAccount{
 		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
 	}
+	alloc[common.HexToAddress("0x3B353f9f6A9d3b6B4765463e3bB5cB8BBdFc190b")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0x5dB7b0CF8cDa072A651A9cfbb3eF835AC78c95f5")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0xA67B2bdF473d14DB7F0ED9934c62f9627aD142f3")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
 
 	config := params.MainnetChainConfig
 	var witnesses []string

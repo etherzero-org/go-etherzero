@@ -626,11 +626,28 @@ var (
 		Name:  "masternode",
 		Usage: "Enable masternode",
 	}
+	// MasternodeIP
+	MasternodeIP = cli.StringFlag{
+		Name: "masternodeip",
+		Usage: "Report to other nodes your own IP only when you are masternode in working," +
+			"you need to report to other node  your ip",
+		Value: "",
+	}
 )
 
 func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(MasternodeFlag.Name) {
 		cfg.IsMasternode = true
+	}
+}
+
+// setMasternodeIP
+// Only if the node is masternode and then  we will focus on the masternode ip
+func setMasternodeIP(ctx *cli.Context, cfg *p2p.Config) {
+	if cfg.IsMasternode &&
+		ctx.GlobalIsSet(MasternodeIP.Name) &&
+		validIP4(ctx.GlobalString(MasternodeIP.Name)) {
+		cfg.MasternodeIP = ctx.GlobalString(MasternodeIP.Name)
 	}
 }
 
@@ -916,6 +933,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 	setMasternode(ctx, cfg)
+	setMasternodeIP(ctx, cfg)
 
 	lightClient := ctx.GlobalString(SyncModeFlag.Name) == "light"
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0

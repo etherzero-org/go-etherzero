@@ -147,6 +147,7 @@ type Config struct {
 	Logger log.Logger `toml:",omitempty"`
 
 	IsMasternode bool
+	MasternodeIP string // MasternodeIP
 }
 
 // Server manages all peer connections.
@@ -196,7 +197,7 @@ type peerDrop struct {
 type connFlag int32
 
 const (
-	dynDialedConn connFlag = 1 << iota
+	dynDialedConn    connFlag = 1 << iota
 	staticDialedConn
 	inboundConn
 	trustedConn
@@ -205,7 +206,7 @@ const (
 // conn wraps a network connection with information gathered
 // during the two handshakes.
 type conn struct {
-	fd net.Conn
+	fd    net.Conn
 	transport
 	node  *enode.Node
 	flags connFlag
@@ -777,7 +778,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 
 func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
+	case !c.is(trustedConn | staticDialedConn) && len(peers) >= srv.MaxPeers:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers

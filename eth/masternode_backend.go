@@ -23,9 +23,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"errors"
 
+	"github.com/etherzero/go-etherzero/enodetools"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
+	contract2 "github.com/etherzero/go-etherzero/contracts/enodeinfo/contract"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
@@ -35,6 +38,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/p2p/discover"
+	"net"
 )
 
 var (
@@ -44,15 +48,16 @@ var (
 type MasternodeManager struct {
 	beats map[common.Hash]time.Time // Last heartbeat from each known vote
 
-	active   *masternode.ActiveMasternode
-	mu       sync.Mutex
+	active *masternode.ActiveMasternode
+	mu     sync.Mutex
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh    chan *peer
-	IsMasternode uint32
-	srvr         *p2p.Server
-	contract     *contract.Contract
-	blockchain   *core.BlockChain
-	scope        event.SubscriptionScope
+	newPeerCh         chan *peer
+	IsMasternode      uint32
+	srvr              *p2p.Server
+	contract          *contract.Contract
+	enodeinfoContract *contract2.Contract
+	blockchain        *core.BlockChain
+	scope             event.SubscriptionScope
 
 	currentCycle uint64        // Current vote of the block chain
 	Lifetime     time.Duration // Maximum amount of time vote are queued
@@ -62,15 +67,16 @@ type MasternodeManager struct {
 	downloader *downloader.Downloader
 }
 
-func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
+func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, enodeinfoContract *contract2.Contract, txPool *core.TxPool) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		blockchain: blockchain,
-		beats:      make(map[common.Hash]time.Time),
-		Lifetime:   30 * time.Second,
-		contract:   contract,
-		txPool:     txPool,
+		blockchain:        blockchain,
+		beats:             make(map[common.Hash]time.Time),
+		Lifetime:          30 * time.Second,
+		contract:          contract,
+		enodeinfoContract: enodeinfoContract,
+		txPool:            txPool,
 	}
 	return manager
 }
@@ -109,6 +115,10 @@ func (mm *MasternodeManager) masternodeLoop() {
 		fmt.Printf("### Masternode Transaction Data: %s\n", data)
 	}
 
+	//time.AfterFunc(masternode.MASTERNODE_PING_INTERVAL, func() {
+	//	mm.SaveNodeIpToContract()
+	//})
+	mm.SaveNodeIpToContract()
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
 	joinSub, err1 := mm.contract.WatchJoin(nil, joinCh)
@@ -154,7 +164,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 		case <-ntp.C:
 			ntp.Reset(10 * time.Minute)
-		    go discover.CheckClockDrift()
+			go discover.CheckClockDrift()
 		case <-ping.C:
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
 			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
@@ -214,4 +224,102 @@ func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error)
 
 func (self *MasternodeManager) GetGovernanceContractAddress(number *big.Int) (common.Address, error) {
 	return masternode.GetGovernanceAddress(self.contract, number)
+}
+
+// SaveNodeIpToContract
+// only masyernode need to save ip to contract
+func (mm *MasternodeManager) SaveNodeIpToContract() (err error) {
+	fmt.Printf("time.now is %v\n", time.Now())
+
+	// not initialize
+	if mm.srvr.Self() == nil {
+		return
+	}
+	fmt.Printf("mm.srvr.IsMasternode  %v,mm.active.State()  %v", mm.srvr.IsMasternode, mm.active.State())
+	if !mm.srvr.IsMasternode || mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
+		return
+	}
+	minPower := big.NewInt(20e+14)
+	// // send myself node info
+	address := mm.active.NodeAccount
+	fmt.Println("NodeAccountNodeAccount", address.String())
+	stateDB, _ := mm.blockchain.State()
+	if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
+		err = errors.New(fmt.Sprintf("Failed to deposit 0.01 etz to %v ", address.String()))
+		return
+	}
+
+	if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
+		err = errors.New(fmt.Sprintf("Insufficient power for send masternode transaction %v  %v",
+			address.String(), stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).String()))
+		return
+	}
+
+	var dataRaw string
+	dataRaw, err = mm.genData()
+	if err != nil {
+		fmt.Printf("gen node info err :%v\n", err)
+		return
+	}
+
+	data := common.Hex2Bytes(dataRaw)
+	fmt.Printf("dataRaw is %v,data is %v\n", dataRaw, data)
+	tx := types.NewTransaction(
+		mm.txPool.State().GetNonce(address),
+		params.EnodeinfoAddress, //
+		big.NewInt(0),
+		270000,
+		big.NewInt(20e+9),
+		data,
+	)
+
+	signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.active.PrivateKey)
+	if err != nil {
+		fmt.Println("SignTx error:", err)
+		return
+	}
+
+	err = mm.txPool.AddLocal(signed)
+	if err != nil {
+		fmt.Println("send  ip to txpool error:", err)
+		return
+	}
+	// add to send ping message
+	fmt.Println("Send ip message ...")
+	return
+}
+
+func (mm *MasternodeManager) genData() (data string, err error) {
+
+	// Just for safe check
+	if mm.srvr.Self() == nil || mm.srvr.MasternodeIP == "" {
+		err = errors.New("Nil node info")
+		return
+	}
+
+	selfnode := mm.srvr.Self()
+	// return node info
+	xy := selfnode.XY()
+
+	var (
+		ip         uint32
+		ip_port    uint64
+		funcSha3   = "c0e64821" // web3.sha3("register(bytes32,bytes32,bytes32)") in enodeinfo.sol
+		bytes64len = uint32(64)
+	)
+	nodeid := common.Bytes2Hex(xy[:])
+	fmt.Printf("nodeidnodeidnodeid is %v\n", nodeid)
+	fmt.Println("mm.srvr.MasternodeIP", mm.srvr.MasternodeIP)
+	ip = enodetools.Netiptoipnr(net.ParseIP(mm.srvr.MasternodeIP))
+
+	// encode to string
+	ip_port = enodetools.EncodeIpPort(ip, uint32(selfnode.TCP()))
+	ip_portStr := fmt.Sprintf("%x", ip_port)
+	fmt.Println("ip_portStr", ip_portStr)
+	prevZero := enodetools.PrefixZeroString(bytes64len - uint32(len(ip_portStr)))
+	encodeIp_port := fmt.Sprintf("%v%s", prevZero, ip_portStr)
+	fmt.Printf("ip_port %v , nodeid %v ,encodeIp_port %s\n", ip_port, nodeid, encodeIp_port)
+	data = fmt.Sprintf("%v%v%v", funcSha3, nodeid, encodeIp_port)
+	fmt.Println("data string is ", data)
+	return
 }
