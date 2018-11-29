@@ -76,11 +76,10 @@ func NewDiscoverNode(id1, id2 [32]byte, ipPort uint64) (node *enode.Node) {
 
 	netip := Ipnrtonetip(ip)
 
-	var nodeid [64]byte
-	copy(nodeid[:], id1[:])
-	copy(nodeid[32:], id2[:])
+	nodeid := make([]byte, 64)
+	nodeid = append(id1[:], id2[:]...)
 
-	nodeidStr := common.Bytes2Hex(nodeid[:])
+	nodeidStr := common.Bytes2Hex(nodeid)
 	fmt.Printf("nodeidStr is %v\n", nodeidStr)
 	enodeStr := fmt.Sprintf("enode://%s@%s:%d", nodeidStr, netip.String(), port)
 	fmt.Printf("enodeStr is %v\n", enodeStr)

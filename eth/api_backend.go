@@ -263,7 +263,7 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 // GetEnode named by id
 func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 	if b.eth.masternodeManager.enodeinfoContract == nil {
-		enodeinfo = "wait for 10 seconds util finish initializing"
+		enodeinfo = "wait for 10 seconds until finish initializing"
 		return
 	}
 
@@ -286,7 +286,7 @@ func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 
 	data, err := b.eth.masternodeManager.enodeinfoContract.GetSingleEnode(nil, id)
 	if err != nil {
-		fmt.Errorf("contract.Has error %v", err)
+		fmt.Errorf("enodeinfoContract.GetSingleEnode error %v\n", err)
 		return
 	}
 	fmt.Printf("data.Id1 %v ,data.Id2 %v,data.IpPort %v\n", data.Id1, data.Id2, data.Ipport)
@@ -313,7 +313,6 @@ func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 	//	return
 	//}
 	node := aux.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
-
 	return node.String()
 }
 
