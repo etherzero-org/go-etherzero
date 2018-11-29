@@ -703,6 +703,12 @@ web3._extend({
 			params: 0,
 			outputFormatter: web3._extend.utils.toBigNumber
 		}),
+		new web3._extend.Method({
+			name: 'getSnapshot',
+			call: 'devote_getSnapshot',
+			params: 1,
+			inputFormatter: [null]
+		}),
 	]
 });
 `
