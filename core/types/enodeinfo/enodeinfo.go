@@ -23,6 +23,8 @@ func GetNodesByBlockNumber(contract *contract.Contract, blockNumber *big.Int, no
 	}
 	if data.Id1 == [32]byte{} ||
 		data.Id2 == [32]byte{} ||
+		len(data.Id2) != 32 ||
+		len(data.Id1) != 32 ||
 		data.Ipport == uint64(0) {
 		return
 	}

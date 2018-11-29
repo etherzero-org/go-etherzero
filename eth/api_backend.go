@@ -38,7 +38,7 @@ import (
 	"strings"
 	"fmt"
 	"github.com/etherzero/go-etherzero/p2p/discover"
-	"github.com/etherzero/go-etherzero/aux"
+	"github.com/etherzero/go-etherzero/enodetools"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -263,7 +263,7 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 // GetEnode named by id
 func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 	if b.eth.masternodeManager.enodeinfoContract == nil {
-		enodeinfo = "wait for 10 seconds util finish initializing"
+		enodeinfo = "wait for 10 seconds until finish initializing"
 		return
 	}
 
@@ -286,7 +286,7 @@ func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 
 	data, err := b.eth.masternodeManager.enodeinfoContract.GetSingleEnode(nil, id)
 	if err != nil {
-		fmt.Errorf("contract.Has error %v", err)
+		fmt.Errorf("enodeinfoContract.GetSingleEnode error %v\n", err)
 		return
 	}
 	fmt.Printf("data.Id1 %v ,data.Id2 %v,data.IpPort %v\n", data.Id1, data.Id2, data.Ipport)
@@ -312,13 +312,11 @@ func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 	//	fmt.Printf("strconv.Atoistrconv.Atoistrconv.Atoistrconv.Atoi %v", err)
 	//	return
 	//}
-	node := aux.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
-
+	node := enodetools.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
 	return node.String()
 }
 
 // Masternodes return masternode contract data
-
 func (b *EthAPIBackend) Data() (strPromotion string) {
 	if b.eth.masternodeManager.srvr.Self() == nil {
 		strPromotion = "wait for more 10 seconds to initial the geth"

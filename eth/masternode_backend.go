@@ -25,7 +25,7 @@ import (
 	"time"
 	"errors"
 
-	"github.com/etherzero/go-etherzero/aux"
+	"github.com/etherzero/go-etherzero/enodetools"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	contract2 "github.com/etherzero/go-etherzero/contracts/enodeinfo/contract"
@@ -310,13 +310,13 @@ func (mm *MasternodeManager) genData() (data string, err error) {
 	nodeid := common.Bytes2Hex(xy[:])
 	fmt.Printf("nodeidnodeidnodeid is %v\n", nodeid)
 	fmt.Println("mm.srvr.MasternodeIP", mm.srvr.MasternodeIP)
-	ip = aux.Netiptoipnr(net.ParseIP(mm.srvr.MasternodeIP))
+	ip = enodetools.Netiptoipnr(net.ParseIP(mm.srvr.MasternodeIP))
 
 	// encode to string
-	ip_port = aux.EncodeIpPort(ip, uint32(selfnode.TCP()))
+	ip_port = enodetools.EncodeIpPort(ip, uint32(selfnode.TCP()))
 	ip_portStr := fmt.Sprintf("%x", ip_port)
 	fmt.Println("ip_portStr", ip_portStr)
-	prevZero := aux.PrefixZeroString(bytes64len - uint32(len(ip_portStr)))
+	prevZero := enodetools.PrefixZeroString(bytes64len - uint32(len(ip_portStr)))
 	encodeIp_port := fmt.Sprintf("%v%s", prevZero, ip_portStr)
 	fmt.Printf("ip_port %v , nodeid %v ,encodeIp_port %s\n", ip_port, nodeid, encodeIp_port)
 	data = fmt.Sprintf("%v%v%v", funcSha3, nodeid, encodeIp_port)
