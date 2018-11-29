@@ -49,7 +49,7 @@ var (
 		EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
 		Devote: &DevoteConfig{
-			Period: 15,
+			Period: 1,
 			Epoch:  600,
 			Witnesses: []string{
 
