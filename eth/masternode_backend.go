@@ -115,9 +115,9 @@ func (mm *MasternodeManager) masternodeLoop() {
 		fmt.Printf("### Masternode Transaction Data: %s\n", data)
 	}
 
-	//time.AfterFunc(masternode.MASTERNODE_IP_INTERVAL, func() {
+	time.AfterFunc(masternode.MASTERNODE_IP_INTERVAL, func() {
 	mm.SaveNodeIpToContract()
-	//})
+	})
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
 	joinSub, err1 := mm.contract.WatchJoin(nil, joinCh)
