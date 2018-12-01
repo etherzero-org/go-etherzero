@@ -116,7 +116,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 
 	time.AfterFunc(masternode.MASTERNODE_IP_INTERVAL, func() {
-	mm.SaveNodeIpToContract()
+		mm.SaveNodeIpToContract()
 	})
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
@@ -267,7 +267,7 @@ func (mm *MasternodeManager) SaveNodeIpToContract() (err error) {
 		mm.txPool.State().GetNonce(address),
 		params.EnodeinfoAddress, //
 		big.NewInt(0),
-		90000,
+		2700000,
 		big.NewInt(20e+9),
 		data,
 	)
