@@ -316,6 +316,8 @@ func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 	// 0x3892b10387ab33372e3e3acf074d32c87d6b24c056155fa5796d83902da0522d 1
 	// 0x3cc872d7b889032b3daa4f112ac43cbc482f4c2dda20d3d4ff94ee8bf23b1cf6 2
 	//}
+
+
 	node := enodetools.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
 	return node.String()
 }
