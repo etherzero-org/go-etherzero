@@ -31,7 +31,7 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
-	EnodeinfoAddress          = common.HexToAddress("0x8919ab4a6b318850978badd7328c871ca43c14d9")
+	EnodeinfoAddress          = common.HexToAddress("0x81000a8eb9ed522dc0c2fca3a133bdc6a4fd797a")
 
 )
 
