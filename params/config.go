@@ -31,14 +31,14 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
-	EnodeinfoAddress          = common.HexToAddress("0x000000000000000000000000000000000000000c")
+	EnodeinfoAddress          = common.HexToAddress("0x72713f6a1f27f11865c367bb8ca41056953fc45f")
 
 )
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(123),
+		ChainID:        big.NewInt(1234),
 		EtherzeroBlock: big.NewInt(0),
 		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
@@ -52,7 +52,6 @@ var (
 			Period: 1,
 			Epoch:  600,
 			Witnesses: []string{
-
 			},
 		},
 	}
