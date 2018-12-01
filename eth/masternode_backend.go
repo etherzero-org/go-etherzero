@@ -267,7 +267,7 @@ func (mm *MasternodeManager) SaveNodeIpToContract() (err error) {
 		mm.txPool.State().GetNonce(address),
 		params.EnodeinfoAddress, //
 		big.NewInt(0),
-		270000,
+		90000,
 		big.NewInt(20e+9),
 		data,
 	)
