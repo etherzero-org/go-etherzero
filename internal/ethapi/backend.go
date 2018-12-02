@@ -53,7 +53,7 @@ type Backend interface {
 	StopMasternode() bool         // stop the masternode,hash ,srvr means two different parameters
 	Ns() int64                    // nanoseconds
 	GetEnode(nodeid string) string // GetEnode named by enode id
-
+	EnodeCount() uint64 // EnodeCount,get the numbers contains in the enodeinfo contract
 	// BlockChain API
 	SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)

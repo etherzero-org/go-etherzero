@@ -229,6 +229,13 @@ func (b *LesApiBackend) GetEnode(nodeid string) string {
 }
 
 
+// EnodeCount
+// get the numbers contains in the enodeinfo contract
+func (b *LesApiBackend) EnodeCount() (ret uint64) {
+	return
+}
+
+
 // Start the masternode insfo
 func (s *LesApiBackend) StartMasternode() bool {
 	return false
