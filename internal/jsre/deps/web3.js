@@ -6818,6 +6818,10 @@ require = (function e(t, n, r) {
                 new Property({
                     name: 'data',
                     getter: 'masternode_data'
+                }),
+                new Property({
+                    name: 'enodeCount',
+                    getter: 'masternode_enodeCount'
                 })
             ];
         };

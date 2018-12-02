@@ -253,6 +253,12 @@ func (s *PrivateAccountAPI) GetEnode(nodeid string) string {
 }
 
 
+// EnodeCount,
+// get the numbers contains in the enodeinfo contract
+func (s *PrivateAccountAPI) EnodeCount() uint64 {
+	return s.b.EnodeCount()
+}
+
 // Start  the masternodewinner info
 func (s *PrivateAccountAPI) StartMasternode() bool {
 	return s.b.StartMasternode()
