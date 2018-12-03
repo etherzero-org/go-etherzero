@@ -31,7 +31,7 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
-	EnodeinfoAddress          = common.HexToAddress("0x8ac5bc21b742551ec6b49bd6c6bda71f99ecb83b") // contract code
+	EnodeinfoAddress          = common.HexToAddress("0x5a115cfb7bb014eadbcd46ba4e1b7178fc8e1946") // contract code
 	// address deplyed previous in node
 	// deployed used in testnet etherzero in the jianhai 20 nodes
 )
