@@ -755,8 +755,8 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
 	for obj := range pm.minedBlockSub.Chan() {
 		if ev, ok := obj.Data.(core.NewMinedBlockEvent); ok {
-			pm.BroadcastBlock(ev.Block, true)  // First propagate block to peers
-			pm.BroadcastBlock(ev.Block, false) // Only then announce to the rest
+			go pm.BroadcastBlock(ev.Block, true)  // First propagate block to peers
+			go pm.BroadcastBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
 }
