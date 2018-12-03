@@ -13,8 +13,8 @@ contract Enodeinfo {
 
     mapping (bytes8 => Enode ) public Enodes;
     // Masternode contract address
-    address public MasterAddr = 0x000000000000000000000000000000000000000a;
-    // count means the number of the register node info in
+    address public constant masteraddr = 0x000000000000000000000000000000000000000A;
+    // Count means the number of the register node info in
     // Enodeinfo smart contact
     uint public count;
     // the initial lastId,mean
@@ -56,7 +56,7 @@ contract Enodeinfo {
 
         require(id != bytes8(0));
 
-        isMasternode = Masternode(MasterAddr).has(id); // id means whether it is masternode or not
+        isMasternode = Masternode(masteraddr).has(id); // id means whether it is masternode or not
 
         require(bool(isMasternode) == bool(true));
 
@@ -99,5 +99,5 @@ contract Enodeinfo {
 }
 
 contract Masternode {
-    function has(bytes8 ) constant public returns (bool ){}
+    function has(bytes8 ) constant public returns (bool){}
 }

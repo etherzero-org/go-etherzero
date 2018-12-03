@@ -1,17 +1,6 @@
 [{
   "constant": true,
   "inputs": [],
-  "name": "MasterAddr",
-  "outputs": [{
-    "name": "",
-    "type": "address"
-  }],
-  "payable": false,
-  "stateMutability": "view",
-  "type": "function"
-}, {
-  "constant": true,
-  "inputs": [],
   "name": "count",
   "outputs": [{
     "name": "",
@@ -39,6 +28,17 @@
   }, {
     "name": "ipport",
     "type": "uint64"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "constant": true,
+  "inputs": [],
+  "name": "masteraddr",
+  "outputs": [{
+    "name": "",
+    "type": "address"
   }],
   "payable": false,
   "stateMutability": "view",

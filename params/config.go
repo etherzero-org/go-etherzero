@@ -32,7 +32,6 @@ var (
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
 	EnodeinfoAddress          = common.HexToAddress("0x000000000000000000000000000000000000000c")
-
 )
 
 var (
@@ -52,7 +51,6 @@ var (
 			Period: 1,
 			Epoch:  600,
 			Witnesses: []string{
-
 			},
 		},
 	}

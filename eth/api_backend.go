@@ -259,6 +259,25 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
+// EnodeCount
+// get the numbers contains in the enodeinfo contract
+func (b *EthAPIBackend) EnodeCount() (ret uint64) {
+	if b.eth.masternodeManager.enodeinfoContract == nil {
+		fmt.Println("Not wait for 10 seconds until finish initializing")
+		return
+	}
+
+	data, err := b.eth.masternodeManager.enodeinfoContract.GetCount(nil)
+	if err != nil {
+		fmt.Errorf("enodeinfoContract.GetCount error %v\n", err)
+		return
+	}
+	if data != nil {
+		ret = data.Uint64()
+	}
+
+	return
+}
 
 // GetEnode named by id
 func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
@@ -306,12 +325,17 @@ func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
 	// masternode.list
 	// miner.stop()
 	// eth.mining
+	// eth.blockNumber
 	//str := common.Bytes2Hex(data.Ipport[:])
 	//ip_int, err := strconv.Atoi(str)
 	//if err != nil {
 	//	fmt.Printf("strconv.Atoistrconv.Atoistrconv.Atoistrconv.Atoi %v", err)
 	//	return
+	// 0xf170eef0984d24eb479c508a4c650d2c383f06438f050a16fced1d07982c720c 0
+	// 0x3892b10387ab33372e3e3acf074d32c87d6b24c056155fa5796d83902da0522d 1
+	// 0x3cc872d7b889032b3daa4f112ac43cbc482f4c2dda20d3d4ff94ee8bf23b1cf6 2
 	//}
+
 	node := enodetools.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
 	return node.String()
 }
