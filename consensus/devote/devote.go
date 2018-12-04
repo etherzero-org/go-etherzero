@@ -547,22 +547,22 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
-func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
 	header.Nonce = types.BlockNonce{}
 
 	number := header.Number.Uint64()
 	// Assemble the voting snapshot to check which votes make sense
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
-	if number%c.config.Epoch != 0 {
-		c.lock.RLock()
+	if number%d.config.Epoch != 0 {
+		d.lock.RLock()
 
 		// Gather all the proposals that make sense voting on
-		witnesses := make([]string, 0, len(c.proposals))
-		for witness, authorize := range c.proposals {
+		witnesses := make([]string, 0, len(d.proposals))
+		for witness, authorize := range d.proposals {
 			if snap.validWitness(witness, authorize) {
 				witnesses = append(witnesses, witness)
 			}
@@ -570,17 +570,19 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		// If there's pending proposals, cast a vote on them
 		if len(witnesses) > 0 {
 			header.Witness = witnesses[rand.Intn(len(witnesses))]
-			if c.proposals[header.Witness] {
+			if d.proposals[header.Witness] {
 				copy(header.Nonce[:], nonceAuthVote)
 			} else {
 				copy(header.Nonce[:], nonceDropVote)
 			}
 		}
-		c.lock.RUnlock()
+		d.lock.RUnlock()
 	}
 	// Set the correct difficulty
-	header.Difficulty = CalcDifficulty(snap, c.signer)
-	header.Witness = c.signer
+	d.lock.Lock()
+	header.Difficulty = CalcDifficulty(snap, d.signer)
+	header.Witness = d.signer
+	d.lock.Unlock()
 
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < extraVanity {
@@ -588,7 +590,7 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	}
 	header.Extra = header.Extra[:extraVanity]
 
-	if number%c.config.Epoch == 0 {
+	if number%d.config.Epoch == 0 {
 		for _, signer := range snap.signers() {
 			header.Extra = append(header.Extra, signer[:]...)
 		}
@@ -603,7 +605,7 @@ func (c *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
+	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(d.config.Period))
 	if header.Time.Int64() < time.Now().Unix() {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
@@ -748,12 +750,13 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
-func (c *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	snap, err := c.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+
+	snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
 		return nil
 	}
-	return CalcDifficulty(snap, c.signer)
+	return CalcDifficulty(snap, d.signer)
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
