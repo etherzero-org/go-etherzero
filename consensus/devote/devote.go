@@ -317,18 +317,6 @@ func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if len(header.Extra) < extraVanity+extraSeal {
 		return errMissingSignature
 	}
-	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
-	//signersBytes := len(header.Extra) - extraVanity - extraSeal
-	//if !checkpoint && signersBytes != 0 {
-	//	return errExtraSigners
-	//}
-	//if checkpoint && signersBytes%common.AddressLength != 0 {
-	//	return errInvalidCheckpointSigners
-	//}
-	//// Ensure that the mix digest is zero as we don't have fork protection currently
-	//if header.MixDigest != (common.Hash{}) {
-	//	return errInvalidMixDigest
-	//}
 	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
 	if header.UncleHash != uncleHash {
 		return errInvalidUncleHash
@@ -381,10 +369,6 @@ func (d *Devote) verifyCascadingFields(chain consensus.ChainReader, header *type
 		for i, signer := range snap.signers() {
 			signers[i] = signer
 		}
-		//extraSuffix := len(header.Extra) - extraSeal
-		//if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
-		//	return errMismatchingCheckpointSigners
-		//}
 	}
 	// All basic checks passed, verify the seal and return
 	return d.verifySeal(chain, header, parents)
@@ -421,18 +405,18 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				for _, node := range masternodes {
 					sortedWitnesses = append(sortedWitnesses, node.nodeid)
 				}
-				//context := []interface{}{
-				//	"cycle", cycle,
-				//	"signers", sortedWitnesses,
-				//	"hash", hash,
-				//}
-				//log.Info("Elected new cycle signers", context...)
+				context := []interface{}{
+					"cycle", cycle,
+					"signers", sortedWitnesses,
+					"hash", hash,
+				}
+				log.Info("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
 				d.recents.Add(snap.Hash, snap)
-				//log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
 		}
@@ -682,6 +666,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
