@@ -49,7 +49,7 @@ const (
 	checkpointInterval = 600                    // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 128                    // Number of recent vote snapshots to keep in memory
 	inmemorySignatures = 4096                   // Number of recent block signatures to keep in memory
-	maxSignersSize     = 21                     // Number of max singers in current cycle
+	maxSignersSize     = 11                     // Number of max singers in current cycle
 	wiggleTime         = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 )
 
@@ -409,6 +409,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 					"cycle", cycle,
 					"signers", sortedWitnesses,
 					"hash", hash,
+					"number",number,
 				}
 				log.Info("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
