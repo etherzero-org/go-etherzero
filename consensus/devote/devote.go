@@ -392,6 +392,12 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				if err != nil {
 					return nil, fmt.Errorf("get current masternodes err:%s", err)
 				}
+				stabilization := number - 100
+				stableBlock := chain.GetHeaderByNumber(stabilization)
+				if stableBlock != nil {
+					hash = stableBlock.Hash()
+				}
+
 				result, err := masternodes(hash, all)
 				masternodes := sortableAddresses{}
 				for masternode, cnt := range result {
@@ -409,7 +415,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 					"cycle", cycle,
 					"signers", sortedWitnesses,
 					"hash", hash,
-					"number",number,
+					"number", number,
 				}
 				log.Info("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
@@ -693,10 +699,10 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 		if recent == signer {
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Signed recently, must wait for others, ", "signer",signer,"seen", seen, "number", number, "limit", limit)
+				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
 				return nil
 			}
-			log.Info("Passed Signed recently, ", "signer",signer,"seen", seen, "number", number, "limit", uint64(len(snap.Signers)/2+1))
+			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(snap.Signers)/2+1))
 		}
 	}
 	// Sweet, the protocol permits us to sign the block, wait for our time
