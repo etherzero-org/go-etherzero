@@ -179,10 +179,10 @@ func (s *Snapshot) signers() []string {
 }
 
 // inturn returns if a signer at a given block height is in-turn or not.
-func (c *Snapshot) inturn(number uint64, signer string) bool {
+func (d *Snapshot) inturn(number uint64, signer string) bool {
 
 	var signers []string
-	for signer := range c.Signers {
+	for signer := range d.Signers {
 		signers= append(signers, signer)
 	}
 	sort.Strings(signers)
@@ -190,6 +190,7 @@ func (c *Snapshot) inturn(number uint64, signer string) bool {
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
+	//fmt.Printf("devote snapshot check signer inturn offset%d, number%d, value%d \n",offset,number,(number % uint64(len(signers))))
 	return (number % uint64(len(signers))) == uint64(offset)
 }
 

@@ -382,6 +382,12 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		snap    *Snapshot
 	)
 	for snap == nil {
+		// If an in-memory snapshot was found, use that
+		if s, ok := d.recents.Get(hash); ok {
+			snap = s.(*Snapshot)
+			break
+		}
+
 		// If we're at an checkpoint block, make a snapshot if it's known
 		if number == 0 || number%d.config.Epoch == 0 {
 			checkpoint := chain.GetHeaderByNumber(number)
@@ -411,29 +417,24 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				for _, node := range masternodes {
 					sortedWitnesses = append(sortedWitnesses, node.nodeid)
 				}
-				context := []interface{}{
-					"cycle", cycle,
-					"signers", sortedWitnesses,
-					"hash", hash,
-					"number", number,
-				}
-				log.Info("Elected new cycle signers", context...)
+				//context := []interface{}{
+				//	"cycle", cycle,
+				//	"signers", sortedWitnesses,
+				//	"hash", hash,
+				//	"number", number,
+				//}
+				//log.Info("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
+				headers =make([]*types.Header,0)
 				d.recents.Add(snap.Hash, snap)
-				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+				//log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
 		}
 
-		// If an in-memory snapshot was found, use that
-		if s, ok := d.recents.Get(hash); ok {
-			snap = s.(*Snapshot)
-			//fmt.Printf("devote snapshot get Snapshot from recents number,%d,hash:%x,", number, hash)
-			break
-		}
 		// No snapshot for this header, gather the header and move backward
 		var header *types.Header
 		if len(parents) > 0 {
@@ -457,7 +458,6 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	//fmt.Printf("devote assembly snapshot headers count:%d\n", len(headers))
 	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
@@ -512,6 +512,7 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 
 	if _, ok := snap.Signers[signer]; !ok {
+		fmt.Println("devote snap.Signers map value:%s ,signer %s\n", snap.Signers,signer)
 		return errUnauthorizedSigner
 	}
 	for seen, recent := range snap.Recents {
@@ -748,6 +749,7 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 	if err != nil {
 		return nil
 	}
+	snap.Number=parent.Number.Uint64()
 	return CalcDifficulty(snap, d.signer)
 }
 
@@ -755,7 +757,8 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
 func CalcDifficulty(snap *Snapshot, signer string) *big.Int {
-	if snap.inturn(snap.Number+1, signer) {
+
+	if snap.inturn(snap.Number, signer) {
 		return new(big.Int).Set(diffInTurn)
 	}
 	return new(big.Int).Set(diffNoTurn)
