@@ -29,13 +29,14 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/p2p/discv5"
+	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/p2p/nat"
 	"github.com/etherzero/go-etherzero/p2p/netutil"
 )
 
 func main() {
 	var (
-		listenAddr  = flag.String("addr", ":21210", "listen address")
+		listenAddr  = flag.String("addr", ":30301", "listen address")
 		genKey      = flag.String("genkey", "", "generate a node key")
 		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
 		nodeKeyFile = flag.String("nodekey", "", "private key filename")
@@ -85,7 +86,7 @@ func main() {
 	}
 
 	if *writeAddr {
-		fmt.Printf("%v\n", discover.PubkeyID(&nodeKey.PublicKey))
+		fmt.Printf("%v\n", enode.PubkeyToIDV4(&nodeKey.PublicKey))
 		os.Exit(0)
 	}
 

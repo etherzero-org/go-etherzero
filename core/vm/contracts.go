@@ -26,10 +26,9 @@ import (
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/crypto/bn256"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/crypto/secp256k1"
-	"github.com/etherzero/go-etherzero/log"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/crypto/secp256k1"
+	"crypto/ecdsa"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -121,7 +120,7 @@ func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	return h[:], nil
 }
 
-// RIPMED160 implemented as a native contract.
+// RIPEMD160 implemented as a native contract.
 type ripemd160hash struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
@@ -363,7 +362,6 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 	}
 	return false32Byte, nil
 }
-
 type peeridrecover struct{}
 
 func (c *peeridrecover) RequiredGas(input []byte) uint64 {
@@ -374,11 +372,8 @@ func (c *peeridrecover) Run(input []byte) ([]byte, error) {
 	if len(input) < 97 {
 		return nil, nil
 	}
-	//input = common.RightPadBytes(input, 128)
-
 	key, err := secp256k1.RecoverPubkey(input[:32], input[32:97])
 	if err != nil || len(key) != 65 {
-		log.Error("peeridrecover", "error", err)
 		return nil, nil
 	}
 	return key[1:9], nil
@@ -394,12 +389,14 @@ func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
 	if len(input) < 64 {
 		return nil, nil
 	}
-	NodeID := discover.MustBytesID(input[0:64])
-	key, err := NodeID.Pubkey()
-	if err != nil {
+	id := input[0:64]
+	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
+	half := len(id) / 2
+	p.X.SetBytes(id[:half])
+	p.Y.SetBytes(id[half:])
+	if !p.Curve.IsOnCurve(p.X, p.Y) {
 		return nil, nil
 	}
-	addr := crypto.PubkeyToAddress(*key)
+	addr := crypto.PubkeyToAddress(*p)
 	return common.LeftPadBytes(addr[:], 32), nil
 }
-

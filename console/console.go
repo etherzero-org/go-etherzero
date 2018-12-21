@@ -190,6 +190,7 @@ func (c *Console) init(preload []string) error {
 			obj.Set("sign", bridge.Sign)
 		}
 	}
+	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")
 	if err != nil {
 		return err
@@ -313,7 +314,7 @@ func (c *Console) Interactive() {
 		input     = ""                // Current user input
 		scheduler = make(chan string) // Channel to send the next prompt on and receive the input
 	)
-	// Start a goroutine to listen for promt requests and send back inputs
+	// Start a goroutine to listen for prompt requests and send back inputs
 	go func() {
 		for {
 			// Read the next user input

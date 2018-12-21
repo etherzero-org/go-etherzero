@@ -226,7 +226,7 @@ type txList struct {
 	costcap *big.Int // Price of the highest costing transaction (reset only if exceeds balance)
 	gascap  uint64   // Gas limit of the highest spending transaction (reset only if exceeds block limit)
 
-	valuecap *big.Int // Vaule of the highest spending transaction (reset only if exceeds balance)
+	valuecap *big.Int
 }
 
 // newTxList create a new transaction list for maintaining nonce-indexable fast,
@@ -300,8 +300,7 @@ func (l *txList) Filter(valueLimit, costLimit *big.Int, gasLimit uint64) (types.
 	}
 	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
 	l.gascap = gasLimit
-	l.valuecap = new(big.Int).Set(valueLimit) // Lower the caps to the thresholds
-
+	l.valuecap = new(big.Int).Set(valueLimit)
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool { return tx.Value().Cmp(valueLimit) > 0 || tx.Cost().Cmp(costLimit) > 0 || tx.Gas() > gasLimit })
@@ -444,7 +443,7 @@ func (l *txPricedList) Removed() {
 }
 
 // Cap finds all the transactions below the given price threshold, drops them
-// from the priced list and returs them for further removal from the entire pool.
+// from the priced list and returns them for further removal from the entire pool.
 func (l *txPricedList) Cap(threshold *big.Int, local *accountSet) types.Transactions {
 	drop := make(types.Transactions, 0, 128) // Remote underpriced transactions to drop
 	save := make(types.Transactions, 0, 64)  // Local underpriced transactions to keep

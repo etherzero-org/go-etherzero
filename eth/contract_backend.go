@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"github.com/etherzero/go-etherzero/core/rawdb"
 )
 
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
@@ -45,7 +46,9 @@ func NewContractBackend(eth *Ethereum) *ContractBackend {
 		database:   eth.chainDb,
 		blockchain: eth.blockchain,
 		config:     eth.chainConfig,
+		//events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
 		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
+
 		txPool:     eth.txPool,
 	}
 	backend.rollback()
@@ -138,7 +141,7 @@ func (b *ContractBackend) StorageAt(ctx context.Context, contract common.Address
 
 // TransactionReceipt returns the receipt of a transaction.
 func (b *ContractBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	receipt, _, _, _ := core.GetReceipt(b.database, txHash)
+	receipt, _, _, _ := rawdb.ReadReceipt(b.database, txHash)
 	return receipt, nil
 }
 
@@ -253,7 +256,7 @@ func (b *ContractBackend) callContract(ctx context.Context, call ethereum.CallMs
 	}
 	// Set infinite balance to the fake caller account.
 	from := statedb.GetOrNewStateObject(call.From)
-	from.SetBalance(math.MaxBig256, b.blockchain.CurrentBlock().Number())
+	from.SetBalance(math.MaxBig256, block.Number())
 	from.SetPower(math.MaxBig256)
 	// Execute the call.
 	msg := callmsg{call}
@@ -280,18 +283,24 @@ func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transac
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
 func (b *ContractBackend) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
-	// Initialize unset filter boundaried to run from genesis to chain head
-	from := int64(0)
-	if query.FromBlock != nil {
-		from = query.FromBlock.Int64()
+	var filter *filters.Filter
+	if query.BlockHash != nil {
+		// Block filter requested, construct a single-shot filter
+		filter = filters.NewBlockFilter(&filterBackend{b.database, b.blockchain}, *query.BlockHash, query.Addresses, query.Topics)
+	} else {
+		// Initialize unset filter boundaried to run from genesis to chain head
+		from := int64(0)
+		if query.FromBlock != nil {
+			from = query.FromBlock.Int64()
+		}
+		to := int64(-1)
+		if query.ToBlock != nil {
+			to = query.ToBlock.Int64()
+		}
+		// Construct the range filter
+		filter = filters.NewRangeFilter(&filterBackend{b.database, b.blockchain}, from, to, query.Addresses, query.Topics)
 	}
-	to := int64(-1)
-	if query.ToBlock != nil {
-		to = query.ToBlock.Int64()
-	}
-	// Construct and execute the filter
-	filter := filters.New(&filterBackend{b.database, b.blockchain}, from, to, query.Addresses, query.Topics)
-
+	// Run the filter and return all the logs
 	logs, err := filter.Logs(ctx)
 	if err != nil {
 		return nil, err
@@ -386,12 +395,24 @@ func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumb
 	return fb.bc.GetHeaderByNumber(uint64(block.Int64())), nil
 }
 
+func (fb *filterBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return fb.bc.GetHeaderByHash(hash), nil
+}
+
 func (fb *filterBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	return core.GetBlockReceipts(fb.db, hash, core.GetBlockNumber(fb.db, hash)), nil
+	number := rawdb.ReadHeaderNumber(fb.db, hash)
+	if number == nil {
+		return nil, nil
+	}
+	return rawdb.ReadReceipts(fb.db, hash, *number), nil
 }
 
 func (fb *filterBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
-	receipts := core.GetBlockReceipts(fb.db, hash, core.GetBlockNumber(fb.db, hash))
+	number := rawdb.ReadHeaderNumber(fb.db, hash)
+	if number == nil {
+		return nil, nil
+	}
+	receipts := rawdb.ReadReceipts(fb.db, hash, *number)
 	if receipts == nil {
 		return nil, nil
 	}
@@ -402,13 +423,12 @@ func (fb *filterBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*ty
 	return logs, nil
 }
 
-func (fb *filterBackend) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Subscription {
+func (fb *filterBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		<-quit
 		return nil
 	})
 }
-
 func (fb *filterBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
 	return fb.bc.SubscribeChainEvent(ch)
 }
@@ -422,12 +442,4 @@ func (fb *filterBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscr
 func (fb *filterBackend) BloomStatus() (uint64, uint64) { return 4096, 0 }
 func (fb *filterBackend) ServiceFilter(ctx context.Context, ms *bloombits.MatcherSession) {
 	panic("not supported")
-}
-
-// TODO
-func (fb *filterBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		<-quit
-		return nil
-	})
 }

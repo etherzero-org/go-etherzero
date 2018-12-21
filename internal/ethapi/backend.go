@@ -44,6 +44,7 @@ type Backend interface {
 	ChainDb() ethdb.Database
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
+
 	// masternode control api
 	Masternodes() []string        // masternodes info
 	Data() string                 // return masternode contract nodes data
@@ -51,6 +52,8 @@ type Backend interface {
 	StartMasternode() bool        // start the masternode,hash ,srvr means two different parameters
 	StopMasternode() bool         // stop the masternode,hash ,srvr means two different parameters
 	Ns() int64                    // nanoseconds
+	GetEnode(nodeid string) string // GetEnode named by enode id
+	EnodeCount() uint64 // EnodeCount,get the numbers contains in the enodeinfo contract
 	// BlockChain API
 	SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
@@ -63,6 +66,7 @@ type Backend interface {
 	SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 	SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription
+
 
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error
@@ -119,8 +123,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
-		},
-		{
+		},{
 			Namespace: "masternode",
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),

@@ -26,13 +26,13 @@ import (
 	"time"
 
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/prque"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/params"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 const (
@@ -61,6 +61,7 @@ var (
 	ErrInsufficientFunds = errors.New("insufficient funds for value")
 	ErrInsufficientMinFunds = errors.New("insufficient funds for 0.01 etz")
 	ErrInsufficientPower = errors.New("insufficient power for gas * price")
+
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
@@ -124,14 +125,15 @@ type blockChain interface {
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
 type TxPoolConfig struct {
-	NoLocals  bool          // Whether local transaction handling should be disabled
-	Journal   string        // Journal of local transactions to survive node restarts
-	Rejournal time.Duration // Time interval to regenerate the local transaction journal
+	Locals    []common.Address // Addresses that should be treated by default as local
+	NoLocals  bool             // Whether local transaction handling should be disabled
+	Journal   string           // Journal of local transactions to survive node restarts
+	Rejournal time.Duration    // Time interval to regenerate the local transaction journal
 
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
 
-	AccountSlots uint64 // Minimum number of executable transaction slots guaranteed per account
+	AccountSlots uint64 // Number of executable transaction slots guaranteed per account
 	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
 	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
 	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
@@ -232,6 +234,10 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
 	}
 	pool.locals = newAccountSet(pool.signer)
+	for _, addr := range config.Locals {
+		log.Info("Setting new local account", "address", addr)
+		pool.locals.add(addr)
+	}
 	pool.priced = newTxPricedList(pool.all)
 	pool.reset(nil, chain.CurrentBlock().Header())
 
@@ -521,7 +527,7 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	return pending, queued
 }
 
-// Pending retrieves all currently processable transactions, groupped by origin
+// Pending retrieves all currently processable transactions, grouped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
@@ -535,7 +541,15 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
-// local retrieves all currently known local transactions, groupped by origin
+// Locals retrieves the accounts currently considered local by the pool.
+func (pool *TxPool) Locals() []common.Address {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	return pool.locals.flatten()
+}
+
+// local retrieves all currently known local transactions, grouped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) local() map[common.Address]types.Transactions {
@@ -672,7 +686,10 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	}
 	// Mark local addresses and journal local transactions
 	if local {
-		pool.locals.add(from)
+		if !pool.locals.contains(from) {
+			log.Info("Setting new local account", "address", from)
+			pool.locals.add(from)
+		}
 	}
 	pool.journalTx(from, tx)
 
@@ -936,6 +953,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentState.GetPower(addr, pool.chain.CurrentBlock().Number()), pool.currentMaxGas)
+
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -978,11 +996,11 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	if pending > pool.config.GlobalSlots {
 		pendingBeforeCap := pending
 		// Assemble a spam order to penalize large transactors first
-		spammers := prque.New()
+		spammers := prque.New(nil)
 		for addr, list := range pool.pending {
 			// Only evict transactions from high rollers
 			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.AccountSlots {
-				spammers.Push(addr, float32(list.Len()))
+				spammers.Push(addr, int64(list.Len()))
 			}
 		}
 		// Gradually drop transactions from offenders
@@ -1048,7 +1066,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	}
 	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
-		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
+		addresses := make(addressesByHeartbeat, 0, len(pool.queue))
 		for addr := range pool.queue {
 			if !pool.locals.contains(addr) { // don't drop locals
 				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
@@ -1134,17 +1152,18 @@ type addressByHeartbeat struct {
 	heartbeat time.Time
 }
 
-type addresssByHeartbeat []addressByHeartbeat
+type addressesByHeartbeat []addressByHeartbeat
 
-func (a addresssByHeartbeat) Len() int           { return len(a) }
-func (a addresssByHeartbeat) Less(i, j int) bool { return a[i].heartbeat.Before(a[j].heartbeat) }
-func (a addresssByHeartbeat) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a addressesByHeartbeat) Len() int           { return len(a) }
+func (a addressesByHeartbeat) Less(i, j int) bool { return a[i].heartbeat.Before(a[j].heartbeat) }
+func (a addressesByHeartbeat) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 // accountSet is simply a set of addresses to check for existence, and a signer
 // capable of deriving addresses from transactions.
 type accountSet struct {
 	accounts map[common.Address]struct{}
 	signer   types.Signer
+	cache    *[]common.Address
 }
 
 // newAccountSet creates a new address set with an associated signer for sender
@@ -1174,6 +1193,20 @@ func (as *accountSet) containsTx(tx *types.Transaction) bool {
 // add inserts a new address into the set to track.
 func (as *accountSet) add(addr common.Address) {
 	as.accounts[addr] = struct{}{}
+	as.cache = nil
+}
+
+// flatten returns the list of addresses within this set, also caching it for later
+// reuse. The returned slice should not be changed!
+func (as *accountSet) flatten() []common.Address {
+	if as.cache == nil {
+		accounts := make([]common.Address, 0, len(as.accounts))
+		for account := range as.accounts {
+			accounts = append(accounts, account)
+		}
+		as.cache = &accounts
+	}
+	return *as.cache
 }
 
 // txLookup is used internally by TxPool to track transactions while allowing lookup without

@@ -77,7 +77,7 @@ type stateObject struct {
 	trie Trie // storage trie, which becomes non-nil on first access
 	code Code // contract bytecode, which gets set when code is loaded
 
-	cachedStorage Storage // Storage entry cache to avoid duplicate reads
+	originStorage Storage // Storage cache of original entries to dedup rewrites
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
 	// Cache flags.
@@ -123,7 +123,7 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 		address:       address,
 		addrHash:      crypto.Keccak256Hash(address[:]),
 		data:          data,
-		cachedStorage: make(Storage),
+		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 	}
 }
@@ -167,13 +167,25 @@ func (c *stateObject) getTrie(db Database) Trie {
 	return c.trie
 }
 
-// GetState returns a value in account storage.
+// GetState retrieves a value from the account storage trie.
 func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
-	value, exists := self.cachedStorage[key]
-	if exists {
+	// If we have a dirty value for this state entry, return it
+	value, dirty := self.dirtyStorage[key]
+	if dirty {
 		return value
 	}
-	// Load from DB in case it is missing.
+	// Otherwise return the entry's original value
+	return self.GetCommittedState(db, key)
+}
+
+// GetCommittedState retrieves a value from the committed account storage trie.
+func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.Hash {
+	// If we have the original value cached, return that
+	value, cached := self.originStorage[key]
+	if cached {
+		return value
+	}
+	// Otherwise load the value from the database
 	enc, err := self.getTrie(db).TryGet(key[:])
 	if err != nil {
 		self.setError(err)
@@ -186,22 +198,27 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 		}
 		value.SetBytes(content)
 	}
-	self.cachedStorage[key] = value
+	self.originStorage[key] = value
 	return value
 }
 
 // SetState updates a value in account storage.
 func (self *stateObject) SetState(db Database, key, value common.Hash) {
+	// If the new value is the same as old, don't set
+	prev := self.GetState(db, key)
+	if prev == value {
+		return
+	}
+	// New value is different, update and journal the change
 	self.db.journal.append(storageChange{
 		account:  &self.address,
 		key:      key,
-		prevalue: self.GetState(db, key),
+		prevalue: prev,
 	})
 	self.setState(key, value)
 }
 
 func (self *stateObject) setState(key, value common.Hash) {
-	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
 }
 
@@ -210,6 +227,13 @@ func (self *stateObject) updateTrie(db Database) Trie {
 	tr := self.getTrie(db)
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
+
+		// Skip noop changes, persist actual changes
+		if value == self.originStorage[key] {
+			continue
+		}
+		self.originStorage[key] = value
+
 		if (value == common.Hash{}) {
 			self.setError(tr.TryDelete(key[:]))
 			continue
@@ -227,7 +251,7 @@ func (self *stateObject) updateRoot(db Database) {
 	self.data.Root = self.trie.Hash()
 }
 
-// CommitTrie the storage trie of the object to dwb.
+// CommitTrie the storage trie of the object to db.
 // This updates the trie root.
 func (self *stateObject) CommitTrie(db Database) error {
 	self.updateTrie(db)
@@ -257,11 +281,8 @@ func (c *stateObject) AddBalance(amount *big.Int, blockNumber *big.Int) {
 	c.SetBalance(new(big.Int).Add(c.Balance(), amount), blockNumber)
 }
 
-// AddBalance removes amount from c's balance.
-// It is used to add funds to the destination account of a transfer.
+// AddPower removes amount from c's power.
 func (c *stateObject) AddPower(amount *big.Int) {
-	// EIP158: We must check emptiness for the objects such that the account
-	// clearing (0,0,0 objects) can take effect.
 	if amount.Sign() == 0 {
 		if c.empty() {
 			c.touch()
@@ -281,6 +302,7 @@ func (c *stateObject) SubBalance(amount *big.Int, blockNumber *big.Int) {
 	c.SetBalance(new(big.Int).Sub(c.Balance(), amount), blockNumber)
 }
 
+// SubPower removes amount from c's power.
 func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
 	if amount.Sign() == 0 {
 		return
@@ -296,6 +318,10 @@ func (self *stateObject) SetBalance(amount, blockNumber *big.Int) {
 		prev:    new(big.Int).Set(self.data.Balance),
 	})
 	self.setBalance(amount)
+}
+
+func (self *stateObject) setBalance(amount *big.Int) {
+	self.data.Balance = amount
 }
 
 func (self *stateObject) SetPower(amount *big.Int) {
@@ -318,19 +344,6 @@ func (self *stateObject) UpdatePower(blockNumber *big.Int) {
 	self.setPowerAndBlock(power, blockNumber)
 }
 
-func (self *stateObject) setBalance(amount *big.Int) {
-	self.data.Balance = amount
-}
-
-func (self *stateObject) setPower(amount *big.Int) {
-	self.data.Power = amount
-}
-
-func (self *stateObject) setPowerAndBlock(amount *big.Int, blockNumber *big.Int) {
-	self.data.Power = amount
-	self.data.BlockNumber = blockNumber
-}
-
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}
 
@@ -341,7 +354,7 @@ func (self *stateObject) deepCopy(db *StateDB) *stateObject {
 	}
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
-	stateObject.cachedStorage = self.dirtyStorage.Copy()
+	stateObject.originStorage = self.originStorage.Copy()
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted
@@ -409,14 +422,6 @@ func (self *stateObject) Balance() *big.Int {
 	return self.data.Balance
 }
 
-func (self *stateObject) Power() *big.Int {
-	return self.data.Power
-}
-
-func (self *stateObject) BlockNumber() *big.Int {
-	return self.data.BlockNumber
-}
-
 func (self *stateObject) Nonce() uint64 {
 	return self.data.Nonce
 }
@@ -426,4 +431,21 @@ func (self *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (self *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func (self *stateObject) setPower(amount *big.Int) {
+	self.data.Power = amount
+}
+
+func (self *stateObject) setPowerAndBlock(amount *big.Int, blockNumber *big.Int) {
+	self.data.Power = amount
+	self.data.BlockNumber = blockNumber
+}
+
+func (self *stateObject) Power() *big.Int {
+	return self.data.Power
+}
+
+func (self *stateObject) BlockNumber() *big.Int {
+	return self.data.BlockNumber
 }

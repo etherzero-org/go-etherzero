@@ -25,25 +25,25 @@ import (
 	"math/big"
 	"strings"
 
-	"bufio"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/common/math"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
-	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"io"
-	"os"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/p2p/enode"
 	"path/filepath"
+	"os"
 	"github.com/etherzero/go-etherzero/trie"
 	"strconv"
+	"bufio"
+	"io"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -127,6 +127,7 @@ func (h *storageJSON) UnmarshalText(text []byte) error {
 	}
 	offset := len(h) - len(text)/2 // pad on the left
 	if _, err := hex.Decode(h[offset:], text); err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("invalid hex storage key/value %q", text)
 	}
 	return nil
@@ -161,8 +162,9 @@ func (e *GenesisMismatchError) Error() string {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.DevoteChainConfig, common.Hash{}, errGenesisNoConfig
+		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
+
 	// Just commit the new block if there is no stored genesis block.
 	stored := rawdb.ReadCanonicalHash(db, 0)
 	if (stored == common.Hash{}) {
@@ -171,7 +173,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 			genesis = DefaultGenesisBlock()
 			root, err := genesisAccounts(common.Hash{}, db)
 			if err != nil {
-				return params.DevoteChainConfig, common.Hash{}, err
+				return genesis.Config, common.Hash{}, err
 			}
 			genesis.StateRoot = root
 		} else {
@@ -180,6 +182,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		block, err := genesis.Commit(db)
 		return genesis.Config, block.Hash(), err
 	}
+
 	// Check whether the genesis block is already written.
 	if genesis != nil {
 		hash := genesis.ToBlock(nil).Hash()
@@ -187,13 +190,13 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 	}
+
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
 	storedcfg := rawdb.ReadChainConfig(db, stored)
 	if storedcfg == nil {
 		log.Warn("Found genesis block without chain config")
 		rawdb.WriteChainConfig(db, stored, newcfg)
-
 		return newcfg, stored, nil
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
@@ -202,16 +205,15 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 	if genesis == nil && stored != params.MainnetGenesisHash {
 		return storedcfg, stored, nil
 	}
+
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
 	height := rawdb.ReadHeaderNumber(db, rawdb.ReadHeadHeaderHash(db))
 	if height == nil {
-
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
 	compatErr := storedcfg.CheckCompatible(newcfg, *height)
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
-
 		return newcfg, stored, compatErr
 	}
 	rawdb.WriteChainConfig(db, stored, newcfg)
@@ -222,8 +224,12 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
+	case ghash == params.MainnetGenesisHash:
+		return params.MainnetChainConfig
+	case ghash == params.TestnetGenesisHash:
+		return params.TestnetChainConfig
 	default:
-		return params.DevoteChainConfig
+		return params.AllEthashProtocolChanges
 	}
 }
 
@@ -233,7 +239,6 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if db == nil {
 		db = ethdb.NewMemDatabase()
 	}
-
 	statedb, _ := state.New(g.StateRoot, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
 		statedb.AddBalance(addr, account.Balance, big.NewInt(1))
@@ -244,7 +249,6 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		}
 	}
 	root := statedb.IntermediateRoot(false)
-
 	// add devote protocol
 	devoteDB := initGenesisDevoteProtocol(g, db)
 	// add devote protocol
@@ -272,19 +276,14 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
-	block := types.NewBlock(head, nil, nil, nil)
-	block.DevoteDB = devoteDB
 
-	return block
+	return types.NewBlock(head, nil, nil, nil)
 }
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	block := g.ToBlock(db)
-
-	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n", block.DevoteDB)
-
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
@@ -351,20 +350,23 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 	)
 
 	count := int64(len(masternodes))
-	for i := int64(21) ; i < count; i++ {
+	for i := int64(21); i < count; i++ {
 		addresses = append(addresses, common.BytesToAddress(big.NewInt(i).Bytes()))
 	}
 	for index, n := range masternodes {
-		node, err := discover.ParseNode(n)
-		if err != nil {
-			panic(err)
-		}
+		node := enode.MustParseV4(n)
 
 		var contextId common.Hash
 		copy(contextId[24:32], lastId[:8])
 
-		id1 := common.BytesToHash(node.ID[:32])
-		id2 := common.BytesToHash(node.ID[32:])
+		xBytes := node.Pubkey().X.Bytes()
+		yBytes := node.Pubkey().Y.Bytes()
+		var x, y [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		copy(y[32-len(yBytes):], yBytes[:])
+
+		id1 := common.BytesToHash(x[:])
+		id2 := common.BytesToHash(y[:])
 		copy(lastId[:8], id1[:8])
 
 		if lastContextId, ok := data[lastKey]; ok {
@@ -390,10 +392,7 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 		data[key3] = contextId
 		data[key4] = contextAddress
 
-		pubkey, err := node.ID.Pubkey()
-		if err != nil {
-			panic(err)
-		}
+		pubkey := node.Pubkey()
 		addr := crypto.PubkeyToAddress(*pubkey)
 
 		var idsKey [64]byte
@@ -424,9 +423,53 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
+	//alloc[common.BytesToAddress(params.EnodeinfoAddress.Bytes())] = GenesisAccount{
+	//	Balance: big.NewInt(2),
+	//	Nonce:   1,
+	//	Code:    hexutil.MustDecode("0x608060405260043610610083576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd1461008857806320c14805146100b35780633b11c4c11461017e578063515e7e09146101d5578063a87d942c146102a0578063c0e64821146102cb578063c1292cc31461031e575b600080fd5b34801561009457600080fd5b5061009d61037f565b6040518082815260200191505060405180910390f35b3480156100bf57600080fd5b506100f9600480360381019080803577ffffffffffffffffffffffffffffffffffffffffffffffff19169060200190929190505050610385565b60405180856000191660001916815260200184600019166000191681526020018377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018267ffffffffffffffff1667ffffffffffffffff16815260200194505050505060405180910390f35b34801561018a57600080fd5b506101936103ee565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b3480156101e157600080fd5b5061021b600480360381019080803577ffffffffffffffffffffffffffffffffffffffffffffffff191690602001909291905050506103f3565b60405180856000191660001916815260200184600019166000191681526020018377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018267ffffffffffffffff1667ffffffffffffffff16815260200194505050505060405180910390f35b3480156102ac57600080fd5b506102b56105d2565b6040518082815260200191505060405180910390f35b3480156102d757600080fd5b5061031c60048036038101908080356000191690602001909291908035600019169060200190929190803567ffffffffffffffff1690602001909291905050506105dc565b005b34801561032a57600080fd5b50610333610bca565b604051808277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200191505060405180910390f35b60015481565b60006020528060005260406000206000915090508060000154908060010154908060020160009054906101000a9004780100000000000000000000000000000000000000000000000002908060020160089054906101000a900467ffffffffffffffff16905084565b600a81565b600080600080600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168577ffffffffffffffffffffffffffffffffffffffffffffffff19161415151561045a57600080fd5b6000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206000015493506000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206001015492506000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160009054906101000a900478010000000000000000000000000000000000000000000000000291506000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160089054906101000a900467ffffffffffffffff1690509193509193565b6000600154905090565b6105e4610bf5565b6105ec610c17565b6000806000803414801561060c5750600060010260001916886000191614155b80156106245750600060010260001916876000191614155b80156106455750600067ffffffffffffffff168667ffffffffffffffff1614155b151561065057600080fd5b8785600060028110151561066057fe5b602002019060001916908160001916815250508685600160028110151561068357fe5b602002019060001916908160001916815250506020846080876000600b600019f115156106af57600080fd5b8360006001811015156106be57fe5b6020020151600190049250600073ffffffffffffffffffffffffffffffffffffffff168373ffffffffffffffffffffffffffffffffffffffff161415801561073157508273ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16145b151561073c57600080fd5b879050600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168177ffffffffffffffffffffffffffffffffffffffffffffffff1916141515156107a057600080fd5b600a73ffffffffffffffffffffffffffffffffffffffff166316e7f171826040518263ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001915050602060405180830381600087803b15801561084657600080fd5b505af115801561085a573d6000803e3d6000fd5b505050506040513d602081101561087057600080fd5b810190808051906020019092919050505091506001151582151514151561089657600080fd5b6000600102600019166000808377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206000015460001916141561090657600180600082825401925050819055505b6080604051908101604052808960001916815260200188600019168152602001600260009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018767ffffffffffffffff168152506000808377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550905050600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916600260009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916141515610b855780600080600260009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505b80600260006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505050505050505050565b600260009054906101000a900478010000000000000000000000000000000000000000000000000281565b6040805190810160405280600290602082028038833980820191505090505090565b6020604051908101604052806001906020820280388339808201915050905050905600a165627a7a723058208ab8aa1fdc98c4a0e1162802b9d739998e27e6cb486688d97299aeffd5ad0ae40029"),
+	//}
+	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0x06e4c21bbc2a639dd8c7b369dad8a6a032aecf54")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0xF9037710C273d0321ddd1B6042D211c3703829Db")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0x3B353f9f6A9d3b6B4765463e3bB5cB8BBdFc190b")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0x5dB7b0CF8cDa072A651A9cfbb3eF835AC78c95f5")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0xA67B2bdF473d14DB7F0ED9934c62f9627aD142f3")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+
+	config := params.MainnetChainConfig
+	var witnesses []string
+	for _, n := range params.MainnetMasternodes {
+		node := enode.MustParseV4(n)
+		pubkey := node.Pubkey()
+		addr := crypto.PubkeyToAddress(*pubkey)
+		if _, ok := alloc[addr]; !ok {
+			alloc[addr] = GenesisAccount{
+				Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
+			}
+		}
+		xBytes := pubkey.X.Bytes()
+		var x [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		id1 := common.BytesToHash(x[:])
+		id := fmt.Sprintf("%x", id1[:8])
+		witnesses = append(witnesses, id)
+	}
+	config.Devote.Witnesses = witnesses
 	return &Genesis{
-		Config:     params.DevoteChainConfig,
+		Config:     config,
 		Nonce:      66,
+		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		Timestamp:  1531551970,
 		GasLimit:   10000000,
 		Difficulty: big.NewInt(1),
@@ -438,29 +481,44 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultTestnetGenesisBlock() *Genesis {
 	alloc := decodePrealloc(testnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.TestnetMasternodes)
+	alloc[common.BytesToAddress(params.EnodeinfoAddress.Bytes())] = GenesisAccount{
+		Balance: big.NewInt(2),
+		Nonce:   1,
+		Storage: nil,
+		Code:    hexutil.MustDecode("0x608060405260043610610083576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806301ec4aed1461008857806306661abd146100df57806320c148051461010a578063515e7e09146101d5578063a87d942c146102a0578063c0e64821146102cb578063c1292cc31461031e575b600080fd5b34801561009457600080fd5b5061009d61037f565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b3480156100eb57600080fd5b506100f46103a5565b6040518082815260200191505060405180910390f35b34801561011657600080fd5b50610150600480360381019080803577ffffffffffffffffffffffffffffffffffffffffffffffff191690602001909291905050506103ab565b60405180856000191660001916815260200184600019166000191681526020018377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018267ffffffffffffffff1667ffffffffffffffff16815260200194505050505060405180910390f35b3480156101e157600080fd5b5061021b600480360381019080803577ffffffffffffffffffffffffffffffffffffffffffffffff19169060200190929190505050610414565b60405180856000191660001916815260200184600019166000191681526020018377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018267ffffffffffffffff1667ffffffffffffffff16815260200194505050505060405180910390f35b3480156102ac57600080fd5b506102b56105f3565b6040518082815260200191505060405180910390f35b3480156102d757600080fd5b5061031c60048036038101908080356000191690602001909291908035600019169060200190929190803567ffffffffffffffff1690602001909291905050506105fd565b005b34801561032a57600080fd5b50610333610c0d565b604051808277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200191505060405180910390f35b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b60025481565b60006020528060005260406000206000915090508060000154908060010154908060020160009054906101000a9004780100000000000000000000000000000000000000000000000002908060020160089054906101000a900467ffffffffffffffff16905084565b600080600080600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168577ffffffffffffffffffffffffffffffffffffffffffffffff19161415151561047b57600080fd5b6000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206000015493506000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff191681526020019081526020016000206001015492506000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160009054906101000a900478010000000000000000000000000000000000000000000000000291506000808677ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160089054906101000a900467ffffffffffffffff1690509193509193565b6000600254905090565b610605610c38565b61060d610c5a565b6000806000803414801561062d5750600060010260001916886000191614155b80156106455750600060010260001916876000191614155b80156106665750600067ffffffffffffffff168667ffffffffffffffff1614155b151561067157600080fd5b8785600060028110151561068157fe5b60200201906000191690816000191681525050868560016002811015156106a457fe5b602002019060001916908160001916815250506020846080876000600b600019f115156106d057600080fd5b8360006001811015156106df57fe5b6020020151600190049250600073ffffffffffffffffffffffffffffffffffffffff168373ffffffffffffffffffffffffffffffffffffffff161415801561075257508273ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16145b151561075d57600080fd5b879050600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff19168177ffffffffffffffffffffffffffffffffffffffffffffffff1916141515156107c157600080fd5b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166316e7f171826040518263ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001915050602060405180830381600087803b15801561088857600080fd5b505af115801561089c573d6000803e3d6000fd5b505050506040513d60208110156108b257600080fd5b81019080805190602001909291905050509150600115158215151415156108d857600080fd5b6000600102600019166000808377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600001546000191614156109495760016002600082825401925050819055505b6080604051908101604052808960001916815260200188600019168152602001600360009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191681526020018767ffffffffffffffff168152506000808377ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff19168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908378010000000000000000000000000000000000000000000000009004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550905050600078010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916600360009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff1916141515610bc85780600080600360009054906101000a900478010000000000000000000000000000000000000000000000000277ffffffffffffffffffffffffffffffffffffffffffffffff191677ffffffffffffffffffffffffffffffffffffffffffffffff1916815260200190815260200160002060020160006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505b80600360006101000a81548167ffffffffffffffff02191690837801000000000000000000000000000000000000000000000000900402179055505050505050505050565b600360009054906101000a900478010000000000000000000000000000000000000000000000000281565b6040805190810160405280600290602082028038833980820191505090505090565b6020604051908101604052806001906020820280388339808201915050905050905600a165627a7a72305820d2e092796efb7f72e283d7714b4b887c9b3026c303201a7800ce0e81172779dd0029"),
+	}
+
 	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
 		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
 	}
+	alloc[common.HexToAddress("0xb0217add567c450037b3a8c0688c2fb045c4fc7b")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	alloc[common.HexToAddress("0xF9037710C273d0321ddd1B6042D211c3703829Db")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	// eth.getBalance("0x6b7f544158e4dacf3247125a491241889829a436")
+	// 	  eth.getCode("0x000000000000000000000000000000000000000c")
+
 	config := params.TestnetChainConfig
 	var witnesses []string
 	for _, n := range params.TestnetMasternodes {
-		node, err := discover.ParseNode(n)
-		if err != nil {
-			panic(err)
-		}
-		pubkey, err := node.ID.Pubkey()
-		if err != nil {
-			panic(err)
-		}
-		addr := crypto.PubkeyToAddress(*pubkey)
-		alloc[addr] = GenesisAccount{
-			Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
-		}
-		id := fmt.Sprintf("%x", node.ID[:8])
+		node := enode.MustParseV4(n)
+		pubkey := node.Pubkey()
+		//addr := crypto.PubkeyToAddress(*pubkey)
+		//if _, ok := alloc[addr]; !ok {
+		//	alloc[addr] = GenesisAccount{
+		//		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
+		//	}
+		//}
+		xBytes := pubkey.X.Bytes()
+		var x [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		id1 := common.BytesToHash(x[:])
+		id := fmt.Sprintf("%x", id1[:8])
 		witnesses = append(witnesses, id)
 	}
 	config.Devote.Witnesses = witnesses
-
 	return &Genesis{
 		Config:     config,
 		Nonce:      66,
@@ -477,7 +535,7 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.RinkebyChainConfig,
 		Timestamp:  1492009146,
-		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e39734cb256c8c2ac2cbcd42e3a34dcf8a218436a06e4c21bbc2a639dd8c7b369dad8a6a032aecf544415f751ad19098172c5db301d2c9826322252b92ca9e02abbb1c35e74648f358232ad6e32129958410dbec8f3a72ae59333f7de7045498ee5181c489438c70fc481f3d6e0d7a842e935d4718b6fbf48cabb18d43f4ef4191807f5c0469111d9be923db30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   4700000,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(rinkebyAllocData),
@@ -490,8 +548,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 	// Override the default period to the user requested one
 	config := *params.AllCliqueProtocolChanges
 	config.Clique.Period = period
-	alloc := decodePrealloc(testnetAllocData)
-	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.TestnetMasternodes)
+
 	// Assemble and return the genesis with the precompiles and faucet pre-funded
 	return &Genesis{
 		Config:     &config,
@@ -507,7 +564,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
-			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }
@@ -517,7 +574,6 @@ func decodePrealloc(data string) GenesisAlloc {
 	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
 		panic(err)
 	}
-
 	ga := make(GenesisAlloc, len(p))
 	for _, account := range p {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}

@@ -43,12 +43,15 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:     90,
+	NetworkId:     1,
 	LightPeers:    100,
 	DatabaseCache: 768,
 	TrieCache:     256,
 	TrieTimeout:   60 * time.Minute,
-	GasPrice:      big.NewInt(1 * params.Shannon),
+	MinerGasFloor: 8000000,
+	MinerGasCeil:  8000000,
+	MinerGasPrice: big.NewInt(params.GWei),
+	MinerRecommit: 3 * time.Second,
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
@@ -95,12 +98,16 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Etherbase common.Address `toml:",omitempty"`
-	Witness   string         `toml:",omitempty"`
+	Etherbase      common.Address `toml:",omitempty"`
+	MinerNotify    []string       `toml:",omitempty"`
+	MinerExtraData []byte         `toml:",omitempty"`
+	Witness        string         `toml:",omitempty"`
 
-	MinerThreads int    `toml:",omitempty"`
-	ExtraData    []byte `toml:",omitempty"`
-	GasPrice     *big.Int
+	MinerGasFloor uint64
+	MinerGasCeil  uint64
+	MinerGasPrice *big.Int
+	MinerRecommit time.Duration
+	MinerNoverify bool
 
 	// Ethash options
 	Ethash ethash.Config
@@ -116,9 +123,13 @@ type Config struct {
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
-	Devote  bool   `toml:"-"`
+
+	// Type of the EWASM interpreter ("" for detault)
+	EWASMInterpreter string
+	// Type of the EVM interpreter ("" for default)
+	EVMInterpreter string
 }
 
 type configMarshaling struct {
-	ExtraData hexutil.Bytes
+	MinerExtraData hexutil.Bytes
 }

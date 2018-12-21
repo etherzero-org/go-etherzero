@@ -29,6 +29,7 @@ import (
 
 	"github.com/etherzero/go-etherzero/common/math"
 	"gopkg.in/urfave/cli.v1"
+	"regexp"
 )
 
 // Custom type which is registered in the flags library which cli uses for
@@ -237,4 +238,17 @@ func homeDir() string {
 		return usr.HomeDir
 	}
 	return ""
+}
+
+// verify if IP is valid or not
+func validIP4(ipAddress string) bool {
+	if ipAddress == "" {
+		return false
+	}
+	ipAddress = strings.Trim(ipAddress, " ")
+	re, _ := regexp.Compile(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$`)
+	if re.MatchString(ipAddress) {
+		return true
+	}
+	return false
 }

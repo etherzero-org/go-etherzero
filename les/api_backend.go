@@ -60,8 +60,11 @@ func (b *LesApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNum
 	if blockNr == rpc.LatestBlockNumber || blockNr == rpc.PendingBlockNumber {
 		return b.eth.blockchain.CurrentHeader(), nil
 	}
-
 	return b.eth.blockchain.GetHeaderByNumberOdr(ctx, uint64(blockNr))
+}
+
+func (b *LesApiBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return b.eth.blockchain.GetHeaderByHash(hash), nil
 }
 
 func (b *LesApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
@@ -104,7 +107,6 @@ func (b *LesApiBackend) GetTd(hash common.Hash) *big.Int {
 
 func (b *LesApiBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256, header.Number)
-	state.SetPower(msg.From(), math.MaxBig256)
 	context := core.NewEVMContext(msg, header, b.eth.blockchain, nil)
 	return vm.NewEVM(context, state, b.eth.chainConfig, vmCfg), state.Error, nil
 }
@@ -177,6 +179,29 @@ func (b *LesApiBackend) ChainDb() ethdb.Database {
 	return b.eth.chainDb
 }
 
+func (b *LesApiBackend) EventMux() *event.TypeMux {
+	return b.eth.eventMux
+}
+
+func (b *LesApiBackend) AccountManager() *accounts.Manager {
+	return b.eth.accountManager
+}
+
+func (b *LesApiBackend) BloomStatus() (uint64, uint64) {
+	if b.eth.bloomIndexer == nil {
+		return 0, 0
+	}
+	sections, _, _ := b.eth.bloomIndexer.Sections()
+	return params.BloomBitsBlocksClient, sections
+}
+
+func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+	for i := 0; i < bloomFilterThreads; i++ {
+		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
+	}
+}
+
+
 // Masternodes return masternode info
 // TODO LesApiBackend interface does not implemente this api for now(2018-05-30)
 func (b *LesApiBackend) Masternodes() []string {
@@ -198,6 +223,19 @@ func (b *LesApiBackend) GetInfo(nodeid string) string {
 	return ""
 }
 
+// GetEnode return related Enodeinfo in enodeinfo contract
+func (b *LesApiBackend) GetEnode(nodeid string) string {
+	return ""
+}
+
+
+// EnodeCount
+// get the numbers contains in the enodeinfo contract
+func (b *LesApiBackend) EnodeCount() (ret uint64) {
+	return
+}
+
+
 // Start the masternode insfo
 func (s *LesApiBackend) StartMasternode() bool {
 	return false
@@ -208,29 +246,5 @@ func (s *LesApiBackend) StopMasternode() bool {
 	return false
 }
 
-// join nodeid from genesis block to witness
-func (b *LesApiBackend) JoinMasternode(nodeid string) bool {
-	return true
-}
 
-func (b *LesApiBackend) EventMux() *event.TypeMux {
-	return b.eth.eventMux
-}
 
-func (b *LesApiBackend) AccountManager() *accounts.Manager {
-	return b.eth.accountManager
-}
-
-func (b *LesApiBackend) BloomStatus() (uint64, uint64) {
-	if b.eth.bloomIndexer == nil {
-		return 0, 0
-	}
-	sections, _, _ := b.eth.bloomIndexer.Sections()
-	return light.BloomTrieFrequency, sections
-}
-
-func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
-	for i := 0; i < bloomFilterThreads; i++ {
-		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
-	}
-}

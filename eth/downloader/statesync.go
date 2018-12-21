@@ -69,17 +69,6 @@ func (d *Downloader) syncState(root common.Hash) *stateSync {
 	return s
 }
 
-func (d *Downloader) syncDevote(root common.Hash) *stateSync {
-	s := newDevoteSync(d, root)
-	select {
-	case d.stateSyncStart <- s:
-	case <-d.quitCh:
-		s.err = errCancelStateFetch
-		close(s.done)
-	}
-	return s
-}
-
 // stateFetcher manages the active state sync and accepts requests
 // on its behalf.
 func (d *Downloader) stateFetcher() {
@@ -251,18 +240,6 @@ func newStateSync(d *Downloader, root common.Hash) *stateSync {
 	return &stateSync{
 		d:       d,
 		sched:   state.NewStateSync(root, d.stateDB),
-		keccak:  sha3.NewKeccak256(),
-		tasks:   make(map[common.Hash]*stateTask),
-		deliver: make(chan *stateReq),
-		cancel:  make(chan struct{}),
-		done:    make(chan struct{}),
-	}
-}
-
-func newDevoteSync(d *Downloader, root common.Hash) *stateSync {
-	return &stateSync{
-		d:       d,
-		sched:   trie.NewSync(root, d.stateDB, nil),
 		keccak:  sha3.NewKeccak256(),
 		tasks:   make(map[common.Hash]*stateTask),
 		deliver: make(chan *stateReq),

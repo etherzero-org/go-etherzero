@@ -1,0 +1,113 @@
+[{
+  "constant": true,
+  "inputs": [],
+  "name": "count",
+  "outputs": [{
+    "name": "",
+    "type": "uint256"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "constant": true,
+  "inputs": [{
+    "name": "",
+    "type": "bytes8"
+  }],
+  "name": "Enodes",
+  "outputs": [{
+    "name": "id1",
+    "type": "bytes32"
+  }, {
+    "name": "id2",
+    "type": "bytes32"
+  }, {
+    "name": "nextId",
+    "type": "bytes8"
+  }, {
+    "name": "ipport",
+    "type": "uint64"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "constant": true,
+  "inputs": [],
+  "name": "masteraddr",
+  "outputs": [{
+    "name": "",
+    "type": "address"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "constant": true,
+  "inputs": [{
+    "name": "id",
+    "type": "bytes8"
+  }],
+  "name": "getSingleEnode",
+  "outputs": [{
+    "name": "id1",
+    "type": "bytes32"
+  }, {
+    "name": "id2",
+    "type": "bytes32"
+  }, {
+    "name": "nextId",
+    "type": "bytes8"
+  }, {
+    "name": "ipport",
+    "type": "uint64"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "constant": true,
+  "inputs": [],
+  "name": "getCount",
+  "outputs": [{
+    "name": "",
+    "type": "uint256"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "constant": false,
+  "inputs": [{
+    "name": "id1",
+    "type": "bytes32"
+  }, {
+    "name": "id2",
+    "type": "bytes32"
+  }, {
+    "name": "ipport",
+    "type": "uint64"
+  }],
+  "name": "register",
+  "outputs": [],
+  "payable": false,
+  "stateMutability": "nonpayable",
+  "type": "function"
+}, {
+  "constant": true,
+  "inputs": [],
+  "name": "lastId",
+  "outputs": [{
+    "name": "",
+    "type": "bytes8"
+  }],
+  "payable": false,
+  "stateMutability": "view",
+  "type": "function"
+}, {
+  "inputs": [],
+  "payable": false,
+  "stateMutability": "nonpayable",
+  "type": "constructor"
+}]

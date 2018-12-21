@@ -28,7 +28,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/node"
 	"github.com/etherzero/go-etherzero/p2p"
-	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/p2p/simulations"
 	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
 	"github.com/etherzero/go-etherzero/rpc"
@@ -96,12 +96,12 @@ func main() {
 // sends a ping to all its connected peers every 10s and receives a pong in
 // return
 type pingPongService struct {
-	id       discover.NodeID
+	id       enode.ID
 	log      log.Logger
 	received int64
 }
 
-func newPingPongService(id discover.NodeID) *pingPongService {
+func newPingPongService(id enode.ID) *pingPongService {
 	return &pingPongService{
 		id:  id,
 		log: log.New("node.id", id),
