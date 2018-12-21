@@ -18,10 +18,10 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
-	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
@@ -43,6 +43,13 @@ var (
 	// emptyCode is the known hash of the empty EVM bytecode.
 	emptyCode = crypto.Keccak256Hash(nil)
 )
+
+type proofList [][]byte
+
+func (n *proofList) Put(key []byte, value []byte) error {
+	*n = append(*n, value)
+	return nil
+}
 
 // StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
@@ -79,8 +86,6 @@ type StateDB struct {
 	journal        *journal
 	validRevisions []revision
 	nextRevisionId int
-
-	lock sync.Mutex
 }
 
 // Create a new state from a given trie.
@@ -169,9 +174,20 @@ func (self *StateDB) Preimages() map[common.Hash][]byte {
 	return self.preimages
 }
 
+// AddRefund adds gas to the refund counter
 func (self *StateDB) AddRefund(gas uint64) {
 	self.journal.append(refundChange{prev: self.refund})
 	self.refund += gas
+}
+
+// SubRefund removes gas from the refund counter.
+// This method will panic if the refund counter goes below zero
+func (self *StateDB) SubRefund(gas uint64) {
+	self.journal.append(refundChange{prev: self.refund})
+	if gas > self.refund {
+		panic("Refund counter below zero")
+	}
+	self.refund -= gas
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -192,14 +208,6 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.Balance()
-	}
-	return common.Big0
-}
-
-func (self *StateDB) GetPower(addr common.Address, blockNumber *big.Int) *big.Int {
-	stateObject := self.getStateObject(addr)
-	if stateObject != nil {
-		return CalculatePower(stateObject.BlockNumber(), blockNumber, stateObject.Power(), stateObject.Balance())
 	}
 	return common.Big0
 }
@@ -244,10 +252,38 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.BytesToHash(stateObject.CodeHash())
 }
 
-func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Hash {
+// GetState retrieves a value from the given account's storage trie.
+func (self *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.GetState(self.db, bhash)
+		return stateObject.GetState(self.db, hash)
+	}
+	return common.Hash{}
+}
+
+// GetProof returns the MerkleProof for a given Account
+func (self *StateDB) GetProof(a common.Address) ([][]byte, error) {
+	var proof proofList
+	err := self.trie.Prove(crypto.Keccak256(a.Bytes()), 0, &proof)
+	return [][]byte(proof), err
+}
+
+// GetProof returns the StorageProof for given key
+func (self *StateDB) GetStorageProof(a common.Address, key common.Hash) ([][]byte, error) {
+	var proof proofList
+	trie := self.StorageTrie(a)
+	if trie == nil {
+		return proof, errors.New("storage trie for requested address does not exist")
+	}
+	err := trie.Prove(crypto.Keccak256(key.Bytes()), 0, &proof)
+	return [][]byte(proof), err
+}
+
+// GetCommittedState retrieves a value from the given account's committed storage trie.
+func (self *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCommittedState(self.db, hash)
 	}
 	return common.Hash{}
 }
@@ -280,54 +316,26 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
  * SETTERS
  */
 
-// AddBalance adds amount to the account associated with addr
-func (self *StateDB) AddBalance(addr common.Address, amount *big.Int, blockNumber *big.Int) {
+// AddBalance adds amount to the account associated with addr.
+func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddBalance(amount, blockNumber)
+		stateObject.AddBalance(amount)
 	}
 }
 
-func (self *StateDB) AddPower(addr common.Address, amount *big.Int) {
+// SubBalance subtracts amount from the account associated with addr.
+func (self *StateDB) SubBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddPower(amount)
+		stateObject.SubBalance(amount)
 	}
 }
 
-// SubBalance subtracts amount from the account associated with addr
-func (self *StateDB) SubBalance(addr common.Address, amount, blockNumber *big.Int) {
+func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubBalance(amount, blockNumber)
-	}
-}
-
-func (self *StateDB) SubPower(addr common.Address, amount, blockNumber *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SubPower(amount, blockNumber)
-	}
-}
-
-func (self *StateDB) SetBalance(addr common.Address, amount, blockNumber *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetBalance(amount, blockNumber)
-	}
-}
-
-func (self *StateDB) SetPower(addr common.Address, amount *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetPower(amount)
-	}
-}
-
-func (self *StateDB) UpdatePower(addr common.Address, blockNumber *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.UpdatePower(blockNumber)
+		stateObject.SetBalance(amount)
 	}
 }
 
@@ -471,28 +479,20 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 	if so == nil {
 		return
 	}
-
-	// When iterating over the storage check the cache first
-	for h, value := range so.cachedStorage {
-		cb(h, value)
-	}
-
 	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
 	for it.Next() {
-		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
-		if _, ok := so.cachedStorage[key]; !ok {
-			cb(key, common.BytesToHash(it.Value))
+		if value, dirty := so.dirtyStorage[key]; dirty {
+			cb(key, value)
+			continue
 		}
+		cb(key, common.BytesToHash(it.Value))
 	}
 }
 
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (self *StateDB) Copy() *StateDB {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
 		db:                self.db,
@@ -525,10 +525,13 @@ func (self *StateDB) Copy() *StateDB {
 			state.stateObjectsDirty[addr] = struct{}{}
 		}
 	}
-
 	for hash, logs := range self.logs {
-		state.logs[hash] = make([]*types.Log, len(logs))
-		copy(state.logs[hash], logs)
+		cpy := make([]*types.Log, len(logs))
+		for i, l := range logs {
+			cpy[i] = new(types.Log)
+			*cpy[i] = *l
+		}
+		state.logs[hash] = cpy
 	}
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage

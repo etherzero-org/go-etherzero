@@ -200,7 +200,7 @@ func TestAndroid(t *testing.T) {
 	defer os.Chdir(pwd)
 
 	// Create the skeleton of the Android project
-	for _, dir := range []string{"src/main", "src/androidTest/java/org/etherzero/gethtest", "libs"} {
+	for _, dir := range []string{"src/main", "src/androidTest/java/org/ethereum/gethtest", "libs"} {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
 			t.Fatal(err)

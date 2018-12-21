@@ -47,7 +47,7 @@ import (
 )
 
 const (
-	defaultGasPrice = 50 * params.Shannon
+	defaultGasPrice = params.GWei
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -70,41 +70,6 @@ func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) 
 // ProtocolVersion returns the current Ethereum protocol version this node supports
 func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
-}
-
-// Masternodes return masternode info
-func (s *PublicEthereumAPI) Masternodes() []string {
-	return nil
-	//return s.ms.AllNodes()
-}
-
-// Data return masternode contract node data
-func (s *PublicEthereumAPI) Data() string {
-	return ""
-}
-
-func (s *PublicEthereumAPI) Ns() int64 {
-	return 0
-}
-
-// GetInfo return related info in masternode contract
-func (s *PublicEthereumAPI) GetInfo(nodeid string) string {
-	return ""
-}
-
-// Start return the masternodewinner info
-func (s *PublicEthereumAPI) StartMasternode() bool {
-	return false
-}
-
-// Stop return the masternodewinner info
-func (s *PublicEthereumAPI) StopMasternode() bool {
-	return false
-}
-
-// join nodeid from genesis block to witness
-func (b *PublicEthereumAPI) JoinMasternode(nodeid string) bool {
-	return true
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -263,35 +228,6 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 	return addresses
 }
 
-// Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) List() []string {
-	return s.b.Masternodes()
-}
-
-// Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) Data() string {
-	return s.b.Data()
-}
-
-func (s *PrivateAccountAPI) Ns() int64 {
-	return s.b.Ns()
-}
-
-// GetInfo return related info in masternode contract
-func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
-	return s.b.GetInfo(nodeid)
-}
-
-// Start  the masternodewinner info
-func (s *PrivateAccountAPI) StartMasternode() bool {
-	return s.b.StartMasternode()
-}
-
-// Stop return the masternodewinner info
-func (s *PrivateAccountAPI) StopMasternode() bool {
-	return s.b.StopMasternode()
-}
-
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
 type rawWallet struct {
@@ -392,6 +328,9 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 		d = time.Duration(*duration) * time.Second
 	}
 	err := fetchKeystore(s.am).TimedUnlock(accounts.Account{Address: addr}, password, d)
+	if err != nil {
+		log.Warn("Failed account unlock attempt", "address", addr, "err", err)
+	}
 	return err == nil, err
 }
 
@@ -400,10 +339,10 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
-// signTransactions sets defaults and signs the given transaction
+// signTransaction sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
+func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArgs, passwd string) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.am.Find(account)
@@ -434,8 +373,9 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 		s.nonceLock.LockAddr(args.From)
 		defer s.nonceLock.UnlockAddr(args.From)
 	}
-	signed, err := s.signTransaction(ctx, args, passwd)
+	signed, err := s.signTransaction(ctx, &args, passwd)
 	if err != nil {
+		log.Warn("Failed transaction send attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, signed)
@@ -457,8 +397,9 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 	if args.Nonce == nil {
 		return nil, fmt.Errorf("nonce not specified")
 	}
-	signed, err := s.signTransaction(ctx, args, passwd)
+	signed, err := s.signTransaction(ctx, &args, passwd)
 	if err != nil {
+		log.Warn("Failed transaction sign attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return nil, err
 	}
 	data, err := rlp.EncodeToBytes(signed)
@@ -500,6 +441,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 	// Assemble sign the data with the wallet
 	signature, err := wallet.SignHashWithPassphrase(account, passwd, signHash(data))
 	if err != nil {
+		log.Warn("Failed data sign attempt", "address", addr, "err", err)
 		return nil, err
 	}
 	signature[64] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
@@ -513,7 +455,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // addr = ecrecover(hash, signature)
 //
 // Note, the signature must conform to the secp256k1 curve R, S and V values, where
-// the V value must be be 27 or 28 for legacy reasons.
+// the V value must be 27 or 28 for legacy reasons.
 //
 // https://github.com/etherzero/go-etherzero/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
@@ -566,14 +508,70 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
+// Result structs for GetProof
+type AccountResult struct {
+	Address      common.Address  `json:"address"`
+	AccountProof []string        `json:"accountProof"`
+	Balance      *hexutil.Big    `json:"balance"`
+	CodeHash     common.Hash     `json:"codeHash"`
+	Nonce        hexutil.Uint64  `json:"nonce"`
+	StorageHash  common.Hash     `json:"storageHash"`
+	StorageProof []StorageResult `json:"storageProof"`
+}
+type StorageResult struct {
+	Key   string       `json:"key"`
+	Value *hexutil.Big `json:"value"`
+	Proof []string     `json:"proof"`
+}
+
+// GetProof returns the Merkle-proof for a given account and optionally some storage keys.
+func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNr rpc.BlockNumber) (*AccountResult, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
-	b := state.GetPower(address, header.Number)
-	return b, state.Error()
+
+	storageTrie := state.StorageTrie(address)
+	storageHash := types.EmptyRootHash
+	codeHash := state.GetCodeHash(address)
+	storageProof := make([]StorageResult, len(storageKeys))
+
+	// if we have a storageTrie, (which means the account exists), we can update the storagehash
+	if storageTrie != nil {
+		storageHash = storageTrie.Hash()
+	} else {
+		// no storageTrie means the account does not exist, so the codeHash is the hash of an empty bytearray.
+		codeHash = crypto.Keccak256Hash(nil)
+	}
+
+	// create the proof for the storageKeys
+	for i, key := range storageKeys {
+		if storageTrie != nil {
+			proof, storageError := state.GetStorageProof(address, common.HexToHash(key))
+			if storageError != nil {
+				return nil, storageError
+			}
+			storageProof[i] = StorageResult{key, (*hexutil.Big)(state.GetState(address, common.HexToHash(key)).Big()), common.ToHexArray(proof)}
+		} else {
+			storageProof[i] = StorageResult{key, &hexutil.Big{}, []string{}}
+		}
+	}
+
+	// create the accountProof
+	accountProof, proofErr := state.GetProof(address)
+	if proofErr != nil {
+		return nil, proofErr
+	}
+
+	return &AccountResult{
+		Address:      address,
+		AccountProof: common.ToHexArray(accountProof),
+		Balance:      (*hexutil.Big)(state.GetBalance(address)),
+		CodeHash:     codeHash,
+		Nonce:        hexutil.Uint64(state.GetNonce(address)),
+		StorageHash:  storageHash,
+		StorageProof: storageProof,
+	}, state.Error()
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -915,7 +913,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
-	fields["witness"] = b.Witness()
+
 	return fields, nil
 }
 
@@ -1323,7 +1321,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 //
 // The account associated with addr must be unlocked.
 //
-// https://github.com/etherzero/wiki/wiki/JSON-RPC#eth_sign
+// https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
 func (s *PublicTransactionPoolAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}

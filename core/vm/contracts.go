@@ -26,10 +26,7 @@ import (
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/crypto/bn256"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/crypto/secp256k1"
-	"github.com/etherzero/go-etherzero/log"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -60,8 +57,6 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}): &bn256Add{},
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
-	common.BytesToAddress([]byte{9}): &peeridrecover{},
-	common.BytesToAddress([]byte{11}): &ecrecoverByPublicKey{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -121,7 +116,7 @@ func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	return h[:], nil
 }
 
-// RIPMED160 implemented as a native contract.
+// RIPEMD160 implemented as a native contract.
 type ripemd160hash struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
@@ -363,43 +358,3 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 	}
 	return false32Byte, nil
 }
-
-type peeridrecover struct{}
-
-func (c *peeridrecover) RequiredGas(input []byte) uint64 {
-	return params.PeeridrecoverGas
-}
-
-func (c *peeridrecover) Run(input []byte) ([]byte, error) {
-	if len(input) < 97 {
-		return nil, nil
-	}
-	//input = common.RightPadBytes(input, 128)
-
-	key, err := secp256k1.RecoverPubkey(input[:32], input[32:97])
-	if err != nil || len(key) != 65 {
-		log.Error("peeridrecover", "error", err)
-		return nil, nil
-	}
-	return key[1:9], nil
-}
-
-type ecrecoverByPublicKey struct{}
-
-func (c *ecrecoverByPublicKey) RequiredGas(input []byte) uint64 {
-	return params.EcrecoverGas
-}
-
-func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
-	if len(input) < 64 {
-		return nil, nil
-	}
-	NodeID := discover.MustBytesID(input[0:64])
-	key, err := NodeID.Pubkey()
-	if err != nil {
-		return nil, nil
-	}
-	addr := crypto.PubkeyToAddress(*key)
-	return common.LeftPadBytes(addr[:], 32), nil
-}
-

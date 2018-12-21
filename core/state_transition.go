@@ -28,14 +28,14 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient power to pay for gas * gasPrice")
+	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 )
 
 /*
 The State Transitioning Model
 
 A state transition is a change made when a transaction is applied to the current world state
-The state transitioning model does all all the necessary work to work out a valid new state root.
+The state transitioning model does all the necessary work to work out a valid new state root.
 
 1) Nonce handling
 2) Pre pay gas
@@ -151,7 +151,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-	if st.state.GetPower(st.msg.From(), st.evm.BlockNumber).Cmp(mgval) < 0 {
+	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
@@ -160,7 +160,7 @@ func (st *StateTransition) buyGas() error {
 	st.gas += st.msg.Gas()
 
 	st.initialGas = st.msg.Gas()
-	st.state.SubPower(st.msg.From(), mgval, st.evm.BlockNumber)
+	st.state.SubBalance(st.msg.From(), mgval)
 	return nil
 }
 
@@ -178,8 +178,8 @@ func (st *StateTransition) preCheck() error {
 }
 
 // TransitionDb will transition the state by applying the current message and
-// returning the result including the the used gas. It returns an error if it
-// failed. An error indicates a consensus issue.
+// returning the result including the used gas. It returns an error if failed.
+// An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
 		return
@@ -222,7 +222,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		}
 	}
 	st.refundGas()
-	//st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return ret, st.gasUsed(), vmerr != nil, err
 }
@@ -237,7 +237,7 @@ func (st *StateTransition) refundGas() {
 
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	st.state.AddPower(st.msg.From(), remaining)
+	st.state.AddBalance(st.msg.From(), remaining)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

@@ -24,16 +24,13 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/clique"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/ethash"
-	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/bloombits"
 	"github.com/etherzero/go-etherzero/core/rawdb"
@@ -52,7 +49,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 type LesServer interface {
@@ -91,11 +87,9 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
-	witness   string
 
-	networkID         uint64
-	netRPCService     *ethapi.PublicNetAPI
-	masternodeManager *MasternodeManager
+	networkID     uint64
+	netRPCService *ethapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -108,12 +102,18 @@ func (s *Ethereum) AddLesServer(ls LesServer) {
 // New creates a new Ethereum object (including the
 // initialisation of the common Ethereum object)
 func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
+	// Ensure configuration values are compatible and sane
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run eth.Ethereum in light sync mode, use les.LightEthereum")
 	}
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
+	if config.MinerGasPrice == nil || config.MinerGasPrice.Cmp(common.Big0) <= 0 {
+		log.Warn("Sanitizing invalid miner gas price", "provided", config.MinerGasPrice, "updated", DefaultConfig.MinerGasPrice)
+		config.MinerGasPrice = new(big.Int).Set(DefaultConfig.MinerGasPrice)
+	}
+	// Assemble the Ethereum object
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
@@ -130,15 +130,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, &config.Ethash, chainConfig, chainDb),
+		engine:         CreateConsensusEngine(ctx, chainConfig, &config.Ethash, config.MinerNotify, config.MinerNoverify, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
-		gasPrice:       config.GasPrice,
+		gasPrice:       config.MinerGasPrice,
 		etherbase:      config.Etherbase,
-		witness:        config.Witness,
-
-		bloomRequests: make(chan chan *bloombits.Retrieval),
-		bloomIndexer:  NewBloomIndexer(chainDb, params.BloomBitsBlocks),
+		bloomRequests:  make(chan chan *bloombits.Retrieval),
+		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 	}
 
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId)
@@ -146,15 +144,19 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, core.BlockChainVersion)
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, core.BlockChainVersion)
 		}
 		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
 	}
 	var (
-		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+		vmConfig = vm.Config{
+			EnablePreimageRecording: config.EnablePreimageRecording,
+			EWASMInterpreter:        config.EWASMInterpreter,
+			EVMInterpreter:          config.EVMInterpreter,
+		}
+		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieCleanLimit: config.TrieCleanCache, TrieDirtyLimit: config.TrieDirtyCache, TrieTimeLimit: config.TrieTimeout}
 	)
-	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, eth.chainConfig, eth.engine, vmConfig)
+	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, eth.chainConfig, eth.engine, vmConfig, eth.shouldPreserve)
 	if err != nil {
 		return nil, err
 	}
@@ -174,25 +176,14 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(eth.chainDb), eth.blockchain.CurrentBlock().Header().Protocol)
 
-	contractBackend := NewContractBackend(eth)
-	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(devoteDB, eth.blockchain, contract, eth.txPool); err != nil {
-		return nil, err
-	}
-	eth.protocolManager.mm = eth.masternodeManager
+	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine, config.MinerRecommit, config.MinerGasFloor, config.MinerGasCeil, eth.isLocalBlock)
+	eth.miner.SetExtra(makeExtraData(config.MinerExtraData))
 
-	if devote, ok := eth.engine.(*devote.Devote); ok {
-		devote.Masternodes(eth.masternodeManager.MasternodeList)
-		devote.GetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
-	}
-	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
-	eth.miner.SetExtra(makeExtraData(config.ExtraData))
 	eth.APIBackend = &EthAPIBackend{eth, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
+		gpoParams.Default = config.MinerGasPrice
 	}
 	eth.APIBackend.gpo = gasprice.NewOracle(eth.APIBackend, gpoParams)
 
@@ -229,18 +220,11 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
-
-	// If proof-of-stake is requested, set it up
-	if chainConfig.Devote != nil {
-		return devote.NewDevote(chainConfig.Devote, db)
-	}
-
+func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
-
 	// Otherwise assume proof-of-work
 	switch config.PowMode {
 	case ethash.ModeFake:
@@ -248,7 +232,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 		return ethash.NewFaker()
 	case ethash.ModeTest:
 		log.Warn("Ethash used in test mode")
-		return ethash.NewTester()
+		return ethash.NewTester(nil, noverify)
 	case ethash.ModeShared:
 		log.Warn("Ethash used in shared mode")
 		return ethash.NewShared()
@@ -260,7 +244,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chai
 			DatasetDir:     config.DatasetDir,
 			DatasetsInMem:  config.DatasetsInMem,
 			DatasetsOnDisk: config.DatasetsOnDisk,
-		})
+		}, notify, noverify)
 		engine.SetThreads(-1) // Disable CPU mining
 		return engine
 	}
@@ -273,6 +257,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
@@ -349,6 +334,60 @@ func (s *Ethereum) Etherbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
 }
 
+// isLocalBlock checks whether the specified block is mined
+// by local miner accounts.
+//
+// We regard two types of accounts as local miner account: etherbase
+// and accounts specified via `txpool.locals` flag.
+func (s *Ethereum) isLocalBlock(block *types.Block) bool {
+	author, err := s.engine.Author(block.Header())
+	if err != nil {
+		log.Warn("Failed to retrieve block author", "number", block.NumberU64(), "hash", block.Hash(), "err", err)
+		return false
+	}
+	// Check whether the given address is etherbase.
+	s.lock.RLock()
+	etherbase := s.etherbase
+	s.lock.RUnlock()
+	if author == etherbase {
+		return true
+	}
+	// Check whether the given address is specified by `txpool.local`
+	// CLI flag.
+	for _, account := range s.config.TxPool.Locals {
+		if account == author {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldPreserve checks whether we should preserve the given block
+// during the chain reorg depending on whether the author of block
+// is a local account.
+func (s *Ethereum) shouldPreserve(block *types.Block) bool {
+	// The reason we need to disable the self-reorg preserving for clique
+	// is it can be probable to introduce a deadlock.
+	//
+	// e.g. If there are 7 available signers
+	//
+	// r1   A
+	// r2     B
+	// r3       C
+	// r4         D
+	// r5   A      [X] F G
+	// r6    [X]
+	//
+	// In the round5, the inturn signer E is offline, so the worst case
+	// is A, F and G sign the block of round5 and reject the block of opponents
+	// and in the round6, the last available signer B is offline, the whole
+	// network is stuck.
+	if _, ok := s.engine.(*clique.Clique); ok {
+		return false
+	}
+	return s.isLocalBlock(block)
+}
+
 // SetEtherbase sets the mining reward address.
 func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Lock()
@@ -358,77 +397,66 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
-func (s *Ethereum) Witness() (witness string, err error) {
-	s.lock.RLock()
-	witness = s.witness
-	s.lock.RUnlock()
-
-	if witness != "" {
-		return witness, nil
+// StartMining starts the miner with the given number of CPU threads. If mining
+// is already running, this method adjust the number of threads allowed to use
+// and updates the minimum price required by the transaction pool.
+func (s *Ethereum) StartMining(threads int) error {
+	// Update the thread count within the consensus engine
+	type threaded interface {
+		SetThreads(threads int)
 	}
-	//if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
-	//	if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-	//		fmt.Printf("backend Witness accounts: %x \n", accounts[0].Address)
-	//		return accounts[0].Address, nil
-	//	}
-	//}
-	if s.masternodeManager.active != nil {
-		fmt.Printf("backend Witness accounts: %x \n", s.masternodeManager.active.ID)
-		return s.masternodeManager.active.ID, nil
-	}
-	return "", fmt.Errorf("Witness  must be explicitly specified")
-}
-
-// set in js console via admin interface or wrapper from cli flags
-func (self *Ethereum) SetWitness(witness string) {
-	self.lock.Lock()
-	self.witness = witness
-	self.lock.Unlock()
-}
-
-func (s *Ethereum) StartMining(local bool) error {
-	witness, err := s.Witness()
-	fmt.Printf("backend StartMining witness:%s\n", witness)
-	if err != nil {
-		log.Error("Cannot start mining without Witness", "err", err)
-		return fmt.Errorf("Witness missing: %v", err)
-	}
-	//if clique, ok := s.engine.(*clique.Clique); ok {
-	//	wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
-	//	if wallet == nil || err != nil {
-	//		log.Error("Etherbase account unavailable locally", "err", err)
-	//		return fmt.Errorf("signer missing: %v", err)
-	//	}
-	//	clique.Authorize(witness, wallet.SignHash)
-	//}
-	eb, err := s.Etherbase()
-	if devote, ok := s.engine.(*devote.Devote); ok {
-		//wallet, err := s.accountManager.Find(accounts.Account{Address: witness})
-		//if wallet == nil || err != nil {
-		//	log.Error("Coinbase account unavailable locally", "err", err)
-		//	return fmt.Errorf("signer missing: %v", err)
-		//}
-
-		active := s.masternodeManager.active
-		if active == nil {
-			log.Error("Active Masternode is nil")
-			return fmt.Errorf("signer missing: %v", errors.New("Active Masternode is nil"))
+	if th, ok := s.engine.(threaded); ok {
+		log.Info("Updated mining threads", "threads", threads)
+		if threads == 0 {
+			threads = -1 // Disable the miner from within
 		}
-		devote.Authorize(witness, active.SignHash)
+		th.SetThreads(threads)
 	}
+	// If the miner was not running, initialize it
+	if !s.IsMining() {
+		// Propagate the initial price point to the transaction pool
+		s.lock.RLock()
+		price := s.gasPrice
+		s.lock.RUnlock()
+		s.txPool.SetGasPrice(price)
 
-	if local {
-		// If local (CPU) mining is started, we can disable the transaction rejection
-		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
-		// so none will ever hit this path, whereas marking sync done on CPU mining
-		// will ensure that private networks work in single miner mode too.
+		// Configure the local mining address
+		eb, err := s.Etherbase()
+		if err != nil {
+			log.Error("Cannot start mining without etherbase", "err", err)
+			return fmt.Errorf("etherbase missing: %v", err)
+		}
+		if clique, ok := s.engine.(*clique.Clique); ok {
+			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+			if wallet == nil || err != nil {
+				log.Error("Etherbase account unavailable locally", "err", err)
+				return fmt.Errorf("signer missing: %v", err)
+			}
+			clique.Authorize(eb, wallet.SignHash)
+		}
+		// If mining is started, we can disable the transaction rejection mechanism
+		// introduced to speed sync times.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+
+		go s.miner.Start(eb)
 	}
-	go s.miner.Start(eb)
 	return nil
 }
 
-func (s *Ethereum) StopMining()         { s.miner.Stop() }
+// StopMining terminates the miner, both at the consensus engine level as well as
+// at the block creation level.
+func (s *Ethereum) StopMining() {
+	// Update the thread count within the consensus engine
+	type threaded interface {
+		SetThreads(threads int)
+	}
+	if th, ok := s.engine.(threaded); ok {
+		th.SetThreads(-1)
+	}
+	// Stop the block creating itself
+	s.miner.Stop()
+}
+
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
 func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 
@@ -443,9 +471,6 @@ func (s *Ethereum) EthVersion() int                    { return int(s.protocolMa
 func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
-func (s *Ethereum) MastenrodeManager() *MasternodeManager { return s.masternodeManager }
-func (s *Ethereum) DevoteDB() *devotedb.DevoteDB { return s.masternodeManager.devoteDB }
-
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
 func (s *Ethereum) Protocols() []p2p.Protocol {
@@ -459,7 +484,7 @@ func (s *Ethereum) Protocols() []p2p.Protocol {
 // Ethereum protocol implementation.
 func (s *Ethereum) Start(srvr *p2p.Server) error {
 	// Start the bloom bits servicing goroutines
-	s.startBloomHandlers()
+	s.startBloomHandlers(params.BloomBitsBlocks)
 
 	// Start the RPC service
 	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
@@ -474,40 +499,10 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
-	go s.startMasternode(srvr)
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
-
 	return nil
-}
-
-// SubscribeVoteEvent registers a subscription of VoteEvent and
-// starts sending event to the given channel.
-//func (s *Ethereum) SubscribeVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
-//	return s.masternodeManager.SubscribeVoteEvent(ch)
-//}
-
-// SubscribePingEvent registers a subscription of PingEvent and
-// starts sending event to the given channel.
-//func (s *Ethereum) SubscribePingEvent(ch chan<- core.PingEvent) event.Subscription {
-//	return s.masternodeManager.SubscribePingEvent(ch)
-//}
-
-func (s *Ethereum) startMasternode(srvr *p2p.Server) {
-	t := time.NewTimer(5 * time.Second)
-	for {
-		select {
-		case <-t.C:
-			if s.Downloader().Synchronising() {
-				t.Reset(5 * time.Second)
-				break
-			}
-			s.masternodeManager.Start(srvr, s.protocolManager.peers, s.Downloader())
-			break
-		}
-	}
-
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
@@ -515,6 +510,7 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server) {
 func (s *Ethereum) Stop() error {
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
+	s.engine.Close()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()
@@ -525,6 +521,5 @@ func (s *Ethereum) Stop() error {
 
 	s.chainDb.Close()
 	close(s.shutdownChan)
-
 	return nil
 }
