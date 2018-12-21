@@ -38,7 +38,6 @@ import (
 	"strings"
 	"fmt"
 	"github.com/etherzero/go-etherzero/p2p/discover"
-	"github.com/etherzero/go-etherzero/enodetools"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -259,68 +258,70 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
+
 // EnodeCount
 // get the numbers contains in the enodeinfo contract
 func (b *EthAPIBackend) EnodeCount() (ret uint64) {
-	if b.eth.masternodeManager.enodeinfoContract == nil {
-		fmt.Println("Not wait for 10 seconds until finish initializing")
-		return
-	}
-
-	data, err := b.eth.masternodeManager.enodeinfoContract.GetCount(nil)
-	if err != nil {
-		fmt.Errorf("enodeinfoContract.GetCount error %v\n", err)
-		return
-	}
-	if data != nil {
-		ret = data.Uint64()
-	}
+	//if b.eth.masternodeManager.enodeinfoContract == nil {
+	//	fmt.Println("Not wait for 10 seconds until finish initializing")
+	//	return
+	//}
+	//
+	//data, err := b.eth.masternodeManager.enodeinfoContract.GetCount(nil)
+	//if err != nil {
+	//	fmt.Errorf("enodeinfoContract.GetCount error %v\n", err)
+	//	return
+	//}
+	//if data != nil {
+	//	ret = data.Uint64()
+	//}
 
 	return
 }
 
 // GetEnode named by id
 func (b *EthAPIBackend) GetEnode(nodeid string) (enodeinfo string) {
-	if b.eth.masternodeManager.enodeinfoContract == nil {
-		enodeinfo = "wait for 10 seconds until finish initializing"
-		return
-	}
-
-	var id [8]byte
-	nodebyte, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
-	if err != nil {
-		fmt.Printf("err %v\n", err)
-		enodeinfo = fmt.Sprintf("nodeid is illegal  %v", nodeid)
-		return
-	}
-	fmt.Printf("nodebyte is %v", len(nodebyte))
-
-	if nodebyte[:] == nil || len(nodebyte) != int(8) {
-		enodeinfo = fmt.Sprintf("nodeid is illegal  %v\n", nodebyte)
-		return
-	}
-
-	copy(id[:], nodebyte)
-	fmt.Printf("nodeid %v \n", id)
-
-	data, err := b.eth.masternodeManager.enodeinfoContract.GetSingleEnode(nil, id)
-	if err != nil {
-		fmt.Errorf("enodeinfoContract.GetSingleEnode error %v\n", err)
-		return
-	}
-	fmt.Printf("data.Id1 %v ,data.Id2 %v,data.IpPort %v\n", data.Id1, data.Id2, data.Ipport)
-
-	if data.Id1 == [32]byte{} ||
-		data.Id2 == [32]byte{} ||
-		len(data.Id1) != 32 ||
-		len(data.Id2) != 32 ||
-		data.Ipport == uint64(0) {
-		enodeinfo = fmt.Sprintf("No enodeinfo storaged for nodeid %v", nodeid)
-		return
-	}
-
-	node := enodetools.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
-	return node.String()
+	//if b.eth.masternodeManager.enodeinfoContract == nil {
+	//	enodeinfo = "wait for 10 seconds until finish initializing"
+	//	return
+	//}
+	//
+	//var id [8]byte
+	//nodebyte, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
+	//if err != nil {
+	//	fmt.Printf("err %v\n", err)
+	//	enodeinfo = fmt.Sprintf("nodeid is illegal  %v", nodeid)
+	//	return
+	//}
+	//fmt.Printf("nodebyte is %v", len(nodebyte))
+	//
+	//if nodebyte[:] == nil || len(nodebyte) != int(8) {
+	//	enodeinfo = fmt.Sprintf("nodeid is illegal  %v\n", nodebyte)
+	//	return
+	//}
+	//
+	//copy(id[:], nodebyte)
+	//fmt.Printf("nodeid %v \n", id)
+	//
+	//data, err := b.eth.masternodeManager.enodeinfoContract.GetSingleEnode(nil, id)
+	//if err != nil {
+	//	fmt.Errorf("enodeinfoContract.GetSingleEnode error %v\n", err)
+	//	return
+	//}
+	//fmt.Printf("data.Id1 %v ,data.Id2 %v,data.IpPort %v\n", data.Id1, data.Id2, data.Ipport)
+	//
+	//if data.Id1 == [32]byte{} ||
+	//	data.Id2 == [32]byte{} ||
+	//	len(data.Id1) != 32 ||
+	//	len(data.Id2) != 32 ||
+	//	data.Ipport == uint64(0) {
+	//	enodeinfo = fmt.Sprintf("No enodeinfo storaged for nodeid %v", nodeid)
+	//	return
+	//}
+	//
+	//node := enodetools.NewDiscoverNode(data.Id1, data.Id2, data.Ipport)
+	//return node.String()
+	return
 }
 
 // Masternodes return masternode contract data

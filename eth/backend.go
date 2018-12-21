@@ -51,7 +51,6 @@ import (
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
-	contract2 "github.com/etherzero/go-etherzero/contracts/enodeinfo/contract"
 	"time"
 )
 
@@ -181,12 +180,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-	contractBackendEnodeInfo := NewContractBackend(eth)
-	contractEnodeInfo, err := contract2.NewContract(params.EnodeinfoAddress, contractBackendEnodeInfo)
 
 	contractBackend := NewContractBackend(eth)
 	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, contractEnodeInfo, eth.txPool); err != nil {
+	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, eth.txPool); err != nil {
 		return nil, err
 	}
 
