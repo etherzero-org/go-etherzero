@@ -144,6 +144,7 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+	DevoteDB     *devotedb.DevoteDB
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -307,7 +308,8 @@ func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Ext
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
+func (b *Block) Body() *Body                  { return &Body{b.transactions, b.uncles} }
+func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.

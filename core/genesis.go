@@ -276,8 +276,9 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
-
-	return types.NewBlock(head, nil, nil, nil)
+	block := types.NewBlock(head, nil, nil, nil)
+	block.DevoteDB = devoteDB
+	return block
 }
 
 // Commit writes the block and state of a genesis specification to the database.

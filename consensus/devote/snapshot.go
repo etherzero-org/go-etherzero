@@ -19,188 +19,170 @@
 package devote
 
 import (
+	"encoding/binary"
+	"errors"
+	"fmt"
 	"math/big"
 	"sort"
 	"sync"
-	"strings"
 
-	"encoding/json"
-	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/hashicorp/golang-lru"
 )
 
-const (
-	Epoch = 600
-	Period = 1
-)
-
-type Snapshot struct {
-	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+type Controller struct {
+	devoteDB  *devotedb.DevoteDB
 	TimeStamp uint64
-
-	mu       sync.Mutex
-	sigcache *lru.ARCCache       // Cache of recent block signatures to speed up ecrecover
-	Hash     common.Hash         //Block hash where the snapshot was created
-	Number   uint64              //Cycle number where the snapshot was created
-	Cycle    uint64              //Cycle number where the snapshot was created
-	Signers  map[string]struct{} //Set of authorized masternodes at this cycle
-	Recents  map[uint64]string   // set of recent masternodes for spam protections
-
+	mu        sync.Mutex
 }
 
-func newSnapshot(config *params.DevoteConfig,number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Snapshot {
-
-	snapshot := &Snapshot{
-		config:config,
-		Signers:  make(map[string]struct{}),
-		Recents:  make(map[uint64]string),
-		Number:   number,
-		Cycle:    cycle,
-		Hash:     hash,
-		sigcache: signatures,
+func Newcontroller(devoteDB *devotedb.DevoteDB) *Controller {
+	controller := &Controller{
+		devoteDB: devoteDB,
 	}
-	for i := 0; i < len(signers); i++ {
-		signer := signers[i]
-		snapshot.Signers[signer] = struct{}{}
-	}
-	return snapshot
+	return controller
 }
 
-// loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.Get(append([]byte("devote-"), hash[:]...))
+// masternodes return  masternode list in the Cycle.
+// key   -- nodeid
+// value -- votes count
+
+func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	list := make(map[string]*big.Int)
+	for i := 0; i < len(nodes); i++ {
+		masternode := nodes[i]
+		hash := make([]byte, 8)
+		hash = append(hash, []byte(masternode)...)
+		hash = append(hash, parent.Hash().Bytes()...)
+		weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+
+		score := big.NewInt(0)
+		score.Add(score, big.NewInt(weight))
+		log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
+		list[masternode] = score
+	}
+	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
+	return list, nil
+}
+
+//when a node does't work in the current cycle, Remove from candidate nodes.
+func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
+
+	witnesses, err := ec.devoteDB.GetWitnesses(cycle)
 	if err != nil {
-		return nil, err
+		return nodes, fmt.Errorf("failed to get witness: %s", err)
 	}
-	snap := new(Snapshot)
-	if err := json.Unmarshal(blob, snap); err != nil {
-		return nil, err
+	if len(witnesses) == 0 {
+		return nodes, errors.New("no witness could be uncast")
 	}
-	snap.sigcache = sigcache
+	needUncastWitnesses := sortableAddresses{}
+	for _, witness := range witnesses {
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, cycle)
+		// TODO
+		key = append(key, []byte(witness)...)
 
-	return snap, nil
-}
-
-// copy creates a deep copy of the snapshot, though not the individual votes.
-func (s *Snapshot) copy() *Snapshot {
-	cpy := &Snapshot{
-		sigcache: s.sigcache,
-		Number:   s.Number,
-		Hash:     s.Hash,
-		Signers:  make(map[string]struct{}),
-		Recents:  make(map[uint64]string),
+		size := uint64(0)
+		size = ec.devoteDB.GetStatsNumber(key)
+		if size < 1 {
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
+		}
+		log.Debug("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
 	}
-	for signer := range s.Signers {
-		cpy.Signers[signer] = struct{}{}
+	// no witnessees need uncast
+	needUncastWitnessCnt := len(needUncastWitnesses)
+	if needUncastWitnessCnt <= 0 {
+		return nodes, nil
 	}
-	for block, signer := range s.Recents {
-		cpy.Recents[block] = signer
-	}
-
-	return cpy
-}
-
-// apply creates a new authorization snapshot by applying the given headers to
-// the original one.
-func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
-	// Allow passing in no headers for cleaner code
-	if len(headers) == 0 {
-		return s, nil
-	}
-	// Sanity check that the headers can be applied
-	for i := 0; i < len(headers)-1; i++ {
-		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
-			return nil, errInvalidVotingChain
+	for _, witness := range needUncastWitnesses {
+		j := 0
+		for _, s := range nodes {
+			if s != witness.nodeid {
+				nodes[j] = s
+				j++
+			}
 		}
 	}
-	if headers[0].Number.Uint64() != s.Number+1 {
-		return nil, errInvalidVotingChain
+	return nodes, nil
+}
+
+func (ec *Controller) lookup(now uint64) (witness string, err error) {
+
+	offset := now % params.CycleInterval
+	if offset%params.BlockInterval != 0 {
+		err = ErrInvalidMinerBlockTime
+		return
 	}
-	// Iterate through the headers and create a new snapshot
-	snap := s.copy()
+	offset /= params.BlockInterval
+	witnesses, err := ec.devoteDB.GetWitnesses(ec.devoteDB.GetCycle())
+	if err != nil {
+		return
+	}
 
-	for _, header := range headers {
-		// Remove any votes on checkpoint blocks
-		number := header.Number.Uint64()
+	witnessSize := len(witnesses)
+	if witnessSize == 0 {
+		err = errors.New("failed to lookup witness")
+		return
+	}
+	offset %= uint64(witnessSize)
+	witness = witnesses[offset]
+	return
+}
 
-		// Delete the oldest signer from the recent list to allow it signing again
-		if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
-			delete(snap.Recents, number-limit)
+func (self *Controller) election(genesis, first, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) error {
+
+	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
+	prevCycle := parent.Time.Uint64() / params.CycleInterval
+	currentCycle := self.TimeStamp / params.CycleInterval
+
+	prevCycleIsGenesis := (prevCycle == genesisCycle)
+	if prevCycleIsGenesis && prevCycle < currentCycle {
+		prevCycle = currentCycle - 1
+	}
+	prevCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+
+	for i := prevCycle; i < currentCycle; i++ {
+		// if prevCycle is not genesis, uncast not active masternode
+		list := make([]string, len(nodes))
+		copy(list, nodes)
+		if !prevCycleIsGenesis {
+			list, _ = self.uncast(prevCycle, nodes)
 		}
-		// Resolve the authorization key and check against signers
-		signer, err := ecrecover(header, s.sigcache)
+
+		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
 		if err != nil {
-			return nil, err
+			log.Error("init masternodes ", "err", err)
+			return err
 		}
-		if _, ok := snap.Signers[signer]; !ok {
-			return nil, errUnauthorizedSigner
+		masternodes := sortableAddresses{}
+		for masternode, cnt := range votes {
+			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
-		for _, recent := range snap.Recents {
-			if recent == signer {
-				//fmt.Printf("devote verifySeal signer:%x  not in signers ,%s\n",snap.Recents)
-				return nil, errUnauthorizedSigner
-			}
+		if len(masternodes) < safeSize {
+			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
 		}
-		snap.Recents[number] = signer
-	}
-	snap.Number += uint64(len(headers))
-	snap.Hash = headers[len(headers)-1].Hash()
-
-	//fmt.Printf("snapshot.go apply recents %s \n",snap.Recents)
-	return snap, nil
-}
-
-// store inserts the snapshot into the database.
-func (c *Snapshot) store(db ethdb.Database) error {
-	blob, err := json.Marshal(c)
-	if err != nil {
-		return err
-	}
-	return db.Put(append([]byte("devote-"), c.Hash[:]...), blob)
-}
-
-// signers retrieves the list of authorized signers in ascending order.
-func (s *Snapshot) signers() []string {
-	signers := make([]string, 0, len(s.Signers))
-	for signer := range s.Signers {
-		signers = append(signers, signer)
-	}
-	for i := 0; i < len(signers); i++ {
-		for j := i + 1; j < len(signers); j++ {
-			if strings.Compare(signers[i], signers[j]) > 0 {
-				signers[i], signers[j] = signers[j], signers[i]
-			}
+		sort.Sort(masternodes)
+		if len(masternodes) > int(maxWitnessSize) {
+			masternodes = masternodes[:maxWitnessSize]
 		}
+		var sortedWitnesses []string
+		for _, node := range masternodes {
+			sortedWitnesses = append(sortedWitnesses, node.nodeid)
+		}
+		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
+		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
+		self.devoteDB.Commit()
+		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
 	}
-	return signers
+	return nil
 }
-
-// inturn returns if a signer at a given block height is in-turn or not.
-func (d *Snapshot) inturn(number uint64, signer string) bool {
-
-	var signers []string
-	for signer := range d.Signers {
-		signers= append(signers, signer)
-	}
-	sort.Strings(signers)
-	offset := 0
-	for offset < len(signers) && signers[offset] != signer {
-		offset++
-	}
-	//fmt.Printf("devote snapshot check signer inturn offset%d, number%d, value%d \n",offset,number,(number % uint64(len(signers))))
-	return (number % uint64(len(signers))) == uint64(offset)
-}
-
-// validVote returns whether it makes sense to cast the specified vote in the
-// given snapshot context (e.g. don't try to add an already authorized signer).
-func (s *Snapshot) validWitness(witness string, authorize bool) bool {
-	_, signer := s.Signers[witness]
-	return (signer && !authorize) || (!signer && authorize)
-}
-
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid

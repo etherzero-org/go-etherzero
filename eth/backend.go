@@ -238,7 +238,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	// If Masternode is requested, set it up
 	if chainConfig.Devote != nil {
-		return devote.New(chainConfig.Devote, db)
+		return devote.NewDevote(chainConfig.Devote, db)
 	}
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
