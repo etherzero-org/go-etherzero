@@ -488,19 +488,19 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	header := block.Header()
 	number := header.Number.Uint64()
 	// Sealing the genesis block is not supported
 	if number == 0 {
-		return nil, errUnknownBlock
+		return errUnknownBlock
 	}
 	now := time.Now().Unix()
 	delay := int64(NextSlot(uint64(now))) - now
 	if delay > 0 {
 		select {
 		case <-stop:
-			return nil, nil
+			return nil
 		case <-time.After(time.Duration(delay) * time.Second):
 		}
 	}
@@ -511,10 +511,13 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	// time's up, sign the block
 	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
-	return block.WithSeal(header), nil
+
+	result := block.WithSeal(header)
+	results <- result
+	return nil
 }
 
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
@@ -587,4 +590,9 @@ func (d *Devote) APIs(chain consensus.ChainReader) []rpc.API {
 // Close implements consensus.Engine. It's a noop for Devote as there is are no background threads.
 func (c *Devote) Close() error {
 	return nil
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func (c *Devote) SealHash(header *types.Header) common.Hash {
+	return sigHash(header)
 }

@@ -24,13 +24,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
+	"github.com/deckarep/golang-set"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
@@ -91,6 +92,7 @@ type environment struct {
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
+	devoteDB *devotedb.DevoteDB
 }
 
 // task contains all information for consensus engine sealing and result submitting.
@@ -102,7 +104,7 @@ type task struct {
 }
 
 const (
-	commitInterruptNone int32 = iota
+	commitInterruptNone     int32 = iota
 	commitInterruptNewHead
 	commitInterruptResubmit
 )
@@ -476,7 +478,7 @@ func (w *worker) mainLoop() {
 			}
 			atomic.AddInt32(&w.newTxs, int32(len(ev.Txs)))
 
-		// System stopped
+			// System stopped
 		case <-w.exitCh:
 			return
 		case <-w.txsSub.Err():
@@ -613,6 +615,10 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	if err != nil {
 		return err
 	}
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(w.eth.ChainDb()), parent.Header().Protocol)
+	if err != nil {
+		return err
+	}
 	env := &environment{
 		signer:    types.NewEIP155Signer(w.config.ChainID),
 		state:     state,
@@ -620,6 +626,7 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 		family:    mapset.NewSet(),
 		uncles:    mapset.NewSet(),
 		header:    header,
+		devoteDB:  devoteDB,
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -953,10 +960,11 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 		*receipts[i] = *l
 	}
 	s := w.current.state.Copy()
-	block, err := w.engine.Finalize(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts)
+	block, err := w.engine.Finalize(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts, w.current.devoteDB)
 	if err != nil {
 		return err
 	}
+	block.DevoteDB = w.current.devoteDB
 	if w.isRunning() {
 		if interval != nil {
 			interval()

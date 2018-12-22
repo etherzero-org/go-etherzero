@@ -137,3 +137,16 @@ func CalcGasLimit(parent *types.Block, gasFloor, gasCeil uint64) uint64 {
 	}
 	return limit
 }
+
+func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
+	header := block.Header()
+	localRoot := block.DevoteDB.Root()
+	remoteRoot := header.Protocol.Root()
+	if remoteRoot != localRoot {
+		fmt.Printf(" StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
+		fmt.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
+		fmt.Printf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
+		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
+	}
+	return nil
+}

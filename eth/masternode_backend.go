@@ -38,6 +38,7 @@ import (
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/p2p/discover"
 	"net"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -63,6 +64,7 @@ type MasternodeManager struct {
 	txPool *core.TxPool
 
 	downloader *downloader.Downloader
+	devoteDB   *devotedb.DevoteDB
 }
 
 func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
