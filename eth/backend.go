@@ -30,11 +30,14 @@ import (
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/clique"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/ethash"
+	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/bloombits"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/eth/filters"
@@ -49,10 +52,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/consensus/devote"
-	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"time"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 type LesServer interface {
@@ -182,9 +182,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(eth.chainDb), eth.blockchain.CurrentBlock().Header().Protocol)
 	contractBackend := NewContractBackend(eth)
 	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, eth.txPool); err != nil {
+	if eth.masternodeManager = NewMasternodeManager(devoteDB, eth.blockchain, contract, eth.txPool); err != nil {
 		return nil, err
 	}
 

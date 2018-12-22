@@ -67,10 +67,11 @@ type MasternodeManager struct {
 	devoteDB   *devotedb.DevoteDB
 }
 
-func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
+func NewMasternodeManager(dp *devotedb.DevoteDB, blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
+		devoteDB:   dp,
 		blockchain: blockchain,
 		beats:      make(map[common.Hash]time.Time),
 		Lifetime:   30 * time.Second,
