@@ -20,11 +20,12 @@
 package discover
 
 import (
-	"fmt"
 	"net"
 	"sort"
 	"time"
 
+	"runtime/debug"
+	"sync/atomic"
 	"github.com/etherzero/go-etherzero/log"
 )
 
@@ -41,19 +42,45 @@ func (s durationSlice) Len() int           { return len(s) }
 func (s durationSlice) Less(i, j int) bool { return s[i] < s[j] }
 func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-// checkClockDrift queries an NTP server for clock drifts and warns the user if
+var (
+	nanoDrift = int64(0)
+)
+
+func NanoDrift() int64 {
+	return atomic.LoadInt64(&nanoDrift)
+}
+
+// CheckClockDrift An interface for queries an NTP server for clock drifts and warns the user if
 // one large enough is detected.
-func checkClockDrift() {
-	drift, err := sntpDrift(ntpChecks)
-	if err != nil {
-		return
+// return nanoseconds
+func CheckClockDrift() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warn("CheckClockDrift recover", "err", err)
+			debug.PrintStack()
+		}
+	}()
+
+	for {
+		times := uint8(3)
+	begin:
+		drift, err := sntpDrift(ntpChecks)
+		if err != nil {
+			log.Warn("When NTP drift", "err", err)
+			times--
+			if times == 0 {
+				return
+			}
+			time.Sleep((1 << (uint8(times + 1 - times))) * time.Second) //1,2,4
+			goto begin
+		}
+		atomic.StoreInt64(&nanoDrift, int64(drift))
+		if (drift) >= time.Second {
+			log.Warn("NTP drift is bigger than one second", "drift", drift)
+		}
+		break
 	}
-	if drift < -driftThreshold || drift > driftThreshold {
-		log.Warn(fmt.Sprintf("System clock seems off by %v, which can prevent network connectivity", drift))
-		log.Warn("Please enable network time synchronisation in system settings.")
-	} else {
-		log.Debug("NTP sanity check done", "drift", drift)
-	}
+
 }
 
 // sntpDrift does a naive time resolution against an NTP server and returns the

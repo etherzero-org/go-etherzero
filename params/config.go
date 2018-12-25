@@ -25,63 +25,77 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
+	MainnetGenesisHash = common.HexToHash("0x3db016c328e0f776ea3cabc6139e2f5d51c2528393987ed8361bdb27b3f29f98")
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
 	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
+
+	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
+	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
 )
 
 var (
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
-		HomesteadBlock:      big.NewInt(1150000),
-		DAOForkBlock:        big.NewInt(1920000),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(2463000),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(2675000),
-		EIP158Block:         big.NewInt(2675000),
-		ByzantiumBlock:      big.NewInt(4370000),
-		ConstantinopleBlock: nil,
-		Ethash:              new(EthashConfig),
-	}
+	DevoteChainConfig = &ChainConfig{
+		ChainID:        big.NewInt(90),
+		EtherzeroBlock: big.NewInt(0),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   nil,
+		DAOForkSupport: false,
+		EIP150Block:    big.NewInt(0),
+		EIP150Hash:     common.Hash{},
+		EIP155Block:    big.NewInt(0),
+		EIP158Block:    big.NewInt(0),
+		ByzantiumBlock: big.NewInt(0),
 
-	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
-	MainnetTrustedCheckpoint = &TrustedCheckpoint{
-		Name:         "mainnet",
-		SectionIndex: 206,
-		SectionHead:  common.HexToHash("0x9fa677c7c0580136f5a86d9b2fd29b112e531f0284396298b8809bcb6787b538"),
-		CHTRoot:      common.HexToHash("0x7f32dfb29e341b4c8c10ea2e06a812bcea470366f635b7a8b3d0856684cd76f4"),
-		BloomRoot:    common.HexToHash("0x0169e174f0a8172aec217556d8a25c7ba7ca52aacff170325230a75740ff1eaf"),
+		Devote: &DevoteConfig{
+			Witnesses: []string{
+				"81e4a6821a4d7117",
+				"754ae5a877ff913e",
+				"9e2ebf310caf945d",
+				"5ca084808222e3c8",
+				"b553bcf51ae5f42b",
+				"bbdf34418a2630cf",
+				"7f0dcd95f323b9f2",
+				"35b680724f0cdfed",
+				"65fed3a560cd231a",
+				"2cbd44f1b7b4d8be",
+				"3b9639dadd18a258",
+				"53da176be1538aed",
+				"017c131b2ae66403",
+				"4fa67b7657947783",
+				"4717417a9605535d",
+				"b371992843eaf7cd",
+				"98da296630899f29",
+				"3beabd9d5fceccf6",
+				"6f5381470fb24553",
+				"3b9471c1b4d93a45",
+				"8375c6b34607d06b",
+			},
+		},
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(3),
+		ChainID:             big.NewInt(91),
+		EtherzeroBlock:      big.NewInt(0),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
 		EIP150Block:         big.NewInt(0),
 		EIP150Hash:          common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d"),
-		EIP155Block:         big.NewInt(10),
-		EIP158Block:         big.NewInt(10),
-		ByzantiumBlock:      big.NewInt(1700000),
-		ConstantinopleBlock: big.NewInt(4230000),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: nil,
 		Ethash:              new(EthashConfig),
-	}
-
-	// TestnetTrustedCheckpoint contains the light client trusted checkpoint for the Ropsten test network.
-	TestnetTrustedCheckpoint = &TrustedCheckpoint{
-		Name:         "testnet",
-		SectionIndex: 136,
-		SectionHead:  common.HexToHash("0xe5d80bb08d92bbc12dfe510c64cba01eafcbb4ba585e7c7ab7f8a93c6f295ab3"),
-		CHTRoot:      common.HexToHash("0xe3ca77ab0cb51eec74f4f7458e36aee207c68768387b39cb0bcff0940a6264d8"),
-		BloomRoot:    common.HexToHash("0x30c8eeadac5539d3dcd6e88915d1a07cb2f3a1d6ebe7e553e3ee783c04c68c2d"),
+		Devote: &DevoteConfig{
+			//Witnesses: []string{},
+		},
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	RinkebyChainConfig = &ChainConfig{
 		ChainID:             big.NewInt(4),
+		EtherzeroBlock:      big.NewInt(1),
 		HomesteadBlock:      big.NewInt(1),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -95,15 +109,13 @@ var (
 			Period: 15,
 			Epoch:  30000,
 		},
-	}
-
-	// RinkebyTrustedCheckpoint contains the light client trusted checkpoint for the Rinkeby test network.
-	RinkebyTrustedCheckpoint = &TrustedCheckpoint{
-		Name:         "rinkeby",
-		SectionIndex: 103,
-		SectionHead:  common.HexToHash("0x9f38b903852831bf4fa7992f7fd43d8b26da2deb82b421fb845cf6faee54e056"),
-		CHTRoot:      common.HexToHash("0x2d710c2cea468d2e604838000d658ee213e4abb07f90c4f71f5cd7f8510aa708"),
-		BloomRoot:    common.HexToHash("0xcc401060280c2cc82697ea5ecef8cac61e52063c37533a2e9609332419704d5f"),
+		Devote: &DevoteConfig{
+			Witnesses: []string{
+				"c34c967d399d38f0",
+				"ffb14ca8e65770b4",
+				"de4e2e0521f16469",
+			},
+		},
 	}
 
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
@@ -111,16 +123,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -144,25 +156,29 @@ type TrustedCheckpoint struct {
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
+	EtherzeroBlock *big.Int `json:"EtherzeroBlock,omitempty"` // Etherzero switch block (nil = no fork, 0 = already on Etherzero)
+
 	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
 
 	DAOForkBlock   *big.Int `json:"daoForkBlock,omitempty"`   // TheDAO hard-fork switch block (nil = no fork)
 	DAOForkSupport bool     `json:"daoForkSupport,omitempty"` // Whether the nodes supports or opposes the DAO hard-fork
 
-	// EIP150 implements the Gas price changes (https://github.com/ethereum/EIPs/issues/150)
+	// EIP150 implements the Gas price changes (https://github.com/etherzero/EIPs/issues/150)
 	EIP150Block *big.Int    `json:"eip150Block,omitempty"` // EIP150 HF block (nil = no fork)
 	EIP150Hash  common.Hash `json:"eip150Hash,omitempty"`  // EIP150 HF hash (needed for header only clients as only gas pricing changed)
 
 	EIP155Block *big.Int `json:"eip155Block,omitempty"` // EIP155 HF block
 	EIP158Block *big.Int `json:"eip158Block,omitempty"` // EIP158 HF block
 
-	ByzantiumBlock      *big.Int `json:"byzantiumBlock,omitempty"`      // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+
 	ConstantinopleBlock *big.Int `json:"constantinopleBlock,omitempty"` // Constantinople switch block (nil = no fork, 0 = already activated)
 	EWASMBlock          *big.Int `json:"ewasmBlock,omitempty"`          // EWASM switch block (nil = no fork, 0 = already activated)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+	Devote *DevoteConfig `json:"devote,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -182,6 +198,16 @@ type CliqueConfig struct {
 // String implements the stringer interface, returning the consensus engine details.
 func (c *CliqueConfig) String() string {
 	return "clique"
+}
+
+// MasternodeConfig is the consensus engine configs for devote + delegated proof-of-stake based sealing.
+type DevoteConfig struct {
+	Witnesses []string `json:"witnesses"` // Genesis witness list
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (d *DevoteConfig) String() string {
+	return "devote"
 }
 
 // String implements the fmt.Stringer interface.
@@ -237,6 +263,11 @@ func (c *ChainConfig) IsEIP158(num *big.Int) bool {
 // IsByzantium returns whether num is either equal to the Byzantium fork block or greater.
 func (c *ChainConfig) IsByzantium(num *big.Int) bool {
 	return isForked(c.ByzantiumBlock, num)
+}
+
+// IsEtherzero returns whether num is either equal to the Etherzero masternode fork block or greater.
+func (c *ChainConfig) IsEtherzero(num *big.Int) bool {
+	return isForked(c.EtherzeroBlock, num)
 }
 
 // IsConstantinople returns whether num is either equal to the Constantinople fork block or greater.
@@ -375,7 +406,7 @@ func (err *ConfigCompatError) Error() string {
 	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }
 
-// Rules wraps ChainConfig and is merely syntactic sugar or can be used for functions
+// Rules wraps ChainConfig and is merely syntatic sugar or can be used for functions
 // that do not have or require information about the block.
 //
 // Rules is a one time interface meaning that it shouldn't be used in between transition

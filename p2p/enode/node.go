@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/etherzero/go-etherzero/p2p/enr"
+	"github.com/etherzero/go-etherzero/common/math"
 )
 
 // Node represents a host on the network.
@@ -51,6 +52,22 @@ func New(validSchemes enr.IdentityScheme, r *enr.Record) (*Node, error) {
 // ID returns the node identifier.
 func (n *Node) ID() ID {
 	return n.id
+}
+
+// X8 returns 8 bytes of ecdsa.PublicKey.X
+func (n *Node) X8() (x8 [8]byte) {
+	buf := make([]byte, 32)
+	math.ReadBits(n.Pubkey().X, buf)
+	copy(x8[:], buf[:8])
+	return x8
+}
+
+// X8 returns 64 bytes of X & Y
+func (n *Node) XY() (xy [64]byte) {
+	pubkey := n.Pubkey()
+	math.ReadBits(pubkey.X, xy[:32])
+	math.ReadBits(pubkey.Y, xy[32:])
+	return xy
 }
 
 // Seq returns the sequence number of the underlying record.

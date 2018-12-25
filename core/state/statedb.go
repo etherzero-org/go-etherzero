@@ -212,6 +212,14 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	return common.Big0
 }
 
+func (self *StateDB) GetPower(addr common.Address, blockNumber *big.Int) *big.Int {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return CalculatePower(stateObject.BlockNumber(), blockNumber, stateObject.Power(), stateObject.Balance())
+	}
+	return common.Big0
+}
+
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
@@ -317,25 +325,53 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
  */
 
 // AddBalance adds amount to the account associated with addr.
-func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
+func (self *StateDB) AddBalance(addr common.Address, amount *big.Int, blockNumber *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddBalance(amount)
+		stateObject.AddBalance(amount, blockNumber)
+	}
+}
+
+func (self *StateDB) AddPower(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddPower(amount)
 	}
 }
 
 // SubBalance subtracts amount from the account associated with addr.
-func (self *StateDB) SubBalance(addr common.Address, amount *big.Int) {
+func (self *StateDB) SubBalance(addr common.Address, amount, blockNumber *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubBalance(amount)
+		stateObject.SubBalance(amount, blockNumber)
 	}
 }
 
-func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
+func (self *StateDB) SubPower(addr common.Address, amount, blockNumber *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetBalance(amount)
+		stateObject.SubPower(amount, blockNumber)
+	}
+}
+
+func (self *StateDB) SetBalance(addr common.Address, amount, blockNumber *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetBalance(amount, blockNumber)
+	}
+}
+
+func (self *StateDB) SetPower(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetPower(amount)
+	}
+}
+
+func (self *StateDB) UpdatePower(addr common.Address, blockNumber *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.UpdatePower(blockNumber)
 	}
 }
 

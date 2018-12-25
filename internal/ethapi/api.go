@@ -228,6 +228,35 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 	return addresses
 }
 
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) List() []string {
+	return s.b.Masternodes()
+}
+
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) Data() string {
+	return s.b.Data()
+}
+
+func (s *PrivateAccountAPI) Ns() int64 {
+	return s.b.Ns()
+}
+
+// GetInfo return related info in masternode contract
+func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
+	return s.b.GetInfo(nodeid)
+}
+
+// Start  the masternodewinner info
+func (s *PrivateAccountAPI) StartMasternode() bool {
+	return s.b.StartMasternode()
+}
+
+// Stop return the masternodewinner info
+func (s *PrivateAccountAPI) StopMasternode() bool {
+	return s.b.StopMasternode()
+}
+
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
 // data contents extracted into plain fields.
 type rawWallet struct {
@@ -478,6 +507,16 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 // and will be removed in the future. It primary goal is to give clients time to update.
 func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	return s.SendTransaction(ctx, args, passwd)
+}
+
+func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
+	b := state.GetPower(address, header.Number)
+	return b, state.Error()
 }
 
 // PublicBlockChainAPI provides an API to access the Ethereum blockchain.

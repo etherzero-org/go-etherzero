@@ -34,6 +34,10 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
+	"fmt"
+	"encoding/hex"
+	"strings"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -126,7 +130,8 @@ func (b *EthAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *EthAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	state.SetBalance(msg.From(), math.MaxBig256)
+	state.SetBalance(msg.From(), math.MaxBig256, header.Number)
+	state.SetPower(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 
 	context := core.NewEVMContext(msg, header, b.eth.BlockChain(), nil)
@@ -222,4 +227,75 @@ func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
+}
+
+// Masternodes return masternode info
+func (b *EthAPIBackend) Masternodes() []string {
+	list, _ := b.eth.masternodeManager.MasternodeList(b.eth.blockchain.CurrentBlock().Number())
+	return list
+}
+
+// GetInfo return related info in masternode contract
+func (b *EthAPIBackend) GetInfo(nodeid string) string {
+	var id [8]byte
+	node, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
+	if err != nil {
+		fmt.Printf("err %v\n", err)
+		return ""
+	} else if len(node) != len(id) {
+		return ""
+	}
+	copy(id[:], node)
+	fmt.Println("nodeid ", nodeid)
+
+	info, err := b.eth.masternodeManager.contract.GetInfo(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has", "error", err)
+		return ""
+	}
+
+	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:0x%v,NextId:0x%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
+		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
+		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
+}
+
+// Masternodes return masternode contract data
+
+func (b *EthAPIBackend) Data() (strPromotion string) {
+	if b.eth.masternodeManager.srvr.Self() == nil {
+		strPromotion = "wait for more 10 seconds to initial the geth"
+		return
+	}
+	xy := b.eth.masternodeManager.srvr.Self().XY()
+
+	var id [8]byte
+	copy(id[:], xy[0:8])
+	has, err := b.eth.masternodeManager.contract.Has(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has error %v", err)
+		return
+	}
+	if has {
+		strPromotion = fmt.Sprintf("### It's already been a masternode!,don't send your masternode data any more!")
+	}
+	data := "0x2f926732" + common.Bytes2Hex(xy[:])
+	return fmt.Sprintf("%v your masternode data is %v", strPromotion, data)
+}
+
+// Masternodes return masternode contract data
+func (b *EthAPIBackend) Ns() int64 {
+	return discover.NanoDrift()
+}
+
+// StartMasternode just call the start function of instantx
+// TODO ,send 20 ether to the contract address
+func (b *EthAPIBackend) StartMasternode() bool {
+	//b.eth.masternodeManager.is.Start()
+	return true
+}
+
+// Stop
+func (b *EthAPIBackend) StopMasternode() bool {
+	//b.eth.masternodeManager.is.Stop()
+	return true
 }

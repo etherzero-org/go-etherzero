@@ -166,7 +166,7 @@ var (
 	GCModeFlag = cli.StringFlag{
 		Name:  "gcmode",
 		Usage: `Blockchain garbage collection mode ("full", "archive")`,
-		Value: "full",
+		Value: "archive",
 	}
 	LightServFlag = cli.IntFlag{
 		Name:  "lightserv",
@@ -504,6 +504,10 @@ var (
 		Usage: "Comma separated enode URLs for P2P discovery bootstrap (set v4+v5 instead for light servers)",
 		Value: "",
 	}
+	MasternodeFlag = cli.BoolFlag{
+		Name:  "masternode",
+		Usage: "Enable masternode",
+	}
 	BootnodesV4Flag = cli.StringFlag{
 		Name:  "bootnodesv4",
 		Usage: "Comma separated enode URLs for P2P v4 discovery bootstrap (light server, full nodes)",
@@ -704,6 +708,12 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 			log.Crit("Bootstrap URL invalid", "enode", url, "err", err)
 		}
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
+	}
+}
+
+func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
+	if ctx.GlobalIsSet(MasternodeFlag.Name) {
+		cfg.IsMasternode = true
 	}
 }
 
@@ -909,6 +919,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setListenAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
+	setMasternode(ctx, cfg)
 
 	lightClient := ctx.GlobalString(SyncModeFlag.Name) == "light"
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0

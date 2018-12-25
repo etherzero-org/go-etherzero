@@ -58,7 +58,9 @@ var (
 
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
-	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
+	ErrInsufficientFunds = errors.New("insufficient funds for value")
+	ErrInsufficientMinFunds = errors.New("insufficient funds for 0.01 etz")
+	ErrInsufficientPower = errors.New("insufficient power for gas * price")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
@@ -145,7 +147,7 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
-	PriceLimit: 1,
+	PriceLimit: 1000000000,
 	PriceBump:  10,
 
 	AccountSlots: 16,
@@ -595,8 +597,14 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+	if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
 		return ErrInsufficientFunds
+	}
+	if pool.currentState.GetBalance(from).Cmp(big.NewInt(1e+16)) < 0 {
+		return ErrInsufficientMinFunds
+	}
+	if pool.currentState.GetPower(from, pool.chain.CurrentBlock().Number()).Cmp(tx.Cost()) < 0 {
+		return ErrInsufficientPower
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 	if err != nil {
@@ -825,7 +833,7 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
-	// Add the batch of transactions, tracking the accepted ones
+	// Add the batch of transaction, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))
 
@@ -944,7 +952,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentState.GetPower(addr, pool.chain.CurrentBlock().Number()), pool.currentMaxGas)
+
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
@@ -1108,7 +1117,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, invalids := list.Filter(pool.currentState.GetBalance(addr),pool.currentState.GetPower(addr, pool.chain.CurrentBlock().Number()), pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)

@@ -43,7 +43,7 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:      1,
+	NetworkId:      90,
 	LightPeers:     100,
 	DatabaseCache:  512,
 	TrieCleanCache: 256,
@@ -101,6 +101,7 @@ type Config struct {
 
 	// Mining-related options
 	Etherbase      common.Address `toml:",omitempty"`
+	Witness        string         `toml:",omitempty"`
 	MinerNotify    []string       `toml:",omitempty"`
 	MinerExtraData []byte         `toml:",omitempty"`
 	MinerGasFloor  uint64
@@ -123,6 +124,7 @@ type Config struct {
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
+	Devote  bool   `toml:"-"`
 
 	// Type of the EWASM interpreter ("" for default)
 	EWASMInterpreter string

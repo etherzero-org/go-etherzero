@@ -44,6 +44,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -939,7 +940,12 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
 		return NonStatTy, err
 	}
+
 	rawdb.WriteBlock(bc.db, block)
+
+	if _, err := block.DevoteDB.Commit(); err != nil {
+		return NonStatTy, err
+	}
 
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
 	if err != nil {
@@ -1186,6 +1192,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		if parent == nil {
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
 		}
+
+		block.DevoteDB, err = devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), parent.Header().Protocol)
+		if err != nil {
+			return it.index, events, coalescedLogs, err
+		}
+
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return it.index, events, coalescedLogs, err
@@ -1557,7 +1569,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 			i, receipt.CumulativeGasUsed, receipt.GasUsed, receipt.ContractAddress.Hex(),
 			receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.Bloom, receipt.PostState)
 	}
-	log.Error(fmt.Sprintf(`
+	log.Debug(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
 

@@ -28,6 +28,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 // BlockGen creates blocks for testing.
@@ -45,6 +46,7 @@ type BlockGen struct {
 	uncles   []*types.Header
 
 	config *params.ChainConfig
+	//votes  []*types.Vote
 	engine consensus.Engine
 }
 
@@ -197,8 +199,9 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 		if b.engine != nil {
 			// Finalize and seal the block
-			block, _ := b.engine.Finalize(chainreader, b.header, statedb, b.txs, b.uncles, b.receipts)
+			block, _ := b.engine.Finalize(chainreader, b.header, statedb, b.txs, b.uncles, b.receipts, nil)
 
+			//devote.AccumulateRewards(params.GovernanceContractAddress, statedb, h, b.uncles)
 			// Write state changes to db
 			root, err := statedb.Commit(config.IsEIP158(b.header.Number))
 			if err != nil {
@@ -242,6 +245,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 			Difficulty: parent.Difficulty(),
 			UncleHash:  parent.UncleHash(),
 		}),
+		Protocol:   &devotedb.DevoteProtocol{},
 		GasLimit: CalcGasLimit(parent, parent.GasLimit(), parent.GasLimit()),
 		Number:   new(big.Int).Add(parent.Number(), common.Big1),
 		Time:     time,

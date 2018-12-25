@@ -49,6 +49,10 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/consensus/devote"
+	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
+	"time"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 type LesServer interface {
@@ -87,10 +91,10 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
-
+	witness           string
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
-
+	masternodeManager *MasternodeManager
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
@@ -135,6 +139,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		networkID:      config.NetworkId,
 		gasPrice:       config.MinerGasPrice,
 		etherbase:      config.Etherbase,
+		witness:        config.Witness,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 	}
@@ -177,6 +182,19 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(eth.chainDb), eth.blockchain.CurrentBlock().Header().Protocol)
+
+	contractBackend := NewContractBackend(eth)
+	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
+	if eth.masternodeManager = NewMasternodeManager(devoteDB, eth.blockchain, contract, eth.txPool); err != nil {
+		return nil, err
+	}
+	eth.protocolManager.mm = eth.masternodeManager
+
+	if devote, ok := eth.engine.(*devote.Devote); ok {
+		devote.Masternodes(eth.masternodeManager.MasternodeList)
+		devote.GetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
+	}
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine, config.MinerRecommit, config.MinerGasFloor, config.MinerGasCeil, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.MinerExtraData))
 
@@ -221,6 +239,10 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+	// If Masternode is requested, set it up
+	if chainConfig.Devote != nil {
+		return devote.NewDevote(chainConfig.Devote, db)
+	}
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -397,6 +419,28 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
+func (s *Ethereum) Witness() (witness string, err error) {
+	s.lock.RLock()
+	witness = s.witness
+	s.lock.RUnlock()
+
+	if witness != "" {
+		return witness, nil
+	}
+	if s.masternodeManager.active != nil {
+		fmt.Printf("backend Witness accounts: %x \n", s.masternodeManager.active.ID)
+		return s.masternodeManager.active.ID, nil
+	}
+	return "", fmt.Errorf("Witness  must be explicitly specified")
+}
+
+// set in js console via admin interface or wrapper from cli flags
+func (self *Ethereum) SetWitness(witness string) {
+	self.lock.Lock()
+	self.witness = witness
+	self.lock.Unlock()
+}
+
 // StartMining starts the miner with the given number of CPU threads. If mining
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
@@ -426,6 +470,20 @@ func (s *Ethereum) StartMining(threads int) error {
 			log.Error("Cannot start mining without etherbase", "err", err)
 			return fmt.Errorf("etherbase missing: %v", err)
 		}
+		witness, err := s.Witness()
+		fmt.Printf("backend StartMining witness:%s\n", witness)
+		if err != nil {
+			log.Error("Cannot start mining without Witness", "err", err)
+			return fmt.Errorf("Witness missing: %v", err)
+		}
+		active := s.masternodeManager.active
+		if active == nil {
+			log.Error("Active Masternode is nil")
+			return fmt.Errorf("signer missing: %v", errors.New("Active Masternode is nil"))
+		}
+		if devote, ok := s.engine.(*devote.Devote); ok {
+			devote.Authorize(witness, active.SignHash)
+		}
 		if clique, ok := s.engine.(*clique.Clique); ok {
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
@@ -434,6 +492,7 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			clique.Authorize(eb, wallet.SignHash)
 		}
+
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
@@ -470,6 +529,7 @@ func (s *Ethereum) IsListening() bool                  { return true } // Always
 func (s *Ethereum) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *Ethereum) DevoteDB() *devotedb.DevoteDB       { return s.masternodeManager.devoteDB }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
@@ -499,10 +559,28 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
+	go s.startMasternode(srvr)
+
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
 	return nil
+}
+
+func (s *Ethereum) startMasternode(srvr *p2p.Server) {
+	t := time.NewTimer(5 * time.Second)
+	for {
+		select {
+		case <-t.C:
+			if s.Downloader().Synchronising() {
+				t.Reset(5 * time.Second)
+				break
+			}
+			s.masternodeManager.Start(srvr, s.protocolManager.peers, s.Downloader())
+			break
+		}
+	}
+
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
