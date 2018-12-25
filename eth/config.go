@@ -52,7 +52,7 @@ var DefaultConfig = Config{
 	MinerGasFloor:  8000000,
 	MinerGasCeil:   8000000,
 	MinerGasPrice:  big.NewInt(params.GWei),
-	MinerRecommit:  3 * time.Second,
+	MinerRecommit:  1 * time.Second,
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{

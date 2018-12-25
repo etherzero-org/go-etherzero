@@ -36,6 +36,8 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/consensus/devote"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 )
 
 const (
@@ -213,10 +215,10 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, eth Backend,
 	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 
 	// Sanitize recommit interval if the user-specified one is too short.
-	if recommit < minRecommitInterval {
-		log.Warn("Sanitizing miner recommit interval", "provided", recommit, "updated", minRecommitInterval)
-		recommit = minRecommitInterval
-	}
+	//if recommit < minRecommitInterval {
+	//	log.Warn("Sanitizing miner recommit interval", "provided", recommit, "updated", minRecommitInterval)
+	//	recommit = minRecommitInterval
+	//}
 
 	go worker.mainLoop()
 	go worker.newWorkLoop(recommit)
@@ -297,7 +299,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		timestamp   int64      // timestamp for each round of mining.
 	)
 
-	timer := time.NewTimer(0)
+	timer := time.NewTimer(time.Second)
 	<-timer.C // discard the initial tick
 
 	// commit aborts in-flight transaction execution with given signal and resubmits a new one.
@@ -312,24 +314,24 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 	}
 	// recalcRecommit recalculates the resubmitting interval upon feedback.
 	recalcRecommit := func(target float64, inc bool) {
-		var (
-			prev = float64(recommit.Nanoseconds())
-			next float64
-		)
-		if inc {
-			next = prev*(1-intervalAdjustRatio) + intervalAdjustRatio*(target+intervalAdjustBias)
-			// Recap if interval is larger than the maximum time interval
-			if next > float64(maxRecommitInterval.Nanoseconds()) {
-				next = float64(maxRecommitInterval.Nanoseconds())
-			}
-		} else {
-			next = prev*(1-intervalAdjustRatio) + intervalAdjustRatio*(target-intervalAdjustBias)
-			// Recap if interval is less than the user specified minimum
-			if next < float64(minRecommit.Nanoseconds()) {
-				next = float64(minRecommit.Nanoseconds())
-			}
-		}
-		recommit = time.Duration(int64(next))
+		//var (
+		//	prev = float64(recommit.Nanoseconds())
+		//	next float64
+		//)
+		//if inc {
+		//	next = prev*(1-intervalAdjustRatio) + intervalAdjustRatio*(target+intervalAdjustBias)
+		//	// Recap if interval is larger than the maximum time interval
+		//	if next > float64(maxRecommitInterval.Nanoseconds()) {
+		//		next = float64(maxRecommitInterval.Nanoseconds())
+		//	}
+		//} else {
+		//	next = prev*(1-intervalAdjustRatio) + intervalAdjustRatio*(target-intervalAdjustBias)
+		//	// Recap if interval is less than the user specified minimum
+		//	if next < float64(minRecommit.Nanoseconds()) {
+		//		next = float64(minRecommit.Nanoseconds())
+		//	}
+		//}
+		//recommit = time.Duration(int64(next))
 	}
 	// clearPending cleans the stale pending tasks.
 	clearPending := func(number uint64) {
@@ -509,6 +511,27 @@ func (w *worker) taskLoop() {
 	for {
 		select {
 		case task := <-w.taskCh:
+			engine, ok := w.engine.(*devote.Devote)
+			if !ok {
+				log.Error("Only the devote engine was allowed")
+				return
+			}
+			drift := time.Duration(discover.NanoDrift())
+			err := engine.CheckWitness(w.chain.CurrentBlock(), time.Now().Add(-drift).Unix())
+			if err != nil {
+				switch err {
+				case devote.ErrWaitForPrevBlock,
+					devote.ErrMinerFutureBlock,
+					devote.ErrInvalidBlockWitness,
+					devote.ErrInvalidMinerBlockTime:
+					log.Debug("Failed to miner the block, while ", "err", err)
+					//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+				default:
+					log.Error("Failed to miner the block", "err", err)
+					//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+				}
+				continue
+			}
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
