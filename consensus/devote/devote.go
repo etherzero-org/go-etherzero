@@ -53,7 +53,7 @@ const (
 	wiggleTime         = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 )
 
-// Clique proof-of-authority protocol constants.
+// Devote proof-of-authority protocol constants.
 var (
 	epochLength = uint64(600) // Default number of blocks after which to checkpoint and reset the pending votes
 
@@ -417,20 +417,20 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				for _, node := range masternodes {
 					sortedWitnesses = append(sortedWitnesses, node.nodeid)
 				}
-				//context := []interface{}{
-				//	"cycle", cycle,
-				//	"signers", sortedWitnesses,
-				//	"hash", hash,
-				//	"number", number,
-				//}
-				//log.Info("Elected new cycle signers", context...)
+				sort.Strings(sortedWitnesses)
+				context := []interface{}{
+					"cycle", cycle,
+					"signers", sortedWitnesses,
+					"hash", hash,
+					"number", number,
+				}
+				log.Info("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
-				headers =make([]*types.Header,0)
 				d.recents.Add(snap.Hash, snap)
-				//log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
 		}
@@ -457,6 +457,11 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	// Previous snapshot found, apply any pending headers on top of it
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+	for i:=0;i<len(headers);i++{
+		if headers[i].Number.Uint64()%Epoch == 0{
+			headers=headers[i:len(headers)-1]
+		}
 	}
 	snap, err := snap.apply(headers)
 	if err != nil {
@@ -510,9 +515,9 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	if err != nil {
 		return err
 	}
-
 	if _, ok := snap.Signers[signer]; !ok {
-		fmt.Println("devote snap.Signers map value:%s ,signer %s\n", snap.Signers,signer)
+		fmt.Println("not in verifySeal signers")
+
 		return errUnauthorizedSigner
 	}
 	for seen, recent := range snap.Recents {
@@ -526,6 +531,7 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
 	if !c.fakeDiff {
+
 		inturn := snap.inturn(header.Number.Uint64(), signer)
 		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 			return errWrongDifficulty
@@ -692,7 +698,7 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 	if err != nil {
 		return err
 	}
-	if _, authorized := snap.Signers[signer]; !authorized {
+	if _, ok := snap.Signers[signer]; !ok {
 		return errUnauthorizedSigner
 	}
 	// If we're amongst the recent signers, wait for the next block
@@ -744,12 +750,10 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-
 	snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
 		return nil
 	}
-	snap.Number=parent.Number.Uint64()
 	return CalcDifficulty(snap, d.signer)
 }
 
@@ -758,7 +762,7 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 // current signer.
 func CalcDifficulty(snap *Snapshot, signer string) *big.Int {
 
-	if snap.inturn(snap.Number, signer) {
+	if snap.inturn(snap.Number+1, signer) {
 		return new(big.Int).Set(diffInTurn)
 	}
 	return new(big.Int).Set(diffNoTurn)

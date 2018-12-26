@@ -20,11 +20,10 @@ package devote
 
 import (
 	"math/big"
-	"sort"
 	"sync"
 	"strings"
-
 	"encoding/json"
+
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -33,12 +32,12 @@ import (
 )
 
 const (
-	Epoch = 600
+	Epoch  = 600
 	Period = 1
 )
 
 type Snapshot struct {
-	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+	config    *params.DevoteConfig // Consensus engine parameters to fine tune behavior
 	TimeStamp uint64
 
 	mu       sync.Mutex
@@ -46,15 +45,15 @@ type Snapshot struct {
 	Hash     common.Hash         //Block hash where the snapshot was created
 	Number   uint64              //Cycle number where the snapshot was created
 	Cycle    uint64              //Cycle number where the snapshot was created
-	Signers  map[string]struct{} //Set of authorized masternodes at this cycle
+	Signers map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
 	Recents  map[uint64]string   // set of recent masternodes for spam protections
 
 }
 
-func newSnapshot(config *params.DevoteConfig,number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Snapshot {
+func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Snapshot {
 
 	snapshot := &Snapshot{
-		config:config,
+		config:   config,
 		Signers:  make(map[string]struct{}),
 		Recents:  make(map[uint64]string),
 		Number:   number,
@@ -62,8 +61,8 @@ func newSnapshot(config *params.DevoteConfig,number uint64, cycle uint64, signat
 		Hash:     hash,
 		sigcache: signatures,
 	}
-	for i := 0; i < len(signers); i++ {
-		signer := signers[i]
+
+	for _, signer := range signers {
 		snapshot.Signers[signer] = struct{}{}
 	}
 	return snapshot
@@ -79,6 +78,7 @@ func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.
 	if err := json.Unmarshal(blob, snap); err != nil {
 		return nil, err
 	}
+	snap.config = config
 	snap.sigcache = sigcache
 
 	return snap, nil
@@ -110,22 +110,15 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	if len(headers) == 0 {
 		return s, nil
 	}
-	// Sanity check that the headers can be applied
-	for i := 0; i < len(headers)-1; i++ {
-		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
-			return nil, errInvalidVotingChain
-		}
-	}
-	if headers[0].Number.Uint64() != s.Number+1 {
-		return nil, errInvalidVotingChain
-	}
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
 
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
 		number := header.Number.Uint64()
-
+		if number%Epoch == 0 {
+			snap.Recents = make(map[uint64]string)
+		}
 		// Delete the oldest signer from the recent list to allow it signing again
 		if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
 			delete(snap.Recents, number-limit)
@@ -138,18 +131,11 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if _, ok := snap.Signers[signer]; !ok {
 			return nil, errUnauthorizedSigner
 		}
-		for _, recent := range snap.Recents {
-			if recent == signer {
-				//fmt.Printf("devote verifySeal signer:%x  not in signers ,%s\n",snap.Recents)
-				return nil, errUnauthorizedSigner
-			}
-		}
 		snap.Recents[number] = signer
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
-	//fmt.Printf("snapshot.go apply recents %s \n",snap.Recents)
 	return snap, nil
 }
 
@@ -181,16 +167,11 @@ func (s *Snapshot) signers() []string {
 // inturn returns if a signer at a given block height is in-turn or not.
 func (d *Snapshot) inturn(number uint64, signer string) bool {
 
-	var signers []string
-	for signer := range d.Signers {
-		signers= append(signers, signer)
-	}
-	sort.Strings(signers)
+	signers := d.signers()
 	offset := 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
-	//fmt.Printf("devote snapshot check signer inturn offset%d, number%d, value%d \n",offset,number,(number % uint64(len(signers))))
 	return (number % uint64(len(signers))) == uint64(offset)
 }
 
@@ -200,7 +181,6 @@ func (s *Snapshot) validWitness(witness string, authorize bool) bool {
 	_, signer := s.Signers[witness]
 	return (signer && !authorize) || (!signer && authorize)
 }
-
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid

@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	checkpointInterval = 600 // Number of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
@@ -393,13 +393,13 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
 			if s, err := loadSnapshot(c.config, c.signatures, c.db, hash); err == nil {
-				log.Trace("Loaded voting snapshot from disk", "number", number, "hash", hash)
+				log.Info("Loaded voting snapshot from disk", "number", number, "hash", hash)
 				snap = s
 				break
 			}
 		}
 		// If we're at an checkpoint block, make a snapshot if it's known
-		if number == 0 || (number%c.config.Epoch == 0 && chain.GetHeaderByNumber(number-1) == nil) {
+		if number == 0 || number%c.config.Epoch == 0  {
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
@@ -450,7 +450,7 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		if err = snap.store(c.db); err != nil {
 			return nil, err
 		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		log.Info("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
 }
