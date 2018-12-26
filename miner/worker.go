@@ -27,6 +27,7 @@ import (
 	"github.com/deckarep/golang-set"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
@@ -35,9 +36,9 @@ import (
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/params"
+	"fmt"
 )
 
 const (
@@ -106,7 +107,7 @@ type task struct {
 }
 
 const (
-	commitInterruptNone     int32 = iota
+	commitInterruptNone int32 = iota
 	commitInterruptNewHead
 	commitInterruptResubmit
 )
@@ -409,6 +410,7 @@ func (w *worker) mainLoop() {
 	defer w.chainHeadSub.Unsubscribe()
 	defer w.chainSideSub.Unsubscribe()
 
+	fmt.Println("worker.go mainLoop begin")
 	for {
 		select {
 		case req := <-w.newWorkCh:
@@ -525,10 +527,10 @@ func (w *worker) taskLoop() {
 					devote.ErrInvalidBlockWitness,
 					devote.ErrInvalidMinerBlockTime:
 					log.Debug("Failed to miner the block, while ", "err", err)
-					//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+					fmt.Printf("Failed to miner the block, while error:%s\n", err)
 				default:
 					log.Error("Failed to miner the block", "err", err)
-					//fmt.Printf("Failed to miner the block, while error:%s\n", err)
+					fmt.Printf("Failed to miner the block, while error:%s\n", err)
 				}
 				continue
 			}
@@ -910,28 +912,21 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 	// Accumulate the uncles for the current block
 	uncles := make([]*types.Header, 0, 2)
-	commitUncles := func(blocks map[common.Hash]*types.Block) {
-		// Clean up stale uncle blocks first
-		for hash, uncle := range blocks {
-			if uncle.NumberU64()+staleThreshold <= header.Number.Uint64() {
-				delete(blocks, hash)
-			}
-		}
-		for hash, uncle := range blocks {
-			if len(uncles) == 2 {
-				break
-			}
-			if err := w.commitUncle(env, uncle.Header()); err != nil {
-				log.Trace("Possible uncle rejected", "hash", hash, "reason", err)
-			} else {
-				log.Debug("Committing new uncle to block", "hash", hash)
-				uncles = append(uncles, uncle.Header())
-			}
-		}
-	}
+	//commitUncles := func(blocks map[common.Hash]*types.Block) {
+	//	// Clean up stale uncle blocks first
+	//	for hash, uncle := range blocks {
+	//		if uncle.NumberU64()+staleThreshold <= header.Number.Uint64() {
+	//			delete(blocks, hash)
+	//		}
+	//	}
+	//	for hash, uncle := range blocks {
+	//		log.Trace("uncles not allowed", "hash", hash, "uncle", uncle.Hash())
+	//		break
+	//	}
+	//}
 	// Prefer to locally generated uncle
-	commitUncles(w.localUncles)
-	commitUncles(w.remoteUncles)
+	//commitUncles(w.localUncles)
+	//commitUncles(w.remoteUncles)
 
 	if !noempty {
 		// Create an empty block based on temporary copied state for sealing in advance without waiting block
@@ -985,6 +980,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	s := w.current.state.Copy()
 	block, err := w.engine.Finalize(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts, w.current.devoteDB)
 	if err != nil {
+		log.Error("engine Finalize err","err",err)
 		return err
 	}
 	block.DevoteDB = w.current.devoteDB
