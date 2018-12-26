@@ -259,8 +259,8 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
 
+// Data
 // Masternodes return masternode contract data
-
 func (b *EthAPIBackend) Data() (strPromotion string) {
 	if b.eth.masternodeManager.srvr.Self() == nil {
 		strPromotion = "wait for more 10 seconds to initial the geth"
@@ -287,15 +287,14 @@ func (b *EthAPIBackend) Ns() int64 {
 	return discover.NanoDrift()
 }
 
-// StartMasternode just call the start function of instantx
-// TODO ,send 20 ether to the contract address
+// StartMasternode
+// TODO StartMasternode just call the start function of instantx
 func (b *EthAPIBackend) StartMasternode() bool {
-	//b.eth.masternodeManager.is.Start()
 	return true
 }
 
-// Stop
+// StopMasternode
+// TODO stop masternode
 func (b *EthAPIBackend) StopMasternode() bool {
-	//b.eth.masternodeManager.is.Stop()
 	return true
 }

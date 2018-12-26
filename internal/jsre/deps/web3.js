@@ -6790,18 +6790,11 @@ require = (function e(t, n, r) {
                 params: 1,
                 inputFormatter: [formatters.formatInputString],
             });
-            var getEnode = new Method({
-                name: 'getEnode',
-                call: 'masternode_getEnode',
-                params: 1,
-                inputFormatter: [formatters.formatInputString],
-            });
             return [
                 startMasternode,
                 stopMasternode,
                 joinMasternode,
-                getInfo,
-                getEnode
+                getInfo
             ];
         };
 
@@ -6818,10 +6811,6 @@ require = (function e(t, n, r) {
                 new Property({
                     name: 'data',
                     getter: 'masternode_data'
-                }),
-                new Property({
-                    name: 'enodeCount',
-                    getter: 'masternode_enodeCount'
                 })
             ];
         };

@@ -72,6 +72,41 @@ func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
+// Masternodes return masternode info
+func (s *PublicEthereumAPI) Masternodes() []string {
+	return nil
+	//return s.ms.AllNodes()
+}
+
+// Data return masternode contract node data
+func (s *PublicEthereumAPI) Data() string {
+	return ""
+}
+
+func (s *PublicEthereumAPI) Ns() int64 {
+	return 0
+}
+
+// GetInfo return related info in masternode contract
+func (s *PublicEthereumAPI) GetInfo(nodeid string) string {
+	return ""
+}
+
+// Start return the masternodewinner info
+func (s *PublicEthereumAPI) StartMasternode() bool {
+	return false
+}
+
+// Stop return the masternodewinner info
+func (s *PublicEthereumAPI) StopMasternode() bool {
+	return false
+}
+
+// join nodeid from genesis block to witness
+func (b *PublicEthereumAPI) JoinMasternode(nodeid string) bool {
+	return true
+}
+
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
 // - startingBlock: block number this node started to synchronise from
