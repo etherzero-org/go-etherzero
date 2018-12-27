@@ -488,19 +488,21 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 	number := header.Number.Uint64()
 	// Sealing the genesis block is not supported
 	if number == 0 {
-		return errUnknownBlock
+		return nil, errUnknownBlock
 	}
 	now := time.Now().Unix()
-	delay := int64(NextSlot(uint64(now))) - now
+	NextSlot := int64(NextSlot(uint64(now)))
+	delay := NextSlot - now
+	log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)
 	if delay > 0 {
 		select {
 		case <-stop:
-			return nil
+			return nil, nil
 		case <-time.After(time.Duration(delay) * time.Second):
 		}
 	}
@@ -511,14 +513,12 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 	// time's up, sign the block
 	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
-
-	result := block.WithSeal(header)
-	results <- result
-	return nil
+	return block.WithSeal(header), nil
 }
+
 
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	return big.NewInt(1)
