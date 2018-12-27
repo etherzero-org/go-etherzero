@@ -234,14 +234,12 @@ func (mm *MasternodeManager) SaveNodeIpToContract() (err error) {
 	if mm.srvr.Self() == nil {
 		return
 	}
-	fmt.Printf("mm.srvr.IsMasternode  %v,mm.active.State()  %v", mm.srvr.IsMasternode, mm.active.State())
 	if !mm.srvr.IsMasternode || mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
 		return
 	}
 	minPower := big.NewInt(20e+14)
 	// // send myself node info
 	address := mm.active.NodeAccount
-	fmt.Println("NodeAccountNodeAccount", address.String())
 	stateDB, _ := mm.blockchain.State()
 	if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
 		err = errors.New(fmt.Sprintf("Failed to deposit 0.01 etz to %v ", address.String()))
@@ -262,7 +260,6 @@ func (mm *MasternodeManager) SaveNodeIpToContract() (err error) {
 	}
 
 	data := common.Hex2Bytes(dataRaw)
-	fmt.Printf("dataRaw is %v,data is %v\n", dataRaw, data)
 	tx := types.NewTransaction(
 		mm.txPool.State().GetNonce(address),
 		params.EnodeinfoAddress, //
@@ -307,18 +304,13 @@ func (mm *MasternodeManager) genData() (data string, err error) {
 		bytes64len = uint32(64)
 	)
 	nodeid := common.Bytes2Hex(xy[:])
-	fmt.Printf("nodeidnodeidnodeid is %v\n", nodeid)
-	fmt.Println("mm.srvr.MasternodeIP", mm.srvr.MasternodeIP)
 	ip = enodetools.Netiptoipnr(net.ParseIP(mm.srvr.MasternodeIP))
 
 	// encode to string
 	ip_port = enodetools.EncodeIpPort(ip, uint32(selfnode.TCP()))
 	ip_portStr := fmt.Sprintf("%x", ip_port)
-	fmt.Println("ip_portStr", ip_portStr)
 	prevZero := enodetools.PrefixZeroString(bytes64len - uint32(len(ip_portStr)))
 	encodeIp_port := fmt.Sprintf("%v%s", prevZero, ip_portStr)
-	fmt.Printf("ip_port %v , nodeid %v ,encodeIp_port %s\n", ip_port, nodeid, encodeIp_port)
 	data = fmt.Sprintf("%v%v%v", funcSha3, nodeid, encodeIp_port)
-	fmt.Println("data string is ", data)
 	return
 }
