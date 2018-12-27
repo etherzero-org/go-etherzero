@@ -266,17 +266,14 @@ func (self *worker) mine(now int64) {
 			devote.ErrInvalidBlockWitness,
 			devote.ErrInvalidMinerBlockTime:
 			log.Debug("Failed to miner the block, while ", "err", err)
-			fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		default:
 			log.Error("Failed to miner the block", "err", err)
-			fmt.Printf("Failed to miner the block, while error:%s\n", err)
 		}
 		return
 	}
 
 	work, err := self.commitNewWork()
 	if err != nil {
-		log.Info("error Failed to create the new work", "err", err)
 		log.Error("Failed to create the new work", "err", err)
 		return
 	}
@@ -285,7 +282,6 @@ func (self *worker) mine(now int64) {
 		close(self.quitCh)
 	}
 	self.quitCh = make(chan struct{})
-	log.Info("worker.go befor engine seal")
 	go self.seal(work)
 
 	self.mu.Unlock()
@@ -549,7 +545,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		badUncles []common.Hash
 	)
 	for hash, uncle := range self.possibleUncles {
-		if len(uncles) == 2 {
+		if len(uncles) > 0 {
 			break
 		}
 		if err := self.commitUncle(work, uncle.Header()); err != nil {
@@ -570,7 +566,6 @@ func (self *worker) commitNewWork() (*Work, error) {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 
-	log.Info("worker.go after engine finalize ")
 	work.Block.DevoteDB = work.devoteDB
 
 	// update the count for the miner of new block
@@ -579,11 +574,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
-	log.Info("worker.go before engine finalize ")
-
 	self.updateSnapshot()
-	log.Info("worker.go after engine finalize ")
-
 	return work, nil
 }
 
