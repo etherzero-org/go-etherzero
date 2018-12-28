@@ -516,8 +516,6 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		return err
 	}
 	if _, ok := snap.Signers[signer]; !ok {
-		fmt.Println("not in verifySeal signers")
-
 		return errUnauthorizedSigner
 	}
 	for seen, recent := range snap.Recents {
@@ -618,7 +616,6 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	// Accumulate the rewards for the masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward, header.Number)
-	//fmt.Printf("devote AccumulateRewards coinbase:%x,header.number%d,reward%d \n", header.Coinbase, header.Number, reward)
 
 	//  Accumulate the rewards to community account
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
