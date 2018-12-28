@@ -423,20 +423,11 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
-	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
+	alloc[common.HexToAddress("0xD249212F87D6bE413a7883552F37777204f4e5E2")] = GenesisAccount{
 		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
 	}
-	alloc[common.HexToAddress("0x06e4c21bbc2a639dd8c7b369dad8a6a032aecf54")] = GenesisAccount{
-		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
-	}
-	alloc[common.HexToAddress("0x3B353f9f6A9d3b6B4765463e3bB5cB8BBdFc190b")] = GenesisAccount{
-		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
-	}
-	alloc[common.HexToAddress("0x5dB7b0CF8cDa072A651A9cfbb3eF835AC78c95f5")] = GenesisAccount{
-		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
-	}
-	alloc[common.HexToAddress("0xA67B2bdF473d14DB7F0ED9934c62f9627aD142f3")] = GenesisAccount{
-		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	alloc[common.HexToAddress("0x7cB5761e153CC39d618DE6D074C2a199B109671f")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+16)),
 	}
 
 	config := params.MainnetChainConfig
