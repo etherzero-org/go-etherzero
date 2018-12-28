@@ -398,11 +398,11 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				if err != nil {
 					return nil, fmt.Errorf("get current masternodes err:%s", err)
 				}
-				//stabilization := number - 100
-				//stableBlock := chain.GetHeaderByNumber(stabilization)
-				//if stableBlock != nil {
-				//	hash = stableBlock.Hash()
-				//}
+				stabilization := number - 100
+				stableBlock := chain.GetHeaderByNumber(stabilization)
+				if stableBlock != nil {
+					hash = stableBlock.Hash()
+				}
 
 				result, err := masternodes(hash, all)
 				masternodes := sortableAddresses{}
@@ -460,6 +460,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	}
 	for i:=0;i<len(headers);i++{
 		if headers[i].Number.Uint64()%Epoch == 0{
+			fmt.Println("init snapshot when headers is new Cycle ","I:",i,"header Number",headers[i].Number)
 			headers=headers[i:len(headers)-1]
 		}
 	}
