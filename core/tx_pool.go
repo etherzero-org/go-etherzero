@@ -155,7 +155,7 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	AccountQueue: 64,
 	GlobalQueue:  1024,
 
-	Lifetime: 3 * time.Hour,
+	Lifetime: 30 * time.Minute,
 }
 
 // sanitize checks the provided user configurations and changes anything that's
@@ -598,7 +598,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
-		return ErrInsufficientFunds
+		// return ErrInsufficientFunds
+		return errors.New(fmt.Sprintf("insufficient funds: %s %s", tx.Value().String(), from.Hex()))
 	}
 	if pool.currentState.GetBalance(from).Cmp(big.NewInt(1e+16)) < 0 {
 		return ErrInsufficientMinFunds
@@ -780,7 +781,8 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
-	return pool.addTx(tx, !pool.config.NoLocals)
+	// return pool.addTx(tx, !pool.config.NoLocals)
+	return pool.addTx(tx, pool.config.NoLocals)
 }
 
 // AddRemote enqueues a single transaction into the pool if it is valid. If the
@@ -794,7 +796,8 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
-	return pool.addTxs(txs, !pool.config.NoLocals)
+	// return pool.addTxs(txs, !pool.config.NoLocals)
+	return pool.addTxs(txs, pool.config.NoLocals)
 }
 
 // AddRemotes enqueues a batch of transactions into the pool if they are valid.
