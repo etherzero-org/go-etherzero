@@ -97,9 +97,8 @@ func (self *MasternodeManager) Stop() {
 }
 
 func (mm *MasternodeManager) masternodeLoop() {
-	var id [8]byte
-	copy(id[:], mm.srvr.Self().ID[0:8])
-	has, err := mm.contract.Has(nil, id)
+	xy := mm.srvr.Self().XY()
+	has, err := mm.contract.Has(nil, mm.srvr.Self().X8())
 	if err != nil {
 		log.Error("contract.Has", "error", err)
 	}
@@ -109,7 +108,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 		mm.updateActiveMasternode(true)
 	} else if mm.srvr.IsMasternode {
 		mm.updateActiveMasternode(false)
-		data := "0x2f926732" + common.Bytes2Hex(mm.srvr.Self().ID[:])
+		data := "0x2f926732" + common.Bytes2Hex(xy[:])
 		fmt.Printf("### Masternode Transaction Data: %s\n", data)
 	}
 
@@ -138,13 +137,13 @@ func (mm *MasternodeManager) masternodeLoop() {
 	for {
 		select {
 		case join := <-joinCh:
-			if bytes.Equal(join.Id[:], mm.srvr.Self().ID[0:8]) {
+			if bytes.Equal(join.Id[:], xy[:]) {
 				atomic.StoreUint32(&mm.IsMasternode, 1)
 				mm.updateActiveMasternode(true)
 				fmt.Println("### It's already been a masternode! ")
 			}
 		case quit := <-quitCh:
-			if bytes.Equal(quit.Id[:], mm.srvr.Self().ID[0:8]) {
+			if bytes.Equal(quit.Id[:], xy[0:8]) {
 				atomic.StoreUint32(&mm.IsMasternode, 0)
 				mm.updateActiveMasternode(false)
 				fmt.Println("### Remove masternode! ")
@@ -158,7 +157,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 		case <-ntp.C:
 			ntp.Reset(10 * time.Minute)
-		    go discover.CheckClockDrift()
+			go discover.CheckClockDrift()
 		case <-ping.C:
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
 			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {

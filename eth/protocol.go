@@ -36,10 +36,9 @@ const (
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
-
 var ProtocolName = "etz"
 
-// ProtocolVersions are the upported versions of the eth protocol (first is primary).
+// ProtocolVersions are the supported versions of the eth protocol (first is primary).
 var ProtocolVersions = []uint{etz64, eth63, eth62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
@@ -64,15 +63,12 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
-
-	// Protocol messages belonging to etz/64
-	//MasternodePingMsg = 0x22
 )
 
 type errCode int
 
 const (
-	ErrMsgTooLarge             = iota
+	ErrMsgTooLarge = iota
 	ErrDecode
 	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
@@ -180,7 +176,7 @@ type newBlockData struct {
 
 // blockBody represents the data content of a single block.
 type blockBody struct {
-	Transactions []*types.Transaction   // Transactions contained within a block
+	Transactions []*types.Transaction // Transactions contained within a block
 	Uncles       []*types.Header      // Uncles contained within a block
 }
 

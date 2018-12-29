@@ -19,7 +19,9 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
-	"crypto/rand"
+	crand "crypto/rand"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -31,14 +33,21 @@ import (
 	"time"
 
 	"github.com/etherzero/go-etherzero/log"
+	colorable "github.com/mattn/go-colorable"
 	"github.com/pborman/uuid"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
 
 func generateEndpoints(scheme string, cluster string, from int, to int) {
-	for port := from; port <= to; port++ {
-		endpoints = append(endpoints, fmt.Sprintf("%s://%v.%s.swarm-gateways.net", scheme, port, cluster))
+	if cluster == "prod" {
+		for port := from; port <= to; port++ {
+			endpoints = append(endpoints, fmt.Sprintf("%s://%v.swarm-gateways.net", scheme, port))
+		}
+	} else {
+		for port := from; port <= to; port++ {
+			endpoints = append(endpoints, fmt.Sprintf("%s://swarm-%v-%s.stg.swarm-gateways.net", scheme, port, cluster))
+		}
 	}
 
 	if includeLocalhost {
@@ -47,13 +56,16 @@ func generateEndpoints(scheme string, cluster string, from int, to int) {
 }
 
 func cliUploadAndSync(c *cli.Context) error {
-	defer func(now time.Time) { log.Info("total time", "time", time.Since(now), "size", filesize) }(time.Now())
+	log.PrintOrigins(true)
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(verbosity), log.StreamHandler(colorable.NewColorableStderr(), log.TerminalFormat(true))))
+
+	defer func(now time.Time) { log.Info("total time", "time", time.Since(now), "size (kb)", filesize) }(time.Now())
 
 	generateEndpoints(scheme, cluster, from, to)
 
 	log.Info("uploading to " + endpoints[0] + " and syncing")
 
-	f, cleanup := generateRandomFile(filesize * 1000000)
+	f, cleanup := generateRandomFile(filesize * 1000)
 	defer cleanup()
 
 	hash, err := upload(f, endpoints[0])
@@ -70,15 +82,10 @@ func cliUploadAndSync(c *cli.Context) error {
 
 	log.Info("uploaded successfully", "hash", hash, "digest", fmt.Sprintf("%x", fhash))
 
-	if filesize < 10 {
-		time.Sleep(15 * time.Second)
-	} else {
-		time.Sleep(2 * time.Duration(filesize) * time.Second)
-	}
+	time.Sleep(3 * time.Second)
 
 	wg := sync.WaitGroup{}
 	for _, endpoint := range endpoints {
-		endpoint := endpoint
 		ruid := uuid.New()[:8]
 		wg.Add(1)
 		go func(endpoint string, ruid string) {
@@ -102,10 +109,13 @@ func cliUploadAndSync(c *cli.Context) error {
 // fetch is getting the requested `hash` from the `endpoint` and compares it with the `original` file
 func fetch(hash string, endpoint string, original []byte, ruid string) error {
 	log.Trace("sleeping", "ruid", ruid)
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	log.Trace("http get request", "ruid", ruid, "api", endpoint, "hash", hash)
-	res, err := http.Get(endpoint + "/bzz:/" + hash + "/")
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+	res, err := client.Get(endpoint + "/bzz:/" + hash + "/")
 	if err != nil {
 		log.Warn(err.Error(), "ruid", ruid)
 		return err
@@ -159,6 +169,18 @@ func digest(r io.Reader) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+// generates random data in heap buffer
+func generateRandomData(datasize int) ([]byte, error) {
+	b := make([]byte, datasize)
+	c, err := crand.Read(b)
+	if err != nil {
+		return nil, err
+	} else if c != datasize {
+		return nil, errors.New("short read")
+	}
+	return b, nil
+}
+
 // generateRandomFile is creating a temporary file with the requested byte size
 func generateRandomFile(size int) (f *os.File, teardown func()) {
 	// create a tmp file
@@ -174,7 +196,7 @@ func generateRandomFile(size int) (f *os.File, teardown func()) {
 	}
 
 	buf := make([]byte, size)
-	_, err = rand.Read(buf)
+	_, err = crand.Read(buf)
 	if err != nil {
 		panic(err)
 	}

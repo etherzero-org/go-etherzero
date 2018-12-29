@@ -68,7 +68,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		worker:   newWorker(config, engine, common.Address{}, eth, mux),
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	//miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
 
 	return miner
@@ -149,11 +149,11 @@ func (self *Miner) HashRate() (tot int64) {
 	// do we care this might race? is it worth we're rewriting some
 	// aspects of the worker/locking up agents so we can get an accurate
 	// hashrate?
-	for agent := range self.worker.agents {
-		if _, ok := agent.(*CpuAgent); !ok {
-			tot += agent.GetHashRate()
-		}
-	}
+	//for agent := range self.worker.agents {
+	//	if _, ok := agent.(*CpuAgent); !ok {
+	//		tot += agent.GetHashRate()
+	//	}
+	//}
 	return
 }
 

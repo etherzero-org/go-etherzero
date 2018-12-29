@@ -385,7 +385,7 @@ func (ctl *HandshakeController) sendKey(pubkeyid string, topic *Topic, keycount 
 	// generate new keys to send
 	for i := 0; i < len(recvkeyids); i++ {
 		var err error
-		recvkeyids[i], err = ctl.pss.generateSymmetricKey(*topic, to, true)
+		recvkeyids[i], err = ctl.pss.GenerateSymmetricKey(*topic, to, true)
 		if err != nil {
 			return []string{}, fmt.Errorf("set receive symkey fail (pubkey %x topic %x): %v", pubkeyid, topic, err)
 		}
@@ -486,7 +486,7 @@ func (api *HandshakeAPI) Handshake(pubkeyid string, topic Topic, sync bool, flus
 
 // Activate handshake functionality on a topic
 func (api *HandshakeAPI) AddHandshake(topic Topic) error {
-	api.ctrl.deregisterFuncs[topic] = api.ctrl.pss.Register(&topic, api.ctrl.handler)
+	api.ctrl.deregisterFuncs[topic] = api.ctrl.pss.Register(&topic, NewHandler(api.ctrl.handler))
 	return nil
 }
 

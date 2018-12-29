@@ -23,11 +23,14 @@ import (
 	"math/big"
 	"time"
 
+	"crypto/ecdsa"
 	"github.com/etherzero/go-etherzero/accounts/abi/bind"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
+	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/p2p/discover"
+	"github.com/etherzero/go-etherzero/p2p/discv5"
+	"github.com/etherzero/go-etherzero/p2p/enode"
 )
 
 const (
@@ -35,7 +38,8 @@ const (
 )
 
 const (
-	MASTERNODE_PING_INTERVAL  = 1200 * time.Second
+	MASTERNODE_PING_INTERVAL = 1200 * time.Second
+	MASTERNODE_IP_INTERVAL   = 900 * time.Second
 )
 
 var (
@@ -45,8 +49,10 @@ var (
 )
 
 type Masternode struct {
+	ENode *enode.Node
+
 	ID          string
-	NodeID      discover.NodeID
+	NodeID      discv5.NodeID
 	Account     common.Address
 	OriginBlock *big.Int
 	State       int
@@ -55,10 +61,18 @@ type Masternode struct {
 	BlockLastPing  *big.Int
 }
 
-func newMasternode(nodeId discover.NodeID, account common.Address, block, blockOnlineAcc, blockLastPing *big.Int) *Masternode {
+func newMasternode(nodeId discv5.NodeID, account common.Address, block, blockOnlineAcc, blockLastPing *big.Int) *Masternode {
 
 	id := GetMasternodeID(nodeId)
+	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
+	p.X.SetBytes(nodeId[:32])
+	p.Y.SetBytes(nodeId[32:])
+	if !p.Curve.IsOnCurve(p.X, p.Y) {
+		return &Masternode{}
+	}
+	node := enode.NewV4(p, nil, 0, 0)
 	return &Masternode{
+		ENode:          node,
 		ID:             id,
 		NodeID:         nodeId,
 		Account:        account,
@@ -144,7 +158,7 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 	return ids, nil
 }
 
-func GetMasternodeID(ID discover.NodeID) string {
+func GetMasternodeID(ID discv5.NodeID) string {
 	return fmt.Sprintf("%x", ID[:8])
 }
 
@@ -155,11 +169,14 @@ type MasternodeContext struct {
 }
 
 func GetMasternodeContext(opts *bind.CallOpts, contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
+
 	data, err := contract.ContractCaller.GetInfo(opts, id)
 	if err != nil {
 		return &MasternodeContext{}, err
 	}
-	nodeId, _ := discover.BytesID(append(data.Id1[:], data.Id2[:]...))
+	id2 := append(data.Id1[:], data.Id2[:]...)
+	var nodeId discv5.NodeID
+	copy(nodeId[:], id2[:])
 	node := newMasternode(nodeId, data.Account, data.BlockNumber, data.BlockOnlineAcc, data.BlockLastPing)
 
 	return &MasternodeContext{

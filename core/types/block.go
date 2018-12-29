@@ -28,9 +28,9 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/rlp"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -69,24 +69,23 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
-
-	Witness  string                `json:"witness"          gencodec:"required"`
-	Protocol *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
+	ParentHash  common.Hash              `json:"parentHash"       gencodec:"required"`
+	UncleHash   common.Hash              `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase    common.Address           `json:"miner"            gencodec:"required"`
+	Root        common.Hash              `json:"stateRoot"        gencodec:"required"`
+	TxHash      common.Hash              `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash common.Hash              `json:"receiptsRoot"     gencodec:"required"`
+	Bloom       Bloom                    `json:"logsBloom"        gencodec:"required"`
+	Difficulty  *big.Int                 `json:"difficulty"       gencodec:"required"`
+	Number      *big.Int                 `json:"number"           gencodec:"required"`
+	GasLimit    uint64                   `json:"gasLimit"         gencodec:"required"`
+	GasUsed     uint64                   `json:"gasUsed"          gencodec:"required"`
+	Time        *big.Int                 `json:"timestamp"        gencodec:"required"`
+	Extra       []byte                   `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash              `json:"mixHash"`
+	Nonce       BlockNonce               `json:"nonce"`
+	Witness     string                   `json:"witness"          gencodec:"required"`
+	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -231,6 +230,7 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
 	}
+
 	return b
 }
 
@@ -323,7 +323,6 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
-
 func (b *Block) Witness() string { return b.header.Witness }
 
 func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }

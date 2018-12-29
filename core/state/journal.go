@@ -180,14 +180,6 @@ func (ch touchChange) dirtied() *common.Address {
 	return ch.account
 }
 
-func (ch balanceChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setBalance(ch.prev)
-}
-
-func (ch balanceChange) dirtied() *common.Address {
-	return ch.account
-}
-
 func (ch powerChange) revert(s *StateDB) {
 	s.getStateObject(*ch.account).setPower(ch.prev)
 }
@@ -201,6 +193,14 @@ func (ch blockChange) revert(s *StateDB) {
 }
 
 func (ch blockChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch balanceChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setBalance(ch.prev)
+}
+
+func (ch balanceChange) dirtied() *common.Address {
 	return ch.account
 }
 

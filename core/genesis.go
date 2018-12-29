@@ -36,7 +36,6 @@ import (
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"io"
@@ -44,6 +43,7 @@ import (
 	"path/filepath"
 	"github.com/etherzero/go-etherzero/trie"
 	"strconv"
+	"github.com/etherzero/go-etherzero/p2p/enode"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -355,16 +355,19 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 		addresses = append(addresses, common.BytesToAddress(big.NewInt(i).Bytes()))
 	}
 	for index, n := range masternodes {
-		node, err := discover.ParseNode(n)
-		if err != nil {
-			panic(err)
-		}
+		node := enode.MustParseV4(n)
 
 		var contextId common.Hash
 		copy(contextId[24:32], lastId[:8])
 
-		id1 := common.BytesToHash(node.ID[:32])
-		id2 := common.BytesToHash(node.ID[32:])
+		xBytes := node.Pubkey().X.Bytes()
+		yBytes := node.Pubkey().Y.Bytes()
+		var x, y [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		copy(y[32-len(yBytes):], yBytes[:])
+
+		id1 := common.BytesToHash(x[:])
+		id2 := common.BytesToHash(y[:])
 		copy(lastId[:8], id1[:8])
 
 		if lastContextId, ok := data[lastKey]; ok {
@@ -390,10 +393,7 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 		data[key3] = contextId
 		data[key4] = contextAddress
 
-		pubkey, err := node.ID.Pubkey()
-		if err != nil {
-			panic(err)
-		}
+		pubkey := node.Pubkey()
 		addr := crypto.PubkeyToAddress(*pubkey)
 
 		var idsKey [64]byte
@@ -444,23 +444,22 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	config := params.TestnetChainConfig
 	var witnesses []string
 	for _, n := range params.TestnetMasternodes {
-		node, err := discover.ParseNode(n)
-		if err != nil {
-			panic(err)
-		}
-		pubkey, err := node.ID.Pubkey()
-		if err != nil {
-			panic(err)
-		}
-		addr := crypto.PubkeyToAddress(*pubkey)
-		alloc[addr] = GenesisAccount{
-			Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
-		}
-		id := fmt.Sprintf("%x", node.ID[:8])
+		node := enode.MustParseV4(n)
+		pubkey := node.Pubkey()
+		//addr := crypto.PubkeyToAddress(*pubkey)
+		//if _, ok := alloc[addr]; !ok {
+		//	alloc[addr] = GenesisAccount{
+		//		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
+		//	}
+		//}
+		xBytes := pubkey.X.Bytes()
+		var x [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		id1 := common.BytesToHash(x[:])
+		id := fmt.Sprintf("%x", id1[:8])
 		witnesses = append(witnesses, id)
 	}
 	config.Devote.Witnesses = witnesses
-
 	return &Genesis{
 		Config:     config,
 		Nonce:      66,

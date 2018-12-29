@@ -25,7 +25,6 @@ import (
 	"github.com/etherzero/go-etherzero/common/math"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/bloombits"
-	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/vm"
@@ -74,6 +73,10 @@ func (b *EthAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNum
 	return b.eth.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
 }
 
+func (b *EthAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return b.eth.blockchain.GetHeaderByHash(hash), nil
+}
+
 func (b *EthAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
@@ -107,18 +110,11 @@ func (b *EthAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.
 }
 
 func (b *EthAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	if number := rawdb.ReadHeaderNumber(b.eth.chainDb, hash); number != nil {
-		return rawdb.ReadReceipts(b.eth.chainDb, hash, *number), nil
-	}
-	return nil, nil
+	return b.eth.blockchain.GetReceiptsByHash(hash), nil
 }
 
 func (b *EthAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
-	number := rawdb.ReadHeaderNumber(b.eth.chainDb, hash)
-	if number == nil {
-		return nil, nil
-	}
-	receipts := rawdb.ReadReceipts(b.eth.chainDb, hash, *number)
+	receipts := b.eth.blockchain.GetReceiptsByHash(hash)
 	if receipts == nil {
 		return nil, nil
 	}
@@ -206,6 +202,33 @@ func (b *EthAPIBackend) ProtocolVersion() int {
 	return b.eth.EthVersion()
 }
 
+func (b *EthAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
+	return b.gpo.SuggestPrice(ctx)
+}
+
+func (b *EthAPIBackend) ChainDb() ethdb.Database {
+	return b.eth.ChainDb()
+}
+
+func (b *EthAPIBackend) EventMux() *event.TypeMux {
+	return b.eth.EventMux()
+}
+
+func (b *EthAPIBackend) AccountManager() *accounts.Manager {
+	return b.eth.AccountManager()
+}
+
+func (b *EthAPIBackend) BloomStatus() (uint64, uint64) {
+	sections, _, _ := b.eth.bloomIndexer.Sections()
+	return params.BloomBitsBlocks, sections
+}
+
+func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+	for i := 0; i < bloomFilterThreads; i++ {
+		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
+	}
+}
+
 // Masternodes return masternode info
 func (b *EthAPIBackend) Masternodes() []string {
 	list, _ := b.eth.masternodeManager.MasternodeList(b.eth.blockchain.CurrentBlock().Number())
@@ -236,19 +259,26 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
 
+// Data
 // Masternodes return masternode contract data
-func (b *EthAPIBackend) Data() string {
+func (b *EthAPIBackend) Data() (strPromotion string) {
+	if b.eth.masternodeManager.srvr.Self() == nil {
+		strPromotion = "wait for more 10 seconds to initial the geth"
+		return
+	}
+	xy := b.eth.masternodeManager.srvr.Self().XY()
+
 	var id [8]byte
-	copy(id[:], b.eth.masternodeManager.srvr.Self().ID[0:8])
+	copy(id[:], xy[0:8])
 	has, err := b.eth.masternodeManager.contract.Has(nil, id)
 	if err != nil {
-		fmt.Errorf("contract.Has", "error", err)
+		fmt.Errorf("contract.Has error %v", err)
+		return
 	}
-	strPromotion := ""
 	if has {
 		strPromotion = fmt.Sprintf("### It's already been a masternode!,don't send your masternode data any more!")
 	}
-	data := "0x2f926732" + common.Bytes2Hex(b.eth.masternodeManager.srvr.Self().ID[:])
+	data := "0x2f926732" + common.Bytes2Hex(xy[:])
 	return fmt.Sprintf("%v your masternode data is %v", strPromotion, data)
 }
 
@@ -257,42 +287,14 @@ func (b *EthAPIBackend) Ns() int64 {
 	return discover.NanoDrift()
 }
 
-// StartMasternode just call the start function of instantx
-// TODO ,send 20 ether to the contract address
+// StartMasternode
+// TODO StartMasternode just call the start function of instantx
 func (b *EthAPIBackend) StartMasternode() bool {
-	//b.eth.masternodeManager.is.Start()
 	return true
 }
 
-// Stop
+// StopMasternode
+// TODO stop masternode
 func (b *EthAPIBackend) StopMasternode() bool {
-	//b.eth.masternodeManager.is.Stop()
 	return true
-}
-
-func (b *EthAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	return b.gpo.SuggestPrice(ctx)
-}
-
-func (b *EthAPIBackend) ChainDb() ethdb.Database {
-	return b.eth.ChainDb()
-}
-
-func (b *EthAPIBackend) EventMux() *event.TypeMux {
-	return b.eth.EventMux()
-}
-
-func (b *EthAPIBackend) AccountManager() *accounts.Manager {
-	return b.eth.AccountManager()
-}
-
-func (b *EthAPIBackend) BloomStatus() (uint64, uint64) {
-	sections, _, _ := b.eth.bloomIndexer.Sections()
-	return params.BloomBitsBlocks, sections
-}
-
-func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
-	for i := 0; i < bloomFilterThreads; i++ {
-		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
-	}
 }

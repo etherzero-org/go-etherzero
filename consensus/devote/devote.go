@@ -419,7 +419,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
 	if err != nil {
-		//log.Debug("devote verifySeal failed ", "cycle Hash", devoteProtocol.CycleTrie())
+		// log.Debug("devote verifySeal failed ", "cycle Hash", devoteProtocol.CycleTrie())
 		return err
 	}
 
@@ -496,7 +496,9 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errUnknownBlock
 	}
 	now := time.Now().Unix()
-	delay := int64(NextSlot(uint64(now))) - now
+	NextSlot := int64(NextSlot(uint64(now)))
+	delay := NextSlot - now
+	log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)
 	if delay > 0 {
 		select {
 		case <-stop:
@@ -505,7 +507,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		}
 	}
 	drift := time.Duration(discover.NanoDrift())
-	blockTime:=time.Now().Add(-drift).Unix()
+	blockTime := time.Now().Add(-drift).Unix()
 	block.Header().Time.SetInt64(blockTime)
 
 	// time's up, sign the block
@@ -516,6 +518,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
 	return block.WithSeal(header), nil
 }
+
 
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	return big.NewInt(1)
@@ -582,4 +585,14 @@ func (d *Devote) APIs(chain consensus.ChainReader) []rpc.API {
 		Service:   &API{chain: chain, devote: d},
 		Public:    true,
 	}}
+}
+
+// Close implements consensus.Engine. It's a noop for Devote as there is are no background threads.
+func (c *Devote) Close() error {
+	return nil
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func (c *Devote) SealHash(header *types.Header) common.Hash {
+	return sigHash(header)
 }
