@@ -45,6 +45,7 @@ import (
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 )
 
 var (
@@ -1217,6 +1218,22 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		}
 		t2 := time.Now()
 		proctime := time.Since(start)
+
+		// Validate the devote state using the default validator
+		err = bc.Validator().ValidateDevoteState(block)
+		if err != nil {
+			bc.reportBlock(block, receipts, err)
+			return it.index, events, coalescedLogs, err
+		}
+		// Validate validator
+		devoteEngine, isDevote := bc.engine.(*devote.Devote)
+		if isDevote {
+			err = devoteEngine.VerifySeal(bc, block.Header())
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return it.index, events, coalescedLogs, err
+			}
+		}
 
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, state)
