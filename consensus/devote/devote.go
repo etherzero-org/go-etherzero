@@ -382,11 +382,6 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		snap    *Snapshot
 	)
 	for snap == nil {
-		// If an in-memory snapshot was found, use that
-		if s, ok := d.recents.Get(hash); ok {
-			snap = s.(*Snapshot)
-			break
-		}
 
 		// If we're at an checkpoint block, make a snapshot if it's known
 		if number == 0 || number%d.config.Epoch == 0 {
@@ -400,7 +395,6 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				}
 				stabilization := number - 100
 				stableBlock := chain.GetHeaderByNumber(stabilization)
-				fmt.Printf("snapshot new cycle ,stabilization: %d，hash: %x,stableBlock: %x \n",stabilization,hash,stableBlock.Hash())
 				if stableBlock != nil {
 					hash = stableBlock.Hash()
 				}
@@ -424,13 +418,13 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 					"hash", hash,
 					"number", number,
 				}
-				log.Info("Elected new cycle signers", context...)
+				log.Debug("Elected new cycle signers", context...)
 				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
 				d.recents.Add(snap.Hash, snap)
-				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+				log.Trace("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
 		}
@@ -457,15 +451,6 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	// Previous snapshot found, apply any pending headers on top of it
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
-	}
-	checkpoint:=0
-	for i:=0;i<len(headers);i++{
-		if headers[i].Number.Uint64()%Epoch == 0{
-			checkpoint=i+1
-		}
-	}
-	if checkpoint >0 && len(headers)>1 {
-		headers=headers[checkpoint:len(headers)-1]
 	}
 
 	snap, err := snap.apply(headers)
@@ -534,7 +519,6 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
 	if !c.fakeDiff {
-
 		inturn := snap.inturn(header.Number.Uint64(), signer)
 		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 			return errWrongDifficulty
@@ -801,7 +785,7 @@ func masternodes(hash common.Hash, nodes []string) (map[string]*big.Int, error) 
 		score.Add(score, big.NewInt(weight))
 		result[masternode] = score
 	}
-	log.Info("snapshot nodes ", "context", nodes, "count", len(nodes))
+	log.Debug("snapshot nodes ", "context", nodes, "count", len(nodes))
 	return result, nil
 }
 
