@@ -400,10 +400,10 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				}
 				stabilization := number - 100
 				stableBlock := chain.GetHeaderByNumber(stabilization)
+				fmt.Printf("snapshot new cycle ,stabilization: %d，hash: %x,stableBlock: %x \n",stabilization,hash,stableBlock.Hash())
 				if stableBlock != nil {
 					hash = stableBlock.Hash()
 				}
-
 				result, err := masternodes(hash, all)
 				masternodes := sortableAddresses{}
 				for masternode, cnt := range result {
@@ -458,12 +458,16 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
+	checkpoint:=0
 	for i:=0;i<len(headers);i++{
 		if headers[i].Number.Uint64()%Epoch == 0{
-			fmt.Println("init snapshot when headers is new Cycle ","I:",i,"header Number",headers[i].Number)
-			headers=headers[i:len(headers)-1]
+			checkpoint=i+1
 		}
 	}
+	if checkpoint >0 && len(headers)>1 {
+		headers=headers[checkpoint:len(headers)-1]
+	}
+
 	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
@@ -797,7 +801,7 @@ func masternodes(hash common.Hash, nodes []string) (map[string]*big.Int, error) 
 		score.Add(score, big.NewInt(weight))
 		result[masternode] = score
 	}
-	log.Debug("snapshot nodes ", "context", nodes, "count", len(nodes))
+	log.Info("snapshot nodes ", "context", nodes, "count", len(nodes))
 	return result, nil
 }
 
@@ -821,3 +825,4 @@ func (c *Devote) APIs(chain consensus.ChainReader) []rpc.API {
 		Public:    false,
 	}}
 }
+

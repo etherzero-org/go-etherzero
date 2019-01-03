@@ -19,10 +19,10 @@
 package devote
 
 import (
-	"math/big"
-	"sync"
-	"strings"
 	"encoding/json"
+	"math/big"
+	"strings"
+	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
@@ -45,7 +45,7 @@ type Snapshot struct {
 	Hash     common.Hash         //Block hash where the snapshot was created
 	Number   uint64              //Cycle number where the snapshot was created
 	Cycle    uint64              //Cycle number where the snapshot was created
-	Signers map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
+	Signers  map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
 	Recents  map[uint64]string   // set of recent masternodes for spam protections
 
 }
@@ -131,7 +131,9 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if _, ok := snap.Signers[signer]; !ok {
 			return nil, errUnauthorizedSigner
 		}
-		snap.Recents[number] = signer
+		if number%Epoch != 0 {
+			snap.Recents[number] = signer
+		}
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
