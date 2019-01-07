@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"sort"
 
 	"encoding/binary"
 	"github.com/etherzero/go-etherzero/common"
@@ -42,7 +43,6 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	lru "github.com/hashicorp/golang-lru"
-	"sort"
 )
 
 const (
@@ -460,7 +460,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	d.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if snap.Number%checkpointInterval == 0 && len(headers) >0{
 		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
@@ -518,14 +518,12 @@ func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
-	if !c.fakeDiff {
-		inturn := snap.inturn(header.Number.Uint64(), signer)
-		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-			return errWrongDifficulty
-		}
-		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
-			return errWrongDifficulty
-		}
+	inturn := snap.inturn(header.Number.Uint64(), signer)
+	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
+		return errWrongDifficulty
+	}
+	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
+		return errWrongDifficulty
 	}
 	return nil
 }
