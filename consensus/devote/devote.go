@@ -65,6 +65,8 @@ var (
 
 	uncleHash = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 
+	confirmedBlockHead = []byte("confirmed-block-head")
+
 	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
 	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
 
@@ -141,6 +143,8 @@ var (
 	// that already signed a header recently, thus is temporarily not allowed to.
 	errRecentlySigned = errors.New("recently signed")
 
+	ErrNilBlockHeader           = errors.New("nil block header returned")
+
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
 )
 
@@ -188,6 +192,27 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
+// Devote is the proof-of-authority consensus engine proposed to support the
+// Ethereum testnet following the Ropsten attacks.
+type Devote struct {
+	config *params.DevoteConfig // Consensus engine configuration parameters
+	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
+
+	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
+	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
+
+	proposals map[string]bool // Current list of proposals we are pushing
+	confirmedBlockHeader        *types.Header
+
+	signer string       // Masternode 's Id
+	signFn SignerFn     // Signer function to authorize hashes with
+	lock   sync.RWMutex // Protects the signer fields
+
+	masternodeListFn            MasternodeListFn             //get current all masternodes
+	governanceContractAddressFn GetGovernanceContractAddress //get current GovernanceContractAddress
+
+}
+
 // ecrecover extracts the Masternode account ID from a signed header.
 func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
 	// If the signature's already cached, return that
@@ -210,28 +235,6 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
 	return id, nil
 }
 
-// Devote is the proof-of-authority consensus engine proposed to support the
-// Ethereum testnet following the Ropsten attacks.
-type Devote struct {
-	config *params.DevoteConfig // Consensus engine configuration parameters
-	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
-
-	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
-	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
-
-	proposals map[string]bool // Current list of proposals we are pushing
-
-	signer string       // Ethereum address of the signing key
-	signFn SignerFn     // Signer function to authorize hashes with
-	lock   sync.RWMutex // Protects the signer fields
-
-	// The fields below are for testing only
-	fakeDiff bool // Skip difficulty verifications
-
-	masternodeListFn            MasternodeListFn             //get current all masternodes
-	governanceContractAddressFn GetGovernanceContractAddress //get current GovernanceContractAddress
-
-}
 
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
@@ -464,7 +467,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
-		log.Info("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		log.Info("Stored snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
 }
@@ -621,7 +624,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	//}
 	govaddress = common.Address{}
 
-	AccumulateRewards(govaddress, state, header, uncles)
+	AccumulateRewards(govaddress, state, header, nil)
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -786,6 +789,78 @@ func masternodes(hash common.Hash, nodes []string) (map[string]*big.Int, error) 
 	log.Debug("snapshot nodes ", "context", nodes, "count", len(nodes))
 	return result, nil
 }
+
+// store inserts the snapshot into the database.
+func (s *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
+	db.Put(confirmedBlockHead, s.confirmedBlockHeader.Hash().Bytes())
+	return nil
+}
+
+
+func (s *Devote) loadConfirmedBlockHeader(chain consensus.ChainReader) (*types.Header, error) {
+
+	key, err := s.db.Get(confirmedBlockHead)
+	if err != nil {
+		return nil, err
+	}
+	header := chain.GetHeaderByHash(common.BytesToHash(key))
+	if header == nil {
+		return nil, ErrNilBlockHeader
+	}
+	return header, nil
+}
+
+
+func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
+	if d.confirmedBlockHeader == nil {
+		header, err := d.loadConfirmedBlockHeader(chain)
+		if err != nil {
+			header = chain.GetHeaderByNumber(0)
+			if header == nil {
+				return err
+			}
+		}
+		d.confirmedBlockHeader = header
+	}
+
+	curHeader := chain.CurrentHeader()
+	cycle := uint64(0)
+	witnessMap := make(map[string]bool)
+	consensusSize := int(15)
+	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
+		consensusSize = 1
+	}
+	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
+		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
+		curCycle := curHeader.Time.Uint64() / params.CycleInterval
+		if curCycle != cycle {
+			cycle = curCycle
+			witnessMap = make(map[string]bool)
+		}
+		// fast return
+		// if block number difference less consensusSize-witnessNum
+		// there is no need to check block is confirmed
+		if curHeader.Number.Int64()-d.confirmedBlockHeader.Number.Int64() < int64(consensusSize-len(witnessMap)) {
+			log.Debug("Devote fast return", "current", curHeader.Number.String(), "confirmed", d.confirmedBlockHeader.Number.String(), "witnessCount", len(witnessMap))
+			return nil
+		}
+		witnessMap[curHeader.Witness] = true
+		if len(witnessMap) >= consensusSize {
+			d.confirmedBlockHeader = curHeader
+			if err := d.storeConfirmedBlockHeader(d.db); err != nil {
+				return err
+			}
+			log.Debug("devote set confirmed block header success", "currentHeader", curHeader.Number.String())
+			return nil
+		}
+		curHeader = chain.GetHeaderByHash(curHeader.ParentHash)
+		if curHeader == nil {
+			return ErrNilBlockHeader
+		}
+	}
+	return nil
+}
+
 
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *Devote) SealHash(header *types.Header) common.Hash {
