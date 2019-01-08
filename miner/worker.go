@@ -878,29 +878,6 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	if w.config.DAOForkSupport && w.config.DAOForkBlock != nil && w.config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(env.state)
 	}
-	// Accumulate the uncles for the current block
-	//commitUncles := func(blocks map[common.Hash]*types.Block) {
-	//	// Clean up stale uncle blocks first
-	//	for hash, uncle := range blocks {
-	//		if uncle.NumberU64()+staleThreshold <= header.Number.Uint64() {
-	//			delete(blocks, hash)
-	//		}
-	//	}
-	//	for hash, uncle := range blocks {
-	//		if len(uncles) == 2 {
-	//			break
-	//		}
-	//		if err := w.commitUncle(env, uncle.Header()); err != nil {
-	//			log.Trace("Possible uncle rejected", "hash", hash, "reason", err)
-	//		} else {
-	//			log.Debug("Committing new uncle to block", "hash", hash)
-	//			uncles = append(uncles, uncle.Header())
-	//		}
-	//	}
-	//}
-	// Prefer to locally generated uncle
-	//commitUncles(w.localUncles)
-	//commitUncles(w.remoteUncles)
 
 	if !noempty {
 		// Create an empty block based on temporary copied state for sealing in advance without waiting block
