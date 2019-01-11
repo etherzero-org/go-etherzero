@@ -746,7 +746,6 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
 func CalcDifficulty(snap *Snapshot, signer string) *big.Int {
-	fmt.Println("CalcDifficulty snap.Number",snap.Number)
 	if snap.inturn(snap.Number+1, signer) {
 		return new(big.Int).Set(diffInTurn)
 	}
