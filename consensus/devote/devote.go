@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
-	"sort"
 
 	"encoding/binary"
 	"github.com/etherzero/go-etherzero/common"
@@ -143,7 +143,7 @@ var (
 	// that already signed a header recently, thus is temporarily not allowed to.
 	errRecentlySigned = errors.New("recently signed")
 
-	ErrNilBlockHeader           = errors.New("nil block header returned")
+	ErrNilBlockHeader = errors.New("nil block header returned")
 
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
 )
@@ -201,8 +201,8 @@ type Devote struct {
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
 
-	proposals map[string]bool // Current list of proposals we are pushing
-	confirmedBlockHeader        *types.Header
+	proposals            map[string]bool // Current list of proposals we are pushing
+	confirmedBlockHeader *types.Header
 
 	signer string       // Masternode 's Id
 	signFn SignerFn     // Signer function to authorize hashes with
@@ -234,7 +234,6 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
 	sigcache.Add(hash, id)
 	return id, nil
 }
-
 
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
@@ -461,9 +460,8 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		return nil, err
 	}
 	d.recents.Add(snap.Hash, snap)
-
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) >0{
+	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
@@ -748,7 +746,7 @@ func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent
 // that a new block should have based on the previous blocks in the chain and the
 // current signer.
 func CalcDifficulty(snap *Snapshot, signer string) *big.Int {
-
+	fmt.Println("CalcDifficulty snap.Number",snap.Number)
 	if snap.inturn(snap.Number+1, signer) {
 		return new(big.Int).Set(diffInTurn)
 	}
@@ -796,7 +794,6 @@ func (s *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
 	return nil
 }
 
-
 func (s *Devote) loadConfirmedBlockHeader(chain consensus.ChainReader) (*types.Header, error) {
 
 	key, err := s.db.Get(confirmedBlockHead)
@@ -809,7 +806,6 @@ func (s *Devote) loadConfirmedBlockHeader(chain consensus.ChainReader) (*types.H
 	}
 	return header, nil
 }
-
 
 func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	if d.confirmedBlockHeader == nil {
@@ -861,7 +857,6 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	return nil
 }
 
-
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *Devote) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
@@ -882,4 +877,3 @@ func (c *Devote) APIs(chain consensus.ChainReader) []rpc.API {
 		Public:    false,
 	}}
 }
-
