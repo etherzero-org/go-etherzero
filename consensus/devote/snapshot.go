@@ -134,10 +134,10 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if number%Epoch != 0 {
 			snap.Recents[number] = signer
 		}
-		snap.Cycle=number/Epoch
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
+	snap.Cycle=headers[len(headers)-1].Number.Uint64()/Epoch
 	return snap, nil
 }
 
