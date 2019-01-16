@@ -70,8 +70,9 @@ var (
 	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
 	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
 
-	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
-	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
+	diffInTurn          = big.NewInt(2) // Block difficulty for in-turn signatures
+	diffNoTurn          = big.NewInt(1) // Block difficulty for out-of-turn signatures
+	masternodeDifficult = big.NewInt(1) // Block difficult for masternode consensus
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -146,6 +147,12 @@ var (
 	ErrNilBlockHeader = errors.New("nil block header returned")
 
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
+
+	ErrWaitForPrevBlock = errors.New("wait for last block arrived")
+
+	ErrMinerFutureBlock = errors.New("miner the future block")
+
+	ErrInvalidMinerBlockTime = errors.New("invalid time to miner the block")
 )
 
 // SignerFn is a signer callback function to request a hash to be signed by a
@@ -293,7 +300,7 @@ func (c *Devote) VerifyHeaders(chain consensus.ChainReader, headers []*types.Hea
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -304,7 +311,7 @@ func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
-	checkpoint := (number % c.config.Epoch) == 0
+	checkpoint := (number % d.config.Epoch) == 0
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
 	if !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
 		return errInvalidVote
@@ -319,22 +326,29 @@ func (c *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if len(header.Extra) < extraVanity+extraSeal {
 		return errMissingSignature
 	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
+	// Ensure that the block doesn't contain any uncles which are meaningless in devote
 	if header.UncleHash != uncleHash {
 		return errInvalidUncleHash
 	}
-	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if number > 0 {
-		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
+	if chain.Config().IsDevote(header.Number) {
+		// Ensure that the block's difficulty is meaningful (may not be correct at this point)
+		if number > 0 {
+			if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
+				return errInvalidDifficulty
+			}
+		}
+	} else {
+		if header.Difficulty.Cmp(masternodeDifficult) != 0 {
 			return errInvalidDifficulty
 		}
 	}
+
 	// If all checks passed, validate any special fields for hard forks
 	if err := misc.VerifyForkHashes(chain.Config(), header, false); err != nil {
 		return err
 	}
 	// All basic checks passed, verify cascading fields
-	return c.verifyCascadingFields(chain, header, parents)
+	return d.verifyCascadingFields(chain, header, parents)
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
@@ -489,43 +503,58 @@ func (c *Devote) VerifySeal(chain consensus.ChainReader, header *types.Header) e
 // consensus protocol requirements. The method accepts an optional list of parent
 // headers that aren't yet part of the local blockchain to generate the snapshots
 // from.
-func (c *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
 		return errUnknownBlock
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
 
 	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, c.signatures)
+	signer, err := ecrecover(header, d.signatures)
 	if err != nil {
 		return err
 	}
 	if _, ok := snap.Signers[signer]; !ok {
 		return errUnauthorizedSigner
 	}
-	for seen, recent := range snap.Recents {
-		if recent == signer {
-			// Signer is among recents, only fail if the current block doesn't shift it out
-			if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
-				return errRecentlySigned
+	if chain.Config().IsDevote(header.Number) {
+		for seen, recent := range snap.Recents {
+			if recent == signer {
+				// Signer is among recents, only fail if the current block doesn't shift it out
+				if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
+					return errRecentlySigned
+				}
 			}
+		}
+
+		// Ensure that the difficulty corresponds to the turn-ness of the signer
+		inturn := snap.inturn(header.Number.Uint64(), signer)
+		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
+			return errWrongDifficulty
+		}
+		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
+			return errWrongDifficulty
+		}
+	} else {
+		witness, err := lookup(snap.signers(),header.Time.Uint64())
+		if err != nil {
+			return err
+		}
+		if err := d.verifyBlockSigner(witness, header); err != nil {
+			return err
+		}
+
+		if header.Difficulty.Cmp(masternodeDifficult) != 0 {
+			return errWrongDifficulty
 		}
 	}
 
-	// Ensure that the difficulty corresponds to the turn-ness of the signer
-	inturn := snap.inturn(header.Number.Uint64(), signer)
-	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-		return errWrongDifficulty
-	}
-	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
-		return errWrongDifficulty
-	}
 	return nil
 }
 
@@ -612,14 +641,14 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
-func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	//fmt.Printf("devote finalize header.number %d",header.Number)
 	// Accumulate block rewards and commit the final state root
-	govaddress, _ := d.governanceContractAddressFn(header.Number)
-	//if err != nil {
-	//	return nil, fmt.Errorf("get current governance address err:%s", err)
-	//}
+	govaddress, err := d.governanceContractAddressFn(header.Number)
+	if err != nil {
+		return nil, fmt.Errorf("get current governance address err:%s", err)
+	}
 	govaddress = common.Address{}
 
 	AccumulateRewards(govaddress, state, header, nil)
@@ -664,7 +693,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
-func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 
 	header := block.Header()
 
@@ -674,38 +703,42 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 		return errUnknownBlock
 	}
 	// Don't hold the signer fields for the entire sealing procedure
-	c.lock.RLock()
-	signer, signFn := c.signer, c.signFn
-	c.lock.RUnlock()
-
-	// Bail out if we're unauthorized to sign a block
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-	if _, ok := snap.Signers[signer]; !ok {
-		return errUnauthorizedSigner
-	}
-	// If we're amongst the recent signers, wait for the next block
-	for seen, recent := range snap.Recents {
-		if recent == signer {
-			// Signer is among recents, only wait if the current block doesn't shift it out
-			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
-				return nil
-			}
-			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(snap.Signers)/2+1))
-		}
-	}
+	d.lock.RLock()
+	signer, signFn := d.signer, d.signFn
+	d.lock.RUnlock()
 	// Sweet, the protocol permits us to sign the block, wait for our time
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
-	if header.Difficulty.Cmp(diffNoTurn) == 0 {
-		// It's not our turn explicitly to sign, delay it a bit
-		wiggle := time.Duration(len(snap.Signers)+1) * wiggleTime
-		delay += time.Duration(rand.Int63n(int64(wiggle)))
 
-		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+	if chain.Config().IsDevote(header.Number) {
+		// Bail out if we're unauthorized to sign a block
+		snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+		if err != nil {
+			return err
+		}
+		singerMap := snap.Signers
+		if _, ok := singerMap[signer]; !ok {
+			return errUnauthorizedSigner
+		}
+		// If we're amongst the recent signers, wait for the next block
+		for seen, recent := range snap.Recents {
+			if recent == signer {
+				// Signer is among recents, only wait if the current block doesn't shift it out
+				if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
+					log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
+					return nil
+				}
+				log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
+			}
+		}
+		if header.Difficulty.Cmp(diffNoTurn) == 0 {
+			// It's not our turn explicitly to sign, delay it a bit
+			wiggle := time.Duration(15) * wiggleTime
+			delay += time.Duration(rand.Int63n(int64(wiggle)))
+
+			log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+		}
 	}
+
 	// Sign all the things!
 	sighash, err := signFn(signer, sigHash(header).Bytes())
 	if err != nil {
@@ -724,7 +757,7 @@ func (c *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 		select {
 		case results <- block.WithSeal(header):
 		default:
-			log.Warn("Sealing result is not read by miner", "sealhash", c.SealHash(header))
+			log.Warn("Sealing result is not read by miner", "sealhash", d.SealHash(header))
 		}
 	}()
 
@@ -855,6 +888,70 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	}
 	return nil
 }
+
+func PrevSlot(now uint64) uint64 {
+	return (now - 1) / params.BlockInterval * params.BlockInterval
+}
+
+func NextSlot(now uint64) uint64 {
+	return ((now + params.BlockInterval - 1) / params.BlockInterval) * params.BlockInterval
+}
+
+func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
+	prevSlot := PrevSlot(now)
+	nextSlot := NextSlot(now)
+	if lastBlock.Time().Uint64() >= nextSlot {
+		return ErrMinerFutureBlock
+	}
+	// last block was arrived, or time's up
+	if lastBlock.Time().Uint64() == prevSlot || nextSlot-now <= 1 {
+		return nil
+	}
+	return ErrWaitForPrevBlock
+}
+
+func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
+	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
+		return err
+	}
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
+	if err != nil {
+		return err
+	}
+	currentCycle := lastBlock.Time().Uint64() / params.CycleInterval
+	devoteDB.SetCycle(currentCycle)
+	snap := &Snapshot{devoteDB: devoteDB}
+
+	witness, err := snap.lookup(uint64(now))
+	if err != nil {
+		return err
+	}
+	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer)
+	if (witness == "") || witness != d.signer {
+		return errUnauthorizedSigner
+	}
+	return nil
+}
+
+func lookup(witnesses []string,now uint64) (witness string, err error) {
+
+	offset := now % params.CycleInterval
+	if offset%params.BlockInterval != 0 {
+		err = ErrInvalidMinerBlockTime
+		return
+	}
+	offset /= params.BlockInterval
+
+	witnessSize := len(witnesses)
+	if witnessSize == 0 {
+		err = errors.New("failed to lookup witness")
+		return
+	}
+	offset %= uint64(witnessSize)
+	witness = witnesses[offset]
+	return
+}
+
 
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *Devote) SealHash(header *types.Header) common.Hash {

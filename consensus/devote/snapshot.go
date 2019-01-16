@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"strings"
+	"errors"
 	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
@@ -29,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 const (
@@ -39,6 +41,7 @@ const (
 type Snapshot struct {
 	config    *params.DevoteConfig // Consensus engine parameters to fine tune behavior
 	TimeStamp uint64
+	devoteDB  *devotedb.DevoteDB
 
 	mu       sync.Mutex
 	sigcache *lru.ARCCache       // Cache of recent block signatures to speed up ecrecover
@@ -183,6 +186,30 @@ func (s *Snapshot) validWitness(witness string, authorize bool) bool {
 	_, signer := s.Signers[witness]
 	return (signer && !authorize) || (!signer && authorize)
 }
+
+func (s *Snapshot) lookup(now uint64) (witness string, err error) {
+
+	offset := now % params.CycleInterval
+	if offset%params.BlockInterval != 0 {
+		err = ErrInvalidMinerBlockTime
+		return
+	}
+	offset /= params.BlockInterval
+	witnesses, err := s.devoteDB.GetWitnesses(s.devoteDB.GetCycle())
+	if err != nil {
+		return
+	}
+
+	witnessSize := len(witnesses)
+	if witnessSize == 0 {
+		err = errors.New("failed to lookup witness")
+		return
+	}
+	offset %= uint64(witnessSize)
+	witness = witnesses[offset]
+	return
+}
+
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid
