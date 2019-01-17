@@ -79,6 +79,9 @@ type StateDB struct {
 	logs         map[common.Hash][]*types.Log
 	logSize      uint
 
+	intxs    map[common.Hash][]*types.Intx
+	intxSize uint
+
 	preimages map[common.Hash][]byte
 
 	// Journal of state modifications. This is the backbone of
@@ -100,6 +103,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		stateObjects:      make(map[common.Address]*stateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		logs:              make(map[common.Hash][]*types.Log),
+		intxs:             make(map[common.Hash][]*types.Intx),
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
 	}, nil
@@ -131,6 +135,8 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash][]*types.Log)
 	self.logSize = 0
+	self.intxs = make(map[common.Hash][]*types.Intx)
+	self.intxSize = 0
 	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
 	return nil
@@ -157,6 +163,17 @@ func (self *StateDB) Logs() []*types.Log {
 		logs = append(logs, lgs...)
 	}
 	return logs
+}
+
+func (self *StateDB) AddIntx(from common.Address, to common.Address, value *big.Int) {
+	self.journal.append(addIntxChange{txhash: self.thash})
+	intx := &types.Intx{From: from, To: to, Value: *value}
+	self.intxs[self.thash] = append(self.intxs[self.thash], intx)
+	self.intxSize++
+}
+
+func (self *StateDB) GetIntxs(hash common.Hash) []*types.Intx {
+	return self.intxs[hash]
 }
 
 // AddPreimage records a SHA3 preimage seen by the VM.
@@ -538,6 +555,8 @@ func (self *StateDB) Copy() *StateDB {
 		refund:            self.refund,
 		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
+		intxs:             make(map[common.Hash][]*types.Intx, len(self.intxs)),
+		intxSize:          self.intxSize,
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
 	}
@@ -568,6 +587,14 @@ func (self *StateDB) Copy() *StateDB {
 			*cpy[i] = *l
 		}
 		state.logs[hash] = cpy
+	}
+	for hash, intxs := range self.intxs {
+		cpy := make([]*types.Intx, len(intxs))
+		for i, l := range intxs {
+			cpy[i] = new(types.Intx)
+			*cpy[i] = *l
+		}
+		state.intxs[hash] = cpy
 	}
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage

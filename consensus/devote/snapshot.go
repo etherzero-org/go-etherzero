@@ -176,10 +176,10 @@ func (self *Controller) election(genesis, first, parent *types.Header, nodes []s
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
+		log.Debug("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
 		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
 		self.devoteDB.Commit()
-		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
+		log.Debug("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
 	}
 	return nil
 }
