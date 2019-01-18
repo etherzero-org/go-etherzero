@@ -237,9 +237,6 @@ func (self *DevoteDB) StorageStatsTrie(hash common.Hash) Trie {
 
 func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness string) {
 
-	if d.dCache == nil {
-		return
-	}
 	currentCycle := parentBlockTime / params.CycleInterval
 	currentCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))

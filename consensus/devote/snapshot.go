@@ -20,17 +20,23 @@ package devote
 
 import (
 	"encoding/json"
+	"errors"
 	"math/big"
 	"strings"
-	"errors"
 	"sync"
 
+	"encoding/binary"
+	"fmt"
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/hashicorp/golang-lru"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"sort"
 )
 
 const (
@@ -140,7 +146,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
-	snap.Cycle=headers[len(headers)-1].Number.Uint64()/Epoch
+	snap.Cycle = headers[len(headers)-1].Number.Uint64() / Epoch
 	return snap, nil
 }
 
@@ -210,6 +216,150 @@ func (s *Snapshot) lookup(now uint64) (witness string, err error) {
 	return
 }
 
+//when a node does't work in the current cycle, Remove from candidate nodes.
+func (ec *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
+
+	witnesses, err := ec.devoteDB.GetWitnesses(cycle)
+	if err != nil {
+		return nodes, fmt.Errorf("failed to get witness: %s", err)
+	}
+	if len(witnesses) == 0 {
+		return nodes, errors.New("no witness could be uncast")
+	}
+	needUncastWitnesses := sortableAddresses{}
+	for _, witness := range witnesses {
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, cycle)
+		// TODO
+		key = append(key, []byte(witness)...)
+
+		size := uint64(0)
+		size = ec.devoteDB.GetStatsNumber(key)
+		if size < 1 {
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
+		}
+		log.Debug("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
+	}
+	// no witnessees need uncast
+	needUncastWitnessCnt := len(needUncastWitnesses)
+	if needUncastWitnessCnt <= 0 {
+		return nodes, nil
+	}
+	for _, witness := range needUncastWitnesses {
+		j := 0
+		for _, s := range nodes {
+			if s != witness.nodeid {
+				nodes[j] = s
+				j++
+			}
+		}
+	}
+	return nodes, nil
+}
+
+func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []string) error {
+
+	maxWitnessSize := uint64(21)
+	safeSize := int(15)
+
+	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
+	prevCycle := parent.Time.Uint64() / params.CycleInterval
+	currentCycle := self.TimeStamp / params.CycleInterval
+
+	prevCycleIsGenesis := (prevCycle == genesisCycle)
+	if prevCycleIsGenesis && prevCycle < currentCycle {
+		prevCycle = currentCycle - 1
+	}
+	prevCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+
+	for i := prevCycle; i < currentCycle; i++ {
+		// if prevCycle is not genesis, uncast not active masternode
+		list := make([]string, len(nodes))
+		copy(list, nodes)
+		if !prevCycleIsGenesis {
+			list, _ = self.uncast(prevCycle, nodes)
+		}
+
+		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
+		if err != nil {
+			log.Error("init masternodes ", "err", err)
+			return err
+		}
+		masternodes := sortableAddresses{}
+		for masternode, cnt := range votes {
+			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
+		}
+		if len(masternodes) < safeSize {
+			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
+		}
+		sort.Sort(masternodes)
+		if len(masternodes) > int(maxWitnessSize) {
+			masternodes = masternodes[:maxWitnessSize]
+		}
+		var sortedWitnesses []string
+		for _, node := range masternodes {
+			sortedWitnesses = append(sortedWitnesses, node.nodeid)
+		}
+		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
+		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
+		self.devoteDB.Commit()
+		log.Info("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
+	}
+	return nil
+}
+
+// masternodes return  masternode list in the Cycle.
+// key   -- nodeid
+// value -- votes count
+
+func (self *Snapshot) masternodes(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	list := make(map[string]*big.Int)
+	for i := 0; i < len(nodes); i++ {
+		masternode := nodes[i]
+		hash := make([]byte, 8)
+		hash = append(hash, []byte(masternode)...)
+		hash = append(hash, parent.Hash().Bytes()...)
+		weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
+
+		score := big.NewInt(0)
+		score.Add(score, big.NewInt(weight))
+		log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
+		list[masternode] = score
+	}
+	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
+	return list, nil
+}
+
+func GenerateProtocol(chain consensus.ChainReader, header *types.Header, db *devotedb.DevoteDB, nodes []string) *devotedb.DevoteProtocol {
+
+	if chain.Config().IsDevote(header.Number) {
+		protocol := &devotedb.DevoteProtocol{
+			CycleHash: header.Root,
+			StatsHash: header.Root,
+		}
+		return protocol
+	} else {
+		snap := &Snapshot{
+			devoteDB:  db,
+			TimeStamp: header.Time.Uint64(),
+		}
+		parent := chain.GetHeaderByHash(header.ParentHash)
+		genesis := chain.GetHeaderByNumber(0)
+		first := chain.GetHeaderByNumber(1)
+		snap.election(genesis, first, parent, nodes)
+		//miner Rolling
+		log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
+			"headerTime", header.Time.Uint64(), "witness", header.Witness)
+		db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+		db.Commit()
+		return db.Protocol()
+
+	}
+}
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid

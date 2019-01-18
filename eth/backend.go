@@ -428,7 +428,7 @@ func (s *Ethereum) Witness() (witness string, err error) {
 		return witness, nil
 	}
 	if s.masternodeManager.active != nil {
-		fmt.Printf("backend Witness accounts: %x \n", s.masternodeManager.active.ID)
+		fmt.Printf("backend Witness accounts: %s \n", s.masternodeManager.active.ID)
 		return s.masternodeManager.active.ID, nil
 	}
 	return "", fmt.Errorf("Witness  must be explicitly specified")
@@ -471,7 +471,6 @@ func (s *Ethereum) StartMining(threads int) error {
 			return fmt.Errorf("etherbase missing: %v", err)
 		}
 		witness, err := s.Witness()
-		fmt.Printf("backend StartMining witness:%s\n", witness)
 		if err != nil {
 			log.Error("Cannot start mining without Witness", "err", err)
 			return fmt.Errorf("Witness missing: %v", err)

@@ -542,7 +542,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			return errWrongDifficulty
 		}
 	} else {
-		witness, err := lookup(snap.signers(),header.Time.Uint64())
+		witness, err := lookup(snap.signers(), header.Time.Uint64())
 		if err != nil {
 			return err
 		}
@@ -642,30 +642,36 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
+
+	parent := chain.GetHeaderByHash(header.ParentHash)
+	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(maxSignersSize))
+	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
+		stableBlockNumber = big.NewInt(0)
+	}
 
 	// Accumulate block rewards and commit the final state root
-	govaddress, err := d.governanceContractAddressFn(header.Number)
+	govaddress, err := d.governanceContractAddressFn(stableBlockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("get current governance address err:%s", err)
 	}
-	govaddress = common.Address{}
+	nodes, merr := d.masternodeListFn(stableBlockNumber)
+	if merr != nil {
+		return nil, fmt.Errorf("get current masternodes err:%s", merr)
+	}
 
 	AccumulateRewards(govaddress, state, header, nil)
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
-
-	protocol := &devotedb.DevoteProtocol{
-		CycleHash: header.Root,
-		StatsHash: header.Root,
-	}
+	protocol :=GenerateProtocol(chain , header , db ,nodes)
 	header.Protocol = protocol
 
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
+
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
@@ -933,7 +939,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	return nil
 }
 
-func lookup(witnesses []string,now uint64) (witness string, err error) {
+func lookup(witnesses []string, now uint64) (witness string, err error) {
 
 	offset := now % params.CycleInterval
 	if offset%params.BlockInterval != 0 {
@@ -951,7 +957,6 @@ func lookup(witnesses []string,now uint64) (witness string, err error) {
 	witness = witnesses[offset]
 	return
 }
-
 
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *Devote) SealHash(header *types.Header) common.Hash {

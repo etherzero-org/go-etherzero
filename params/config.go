@@ -104,7 +104,7 @@ var (
 		EIP155Block:         big.NewInt(3),
 		EIP158Block:         big.NewInt(3),
 		ByzantiumBlock:      big.NewInt(1035301),
-		DevoteBlock:         big.NewInt(0),
+		DevoteBlock:         big.NewInt(120000),
 		ConstantinopleBlock: nil,
 		Clique: &CliqueConfig{
 			Period: 1,
