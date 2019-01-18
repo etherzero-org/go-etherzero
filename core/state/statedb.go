@@ -167,7 +167,8 @@ func (self *StateDB) Logs() []*types.Log {
 
 func (self *StateDB) AddIntx(from common.Address, to common.Address, value *big.Int) {
 	self.journal.append(addIntxChange{txhash: self.thash})
-	intx := &types.Intx{From: from, To: to, Value: *value}
+	intx := &types.Intx{From: from, To: to}
+	intx.Value.SetBytes(value.Bytes())
 	self.intxs[self.thash] = append(self.intxs[self.thash], intx)
 	self.intxSize++
 }
