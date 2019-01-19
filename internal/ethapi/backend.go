@@ -48,6 +48,7 @@ type Backend interface {
 	// masternode control api
 	Masternodes() []string        // masternodes info
 	Data() string                 // return masternode contract nodes data
+	Signer() string                 // return Active masternode signer
 	GetInfo(nodeid string) string // return related info in masternode contract
 	StartMasternode() bool        // start the masternode,hash ,srvr means two different parameters
 	StopMasternode() bool         // stop the masternode,hash ,srvr means two different parameters

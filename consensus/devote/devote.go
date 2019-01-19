@@ -653,11 +653,11 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	// Accumulate block rewards and commit the final state root
 	govaddress, err := d.governanceContractAddressFn(stableBlockNumber)
 	if err != nil {
-		return nil, fmt.Errorf("get current governance address err:%s", err)
+		return nil, fmt.Errorf("got current governance address err:%s", err)
 	}
 	nodes, merr := d.masternodeListFn(stableBlockNumber)
 	if merr != nil {
-		return nil, fmt.Errorf("get current masternodes err:%s", merr)
+		return nil, fmt.Errorf("got current masternodes err:%s", merr)
 	}
 
 	AccumulateRewards(govaddress, state, header, nil)
@@ -689,7 +689,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return err
 	}
 	if signer != witness {
-		return fmt.Errorf("invalid block witness signer: %s,witness: %s,time:%d \n", signer, witness, header.Time)
+		return fmt.Errorf("invalid block witness have witness: %s,got signer: %s,time:%d \n", witness, signer, header.Time)
 	}
 	if signer != header.Witness {
 		return ErrMismatchSignerAndWitness

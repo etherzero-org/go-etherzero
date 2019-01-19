@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"encoding/hex"
+	"fmt"
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/math"
@@ -28,17 +30,15 @@ import (
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/enodetools"
 	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/eth/gasprice"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
-	"encoding/hex"
 	"strings"
-	"fmt"
-	"github.com/etherzero/go-etherzero/p2p/discover"
-	"github.com/etherzero/go-etherzero/enodetools"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -259,6 +259,7 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
 		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
 }
+
 // EnodeCount
 // get the numbers contains in the enodeinfo contract
 func (b *EthAPIBackend) EnodeCount() (ret uint64) {
@@ -363,6 +364,12 @@ func (b *EthAPIBackend) Data() (strPromotion string) {
 }
 
 // Masternodes return masternode contract data
+func (b *EthAPIBackend) Signer() (signer string) {
+	signer,_ = b.eth.Witness()
+	return signer
+}
+
+// Masternodes return masternode contract data
 func (b *EthAPIBackend) Ns() int64 {
 	return discover.NanoDrift()
 }
@@ -370,12 +377,10 @@ func (b *EthAPIBackend) Ns() int64 {
 // StartMasternode just call the start function of instantx
 // TODO ,send 20 ether to the contract address
 func (b *EthAPIBackend) StartMasternode() bool {
-	//b.eth.masternodeManager.is.Start()
 	return true
 }
 
 // Stop
 func (b *EthAPIBackend) StopMasternode() bool {
-	//b.eth.masternodeManager.is.Stop()
 	return true
 }

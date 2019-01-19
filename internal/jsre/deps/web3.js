@@ -6822,6 +6822,10 @@ require = (function e(t, n, r) {
                 new Property({
                     name: 'enodeCount',
                     getter: 'masternode_enodeCount'
+                }),
+                new Property({
+                    name: 'signer',
+                    getter: 'masternode_signer'
                 })
             ];
         };

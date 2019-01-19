@@ -242,6 +242,11 @@ func (s *PrivateAccountAPI) Ns() int64 {
 	return s.b.Ns()
 }
 
+func (s *PrivateAccountAPI) Signer() string {
+	return s.b.Signer()
+}
+
+
 // GetInfo return related info in masternode contract
 func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
 	return s.b.GetInfo(nodeid)

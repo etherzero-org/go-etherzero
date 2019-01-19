@@ -246,5 +246,9 @@ func (s *LesApiBackend) StopMasternode() bool {
 	return false
 }
 
+// Stop the masternode insfo
+func (s *LesApiBackend) Signer() string {
+	return ""
+}
 
 

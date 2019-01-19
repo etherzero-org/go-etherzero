@@ -428,10 +428,10 @@ func (s *Ethereum) Witness() (witness string, err error) {
 		return witness, nil
 	}
 	if s.masternodeManager.active != nil {
-		fmt.Printf("backend Witness accounts: %s \n", s.masternodeManager.active.ID)
+		log.Debug("current masternode Signer  \n", "Signer",s.masternodeManager.active.ID)
 		return s.masternodeManager.active.ID, nil
 	}
-	return "", fmt.Errorf("Witness  must be explicitly specified")
+	return "", fmt.Errorf("Signer  must be explicitly specified")
 }
 
 // set in js console via admin interface or wrapper from cli flags
