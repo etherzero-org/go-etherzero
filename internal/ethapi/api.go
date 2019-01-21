@@ -199,6 +199,35 @@ func (s *PublicAccountAPI) Accounts() []common.Address {
 	return addresses
 }
 
+type PublicMasternodeAPI struct {
+	b Backend
+}
+
+func NewPublicMasternodeAPI(b Backend) *PublicMasternodeAPI{
+	return &PublicMasternodeAPI{b}
+}
+
+//List will return a list master nodes messages.
+func (self *PublicMasternodeAPI) List() []string{
+	return self.b.Masternodes()
+}
+
+func (self *PublicMasternodeAPI) Data() string{
+	return self.b.Data()
+}
+
+func (self *PublicMasternodeAPI) Signer() string{
+	return self.b.Signer()
+}
+
+func (self *PublicMasternodeAPI) Ns() int64{
+	return self.b.Ns()
+}
+
+func (self *PublicMasternodeAPI) GetInfo(nodeid string) string{
+	return self.b.GetInfo(nodeid)
+}
+
 // PrivateAccountAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.
@@ -226,30 +255,6 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 		}
 	}
 	return addresses
-}
-
-// Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) List() []string {
-	return s.b.Masternodes()
-}
-
-// Masternodes will return a list master nodes messages.
-func (s *PrivateAccountAPI) Data() string {
-	return s.b.Data()
-}
-
-func (s *PrivateAccountAPI) Ns() int64 {
-	return s.b.Ns()
-}
-
-func (s *PrivateAccountAPI) Signer() string {
-	return s.b.Signer()
-}
-
-
-// GetInfo return related info in masternode contract
-func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
-	return s.b.GetInfo(nodeid)
 }
 
 // GetEnode return discover.Node in enodeinfo contract
