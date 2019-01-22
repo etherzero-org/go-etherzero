@@ -593,7 +593,11 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	}
 	// Set the correct difficulty
 	d.lock.Lock()
-	header.Difficulty = CalcDifficulty(snap, d.signer)
+	if chain.Config().IsDevote(header.Number){
+		header.Difficulty = CalcDifficulty(snap, d.signer)
+	}else{
+		header.Difficulty=big.NewInt(1)
+	}
 	header.Witness = d.signer
 	d.lock.Unlock()
 
@@ -689,7 +693,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return err
 	}
 	if signer != witness {
-		return fmt.Errorf("invalid block witness have witness: %s,got signer: %s,time:%d \n", witness, signer, header.Time)
+		return fmt.Errorf("invalid block witness have: %s,got: %s,time:%d \n", witness, signer, header.Time)
 	}
 	if signer != header.Witness {
 		return ErrMismatchSignerAndWitness
@@ -714,13 +718,13 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 	d.lock.RUnlock()
 	// Sweet, the protocol permits us to sign the block, wait for our time
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
+	// Bail out if we're unauthorized to sign a block
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
 
 	if chain.Config().IsDevote(header.Number) {
-		// Bail out if we're unauthorized to sign a block
-		snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
-		if err != nil {
-			return err
-		}
 		singerMap := snap.Signers
 		if _, ok := singerMap[signer]; !ok {
 			return errUnauthorizedSigner
@@ -742,6 +746,14 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 			delay += time.Duration(rand.Int63n(int64(wiggle)))
 
 			log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+		}
+	}else {
+		witness, err := lookup(snap.signers(), header.Time.Uint64())
+		if err != nil {
+			return err
+		}
+		if witness != d.signer {
+			return fmt.Errorf("it's not our turn,current witness:%s",witness)
 		}
 	}
 
