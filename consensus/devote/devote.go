@@ -669,11 +669,39 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
-	protocol :=GenerateProtocol(chain , header , db ,nodes)
+	protocol :=d.GenerateProtocol(chain , header , db ,nodes)
 	header.Protocol = protocol
 
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
+}
+
+func(d *Devote)  GenerateProtocol(chain consensus.ChainReader, header *types.Header, db *devotedb.DevoteDB, nodes []string) *devotedb.DevoteProtocol {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	if chain.Config().IsDevote(header.Number) {
+		protocol := &devotedb.DevoteProtocol{
+			CycleHash: header.Root,
+			StatsHash: header.Root,
+		}
+		return protocol
+	} else {
+		snap := &Snapshot{
+			devoteDB:  db,
+			TimeStamp: header.Time.Uint64(),
+		}
+		parent := chain.GetHeaderByHash(header.ParentHash)
+		genesis := chain.GetHeaderByNumber(0)
+		first := chain.GetHeaderByNumber(1)
+		snap.election(genesis, first, parent, nodes)
+		//miner Rolling
+		log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
+			"headerTime", header.Time.Uint64(), "witness", header.Witness)
+		db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+		return db.Protocol()
+
+	}
 }
 
 
@@ -706,7 +734,6 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 
 	header := block.Header()
-
 	// Sealing the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {

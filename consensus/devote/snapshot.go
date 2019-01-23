@@ -28,7 +28,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
@@ -334,32 +333,6 @@ func (self *Snapshot) masternodes(parent *types.Header, isFirstCycle bool, nodes
 	return list, nil
 }
 
-func GenerateProtocol(chain consensus.ChainReader, header *types.Header, db *devotedb.DevoteDB, nodes []string) *devotedb.DevoteProtocol {
-
-	if chain.Config().IsDevote(header.Number) {
-		protocol := &devotedb.DevoteProtocol{
-			CycleHash: header.Root,
-			StatsHash: header.Root,
-		}
-		return protocol
-	} else {
-		snap := &Snapshot{
-			devoteDB:  db,
-			TimeStamp: header.Time.Uint64(),
-		}
-		parent := chain.GetHeaderByHash(header.ParentHash)
-		genesis := chain.GetHeaderByNumber(0)
-		first := chain.GetHeaderByNumber(1)
-		snap.election(genesis, first, parent, nodes)
-		//miner Rolling
-		log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
-			"headerTime", header.Time.Uint64(), "witness", header.Witness)
-		db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-		db.Commit()
-		return db.Protocol()
-
-	}
-}
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid

@@ -107,6 +107,9 @@ func (db *DevoteDB) Root() (h common.Hash) {
 }
 
 func (d *DevoteDB) Commit() (*DevoteProtocol, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	cycleRoot, err := d.cycleTrie.Commit(nil)
 	if err != nil {
 		return nil, err
@@ -165,13 +168,6 @@ func (d *DevoteDB) GetStatsNumber(key []byte) uint64 {
 }
 
 func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
-	//dc := d.dCache
-	//if dc != nil {
-	//	list, err := dc.GetWitnesses(d.db, cycle)
-	//	if err == nil {
-	//		return list, nil
-	//	}
-	//}
 	newCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(cycle))
 	// Load from DB in case it is missing.
@@ -263,6 +259,7 @@ func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness str
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
 
 	d.statsTrie.TryUpdate(append(newCycleBytes, []byte(witness)...), newCntBytes)
+	d.Commit()
 }
 
 // Exist reports whether the given Devote hash exists in the state.
