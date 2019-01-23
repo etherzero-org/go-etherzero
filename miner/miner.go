@@ -113,6 +113,7 @@ func (self *Miner) update() {
 }
 
 func (self *Miner) Start(coinbase common.Address) {
+
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.SetEtherbase(coinbase)
 
@@ -120,13 +121,12 @@ func (self *Miner) Start(coinbase common.Address) {
 		log.Info("Network syncing, will start miner afterwards")
 		return
 	}
-
 	ticker := time.NewTicker(time.Second).C
 	for{
 		select {
 		case now := <-ticker:
 			self.worker.start()
-			log.Debug("current local time", "now",now)
+			log.Info("current local time", "now",now)
 		case <-self.stopper:
 			self.worker.stop()
 			self.stopper = make(chan struct{}, 1)

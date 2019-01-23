@@ -259,7 +259,6 @@ func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness str
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
 
 	d.statsTrie.TryUpdate(append(newCycleBytes, []byte(witness)...), newCntBytes)
-	d.Commit()
 }
 
 // Exist reports whether the given Devote hash exists in the state.

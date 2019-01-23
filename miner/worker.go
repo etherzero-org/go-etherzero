@@ -23,10 +23,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"fmt"
 
 	"github.com/deckarep/golang-set"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
@@ -218,7 +220,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, eth Backend,
 		recommit = minRecommitInterval
 	}
 
-
 	go worker.mainLoop()
 	go worker.newWorkLoop(recommit)
 	go worker.resultLoop()
@@ -347,6 +348,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 	for {
 		select {
 		case <-w.startCh:
+			fmt.Println("w.startCh")
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -409,10 +411,32 @@ func (w *worker) mainLoop() {
 	defer w.chainHeadSub.Unsubscribe()
 	defer w.chainSideSub.Unsubscribe()
 
+	engine, ok := w.engine.(*devote.Devote)
+	if !ok {
+		log.Error("Only the devote engine was allowed")
+		return
+	}
+
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
+			current := w.chain.CurrentBlock()
+			timestanp:=time.Now().Unix()
+			err := engine.CheckWitness(current,timestanp )
+			if err != nil {
+				switch err {
+				case devote.ErrWaitForPrevBlock,
+					devote.ErrMinerFutureBlock,
+					devote.ErrInvalidBlockWitness,
+					devote.ErrInvalidMinerBlockTime:
+					log.Debug("Failed to miner the block, while ", "err", err)
+				default:
+					log.Error("Failed to miner the block", "err", err)
+				}
+			} else {
+				w.commitNewWork(req.interrupt, req.noempty, timestanp)
+			}
+
 		case ev := <-w.chainSideCh:
 			// Short circuit for duplicate side blocks
 			if _, exist := w.localUncles[ev.Block.Hash()]; exist {
@@ -833,15 +857,15 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	tstart := time.Now()
 	parent := w.chain.CurrentBlock()
 
-	if parent.Time().Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
-		timestamp = parent.Time().Int64() + 1
-	}
+	//if parent.Time().Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
+	//	timestamp = parent.Time().Int64() + 1
+	//}
 	// this will ensure we're not going off too far in the future
-	if now := time.Now().Unix(); timestamp > now+1 {
-		wait := time.Duration(timestamp-now) * time.Second
-		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
-		time.Sleep(wait)
-	}
+	//if now := time.Now().Unix(); timestamp > now+1 {
+	//	wait := time.Duration(timestamp-now) * time.Second
+	//	log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
+	//	time.Sleep(wait)
+	//}
 
 	num := parent.Number()
 	header := &types.Header{
@@ -931,6 +955,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 // commit runs any post-transaction state modifications, assembles the final block
 // and commits new work if consensus engine is running.
 func (w *worker) commit(uncles []*types.Header, interval func(), update bool, start time.Time) error {
+
 	// Deep copy receipts here to avoid interaction between different tasks.
 	receipts := make([]*types.Receipt, len(w.current.receipts))
 	for i, l := range w.current.receipts {
@@ -959,7 +984,6 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 
 			log.Info("Commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
 				"txs", w.current.tcount, "gas", block.GasUsed(), "fees", feesEth, "elapsed", common.PrettyDuration(time.Since(start)))
-
 		case <-w.exitCh:
 			log.Info("Worker has exited")
 		}

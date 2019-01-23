@@ -153,6 +153,8 @@ var (
 	ErrMinerFutureBlock = errors.New("miner the future block")
 
 	ErrInvalidMinerBlockTime = errors.New("invalid time to miner the block")
+
+	ErrInvalidBlockWitness      = errors.New("invalid block witness")
 )
 
 // SignerFn is a signer callback function to request a hash to be signed by a
@@ -647,6 +649,8 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // rewards given, and returns the final block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(maxSignersSize))
@@ -677,8 +681,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 }
 
 func(d *Devote)  GenerateProtocol(chain consensus.ChainReader, header *types.Header, db *devotedb.DevoteDB, nodes []string) *devotedb.DevoteProtocol {
-	d.lock.Lock()
-	defer d.lock.Unlock()
 
 	if chain.Config().IsDevote(header.Number) {
 		protocol := &devotedb.DevoteProtocol{
@@ -699,6 +701,8 @@ func(d *Devote)  GenerateProtocol(chain consensus.ChainReader, header *types.Hea
 		log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
 			"headerTime", header.Time.Uint64(), "witness", header.Witness)
 		db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+		db.Commit()
+		fmt.Printf("devote finalize protocol statsHash value:%x,witness :%s,height: %d \n",db.Protocol().StatsHash,header.Witness,header.Number)
 		return db.Protocol()
 
 	}
@@ -707,12 +711,12 @@ func(d *Devote)  GenerateProtocol(chain consensus.ChainReader, header *types.Hea
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *Devote) Authorize(signer string, signFn SignerFn) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+func (d *Devote) Authorize(signer string, signFn SignerFn) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	c.signer = signer
-	c.signFn = signFn
+	d.signer = signer
+	d.signFn = signFn
 }
 
 func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
@@ -780,7 +784,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results c
 			return err
 		}
 		if witness != d.signer {
-			return fmt.Errorf("it's not our turn,current witness:%s",witness)
+			return fmt.Errorf("it's not our turn,current witness:%s,d.signer%s",witness,d.signer)
 		}
 	}
 
