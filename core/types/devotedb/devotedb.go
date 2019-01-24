@@ -31,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 type DevoteDB struct {
@@ -75,6 +76,7 @@ func NewDevoteByProtocol(db Database, protocol *DevoteProtocol) (*DevoteDB, erro
 
 	cycleTrie, err := db.OpenTrie(protocol.CycleHash)
 	if err != nil {
+		log.Error("get cycle trie err","err",err,"hash",protocol.CycleHash)
 		return nil, err
 	}
 	statsTrie, err := db.OpenTrie(protocol.StatsHash)
@@ -168,6 +170,7 @@ func (d *DevoteDB) GetStatsNumber(key []byte) uint64 {
 }
 
 func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
+
 	newCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newCycleBytes, uint64(cycle))
 	// Load from DB in case it is missing.
@@ -175,7 +178,6 @@ func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var witnesses []string
 	if err := rlp.DecodeBytes(witnessRLP, &witnesses); err != nil {
 		return nil, fmt.Errorf("failed to decode witnesses: %s", err)
@@ -183,11 +185,13 @@ func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	//dc.SetWitnesses(cycle, witnesses)
 	return witnesses, nil
 }
 
 func (d *DevoteDB) SetWitnesses(cycle uint64, witnesses []string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if d.dCache != nil {
 		d.dCache.SetWitnesses(cycle, witnesses)
 	}
@@ -197,7 +201,6 @@ func (d *DevoteDB) SetWitnesses(cycle uint64, witnesses []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode witnesses to rlp bytes: %s", err)
 	}
-
 	return d.cycleTrie.TryUpdate(newCycleBytes, witnessesRLP)
 }
 
@@ -232,6 +235,8 @@ func (self *DevoteDB) StorageStatsTrie(hash common.Hash) Trie {
 }
 
 func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	currentCycle := parentBlockTime / params.CycleInterval
 	currentCycleBytes := make([]byte, 8)

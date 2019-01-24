@@ -563,6 +563,7 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB
 
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(db), &devotedb.DevoteProtocol{})
 	if err != nil {
+		log.Error("genesis initGenesisDevoteProtocol err","err",err)
 		return nil
 	}
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {

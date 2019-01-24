@@ -194,24 +194,25 @@ func (s *Snapshot) validWitness(witness string, authorize bool) bool {
 
 func (s *Snapshot) lookup(now uint64) (witness string, err error) {
 
-	offset := now % params.CycleInterval
+	var offset uint64
+	offset = now % params.CycleInterval
 	if offset%params.BlockInterval != 0 {
 		err = ErrInvalidMinerBlockTime
 		return
 	}
 	offset /= params.BlockInterval
-	witnesses, err := s.devoteDB.GetWitnesses(s.devoteDB.GetCycle())
+	signers, err := s.devoteDB.GetWitnesses(s.devoteDB.GetCycle())
 	if err != nil {
 		return
 	}
-
-	witnessSize := len(witnesses)
-	if witnessSize == 0 {
+	size := len(signers)
+	if size == 0 {
 		err = errors.New("failed to lookup witness")
 		return
 	}
-	offset %= uint64(witnessSize)
-	witness = witnesses[offset]
+	offset %= uint64(size)
+	witness = signers[offset]
+	fmt.Println("lookup signers ", signers,"witness:",witness)
 	return
 }
 
@@ -259,7 +260,7 @@ func (ec *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []string) error {
 
 	maxWitnessSize := uint64(21)
-	safeSize := int(15)
+	//safeSize := int(15)
 
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
 	prevCycle := parent.Time.Uint64() / params.CycleInterval
@@ -269,9 +270,8 @@ func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []str
 	if prevCycleIsGenesis && prevCycle < currentCycle {
 		prevCycle = currentCycle - 1
 	}
-	prevCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
-
+	preCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(preCycleBytes, uint64(prevCycle))
 	for i := prevCycle; i < currentCycle; i++ {
 		// if prevCycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
@@ -289,9 +289,9 @@ func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []str
 		for masternode, cnt := range votes {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
-		if len(masternodes) < safeSize {
-			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
-		}
+		//if len(masternodes) < safeSize {
+		//	return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
+		//}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
@@ -300,6 +300,7 @@ func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []str
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
+		sort.Strings(sortedWitnesses)
 		log.Info("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
 		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
 		self.devoteDB.Commit()
@@ -332,7 +333,6 @@ func (self *Snapshot) masternodes(parent *types.Header, isFirstCycle bool, nodes
 	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
 	return list, nil
 }
-
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid

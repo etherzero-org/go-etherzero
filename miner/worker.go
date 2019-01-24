@@ -23,7 +23,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
 
 	"github.com/deckarep/golang-set"
 	"github.com/etherzero/go-etherzero/common"
@@ -348,7 +347,6 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 	for {
 		select {
 		case <-w.startCh:
-			fmt.Println("w.startCh")
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -421,8 +419,8 @@ func (w *worker) mainLoop() {
 		select {
 		case req := <-w.newWorkCh:
 			current := w.chain.CurrentBlock()
-			timestanp:=time.Now().Unix()
-			err := engine.CheckWitness(current,timestanp )
+			timestanp := time.Now().Unix()
+			err := engine.CheckWitness(current, timestanp)
 			if err != nil {
 				switch err {
 				case devote.ErrWaitForPrevBlock,
@@ -431,8 +429,9 @@ func (w *worker) mainLoop() {
 					devote.ErrInvalidMinerBlockTime:
 					log.Debug("Failed to miner the block, while ", "err", err)
 				default:
-					log.Error("Failed to miner the block", "err", err)
+					log.Debug("Failed to miner the block", "err", err)
 				}
+				continue
 			} else {
 				w.commitNewWork(req.interrupt, req.noempty, timestanp)
 			}
@@ -642,6 +641,7 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	}
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(w.eth.ChainDb()), parent.Header().Protocol)
 	if err != nil {
+		log.Error("work makeCurrent err","err",err)
 		return err
 	}
 

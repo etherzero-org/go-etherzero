@@ -28,10 +28,10 @@ import (
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/ethdb"
 )
 
 // Backend wraps all methods required for mining.
@@ -55,7 +55,6 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 
 	stopper chan struct{}
-
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, recommit time.Duration, gasFloor, gasCeil uint64, isLocalBlock func(block *types.Block) bool) *Miner {
@@ -122,11 +121,11 @@ func (self *Miner) Start(coinbase common.Address) {
 		return
 	}
 	ticker := time.NewTicker(time.Second).C
-	for{
+	for {
 		select {
 		case now := <-ticker:
 			self.worker.start()
-			log.Info("current local time", "now",now)
+			log.Debug("current local time", "now", now)
 		case <-self.stopper:
 			self.worker.stop()
 			self.stopper = make(chan struct{}, 1)
