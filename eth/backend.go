@@ -428,7 +428,7 @@ func (s *Ethereum) Witness() (witness string, err error) {
 		return witness, nil
 	}
 	if s.masternodeManager.active != nil {
-		fmt.Printf("backend Witness accounts: %x \n", s.masternodeManager.active.ID)
+		fmt.Printf("backend Witness accounts: %s \n", s.masternodeManager.active.ID)
 		return s.masternodeManager.active.ID, nil
 	}
 	return "", fmt.Errorf("Witness  must be explicitly specified")
