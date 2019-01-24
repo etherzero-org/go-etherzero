@@ -166,15 +166,15 @@ func (mm *MasternodeManager) masternodeLoop() {
 			if mm.downloader.Synchronising() {
 				break
 			}
-
+			logTime := time.Now().Format("2006-01-02 15:04:05")
 			address := mm.active.NodeAccount
 			stateDB, _ := mm.blockchain.State()
 			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
-				fmt.Println("Failed to deposit 0.01 etz to ", address.String())
+				fmt.Println(logTime, "Failed to deposit 0.01 etz to ", address.String())
 				break
 			}
 			if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
-				fmt.Println("Insufficient power for ping transaction.", address.Hex(), mm.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).String())
+				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), mm.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).String())
 				break
 			}
 			tx := types.NewTransaction(
@@ -187,15 +187,15 @@ func (mm *MasternodeManager) masternodeLoop() {
 			)
 			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.active.PrivateKey)
 			if err != nil {
-				fmt.Println("SignTx error:", err)
+				fmt.Println(logTime, "SignTx error:", err)
 				break
 			}
 
 			if err := mm.txPool.AddLocal(signed); err != nil {
-				fmt.Println("send ping to txpool error:", err)
+				fmt.Println(logTime, "send ping to txpool error:", err)
 				break
 			}
-			fmt.Println("Send ping message ...")
+			fmt.Println(logTime, "Send ping message!")
 		}
 	}
 }

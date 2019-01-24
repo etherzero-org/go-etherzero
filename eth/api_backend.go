@@ -250,7 +250,7 @@ func (b *EthAPIBackend) GetInfo(nodeid string) string {
 
 	info, err := b.eth.masternodeManager.contract.GetInfo(nil, id)
 	if err != nil {
-		fmt.Errorf("contract.Has", "error", err)
+		fmt.Errorf("contract.Has error %v", err)
 		return ""
 	}
 
