@@ -201,7 +201,6 @@ func (d *DevoteDB) SetWitnesses(cycle uint64, witnesses []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode witnesses to rlp bytes: %s", err)
 	}
-
 	return d.cycleTrie.TryUpdate(newCycleBytes, witnessesRLP)
 }
 

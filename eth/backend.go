@@ -192,8 +192,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	eth.protocolManager.mm = eth.masternodeManager
 
 	if devote, ok := eth.engine.(*devote.Devote); ok {
-		devote.Masternodes(eth.masternodeManager.MasternodeList)
-		devote.GetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
+		devote.SetGetMasternodesFn(eth.masternodeManager.MasternodeList)
+		devote.SetGetGovernanceContractAddress(eth.masternodeManager.GetGovernanceContractAddress)
 	}
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.MinerExtraData))
@@ -239,6 +239,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+
 	// If Masternode is requested, set it up
 	if chainConfig.Devote != nil {
 		return devote.NewDevote(chainConfig.Devote, db)
