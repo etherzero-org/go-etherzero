@@ -19,12 +19,9 @@
 package devote
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
-	"sort"
 	"strings"
 	"sync"
 
@@ -32,9 +29,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/ethdb"
-	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -48,7 +43,6 @@ type Snapshot struct {
 	TimeStamp uint64
 	mu        sync.Mutex
 
-	sigcache *lru.ARCCache       // Cache of current witness
 	Hash     common.Hash         //Block hash where the snapshot was created
 	Number   uint64              //Block number where the snapshot was created
 	Cycle    uint64              //Cycle number where the snapshot was created
@@ -56,7 +50,8 @@ type Snapshot struct {
 	Recents  map[uint64]string   // set of recent masternodes for spam protections
 }
 
-func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64, signatures *lru.ARCCache, hash common.Hash, signers []string) *Snapshot {
+func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64,
+	hash common.Hash, signers []string, devoteDB *devotedb.DevoteDB) *Snapshot {
 
 	snap := &Snapshot{
 		config:   config,
@@ -65,7 +60,7 @@ func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64, signa
 		Number:   number,
 		Cycle:    cycle,
 		Hash:     hash,
-		sigcache: signatures,
+		devoteDB: devoteDB,
 	}
 
 	for _, signer := range signers {
@@ -75,7 +70,7 @@ func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64, signa
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(config *params.DevoteConfig, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte("devote-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -85,7 +80,6 @@ func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.
 		return nil, err
 	}
 	snap.config = config
-	snap.sigcache = sigcache
 
 	return snap, nil
 }
@@ -93,7 +87,6 @@ func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		sigcache: s.sigcache,
 		Number:   s.Number,
 		Hash:     s.Hash,
 		Signers:  make(map[string]struct{}),
@@ -211,61 +204,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	snap.Hash = headers[len(headers)-1].Hash()
 	snap.Cycle = headers[len(headers)-1].Number.Uint64() / Epoch
 	return snap, nil
-}
-
-//election create a new cycle witnesses by block hash to
-// the original one.
-func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) error {
-
-	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
-	prevCycle := parent.Time.Uint64() / params.CycleInterval
-	currentCycle := self.TimeStamp / params.CycleInterval
-
-	prevCycleIsGenesis := (prevCycle == genesisCycle)
-	if prevCycleIsGenesis && prevCycle < currentCycle {
-		prevCycle = currentCycle - 1
-	}
-	prevCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
-	//If the witnesses's already cached, return that
-	if w, know := self.sigcache.Get(currentCycle); know {
-		witness := w.([]string)
-		self.devoteDB.SetWitnesses(currentCycle, witness)
-		self.devoteDB.Commit()
-	} else {
-		for i := prevCycle; i < currentCycle; i++ {
-			// if prevCycle is not genesis, uncast not active masternode
-			list := make([]string, len(nodes))
-			copy(list, nodes)
-			votes, err := calculate(parent.Hash(), list)
-			if err != nil {
-				log.Error("init masternodes ", "err", err)
-				return err
-			}
-			masternodes := sortableAddresses{}
-			for masternode, cnt := range votes {
-				masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
-			}
-			if len(masternodes) < safeSize {
-				return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
-			}
-			sort.Sort(masternodes)
-			if len(masternodes) > int(maxWitnessSize) {
-				masternodes = masternodes[:maxWitnessSize]
-			}
-			var sortedWitnesses []string
-			for _, node := range masternodes {
-				sortedWitnesses = append(sortedWitnesses, node.nodeid)
-			}
-			log.Debug("Snapshot election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
-			self.sigcache.Add(currentCycle, sortedWitnesses)
-
-			self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
-			self.devoteDB.Commit()
-			log.Debug("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
-		}
-	}
-	return nil
 }
 
 // nodeid  masternode nodeid

@@ -149,7 +149,7 @@ type Devote struct {
 
 	signer                      string        // master node nodeid
 	signFn                      SignerFn      // signature function
-	signatures                  *lru.ARCCache // Signatures of recent blocks to speed up mining
+	sigcache                    *lru.ARCCache // Cache of current witness
 	recents                     *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	confirmedBlockHeader        *types.Header
 	masternodeListFn            MasternodeListFn             //get current all masternodes
@@ -159,23 +159,22 @@ type Devote struct {
 
 func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
 
-	signatures, _ := lru.NewARC(inmemorySignatures)
+	sigcache, _ := lru.NewARC(inmemorySignatures)
 	return &Devote{
 		config:     config,
 		db:         db,
-		signatures: signatures,
+		sigcache: sigcache,
 	}
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, devoteDB *devotedb.DevoteDB) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
 		snap    *Snapshot
 	)
 	for snap == nil {
-
 		// If we're at an checkpoint block, make a snapshot if it's known
 		if number == 0 || number%d.config.Epoch == 0 {
 			checkpoint := chain.GetHeaderByNumber(number)
@@ -212,7 +211,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 					"number", number,
 				}
 				log.Debug("Elected new cycle signers", context...)
-				snap = newSnapshot(d.config, number, cycle, d.signatures, hash, sortedWitnesses)
+				snap = newSnapshot(d.config, number, cycle, d.sigcache, hash, sortedWitnesses, devoteDB)
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
@@ -388,7 +387,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
 
 	maxWitnessSize := uint64(21)
 	safeSize := int(5)
@@ -410,11 +409,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
-	snap := &Snapshot{
-		devoteDB:  devoteDB,
-		TimeStamp: header.Time.Uint64(),
-		sigcache:  d.signatures,
-	}
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
@@ -426,18 +420,23 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		return nil, fmt.Errorf("get current masternodes err:%s", merr)
 	}
 	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", all)
-	genesis := chain.GetHeaderByNumber(0)
-	first := chain.GetHeaderByNumber(1)
-	err := snap.election(genesis, first, parent, all, safeSize, maxWitnessSize)
+	cycle := header.Time.Uint64() / params.CycleInterval
+	witness, err := d.election(chain, parent, all, safeSize, maxWitnessSize)
 	if err != nil {
 		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
 	}
+	d.sigcache.Add(cycle, witness)
+	log.Debug("Initializing a new cycle", "witnesses count", len(witness), "current", cycle, "next", cycle+1)
+	db.SetWitnesses(cycle, witness)
+	db.Commit()
+	//snap := newSnapshot(d.config, header.Number.Uint64(), cycle, header.Hash(), witness, db)
+
 	//miner Rolling
 	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
 		"headerTime", header.Time.Uint64(), "witness", header.Witness)
-	devoteDB.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-	devoteDB.Commit()
-	header.Protocol = devoteDB.Protocol()
+	db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+	db.Commit()
+	header.Protocol = db.Protocol()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -474,7 +473,7 @@ func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 		return errInvalidMixDigest
 	}
 	// Masternode Difficulty always 1
-	if header.Difficulty.Cmp(masternodeDifficult)!= 0 {
+	if header.Difficulty.Cmp(masternodeDifficult) != 0 {
 		return errInvalidDifficulty
 	}
 	// Ensure that the block doesn't contain any uncles which are meaningless in devote
@@ -650,7 +649,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	if chain.Config().IsDevote(parent.Number) {
-		snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+		snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil, nil)
 		if err != nil {
 			return nil
 		}
@@ -715,6 +714,57 @@ func PrevSlot(now uint64) uint64 {
 
 func NextSlot(now uint64) uint64 {
 	return ((now + params.BlockInterval - 1) / params.BlockInterval) * params.BlockInterval
+}
+
+//election create a new cycle witnesses by block hash to
+// the original one.
+func (d *Devote) election(chain consensus.ChainReader, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) ([]string, error) {
+
+	var sortedWitnesses []string
+	current:=chain.CurrentHeader()
+	genesis:=chain.GetHeaderByNumber(0)
+	genesisCycle := genesis.Time.Uint64() / d.config.Epoch
+	prevCycle := parent.Time.Uint64() / d.config.Epoch
+	currentCycle := current.Time.Uint64() / d.config.Epoch
+
+	prevCycleIsGenesis := (prevCycle == genesisCycle)
+	if prevCycleIsGenesis && prevCycle < currentCycle {
+		prevCycle = currentCycle - 1
+	}
+	prevCycleBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+	//If the witnesses's already cached, return that
+	if w, know := d.sigcache.Get(currentCycle); know {
+		sortedWitnesses := w.([]string)
+		return sortedWitnesses, nil
+	} else {
+		for i := prevCycle; i < currentCycle; i++ {
+			list := make([]string, len(nodes))
+			copy(list, nodes)
+			votes, err := calculate(parent.Hash(), list)
+			if err != nil {
+				log.Error("init masternodes ", "err", err)
+				return nil, err
+			}
+			masternodes := sortableAddresses{}
+			for masternode, cnt := range votes {
+				masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
+			}
+			if len(masternodes) < safeSize {
+				return nil, fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
+			}
+			sort.Sort(masternodes)
+			if len(masternodes) > int(maxWitnessSize) {
+				masternodes = masternodes[:maxWitnessSize]
+			}
+
+			for _, node := range masternodes {
+				sortedWitnesses = append(sortedWitnesses, node.nodeid)
+			}
+			log.Debug("Snapshot election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
+		}
+	}
+	return sortedWitnesses, nil
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
