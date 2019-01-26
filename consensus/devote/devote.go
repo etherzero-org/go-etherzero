@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -37,7 +38,6 @@ import (
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
@@ -45,10 +45,11 @@ import (
 )
 
 const (
-	extraVanity        = 32   // Fixed number of extra-data prefix bytes reserved for signer vanity
-	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
-	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
-	maxSignersSize     = 21   // Number of max singers in current cycle
+	extraVanity        = 32                     // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal          = 65                     // Fixed number of extra-data suffix bytes reserved for signer seal
+	inmemorySignatures = 4096                   // Number of recent block signatures to keep in memory
+	maxSignersSize     = 21                     // Number of max singers in current cycle
+	wiggleTime         = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 
 	//maxWitnessSize uint64 = 0
 	//safeSize              = maxWitnessSize*2/3 + 1
@@ -144,8 +145,8 @@ func sigHash(header *types.Header) (hash common.Hash) {
 type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
-	mu     sync.RWMutex
 	stop   chan bool
+	lock   sync.RWMutex // Protects the signer fields
 
 	signer                      string        // master node nodeid
 	signFn                      SignerFn      // signature function
@@ -161,103 +162,10 @@ func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
 
 	sigcache, _ := lru.NewARC(inmemorySignatures)
 	return &Devote{
-		config:     config,
-		db:         db,
+		config:   config,
+		db:       db,
 		sigcache: sigcache,
 	}
-}
-
-// snapshot retrieves the authorization snapshot at a given point in time.
-func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, devoteDB *devotedb.DevoteDB) (*Snapshot, error) {
-	// Search for a snapshot in memory or on disk for checkpoints
-	var (
-		headers []*types.Header
-		snap    *Snapshot
-	)
-	for snap == nil {
-		// If we're at an checkpoint block, make a snapshot if it's known
-		if number == 0 || number%d.config.Epoch == 0 {
-			checkpoint := chain.GetHeaderByNumber(number)
-			if checkpoint != nil {
-				hash := checkpoint.Hash()
-				cycle := number / d.config.Epoch
-				all, err := d.masternodeListFn(big.NewInt(int64(number)))
-				if err != nil {
-					return nil, fmt.Errorf("get current masternodes err:%s", err)
-				}
-				stabilization := number - 100
-				stableBlock := chain.GetHeaderByNumber(stabilization)
-				if stableBlock != nil {
-					hash = stableBlock.Hash()
-				}
-				result, err := calculate(hash, all)
-				masternodes := sortableAddresses{}
-				for masternode, cnt := range result {
-					masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
-				}
-				sort.Sort(masternodes)
-				if len(masternodes) > int(maxSignersSize) {
-					masternodes = masternodes[:maxSignersSize]
-				}
-				var sortedWitnesses []string
-				for _, node := range masternodes {
-					sortedWitnesses = append(sortedWitnesses, node.nodeid)
-				}
-				sort.Strings(sortedWitnesses)
-				context := []interface{}{
-					"cycle", cycle,
-					"signers", sortedWitnesses,
-					"hash", hash,
-					"number", number,
-				}
-				log.Debug("Elected new cycle signers", context...)
-				snap = newSnapshot(d.config, number, cycle, d.sigcache, hash, sortedWitnesses, devoteDB)
-				if err := snap.store(d.db); err != nil {
-					return nil, err
-				}
-				d.recents.Add(snap.Hash, snap)
-				log.Trace("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
-				break
-			}
-		}
-
-		// No snapshot for this header, gather the header and move backward
-		var header *types.Header
-		if len(parents) > 0 {
-			// If we have explicit parents, pick from there (enforced)
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return nil, consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
-		} else {
-			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
-			if header == nil {
-				return nil, consensus.ErrUnknownAncestor
-			}
-		}
-		headers = append(headers, header)
-		number, hash = number-1, header.ParentHash
-	}
-	// Previous snapshot found, apply any pending headers on top of it
-	for i := 0; i < len(headers)/2; i++ {
-		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
-	}
-
-	snap, err := snap.apply(headers)
-	if err != nil {
-		return nil, err
-	}
-	d.recents.Add(snap.Hash, snap)
-	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%d.config.Epoch == 0 && len(headers) > 0 {
-		if err = snap.store(d.db); err != nil {
-			return nil, err
-		}
-		log.Info("Stored snapshot to disk", "number", snap.Number, "hash", snap.Hash)
-	}
-	return snap, err
 }
 
 // calculate return  masternode list in the Cycle.
@@ -364,8 +272,9 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Difficulty = d.CalcDifficulty(chain, header.Time.Uint64(), parent)
 	header.Witness = d.signer
+	header.Difficulty = d.CalcDifficulty(chain, header.Time.Uint64(), parent)
+
 	return nil
 }
 
@@ -389,14 +298,15 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
 
-	maxWitnessSize := uint64(21)
-	safeSize := int(5)
+	var (
+		maxWitnessSize = 21
+	)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
-		safeSize = 1
 	}
-	parent := chain.GetHeaderByHash(header.ParentHash)
 	number := maxWitnessSize
+
+	parent := chain.GetHeaderByHash(header.ParentHash)
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(number)))
 	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
 		stableBlockNumber = big.NewInt(0)
@@ -409,34 +319,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
-	if timeOfFirstBlock == 0 {
-		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
-			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
-		}
-	}
-
-	all, merr := d.masternodeListFn(stableBlockNumber)
-	if merr != nil {
-		return nil, fmt.Errorf("get current masternodes err:%s", merr)
-	}
-	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", all)
-	cycle := header.Time.Uint64() / params.CycleInterval
-	witness, err := d.election(chain, parent, all, safeSize, maxWitnessSize)
-	if err != nil {
-		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
-	}
-	d.sigcache.Add(cycle, witness)
-	log.Debug("Initializing a new cycle", "witnesses count", len(witness), "current", cycle, "next", cycle+1)
-	db.SetWitnesses(cycle, witness)
-	db.Commit()
-	//snap := newSnapshot(d.config, header.Number.Uint64(), cycle, header.Hash(), witness, db)
-
-	//miner Rolling
-	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
-		"headerTime", header.Time.Uint64(), "witness", header.Witness)
-	db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-	db.Commit()
-	header.Protocol = db.Protocol()
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -551,10 +433,13 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		return err
 	}
 
-	currentcycle := parent.Time.Uint64() / params.CycleInterval
-	devoteDB.SetCycle(currentcycle)
-	snap := &Snapshot{devoteDB: devoteDB}
-	witness, err := snap.lookup(header.Time.Uint64())
+	currentCycle := parent.Time.Uint64() / params.CycleInterval
+	devoteDB.SetCycle(currentCycle)
+	witnesses, err := devoteDB.GetWitnesses(currentCycle)
+	if err != nil {
+		return err
+	}
+	witness, err := lookup(header.Time.Uint64(), witnesses)
 	if err != nil {
 		return err
 	}
@@ -576,6 +461,24 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return ErrMismatchSignerAndWitness
 	}
 	return nil
+}
+
+func lookup(now uint64, witnesses []string) (witness string, err error) {
+
+	offset := now % Epoch
+	if offset%Period != 0 {
+		err = ErrInvalidMinerBlockTime
+		return
+	}
+	offset /= Period
+	size := len(witnesses)
+	if size == 0 {
+		err = errors.New("failed to lookup witness")
+		return
+	}
+	offset %= uint64(size)
+	witness = witnesses[offset]
+	return
 }
 
 func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
@@ -601,9 +504,11 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	}
 	currentCycle := lastBlock.Time().Uint64() / params.CycleInterval
 	devoteDB.SetCycle(currentCycle)
-	snap := &Snapshot{devoteDB: devoteDB}
-
-	witness, err := snap.lookup(uint64(now))
+	witnesses, err := devoteDB.GetWitnesses(currentCycle)
+	if err != nil {
+		return err
+	}
+	witness, err := lookup(uint64(now), witnesses)
 	if err != nil {
 		return err
 	}
@@ -617,39 +522,111 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
 func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+
+	var safeSize = 5
+	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
+		safeSize = 1
+	}
+	log.Info("safeSize", safeSize)
 	header := block.Header()
 	number := header.Number.Uint64()
+	// Don't hold the signer fields for the entire sealing procedure
+	d.lock.RLock()
+	signer, signFn := d.signer, d.signFn
+	d.lock.RUnlock()
+	// Sweet, the protocol permits us to sign the block, wait for our time
+	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
+
 	// Sealing the genesis block is not supported
 	if number == 0 {
 		return nil, errUnknownBlock
 	}
-	now := time.Now().Unix()
-	NextSlot := int64(NextSlot(uint64(now)))
-	delay := NextSlot - now
-	log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)
-	if delay > 0 {
-		select {
-		case <-stop:
-			return nil, nil
-		case <-time.After(time.Duration(delay) * time.Second):
+	blockTime := time.Now().Unix()
+	block.Header().Time.SetInt64(blockTime)
+	parent := chain.GetHeaderByHash(header.ParentHash)
+	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(maxSignersSize))
+	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
+		stableBlockNumber = big.NewInt(0)
+	}
+
+	all, merr := d.masternodeListFn(stableBlockNumber)
+	if merr != nil {
+		return nil, fmt.Errorf("get current masternodes err:%s", merr)
+	}
+	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", all)
+	cycle := header.Time.Uint64() / params.CycleInterval
+	snap, err := d.snapshot(chain, header.Number.Uint64(), header.Hash(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
+	}
+	singerMap := snap.Signers
+	if _, ok := singerMap[signer]; !ok {
+		return nil, errUnauthorizedSigner
+	}
+	// If we're amongst the recent signers, wait for the next block
+	for seen, recent := range snap.Recents {
+		if recent == signer {
+			// Signer is among recents, only wait if the current block doesn't shift it out
+			if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
+				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
+				return nil, fmt.Errorf("Signed recently, must wait for others")
+			}
+			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
 		}
 	}
-	drift := time.Duration(discover.NanoDrift())
-	blockTime := time.Now().Add(-drift).Unix()
-	block.Header().Time.SetInt64(blockTime)
+	if header.Difficulty.Cmp(diffNoTurn) == 0 {
+		// It's not our turn explicitly to sign, delay it a bit
+		wiggle := time.Duration(15) * wiggleTime
+		delay += time.Duration(rand.Int63n(int64(wiggle)))
 
-	// time's up, sign the block
-	sighash, err := d.signFn(d.signer, sigHash(header).Bytes())
+		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+	}
+
+	w, know := d.sigcache.Get(cycle)
+	if know {
+		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
+	}
+	db, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
+	if err != nil {
+		// log.Debug("devote verifySeal failed ", "cycle Hash", devoteProtocol.CycleTrie())
+		return nil, err
+	}
+
+	witness := w.([]string)
+	db.SetWitnesses(cycle, witness)
+	db.Commit()
+	//snap := newSnapshot(d.config, header.Number.Uint64(), cycle, header.Hash(), witness, db)
+	//log.Debug("Initializing a new cycle", "witnesses count", len(witness), "current", cycle, "next", cycle+1)
+
+	//miner Rolling
+	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(),
+		"headerTime", header.Time.Uint64(), "witness", header.Witness)
+	db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+	db.Commit()
+	header.Protocol = db.Protocol()
+
+	// Sign all the things!
+	sighash, err := signFn(signer, sigHash(header).Bytes())
 	if err != nil {
 		return nil, err
 	}
+	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+	// Wait until sealing is terminated or delay timeout.
+	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
+	go func() {
+		select {
+		case <-stop:
+			return
+		case <-time.After(delay):
+		}
+	}()
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
 	return block.WithSeal(header), nil
 }
 
 func (d *Devote) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	if chain.Config().IsDevote(parent.Number) {
-		snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil, nil)
+		snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 		if err != nil {
 			return nil
 		}
@@ -670,8 +647,8 @@ func CalcDifficulty(snap *Snapshot, signer string) *big.Int {
 }
 
 func (d *Devote) Authorize(signer string, signFn SignerFn) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	d.signer = signer
 	d.signFn = signFn
@@ -679,15 +656,15 @@ func (d *Devote) Authorize(signer string, signFn SignerFn) {
 }
 
 func (d *Devote) SetGetMasternodesFn(masternodeListFn MasternodeListFn) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	d.masternodeListFn = masternodeListFn
 }
 
 func (d *Devote) SetGetGovernanceContractAddress(goveAddress GetGovernanceContractAddress) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	d.governanceContractAddressFn = goveAddress
 }
@@ -721,8 +698,8 @@ func NextSlot(now uint64) uint64 {
 func (d *Devote) election(chain consensus.ChainReader, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) ([]string, error) {
 
 	var sortedWitnesses []string
-	current:=chain.CurrentHeader()
-	genesis:=chain.GetHeaderByNumber(0)
+	current := chain.CurrentHeader()
+	genesis := chain.GetHeaderByNumber(0)
 	genesisCycle := genesis.Time.Uint64() / d.config.Epoch
 	prevCycle := parent.Time.Uint64() / d.config.Epoch
 	currentCycle := current.Time.Uint64() / d.config.Epoch
@@ -731,17 +708,15 @@ func (d *Devote) election(chain consensus.ChainReader, parent *types.Header, nod
 	if prevCycleIsGenesis && prevCycle < currentCycle {
 		prevCycle = currentCycle - 1
 	}
-	prevCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
 	//If the witnesses's already cached, return that
 	if w, know := d.sigcache.Get(currentCycle); know {
 		sortedWitnesses := w.([]string)
 		return sortedWitnesses, nil
 	} else {
 		for i := prevCycle; i < currentCycle; i++ {
-			list := make([]string, len(nodes))
-			copy(list, nodes)
-			votes, err := calculate(parent.Hash(), list)
+			all := make([]string, len(nodes))
+			copy(all, nodes)
+			votes, err := calculate(parent.Hash(), all)
 			if err != nil {
 				log.Error("init masternodes ", "err", err)
 				return nil, err
@@ -765,6 +740,119 @@ func (d *Devote) election(chain consensus.ChainReader, parent *types.Header, nod
 		}
 	}
 	return sortedWitnesses, nil
+}
+
+// snapshot retrieves the authorization snapshot at a given point in time.
+func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+	// Search for a snapshot in memory or on disk for checkpoints
+	var (
+		headers         []*types.Header
+		snap            *Snapshot
+		currentCycle    uint64
+		sortedWitnesses []string
+	)
+	current := chain.CurrentHeader()
+	currentCycle = current.Time.Uint64() / d.config.Epoch
+
+	//parentNumber:=new(big.Int).Sub(chain.CurrentHeader().Number,big.NewInt(1))
+	//parent:=chain.GetHeaderByNumber(parentNumber.Uint64())
+	//
+	//genesis := chain.GetHeaderByNumber(0)
+	//genesisCycle := genesis.Time.Uint64() / d.config.Epoch
+	//prevCycle := parent.Time.Uint64() / d.config.Epoch
+
+	// If we're at an checkpoint block, make a snapshot if it's known
+	if w, know := d.sigcache.Get(currentCycle); know {
+		sortedWitnesses = w.([]string)
+		context := []interface{}{
+			"cycle", currentCycle,
+			"signers", sortedWitnesses,
+			"hash", hash,
+			"number", number,
+		}
+		log.Info("Elected currnet cycle signers", context...)
+	} else {
+		if current != nil {
+			hash := current.Hash()
+			cycle := number / d.config.Epoch
+			all, err := d.masternodeListFn(big.NewInt(int64(number)))
+			if err != nil {
+				return nil, fmt.Errorf("get current masternodes err:%s", err)
+			}
+			stabilization := number - 100
+			stableBlock := chain.GetHeaderByNumber(stabilization)
+			if stableBlock != nil {
+				hash = stableBlock.Hash()
+			}
+			result, err := calculate(hash, all)
+			masternodes := sortableAddresses{}
+			for masternode, cnt := range result {
+				masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
+			}
+			sort.Sort(masternodes)
+			if len(masternodes) > int(maxSignersSize) {
+				masternodes = masternodes[:maxSignersSize]
+			}
+
+			for _, node := range masternodes {
+				sortedWitnesses = append(sortedWitnesses, node.nodeid)
+			}
+			sort.Strings(sortedWitnesses)
+			context := []interface{}{
+				"cycle", cycle,
+				"signers", sortedWitnesses,
+				"hash", hash,
+				"number", number,
+			}
+			log.Debug("Elected new cycle signers", context...)
+			snap = newSnapshot(d.config, number, cycle, hash, sortedWitnesses)
+			if err := snap.store(d.db); err != nil {
+				return nil, err
+			}
+			d.recents.Add(snap.Hash, snap)
+			d.sigcache.Add(cycle, sortedWitnesses)
+			log.Trace("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+		}
+	}
+
+	for snap == nil {
+		// No snapshot for this header, gather the header and move backward
+		var header *types.Header
+		if len(parents) > 0 {
+			// If we have explicit parents, pick from there (enforced)
+			header = parents[len(parents)-1]
+			if header.Hash() != hash || header.Number.Uint64() != number {
+				return nil, consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+		} else {
+			// No explicit parents (or no more left), reach out to the database
+			header = chain.GetHeader(hash, number)
+			if header == nil {
+				return nil, consensus.ErrUnknownAncestor
+			}
+		}
+		headers = append(headers, header)
+		number, hash = number-1, header.ParentHash
+	}
+	// Previous snapshot found, apply any pending headers on top of it
+	for i := 0; i < len(headers)/2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+
+	snap, err := snap.apply(headers)
+	if err != nil {
+		return nil, err
+	}
+	d.recents.Add(snap.Hash, snap)
+	// If we've generated a new checkpoint snapshot, save to disk
+	if snap.Number%d.config.Epoch == 0 && len(headers) > 0 {
+		if err = snap.store(d.db); err != nil {
+			return nil, err
+		}
+		log.Info("Stored snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+	}
+	return snap, err
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.

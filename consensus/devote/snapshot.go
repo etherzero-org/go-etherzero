@@ -20,14 +20,12 @@ package devote
 
 import (
 	"encoding/json"
-	"errors"
 	"math/big"
 	"strings"
 	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
 )
@@ -39,19 +37,18 @@ const (
 
 type Snapshot struct {
 	config    *params.DevoteConfig // Consensus engine parameters to fine tune behavior
-	devoteDB  *devotedb.DevoteDB
 	TimeStamp uint64
 	mu        sync.Mutex
 
-	Hash     common.Hash         //Block hash where the snapshot was created
-	Number   uint64              //Block number where the snapshot was created
-	Cycle    uint64              //Cycle number where the snapshot was created
-	Signers  map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
-	Recents  map[uint64]string   // set of recent masternodes for spam protections
+	Hash    common.Hash         //Block hash where the snapshot was created
+	Number  uint64              //Block number where the snapshot was created
+	Cycle   uint64              //Cycle number where the snapshot was created
+	Signers map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
+	Recents map[uint64]string   // set of recent masternodes for spam protections
 }
 
 func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64,
-	hash common.Hash, signers []string, devoteDB *devotedb.DevoteDB) *Snapshot {
+	hash common.Hash, signers []string) *Snapshot {
 
 	snap := &Snapshot{
 		config:   config,
@@ -60,7 +57,6 @@ func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64,
 		Number:   number,
 		Cycle:    cycle,
 		Hash:     hash,
-		devoteDB: devoteDB,
 	}
 
 	for _, signer := range signers {
@@ -87,10 +83,10 @@ func loadSnapshot(config *params.DevoteConfig, db ethdb.Database, hash common.Ha
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		Number:   s.Number,
-		Hash:     s.Hash,
-		Signers:  make(map[string]struct{}),
-		Recents:  make(map[uint64]string),
+		Number:  s.Number,
+		Hash:    s.Hash,
+		Signers: make(map[string]struct{}),
+		Recents: make(map[uint64]string),
 	}
 	for signer := range s.Signers {
 		cpy.Signers[signer] = struct{}{}
@@ -127,17 +123,6 @@ func (s *Snapshot) signers() []string {
 	return signers
 }
 
-// inturn returns if a signer at a given block height is in-turn or not.
-func (d *Snapshot) inturn(number uint64, signer string) bool {
-
-	signers := d.signers()
-	offset := 0
-	for offset < len(signers) && signers[offset] != signer {
-		offset++
-	}
-	return (number % uint64(len(signers))) == uint64(offset)
-}
-
 // validVote returns whether it makes sense to cast the specified vote in the
 // given snapshot context (e.g. don't try to add an already authorized signer).
 func (s *Snapshot) validWitness(witness string, authorize bool) bool {
@@ -145,28 +130,17 @@ func (s *Snapshot) validWitness(witness string, authorize bool) bool {
 	return (signer && !authorize) || (!signer && authorize)
 }
 
-func (ec *Snapshot) lookup(now uint64) (witness string, err error) {
+// inturn returns if a signer at a given block height is in-turn or not.
+func (s *Snapshot) inturn(number uint64, signer string) bool {
 
-	offset := now % params.CycleInterval
-	if offset%params.BlockInterval != 0 {
-		err = ErrInvalidMinerBlockTime
-		return
+	signers := s.signers()
+	offset := 0
+	for offset < len(signers) && signers[offset] != signer {
+		offset++
 	}
-	offset /= params.BlockInterval
-	witnesses, err := ec.devoteDB.GetWitnesses(ec.devoteDB.GetCycle())
-	if err != nil {
-		return
-	}
-
-	witnessSize := len(witnesses)
-	if witnessSize == 0 {
-		err = errors.New("failed to lookup witness")
-		return
-	}
-	offset %= uint64(witnessSize)
-	witness = witnesses[offset]
-	return
+	return (number % uint64(len(signers))) == uint64(offset)
 }
+
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
