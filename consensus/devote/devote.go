@@ -45,10 +45,12 @@ import (
 )
 
 const (
-	extraVanity        = 32                     // Fixed number of extra-data prefix bytes reserved for signer vanity
-	extraSeal          = 65                     // Fixed number of extra-data suffix bytes reserved for signer seal
-	inmemorySignatures = 4096                   // Number of recent block signatures to keep in memory
-	maxSignersSize     = 21                     // Number of max singers in current cycle
+	extraVanity        = 32   // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal          = 65   // Fixed number of extra-data suffix bytes reserved for signer seal
+	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
+	maxSignersSize     = 21   // Number of max singers in current cycle
+	testNetSignerSize  = 1
+	safeSignerSize     = 16
 	wiggleTime         = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
 
 	//maxWitnessSize uint64 = 0
@@ -494,20 +496,13 @@ func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
 	return ErrWaitForPrevBlock
 }
 
-func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
+func (d *Devote) CheckWitness(chain consensus.ChainReader,lastBlock *types.Block, now int64) error {
+
+	snap, err := d.snapshot(chain, lastBlock.Number().Uint64(), lastBlock.Hash(), nil)
 	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
 	}
-	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
-	if err != nil {
-		return err
-	}
-	currentCycle := lastBlock.Time().Uint64() / params.CycleInterval
-	devoteDB.SetCycle(currentCycle)
-	witnesses, err := devoteDB.GetWitnesses(currentCycle)
-	if err != nil {
-		return err
-	}
+	witnesses := snap.signers()
 	witness, err := lookup(uint64(now), witnesses)
 	if err != nil {
 		return err
@@ -751,30 +746,22 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		currentCycle    uint64
 		sortedWitnesses []string
 	)
+
 	current := chain.CurrentHeader()
 	currentCycle = current.Time.Uint64() / d.config.Epoch
+	//generate snap begin
+	for snap == nil {
+		//parentNumber:=new(big.Int).Sub(chain.CurrentHeader().Number,big.NewInt(1))
+		//parent:=chain.GetHeaderByNumber(parentNumber.Uint64())
+		//
+		//genesis := chain.GetHeaderByNumber(0)
+		//genesisCycle := genesis.Time.Uint64() / d.config.Epoch
+		//prevCycle := parent.Time.Uint64() / d.config.Epoch
 
-	//parentNumber:=new(big.Int).Sub(chain.CurrentHeader().Number,big.NewInt(1))
-	//parent:=chain.GetHeaderByNumber(parentNumber.Uint64())
-	//
-	//genesis := chain.GetHeaderByNumber(0)
-	//genesisCycle := genesis.Time.Uint64() / d.config.Epoch
-	//prevCycle := parent.Time.Uint64() / d.config.Epoch
-
-	// If we're at an checkpoint block, make a snapshot if it's known
-	if w, know := d.sigcache.Get(currentCycle); know {
-		sortedWitnesses = w.([]string)
-		context := []interface{}{
-			"cycle", currentCycle,
-			"signers", sortedWitnesses,
-			"hash", hash,
-			"number", number,
-		}
-		log.Info("Elected currnet cycle signers", context...)
-	} else {
-		if current != nil {
-			hash := current.Hash()
-			cycle := number / d.config.Epoch
+		// If we're at an checkpoint block, make a snapshot if it's known
+		if w, know := d.sigcache.Get(currentCycle); know {
+			sortedWitnesses = w.([]string)
+		} else {
 			all, err := d.masternodeListFn(big.NewInt(int64(number)))
 			if err != nil {
 				return nil, fmt.Errorf("get current masternodes err:%s", err)
@@ -793,48 +780,50 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			if len(masternodes) > int(maxSignersSize) {
 				masternodes = masternodes[:maxSignersSize]
 			}
-
 			for _, node := range masternodes {
 				sortedWitnesses = append(sortedWitnesses, node.nodeid)
 			}
-			sort.Strings(sortedWitnesses)
-			context := []interface{}{
-				"cycle", cycle,
-				"signers", sortedWitnesses,
-				"hash", hash,
-				"number", number,
+		}
+		cycle := number / d.config.Epoch
+		context := []interface{}{
+			"cycle", cycle,
+			"signers", sortedWitnesses,
+			"hash", hash,
+			"number", number,
+		}
+		log.Debug("Elected new cycle signers", context...)
+		snap = newSnapshot(d.config, number, cycle, hash, sortedWitnesses)
+		if err := snap.store(d.db); err != nil {
+			return nil, err
+		}
+		d.sigcache.Add(cycle, sortedWitnesses)
+		log.Trace("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+
+		var header *types.Header
+		if number == 0 && (header.Time.Uint64()%d.config.Epoch == 0) {
+			checkpoint := chain.GetHeaderByNumber(number)
+			if checkpoint != nil {
+				// No Epoch for this header, gather the header and move backward
+				if len(parents) > 0 {
+					// If we have explicit parents, pick from there (enforced)
+					header = parents[len(parents)-1]
+					if header.Hash() != hash || header.Number.Uint64() != number {
+						return nil, consensus.ErrUnknownAncestor
+					}
+					parents = parents[:len(parents)-1]
+				} else {
+					// No explicit parents (or no more left), reach out to the database
+					header = chain.GetHeader(hash, number)
+					if header == nil {
+						return nil, consensus.ErrUnknownAncestor
+					}
+				}
+				headers = append(headers, header)
+				number, hash = number-1, header.ParentHash
 			}
-			log.Debug("Elected new cycle signers", context...)
-			snap = newSnapshot(d.config, number, cycle, hash, sortedWitnesses)
-			if err := snap.store(d.db); err != nil {
-				return nil, err
-			}
-			d.recents.Add(snap.Hash, snap)
-			d.sigcache.Add(cycle, sortedWitnesses)
-			log.Trace("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 		}
 	}
 
-	for snap == nil {
-		// No snapshot for this header, gather the header and move backward
-		var header *types.Header
-		if len(parents) > 0 {
-			// If we have explicit parents, pick from there (enforced)
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return nil, consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
-		} else {
-			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
-			if header == nil {
-				return nil, consensus.ErrUnknownAncestor
-			}
-		}
-		headers = append(headers, header)
-		number, hash = number-1, header.ParentHash
-	}
 	// Previous snapshot found, apply any pending headers on top of it
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
