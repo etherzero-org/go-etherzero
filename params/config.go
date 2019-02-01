@@ -49,7 +49,7 @@ var (
 		EIP155Block:    big.NewInt(0),
 		EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
-
+		DevoteBlock:    big.NewInt(10000000),
 		Devote: &DevoteConfig{
 			Period: 1,
 			Epoch:  600,
