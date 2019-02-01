@@ -21,11 +21,11 @@ package devote
 import (
 	"encoding/json"
 	"math/big"
-	"strings"
 	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
 )
@@ -37,26 +37,29 @@ const (
 
 type Snapshot struct {
 	config    *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+	db        *devotedb.DevoteDB
 	TimeStamp uint64
 	mu        sync.Mutex
 
-	Hash    common.Hash         //Block hash where the snapshot was created
-	Number  uint64              //Block number where the snapshot was created
-	Cycle   uint64              //Cycle number where the snapshot was created
-	Signers map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
-	Recents map[uint64]string   // set of recent masternodes for spam protections
+	Hash         common.Hash         //Block hash where the snapshot was created
+	Number       uint64              //Block number where the snapshot was created
+	Cycle        uint64              //Cycle number where the snapshot was created
+	Signers      map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
+	Recents      map[uint64]string   // set of recent masternodes for spam protections
+	witnessArray []string
 }
 
 func newSnapshot(config *params.DevoteConfig, number uint64, cycle uint64,
 	hash common.Hash, signers []string) *Snapshot {
 
 	snap := &Snapshot{
-		config:   config,
-		Signers:  make(map[string]struct{}),
-		Recents:  make(map[uint64]string),
-		Number:   number,
-		Cycle:    cycle,
-		Hash:     hash,
+		config:       config,
+		Signers:      make(map[string]struct{}),
+		Recents:      make(map[uint64]string),
+		Number:       number,
+		Cycle:        cycle,
+		Hash:         hash,
+		witnessArray: signers,
 	}
 
 	for _, signer := range signers {
@@ -83,10 +86,11 @@ func loadSnapshot(config *params.DevoteConfig, db ethdb.Database, hash common.Ha
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		Number:  s.Number,
-		Hash:    s.Hash,
-		Signers: make(map[string]struct{}),
-		Recents: make(map[uint64]string),
+		Number:       s.Number,
+		Hash:         s.Hash,
+		witnessArray: s.witnessArray,
+		Signers:      make(map[string]struct{}),
+		Recents:      make(map[uint64]string),
 	}
 	for signer := range s.Signers {
 		cpy.Signers[signer] = struct{}{}
@@ -94,7 +98,6 @@ func (s *Snapshot) copy() *Snapshot {
 	for block, signer := range s.Recents {
 		cpy.Recents[block] = signer
 	}
-
 	return cpy
 }
 
@@ -112,13 +115,6 @@ func (s *Snapshot) signers() []string {
 	signers := make([]string, 0, len(s.Signers))
 	for signer := range s.Signers {
 		signers = append(signers, signer)
-	}
-	for i := 0; i < len(signers); i++ {
-		for j := i + 1; j < len(signers); j++ {
-			if strings.Compare(signers[i], signers[j]) > 0 {
-				signers[i], signers[j] = signers[j], signers[i]
-			}
-		}
 	}
 	return signers
 }
@@ -140,7 +136,6 @@ func (s *Snapshot) inturn(number uint64, signer string) bool {
 	}
 	return (number % uint64(len(signers))) == uint64(offset)
 }
-
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
