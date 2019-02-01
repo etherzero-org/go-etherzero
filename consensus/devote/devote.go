@@ -310,13 +310,12 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
-	var (
-		maxWitnessSize = 21
-	)
+	maxWitnessSize := uint64(21)
+	safeSize := int(15)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
+		safeSize = 1
 	}
-	number := header.Number.Uint64()
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(maxWitnessSize)))
 	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
@@ -329,22 +328,27 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-
-	parcycle := parent.Time.Uint64() / params.CycleInterval
-	curcycle := header.Time.Uint64() / params.CycleInterval
-	if curcycle > parcycle {
-		parent := chain.GetHeaderByHash(header.ParentHash)
-
-		witnesses, _ := d.election(chain, header.Hash(), number, parent)
-		db.SetWitnesses(curcycle, witnesses)
+	if !chain.Config().IsDevote(header.Number){
+		snap := &Snapshot{
+			db:  db,
+			TimeStamp: header.Time.Uint64(),
+		}
+		genesis := chain.GetHeaderByNumber(0)
+		first := chain.GetHeaderByNumber(1)
+		nodes, merr := d.masternodeListFn(stableBlockNumber)
+		if merr != nil {
+			return nil, fmt.Errorf("get current masternodes err:%s", merr)
+		}
+		err := snap.election(genesis, first, parent, nodes, safeSize, uint64(maxWitnessSize))
+		if err != nil {
+			return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
+		}
+		//miner Rolling
+		db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 		db.Commit()
-		log.Debug("devote Finilize new cycle", "curcycle", curcycle, "Protocol.cycleHash", db.Protocol().CycleHash, "witnesses", witnesses)
-		log.Info("Initializing a new cycle", "Header.Number", header.Number, "current", curcycle, "parentcycle", parcycle)
+		header.Protocol = db.Protocol()
 	}
-	//miner Rolling
-	db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-	db.Commit()
-	header.Protocol = db.Protocol()
+
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
@@ -495,7 +499,6 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		log.Error("verifySeal ecrecover err", "err", errUnauthorizedSigner)
 		return errUnauthorizedSigner
 	}
-
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
 	if chain.Config().IsDevote(header.Number) {
 		inturn := snap.inturn(header.Number.Uint64(), signer)
