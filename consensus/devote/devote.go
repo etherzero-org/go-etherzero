@@ -310,7 +310,6 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
-
 	var (
 		maxWitnessSize = 21
 	)
@@ -318,7 +317,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		maxWitnessSize = 1
 	}
 	number := header.Number.Uint64()
-
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(maxWitnessSize)))
 	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
@@ -336,10 +334,11 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	curcycle := header.Time.Uint64() / params.CycleInterval
 	if curcycle > parcycle {
 		parent := chain.GetHeaderByHash(header.ParentHash)
+
 		witnesses, _ := d.election(chain, header.Hash(), number, parent)
 		db.SetWitnesses(curcycle, witnesses)
 		db.Commit()
-		log.Debug("devote Finilize new cycle", "curcycle",curcycle,"Protocol.cycleHash",db.Protocol().CycleHash,"witnesses",witnesses)
+		log.Debug("devote Finilize new cycle", "curcycle", curcycle, "Protocol.cycleHash", db.Protocol().CycleHash, "witnesses", witnesses)
 		log.Info("Initializing a new cycle", "Header.Number", header.Number, "current", curcycle, "parentcycle", parcycle)
 	}
 	//miner Rolling
@@ -718,12 +717,18 @@ func NextSlot(now uint64) uint64 {
 // the original one.
 func (d *Devote) election(chain consensus.ChainReader, hash common.Hash, number uint64, parent *types.Header) ([]string, error) {
 
-	var sortedWitnesses []string
-	maxWitnessSize := uint64(21)
-	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(int64(maxWitnessSize)))
-	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
+	var (
+		sortedWitnesses   []string
+		stableBlockNumber *big.Int
+		maxWitnessSize    = int64(21)
+	)
+
+	if parent == nil || parent.Number.Cmp(big.NewInt(maxWitnessSize)) <= 0 {
 		stableBlockNumber = big.NewInt(0)
+	} else {
+		stableBlockNumber = new(big.Int).Sub(parent.Number, big.NewInt(int64(maxWitnessSize)))
 	}
+
 	all, err := d.masternodeListFn(stableBlockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("get current masternodes err:%s", err)
