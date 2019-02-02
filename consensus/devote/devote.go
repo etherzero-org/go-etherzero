@@ -223,7 +223,7 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	}
 	for d.confirmedBlockHeader.Hash() != curHeader.Hash() &&
 		d.confirmedBlockHeader.Number.Uint64() < curHeader.Number.Uint64() {
-		curCycle := curHeader.Time.Uint64() / d.config.Period
+		curCycle := curHeader.Time.Uint64() / Period
 		if curCycle != cycle {
 			cycle = curCycle
 			witnessMap = make(map[string]bool)
@@ -767,8 +767,8 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, current *t
 		checkpoint          *types.Header
 	)
 
-	cycle = current.Time.Uint64() / d.config.Epoch
-	currentCycle = chain.CurrentHeader().Time.Uint64() / d.config.Epoch
+	cycle = current.Time.Uint64() / Epoch
+	currentCycle = chain.CurrentHeader().Time.Uint64() / Epoch
 	hash = current.ParentHash
 	checkpoint = current
 	parent := chain.GetHeaderByHash(current.ParentHash)
@@ -790,7 +790,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, current *t
 			checkpoint = chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				// If an on-disk checkpoint snapshot can be found, use that
-				if checkpoint.Time.Uint64()%d.config.Epoch == 0 {
+				if checkpoint.Time.Uint64()%Epoch == 0 {
 					if s, err := loadSnapshot(d.config, d.db, hash); err == nil {
 						log.Trace("Loaded voting snapshot from disk", "number", number, "hash", hash)
 						snap = s
@@ -846,7 +846,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, current *t
 	}
 	d.recents.Add(snap.Hash, snap)
 	// If we've generated a new checkpoint snapshot, save to disk
-	if checkpoint.Time.Uint64()%d.config.Epoch == 0 && len(headers) > 0 {
+	if checkpoint.Time.Uint64()%Epoch == 0 && len(headers) > 0 {
 		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
