@@ -274,6 +274,7 @@ func (s *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
 func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) error {
+
 	header.Nonce = types.BlockNonce{}
 	number := header.Number.Uint64()
 	if len(header.Extra) < extraVanity {
@@ -286,7 +287,11 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		return consensus.ErrUnknownAncestor
 	}
 	header.Witness = d.signer
-	header.Difficulty = d.CalcDifficulty(chain, header.Time.Uint64(), parent)
+	if chain.Config().IsDevote(header.Number) {
+		header.Difficulty = d.CalcDifficulty(chain, header.Time.Uint64(), parent)
+	} else {
+		header.Difficulty = big.NewInt(1)
+	}
 
 	return nil
 }
@@ -310,6 +315,8 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, db *devotedb.DevoteDB) (*types.Block, error) {
+	fmt.Printf("*************** Finalize begin time %s***************\n",time.Now().Unix())
+
 	maxWitnessSize := uint64(21)
 	safeSize := int(15)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
@@ -328,9 +335,28 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	if !chain.Config().IsDevote(header.Number){
+	snap := &Snapshot{
+		db:        db,
+		TimeStamp: header.Time.Uint64(),
+	}
+	genesis := chain.GetHeaderByNumber(0)
+	first := chain.GetHeaderByNumber(1)
+	nodes, merr := d.masternodeListFn(stableBlockNumber)
+	if merr != nil {
+		return nil, fmt.Errorf("get current masternodes err:%s", merr)
+	}
+	err := snap.election(genesis, first, parent, nodes, safeSize, uint64(maxWitnessSize))
+	if err != nil {
+		return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
+	}
+	//miner Rolling
+	db.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
+	db.Commit()
+	header.Protocol = db.Protocol()
+/*
+	if !chain.Config().IsDevote(header.Number) {
 		snap := &Snapshot{
-			db:  db,
+			db:        db,
 			TimeStamp: header.Time.Uint64(),
 		}
 		genesis := chain.GetHeaderByNumber(0)
@@ -348,6 +374,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		db.Commit()
 		header.Protocol = db.Protocol()
 	}
+*/
+	fmt.Printf("*************** Finalize end time %s***************\n",time.Now().Unix())
 
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
@@ -447,19 +475,20 @@ func (d *Devote) VerifySeal(chain consensus.ChainReader, header *types.Header) e
 func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 
 	// Verifying the genesis block is not supported
-	number := header.Number.Uint64()
 	var (
-		parent  *types.Header
-		snap    *Snapshot
-		witarry []string
+		parent   *types.Header
+		snap     *Snapshot
+		witarry  []string
+		//IsDevote = chain.Config().IsDevote(header.Number)
+		number   = header.Number.Uint64()
 	)
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}
-
-	if chain.Config().IsDevote(header.Number) {
+	/*
+	if IsDevote {
 		s, err := d.snapshot(chain, number, header, parents)
 		if err != nil {
 			log.Error("devote verifySeal create snapshot err", "numer", number, "err", err)
@@ -473,11 +502,26 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			log.Error("devote verifySeal failed ", "err", err)
 			return err
 		}
-		currentcycle := parent.Time.Uint64() / params.CycleInterval
+		currentcycle := parent.Time.Uint64() / Epoch
 		devoteDB.SetCycle(currentcycle)
 		witarry, _ = devoteDB.GetWitnesses(devoteDB.GetCycle())
 		snap = newSnapshot(d.config, number, currentcycle, header.Hash(), witarry)
 	}
+	/*# temp begin*/
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
+	if err != nil {
+		log.Error("devote verifySeal failed ", "err", err)
+		return err
+	}
+	currentcycle := parent.Time.Uint64() / Epoch
+	devoteDB.SetCycle(currentcycle)
+	witarry, _ = devoteDB.GetWitnesses(devoteDB.GetCycle())
+	snap = newSnapshot(d.config, number, currentcycle, header.Hash(), witarry)
+
+	if header.Difficulty.Cmp(masternodeDifficult) != 0 {
+		return errWrongDifficulty
+	}
+	/*#temp end	*/
 
 	witness, err := lookup(header.Time.Uint64(), witarry)
 	if err != nil {
@@ -488,7 +532,6 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		log.Error("devote verifySeal verifyBlockSigner err", "numer", number, "header.time", header.Time.Uint64(), "witness", witness, "header.signer:", header.Witness, "err", err)
 		return err
 	}
-
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header)
 	if err != nil {
@@ -499,8 +542,9 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		log.Error("verifySeal ecrecover err", "err", errUnauthorizedSigner)
 		return errUnauthorizedSigner
 	}
+	/*
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
-	if chain.Config().IsDevote(header.Number) {
+	if IsDevote {
 		inturn := snap.inturn(header.Number.Uint64(), signer)
 		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 			return errWrongDifficulty
@@ -521,6 +565,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 			return errWrongDifficulty
 		}
 	}
+	*/
 	return d.updateConfirmedBlockHeader(chain)
 }
 
@@ -622,14 +667,12 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
 				return nil, fmt.Errorf("Signed recently, must wait for others")
 			}
-			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
 		}
 	}
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(15) * wiggleTime
 		delay += time.Duration(rand.Int63n(int64(wiggle)))
-
 		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 	}
 
@@ -725,7 +768,6 @@ func (d *Devote) election(chain consensus.ChainReader, hash common.Hash, number 
 		stableBlockNumber *big.Int
 		maxWitnessSize    = int64(21)
 	)
-
 	if parent == nil || parent.Number.Cmp(big.NewInt(maxWitnessSize)) <= 0 {
 		stableBlockNumber = big.NewInt(0)
 	} else {

@@ -274,9 +274,6 @@ func (d *DevoteDB) Exists() bool {
 }
 
 func (d *DevoteDB) Protocol() *DevoteProtocol {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
 	return &DevoteProtocol{
 		CycleHash: d.cycleTrie.Hash(),
 		StatsHash: d.statsTrie.Hash(),

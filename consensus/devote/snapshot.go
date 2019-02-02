@@ -19,21 +19,20 @@
 package devote
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/ethdb"
-	"github.com/etherzero/go-etherzero/params"
-	"sort"
-	"encoding/binary"
-	"fmt"
 	"github.com/etherzero/go-etherzero/log"
-	"errors"
-	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 const (
@@ -202,7 +201,6 @@ func (p sortableAddresses) Less(i, j int) bool {
 	}
 }
 
-
 func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) error {
 
 	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
@@ -224,7 +222,7 @@ func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []str
 			list, _ = self.uncast(prevCycle, nodes)
 		}
 
-		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
+		votes, err := calculate(parent.Hash(), list)
 		if err != nil {
 			log.Error("init masternodes ", "err", err)
 			return err
@@ -252,7 +250,6 @@ func (self *Snapshot) election(genesis, first, parent *types.Header, nodes []str
 	return nil
 }
 
-
 //when a node does't work in the current cycle, Remove from candidate nodes.
 func (ec *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 
@@ -269,7 +266,6 @@ func (ec *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 		binary.BigEndian.PutUint64(key, cycle)
 		// TODO
 		key = append(key, []byte(witness)...)
-
 		size := uint64(0)
 		size = ec.db.GetStatsNumber(key)
 		if size < 1 {
@@ -292,30 +288,4 @@ func (ec *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 		}
 	}
 	return nodes, nil
-}
-
-
-// masternodes return  masternode list in the Cycle.
-// key   -- nodeid
-// value -- votes count
-
-func (self *Snapshot) masternodes(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	list := make(map[string]*big.Int)
-	for i := 0; i < len(nodes); i++ {
-		masternode := nodes[i]
-		hash := make([]byte, 8)
-		hash = append(hash, []byte(masternode)...)
-		hash = append(hash, parent.Hash().Bytes()...)
-		weight := int64(binary.LittleEndian.Uint32(crypto.Keccak512(hash)))
-
-		score := big.NewInt(0)
-		score.Add(score, big.NewInt(weight))
-		log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
-		list[masternode] = score
-	}
-	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
-	return list, nil
 }
