@@ -27,6 +27,7 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
@@ -96,9 +97,6 @@ func (db *DevoteDB) Database() Database {
 }
 
 func (db *DevoteDB) Root() (h common.Hash) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, db.cycleTrie.Hash())
 	rlp.Encode(hw, db.statsTrie.Hash())
@@ -239,12 +237,12 @@ func (d *DevoteDB) Rolling(parentBlockTime, currentBlockTime uint64, witness str
 	if d.dCache == nil {
 		return
 	}
-	currentCycle := parentBlockTime / params.CycleInterval
+	currentCycle := parentBlockTime / params.Epoch
 	currentCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
 
 	cnt := uint64(1)
-	newCycle := currentBlockTime / params.CycleInterval
+	newCycle := currentBlockTime / params.Epoch
 	hash := common.Hash{}
 	// still during the currentCycleID
 	if currentCycle == newCycle {
@@ -312,10 +310,13 @@ type statsTrie struct {
 }
 
 func (self statsTrie) Commit(onleaf trie.LeafCallback) (common.Hash, error) {
+	var lock sync.RWMutex
+	lock.Lock()
 	root, err := self.SecureTrie.Commit(onleaf)
 	if err != nil {
-		// do sth
+		log.Error("statsTrie commit was failed ", "message", err)
 	}
+	lock.Unlock()
 	return root, err
 }
 
@@ -329,10 +330,13 @@ type cycleTrie struct {
 }
 
 func (self cycleTrie) Commit(onleaf trie.LeafCallback) (common.Hash, error) {
+	var lock sync.RWMutex
+	lock.Lock()
 	root, err := self.SecureTrie.Commit(onleaf)
 	if err != nil {
-		// do sth
+		log.Error("cycleTrie commit was failed", "message", err)
 	}
+	lock.Unlock()
 	return root, err
 }
 

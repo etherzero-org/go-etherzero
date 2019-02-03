@@ -258,7 +258,7 @@ func (self *worker) mine(now int64) {
 		return
 	}
 
-	err := engine.CheckWitness(self.chain, self.chain.CurrentBlock(), now)
+	err := engine.CheckWitness(self.chain.CurrentBlock(), now)
 	if err != nil {
 		switch err {
 		case devote.ErrWaitForPrevBlock,

@@ -45,7 +45,7 @@ func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]string, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	currentcycle:=header.Time.Uint64()/params.CycleInterval
+	currentcycle:=header.Time.Uint64()/params.Epoch
 	devoteDB,_:=devotedb.New(devotedb.NewDatabase(api.devote.db),header.Protocol.CycleHash,header.Protocol.StatsHash)
 	witnesses, err := devoteDB.GetWitnesses(currentcycle)
 	if err != nil {

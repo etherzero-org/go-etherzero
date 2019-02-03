@@ -36,14 +36,14 @@ import (
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/trie"
 	"io"
 	"os"
 	"path/filepath"
-	"github.com/etherzero/go-etherzero/trie"
 	"strconv"
-	"github.com/etherzero/go-etherzero/p2p/enode"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -348,7 +348,7 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 	)
 
 	count := int64(len(masternodes))
-	for i := int64(21) ; i < count; i++ {
+	for i := int64(21); i < count; i++ {
 		addresses = append(addresses, common.BytesToAddress(big.NewInt(i).Bytes()))
 	}
 	for index, n := range masternodes {
@@ -528,7 +528,7 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB
 		return nil
 	}
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
-		genesisCycle := g.Timestamp / params.CycleInterval
+		genesisCycle := g.Timestamp / params.Epoch
 		devoteDB.SetWitnesses(genesisCycle, g.Config.Devote.Witnesses)
 	}
 	return devoteDB
