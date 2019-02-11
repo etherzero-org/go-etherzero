@@ -207,44 +207,39 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		stableBlockNumber = big.NewInt(0)
 	}
 	// Accumulate block rewards and commit the final state root
-	govaddress, gerr := d.governanceContractAddressFn(stableBlockNumber)
-	if gerr != nil {
-
-		return nil, fmt.Errorf("get current governance address err:%s", gerr)
+	govaddress, err := d.governanceContractAddressFn(stableBlockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("get current gov address failed from contract, err:%s", err)
 	}
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-
-	snap := &Snapshot{
-		devoteDB:  devoteDB,
-		TimeStamp: header.Time.Uint64(),
-	}
+	snap := newSnapshot(devoteDB)
+	snap.TimeStamp = header.Time.Uint64()
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
 
-	nodes, merr := d.masternodeListFn(stableBlockNumber)
-	if merr != nil {
-		return nil, fmt.Errorf("get current masternodes err:%s", merr)
+	nodes, err := d.masternodeListFn(stableBlockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
-	log.Debug("finalize get masternode ", "stableBlockNumber", stableBlockNumber, "nodes", nodes)
+	log.Debug("finalize get masternode ", "blockNumber", stableBlockNumber, "nodes", nodes)
 	genesis := chain.GetHeaderByNumber(0)
 	cycle := snap.TimeStamp / params.Epoch
-	_,know:=d.signatures.Get(cycle)
-	if !know{
-		sort,err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
+	_, know := d.signatures.Get(cycle)
+	if !know {
+		//Record the current witness list into the blockchain
+		sort, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
 		if err != nil {
-			return nil, fmt.Errorf("got error when voting next cycle, err: %s", err)
+			return nil, fmt.Errorf("get next cycle witness failed, err: %s", err)
 		}
-		d.signatures.Add(cycle,sort)
+		d.signatures.Add(cycle, sort)
 	}
-	//miner Rolling
-	log.Debug("rolling ", "Number", header.Number, "parnetTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
-	devoteDB.Rolling(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
-	devoteDB.Commit()
-	header.Protocol = devoteDB.Protocol()
+	//accumulating the signer of block
+	log.Debug("rolling ", "Number", header.Number, "parentTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
+	header.Protocol = snap.recording(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 

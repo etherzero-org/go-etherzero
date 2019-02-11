@@ -35,10 +35,12 @@ import (
 
 type Snapshot struct {
 	devoteDB  *devotedb.DevoteDB
+
 	TimeStamp uint64
 	mu        sync.Mutex
 }
 
+//newSnapshot return snapshot by devoteDB
 func newSnapshot(devoteDB *devotedb.DevoteDB) *Snapshot {
 	snap := &Snapshot{
 		devoteDB: devoteDB,
@@ -49,7 +51,6 @@ func newSnapshot(devoteDB *devotedb.DevoteDB) *Snapshot {
 // masternodes return  masternode list in the Cycle.
 // key   -- nodeid
 // value -- votes count
-
 func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -71,7 +72,7 @@ func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes [
 	return list, nil
 }
 
-//when a node does't work in the current cycle, Remove from candidate nodes.
+//Remove from candidate nodes when a node does't work in the current cycle
 func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
@@ -112,6 +113,7 @@ func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 	return nodes, nil
 }
 
+
 func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
 
 	offset := now % params.Epoch
@@ -135,29 +137,37 @@ func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
 	return
 }
 
+// Recording accumulating the total number of signature blocks each signer in the current cycle,return devoteDB hash
+func (snap *Snapshot) recording(parent uint64, header uint64 , witness string) *devotedb.DevoteProtocol{
+	snap.devoteDB.Rolling(parent, header, witness)
+	snap.devoteDB.Commit()
+	return snap.devoteDB.Protocol()
+}
+
+//election record the current witness list into the Blockchain
 func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) ([]string, error) {
 
 	var (
 		sortedWitnesses []string
-		genesisCycle    = genesis.Time.Uint64() / params.Epoch
-		prevCycle       = parent.Time.Uint64() / params.Epoch
-		currentCycle    = snap.TimeStamp / params.Epoch
+		genesiscycle    = genesis.Time.Uint64() / params.Epoch
+		prevcycle       = parent.Time.Uint64() / params.Epoch
+		currentcycle    = snap.TimeStamp / params.Epoch
 	)
-	preisgenesis := (prevCycle == genesisCycle)
-	if preisgenesis && prevCycle < currentCycle {
-		prevCycle = currentCycle - 1
+	preisgenesis := (prevcycle == genesiscycle)
+	if preisgenesis && prevcycle < currentcycle {
+		prevcycle = currentcycle - 1
 	}
-	for i := prevCycle; i < currentCycle; i++ {
-		// if prevCycle is not genesis, uncast not active masternode
+	for i := prevcycle; i < currentcycle; i++ {
+		// if prevcycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
 		copy(list, nodes)
 		if !preisgenesis {
-			list, _ = snap.uncast(prevCycle, nodes)
+			list, _ = snap.uncast(prevcycle, nodes)
 		}
 
 		votes, err := snap.calculate(parent, preisgenesis, list)
 		if err != nil {
-			log.Error("init masternodes ", "err", err)
+			log.Error("snapshot init masternodes failed", "err", err)
 			return nil, err
 		}
 		masternodes := sortableAddresses{}
@@ -165,7 +175,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
-			return nil, fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
+			return nil, fmt.Errorf(" too few masternodes error ,current :%d, safesize:%d", len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
@@ -175,8 +185,8 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "cycle", currentCycle,"count",len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
-		snap.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
+		log.Debug("Initializing a new cycle ", "cycle", currentcycle,"count",len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}
 	return sortedWitnesses, nil
