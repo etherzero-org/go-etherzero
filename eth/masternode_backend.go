@@ -76,6 +76,7 @@ func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contra
 
 func (self *MasternodeManager) Start(srvr *p2p.Server, mux *event.TypeMux) {
 	self.srvr = srvr
+	self.mux = mux
 	log.Trace("MasternodeManqager start ")
 	x8 := srvr.Self().X8()
 	self.ID = fmt.Sprintf("%x", x8[:])
