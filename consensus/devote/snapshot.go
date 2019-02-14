@@ -52,9 +52,9 @@ type Snapshot struct {
 }
 
 //newSnapshot return snapshot by devoteDB
-func newSnapshot(config *params.DevoteConfig,db *devotedb.DevoteDB) *Snapshot {
+func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
 	snap := &Snapshot{
-		config:config,
+		config:   config,
 		devoteDB: db,
 		Signers:  make(map[string]struct{}),
 		Recents:  make(map[uint64]string),
@@ -216,23 +216,27 @@ func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 
 func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
 
+	var (
+		cycle uint64
+	)
 	offset := now % params.Epoch
 	if offset%params.Period != 0 {
 		err = ErrInvalidMinerBlockTime
 		return
 	}
 	offset /= params.Period
-	witnesses, err := snap.devoteDB.GetWitnesses(snap.devoteDB.GetCycle())
+	cycle = snap.devoteDB.GetCycle()
+	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
+		log.Error("failed to get witness list", "cycle", cycle, "error", err)
 		return
 	}
-
-	witnessSize := len(witnesses)
-	if witnessSize == 0 {
+	size := len(witnesses)
+	if size == 0 {
 		err = errors.New("failed to lookup witness")
 		return
 	}
-	offset %= uint64(witnessSize)
+	offset %= uint64(size)
 	witness = witnesses[offset]
 	return
 }
@@ -300,7 +304,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Debug("Initializing a new cycle ", "cycle", i, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}

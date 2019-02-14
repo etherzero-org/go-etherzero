@@ -138,10 +138,12 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer                      string        // master node nodeid
-	signFn                      SignerFn      // signature function
-	recents                     *lru.ARCCache // Snapshots for recent block to speed up reorgs
-	signatures                  *lru.ARCCache // Signatures of recent blocks to speed up mining
+	signer     string          // master node nodeid
+	signFn     SignerFn        // signature function
+	recents    *lru.ARCCache   // Snapshots for recent block to speed up reorgs
+	signatures *lru.ARCCache   // Signatures of recent blocks to speed up mining
+	proposals  map[string]bool // Current list of proposals we are pushing
+
 	confirmedBlockHeader        *types.Header
 	masternodeListFn            MasternodeListFn             //get current all masternodes
 	governanceContractAddressFn GetGovernanceContractAddress //get current GovernanceContractAddress
@@ -160,6 +162,7 @@ func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
 		db:         db,
 		signatures: signatures,
 		recents:    recents,
+		proposals:  make(map[string]bool),
 	}
 }
 
@@ -198,6 +201,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				currentcycle := checkpoint.Time.Uint64() / params.Epoch
 				devoteDB.SetCycle(currentcycle)
 				snap = newSnapshot(d.config, devoteDB)
+				snap.sigcache = d.signatures
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
@@ -283,7 +287,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
 	maxWitnessSize := int64(21)
-	safeSize := int(15)
+	safeSize := int(2)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
 		safeSize = 1
@@ -306,24 +310,21 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
 		}
 	}
-
 	nodes, err := d.masternodeListFn(stableBlockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
-	log.Debug("finalize get masternode ", "blockNumber", stableBlockNumber, "nodes", nodes)
 	genesis := chain.GetHeaderByNumber(0)
 	snap.TimeStamp = header.Time.Uint64()
 	cycle := snap.TimeStamp / params.Epoch
-	_, know := d.signatures.Get(cycle)
-	if !know {
-		//Record the current witness list into the blockchain
-		list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
-		if err != nil {
-			return nil, fmt.Errorf("get next cycle witness failed, err: %s", err)
-		}
-		d.signatures.Add(cycle, list)
+	log.Debug("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
+
+	//Record the current witness list into the blockchain
+	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
+	if err != nil {
+		return nil, fmt.Errorf("get next cycle witness failed, err: %s", err)
 	}
+	d.signatures.Add(cycle, list)
 	//accumulating the signer of block
 	log.Debug("rolling ", "Number", header.Number, "parentTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
 	header.Protocol = snap.recording(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
@@ -445,6 +446,8 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	currentcycle := parent.Time.Uint64() / params.Epoch
 	devoteDB.SetCycle(currentcycle)
 	snap := newSnapshot(d.config, devoteDB)
+	snap.sigcache = d.signatures
+
 	witness, err := snap.lookup(header.Time.Uint64())
 	if err != nil {
 		return err
@@ -492,12 +495,16 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	}
 	currentCycle := lastBlock.Time().Uint64() / params.Epoch
 	devoteDB.SetCycle(currentCycle)
+	log.Info("devote checkWitness lookup", "cycle", currentCycle, "blockNumber", lastBlock.Number())
 	snap := newSnapshot(d.config, devoteDB)
+	snap.sigcache = d.signatures
+
 	witness, err := snap.lookup(uint64(now))
 	if err != nil {
 		return err
 	}
-	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer)
+	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
+
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
 	}
