@@ -287,7 +287,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
 	maxWitnessSize := int64(21)
-	safeSize := int(2)
+	safeSize := int(4)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
 		safeSize = 1
@@ -495,7 +495,6 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	}
 	currentCycle := lastBlock.Time().Uint64() / params.Epoch
 	devoteDB.SetCycle(currentCycle)
-	log.Info("devote checkWitness lookup", "cycle", currentCycle, "blockNumber", lastBlock.Number())
 	snap := newSnapshot(d.config, devoteDB)
 	snap.sigcache = d.signatures
 
