@@ -202,10 +202,14 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 				devoteDB.SetCycle(currentcycle)
 				snap = newSnapshot(d.config, devoteDB)
 				snap.sigcache = d.signatures
+				ary, know := d.signatures.Get(currentcycle)
+				if know {
+					snap.setSigners(ary.([]string))
+				}
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
-				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
+				log.Info("Stored checkpoint snapshot to disk", "number", number, "cycle", currentcycle, "hash", hash)
 				break
 			}
 		}
@@ -304,6 +308,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	cycle:=header.Time.Uint64()/params.Epoch
+	devoteDB.SetCycle(cycle)
 	snap := newSnapshot(d.config, devoteDB)
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
@@ -316,7 +322,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	genesis := chain.GetHeaderByNumber(0)
 	snap.TimeStamp = header.Time.Uint64()
-	cycle := snap.TimeStamp / params.Epoch
 	log.Debug("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
 
 	//Record the current witness list into the blockchain

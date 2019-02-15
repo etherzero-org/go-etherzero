@@ -59,7 +59,10 @@ func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
 		Signers:  make(map[string]struct{}),
 		Recents:  make(map[uint64]string),
 	}
-	ary, _ := db.GetWitnesses(db.GetCycle())
+	ary, err := db.GetWitnesses(db.GetCycle())
+	if err != nil {
+		log.Error("devote create Snapshot failed ", "cycle",db.GetCycle(),"err", err)
+	}
 	for _, s := range ary {
 		snap.Signers[s] = struct{}{}
 	}
@@ -305,7 +308,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "cycle", i, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Info("Initializing a new cycle ", "cycle", i, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}
