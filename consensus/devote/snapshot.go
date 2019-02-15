@@ -295,7 +295,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
-			return nil, fmt.Errorf(" too few masternodes error ,current :%d, safesize:%d", len(masternodes), safeSize)
+			return nil, fmt.Errorf(" too few masternodes ,current :%d, safesize:%d", len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
