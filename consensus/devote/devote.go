@@ -311,6 +311,9 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	cycle:=header.Time.Uint64()/params.Epoch
 	devoteDB.SetCycle(cycle)
 	snap := newSnapshot(d.config, devoteDB)
+
+	snap.TimeStamp = header.Time.Uint64()
+
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
 			timeOfFirstBlock = firstBlockHeader.Time.Uint64()
@@ -321,7 +324,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	snap.TimeStamp = header.Time.Uint64()
 	log.Debug("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
 
 	//Record the current witness list into the blockchain

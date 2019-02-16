@@ -308,7 +308,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Info("Initializing a new cycle ", "cycle", i, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Info("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}
