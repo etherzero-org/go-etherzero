@@ -54,11 +54,6 @@ var (
 			Period: 1,
 			Epoch:  600,
 			Witnesses: []string{
-				"421be8fec3385de5",
-				"c84c9860a017cadd",
-				"7428587a4839162a",
-				"85cb1e6fb7ae0523",
-				"29416b59c5ce1774",
 			},
 		},
 	}

@@ -291,7 +291,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
 	maxWitnessSize := int64(21)
-	safeSize := int(4)
+	safeSize := int(15)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
 		safeSize = 1
@@ -308,7 +308,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	cycle:=header.Time.Uint64()/params.Epoch
+	cycle := header.Time.Uint64() / params.Epoch
 	devoteDB.SetCycle(cycle)
 	snap := newSnapshot(d.config, devoteDB)
 
@@ -329,7 +329,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	//Record the current witness list into the blockchain
 	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
 	if err != nil {
-		return nil, fmt.Errorf("get next cycle witness failed, err: %s", err)
+		return nil, err
 	}
 	d.signatures.Add(cycle, list)
 	//accumulating the signer of block
@@ -535,6 +535,13 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	if err != nil {
 		return nil, err
 	}
+
+	last := chain.CurrentHeader()
+	now := time.Now().Unix()
+	diff := now - last.Time.Int64()
+	if diff > 30 {
+		snap.Recents = make(map[uint64]string)
+	}
 	singerMap := snap.Signers
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {
@@ -548,7 +555,6 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		}
 	}
 
-	now := time.Now().Unix()
 	NextSlot := int64(NextSlot(uint64(now)))
 	delay := NextSlot - now
 	log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)

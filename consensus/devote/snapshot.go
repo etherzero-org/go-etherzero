@@ -288,17 +288,17 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			list, _ = snap.uncast(prevcycle, nodes)
 		}
 
-		votes, err := snap.calculate(parent, preisgenesis, list)
+		count, err := snap.calculate(parent, preisgenesis, list)
 		if err != nil {
 			log.Error("snapshot init masternodes failed", "err", err)
 			return nil, err
 		}
 		masternodes := sortableAddresses{}
-		for masternode, cnt := range votes {
+		for masternode, cnt := range count {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
-			return nil, fmt.Errorf(" too few masternodes ,current :%d, safesize:%d", len(masternodes), safeSize)
+			return nil, fmt.Errorf(" too few masternodes ,cycle:%d, current :%d, safesize:%d",currentcycle, len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
