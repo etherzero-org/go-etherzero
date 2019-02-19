@@ -421,7 +421,7 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
-	config := params.DevoteChainConfig
+	configMainnet := params.DevoteChainConfig
 	var witnesses []string
 	for _, n := range params.MainnetMasternodes {
 		node := enode.MustParseV4(n)
@@ -439,9 +439,9 @@ func DefaultGenesisBlock() *Genesis {
 		id := fmt.Sprintf("%x", id1[:8])
 		witnesses = append(witnesses, id)
 	}
-	config.Devote.Witnesses = witnesses
+	configMainnet.Devote.Witnesses = witnesses
 	return &Genesis{
-		Config:     config,
+		Config:     configMainnet,
 		Nonce:      66,
 		Timestamp:  1531551970,
 		GasLimit:   10000000,
