@@ -421,8 +421,27 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
+	config := params.DevoteChainConfig
+	var witnesses []string
+	for _, n := range params.MainnetMasternodes {
+		node := enode.MustParseV4(n)
+		pubkey := node.Pubkey()
+		//addr := crypto.PubkeyToAddress(*pubkey)
+		//if _, ok := alloc[addr]; !ok {
+		//	alloc[addr] = GenesisAccount{
+		//		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
+		//	}
+		//}
+		xBytes := pubkey.X.Bytes()
+		var x [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		id1 := common.BytesToHash(x[:])
+		id := fmt.Sprintf("%x", id1[:8])
+		witnesses = append(witnesses, id)
+	}
+	config.Devote.Witnesses = witnesses
 	return &Genesis{
-		Config:     params.DevoteChainConfig,
+		Config:     config,
 		Nonce:      66,
 		Timestamp:  1531551970,
 		GasLimit:   10000000,
@@ -503,7 +522,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
-			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }
