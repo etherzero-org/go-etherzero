@@ -237,7 +237,8 @@ func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
 	}
 	size := len(witnesses)
 	if size == 0 {
-		err = errors.New("failed to lookup witness")
+		log.Error("failed to get witness list", "cycle", cycle, "error", err)
+		err = errors.New("failed to lookup witness,size=0")
 		return
 	}
 	offset %= uint64(size)
