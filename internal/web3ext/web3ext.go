@@ -698,10 +698,16 @@ web3._extend({
 	property: 'devote',
 	methods: [
 		new web3._extend.Method({
-			name: 'getWitnesses',
-			call: 'devote_getWitnesses',
+			name: 'getSigners',
+			call: 'devote_getSigners',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getSignersByEpoch',
+			call: 'devote_getSignersByEpoch',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.uint64]
 		}),
 		new web3._extend.Method({
 			name: 'getConfirmedBlockNumber',
