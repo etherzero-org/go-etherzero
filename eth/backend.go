@@ -425,10 +425,10 @@ func (s *Ethereum) Witness() (witness string, err error) {
 		return witness, nil
 	}
 	if atomic.LoadUint32(&s.masternodeManager.IsMasternode) == 1 {
-		fmt.Printf("backend Witness accounts: %s \n", s.masternodeManager.ID)
+		fmt.Printf("Witness ID: %s \n", s.masternodeManager.ID)
 		return s.masternodeManager.ID, nil
 	}
-	return "", fmt.Errorf("Witness  must be explicitly specified")
+	return "", fmt.Errorf("Witness must be explicitly specified")
 }
 
 // set in js console via admin interface or wrapper from cli flags

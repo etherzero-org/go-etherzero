@@ -133,7 +133,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 		case join := <-joinCh:
 			if bytes.Equal(join.Id[:], xy[:]) {
 				atomic.StoreUint32(&mm.IsMasternode, 1)
-				fmt.Println("### It's already been a masternode! ")
+				fmt.Println("### Become masternode! ")
 			}
 		case quit := <-quitCh:
 			if bytes.Equal(quit.Id[:], xy[0:8]) {
