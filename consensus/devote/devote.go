@@ -310,8 +310,9 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	cycle := header.Time.Uint64() / params.Epoch
 	devoteDB.SetCycle(cycle)
-	snap := newSnapshot(d.config, devoteDB)
-
+	snap := &Snapshot{
+		config: d.config,
+		devoteDB: devoteDB}
 	snap.TimeStamp = header.Time.Uint64()
 
 	if timeOfFirstBlock == 0 {
