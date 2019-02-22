@@ -191,7 +191,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			}
 
 			// If we're at an checkpoint block, make a snapshot if it's known
-			if number == 0 || checkpoint.Time.Uint64()%d.config.Epoch == 0 {
+			if number == 0 || checkpoint.Time.Uint64()%params.Epoch == 0 {
 				hash := checkpoint.Hash()
 				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), checkpoint.Protocol)
 				if err != nil {
@@ -311,7 +311,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	cycle := header.Time.Uint64() / params.Epoch
 	devoteDB.SetCycle(cycle)
 	snap := &Snapshot{
-		config: d.config,
+		config:   d.config,
 		devoteDB: devoteDB}
 	snap.TimeStamp = header.Time.Uint64()
 
