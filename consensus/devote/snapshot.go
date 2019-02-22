@@ -122,7 +122,8 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			snap.Recents[number] = signer
 		}
 	}
-	snap.Number += uint64(len(headers))
+	//snap.Number += uint64(len(headers))
+	snap.Number = headers[0].Number.Uint64()
 	snap.Hash = headers[len(headers)-1].Hash()
 	snap.Cycle = headers[len(headers)-1].Time.Uint64() / params.Epoch
 	return snap, nil

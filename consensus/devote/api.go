@@ -34,9 +34,8 @@ type API struct {
 	devote  *Devote
 }
 
-
-// GetWitnesses retrieves the list of the Witnesses at specified block
-func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]string, error) {
+// GetSigners retrieves the list of the Witnesses at specified block
+func (api *API) GetSigners(number *rpc.BlockNumber) ([]string, error) {
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
@@ -46,13 +45,29 @@ func (api *API) GetWitnesses(number *rpc.BlockNumber) ([]string, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	currentcycle:=header.Time.Uint64()/params.Epoch
+	currentEpoch:=header.Time.Uint64()/params.Epoch
 	devoteDB,_:=devotedb.New(devotedb.NewDatabase(api.devote.db),header.Protocol.CycleHash,header.Protocol.StatsHash)
-	witnesses, err := devoteDB.GetWitnesses(currentcycle)
+	signers, err := devoteDB.GetWitnesses(currentEpoch)
 	if err != nil {
 		return nil, err
 	}
-	return witnesses, nil
+	return signers, nil
+}
+
+// GetSignersByEpoch retrieves the list of the Witnesses by round
+func (api *API) GetSignersByEpoch(epoch uint64) ([]string, error) {
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	currentEpoch:=header.Time.Uint64()/params.Epoch
+	if epoch > currentEpoch{
+		return []string{} , nil
+	}
+	devoteDB,_:=devotedb.New(devotedb.NewDatabase(api.devote.db), header.Protocol.CycleHash, header.Protocol.StatsHash)
+	signers, err := devoteDB.GetWitnesses(epoch)
+	if err != nil {
+		return nil, err
+	}
+	return signers, nil
 }
 
 // GetConfirmedBlockNumber retrieves the latest irreversible block
