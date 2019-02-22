@@ -719,7 +719,7 @@ web3._extend({
 			name: 'getSnapshot',
 			call: 'devote_getSnapshot',
 			params: 1,
-			inputFormatter: [null]
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 	]
 });
