@@ -510,11 +510,13 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err != nil {
 		return err
 	}
-	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
+	//log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
 
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
 	}
+	logTime := time.Now().Format("[2006-01-02 15:04:05]")
+	fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
 	return nil
 }
 
