@@ -23,55 +23,51 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"errors"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/p2p/discover"
+	"crypto/ecdsa"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/eth/downloader"
 )
 
 var (
-	statsReportInterval = 10 * time.Second // Time interval to report vote pool stats
+	statsReportInterval  = 10 * time.Second // Time interval to report vote pool stats
+	ErrUnknownMasternode = errors.New("unknown masternode")
 )
 
 type MasternodeManager struct {
-	beats map[common.Hash]time.Time // Last heartbeat from each known vote
-
-	devoteDB *devotedb.DevoteDB
-	active   *masternode.ActiveMasternode
-	mu       sync.Mutex
+	blockchain *core.BlockChain
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh    chan *peer
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
-	blockchain   *core.BlockChain
-	scope        event.SubscriptionScope
-
-	currentCycle uint64        // Current vote of the block chain
-	Lifetime     time.Duration // Maximum amount of time vote are queued
 
 	txPool *core.TxPool
+	mux    *event.TypeMux
 
-	downloader *downloader.Downloader
+	syncing int32
+
+	mu          sync.RWMutex
+	ID          string
+	NodeAccount common.Address
+	PrivateKey  *ecdsa.PrivateKey
 }
 
-func NewMasternodeManager(dp *devotedb.DevoteDB, blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
+func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		devoteDB:   dp,
 		blockchain: blockchain,
-		beats:      make(map[common.Hash]time.Time),
-		Lifetime:   30 * time.Second,
 		contract:   contract,
 		txPool:     txPool,
 	}
@@ -84,12 +80,17 @@ func (self *MasternodeManager) Clear() {
 
 }
 
-func (self *MasternodeManager) Start(srvr *p2p.Server, peers *peerSet, downloader *downloader.Downloader) {
+func (self *MasternodeManager) Start(srvr *p2p.Server, mux *event.TypeMux) {
 	self.srvr = srvr
-	self.downloader = downloader
+	self.mux = mux
 	log.Trace("MasternodeManqager start ")
-	self.active = masternode.NewActiveMasternode(srvr)
+	x8 := srvr.Self().X8()
+	self.ID = fmt.Sprintf("%x", x8[:])
+	self.NodeAccount = crypto.PubkeyToAddress(srvr.Config.PrivateKey.PublicKey)
+	self.PrivateKey = srvr.Config.PrivateKey
+
 	go self.masternodeLoop()
+	go self.checkSyncing()
 }
 
 func (self *MasternodeManager) Stop() {
@@ -105,11 +106,12 @@ func (mm *MasternodeManager) masternodeLoop() {
 	if has {
 		fmt.Println("### It's already been a masternode! ")
 		atomic.StoreUint32(&mm.IsMasternode, 1)
-		mm.updateActiveMasternode(true)
-	} else if mm.srvr.IsMasternode {
-		mm.updateActiveMasternode(false)
-		data := "0x2f926732" + common.Bytes2Hex(xy[:])
-		fmt.Printf("### Masternode Transaction Data: %s\n", data)
+	} else {
+		atomic.StoreUint32(&mm.IsMasternode, 0)
+		if mm.srvr.IsMasternode {
+			data := "0x2f926732" + common.Bytes2Hex(xy[:])
+			fmt.Printf("### Masternode Transaction Data: %s\n", data)
+		}
 	}
 
 	joinCh := make(chan *contract.ContractJoin, 32)
@@ -139,14 +141,12 @@ func (mm *MasternodeManager) masternodeLoop() {
 		case join := <-joinCh:
 			if bytes.Equal(join.Id[:], xy[:]) {
 				atomic.StoreUint32(&mm.IsMasternode, 1)
-				mm.updateActiveMasternode(true)
-				fmt.Println("### It's already been a masternode! ")
+				fmt.Println("### Become a masternode! ")
 			}
 		case quit := <-quitCh:
 			if bytes.Equal(quit.Id[:], xy[0:8]) {
 				atomic.StoreUint32(&mm.IsMasternode, 0)
-				mm.updateActiveMasternode(false)
-				fmt.Println("### Remove masternode! ")
+				fmt.Println("### Remove a masternode! ")
 			}
 		case err := <-joinSub.Err():
 			joinSub.Unsubscribe()
@@ -160,14 +160,15 @@ func (mm *MasternodeManager) masternodeLoop() {
 			go discover.CheckClockDrift()
 		case <-ping.C:
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
-			if mm.active.State() != masternode.ACTIVE_MASTERNODE_STARTED {
-				break
-			}
-			if mm.downloader.Synchronising() {
+			if atomic.LoadUint32(&mm.IsMasternode) == 0 {
 				break
 			}
 			logTime := time.Now().Format("2006-01-02 15:04:05")
-			address := mm.active.NodeAccount
+			if atomic.LoadInt32(&mm.syncing) == 1 {
+				fmt.Println(logTime, " syncing...")
+				break
+			}
+			address := mm.NodeAccount
 			stateDB, _ := mm.blockchain.State()
 			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
 				fmt.Println(logTime, "Failed to deposit 0.01 etz to ", address.String())
@@ -185,7 +186,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				big.NewInt(20e+9),
 				nil,
 			)
-			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.active.PrivateKey)
+			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.PrivateKey)
 			if err != nil {
 				fmt.Println(logTime, "SignTx error:", err)
 				break
@@ -200,20 +201,37 @@ func (mm *MasternodeManager) masternodeLoop() {
 	}
 }
 
-func (mm *MasternodeManager) updateActiveMasternode(isMasternode bool) {
-	var state int
-	if isMasternode {
-		state = masternode.ACTIVE_MASTERNODE_STARTED
-	} else {
-		state = masternode.ACTIVE_MASTERNODE_NOT_CAPABLE
+// SignHash calculates a ECDSA signature for the given hash. The produced
+// signature is in the [R || S || V] format where V is 0 or 1.
+func (self *MasternodeManager) SignHash(id string, hash []byte) ([]byte, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	self.mu.RLock()
+	defer self.mu.RUnlock()
 
+	if id != self.ID {
+		return nil, ErrUnknownMasternode
 	}
-	mm.active.SetState(state)
+	// Sign the hash using plain ECDSA operations
+	return crypto.Sign(hash, self.PrivateKey)
 }
+
+func (self *MasternodeManager) checkSyncing() {
+	events := self.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
+	for ev := range events.Chan() {
+		switch ev.Data.(type) {
+		case downloader.StartEvent:
+			atomic.StoreInt32(&self.syncing, 1)
+		case downloader.DoneEvent, downloader.FailedEvent:
+			atomic.StoreInt32(&self.syncing, 0)
+		}
+	}
+}
+
 
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
 }
+
 
 func (self *MasternodeManager) GetGovernanceContractAddress(number *big.Int) (common.Address, error) {
 	return masternode.GetGovernanceAddress(self.contract, number)

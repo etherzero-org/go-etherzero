@@ -563,7 +563,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 	}
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteDB); err != nil {
-		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
+		return nil, fmt.Errorf("Finalize block failed:%s", err)
 	}
 
 	work.Block.DevoteDB = work.devoteDB

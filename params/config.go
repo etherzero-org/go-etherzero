@@ -45,30 +45,11 @@ var (
 		EIP155Block:    big.NewInt(0),
 		EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
-
+		DevoteBlock:    big.NewInt(10000000),
 		Devote: &DevoteConfig{
+			Period: 1,
+			Epoch:  600,
 			Witnesses: []string{
-				"81e4a6821a4d7117",
-				"754ae5a877ff913e",
-				"9e2ebf310caf945d",
-				"5ca084808222e3c8",
-				"b553bcf51ae5f42b",
-				"bbdf34418a2630cf",
-				"7f0dcd95f323b9f2",
-				"35b680724f0cdfed",
-				"65fed3a560cd231a",
-				"2cbd44f1b7b4d8be",
-				"3b9639dadd18a258",
-				"53da176be1538aed",
-				"017c131b2ae66403",
-				"4fa67b7657947783",
-				"4717417a9605535d",
-				"b371992843eaf7cd",
-				"98da296630899f29",
-				"3beabd9d5fceccf6",
-				"6f5381470fb24553",
-				"3b9471c1b4d93a45",
-				"8375c6b34607d06b",
 			},
 		},
 	}
@@ -123,16 +104,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(EthashConfig), nil, nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, &DevoteConfig{Period: 1, Epoch: 600}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(EthashConfig), nil, nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -171,6 +152,7 @@ type ChainConfig struct {
 	EIP158Block *big.Int `json:"eip158Block,omitempty"` // EIP158 HF block
 
 	ByzantiumBlock *big.Int `json:"byzantiumBlock,omitempty"` // Byzantium switch block (nil = no fork, 0 = already on byzantium)
+	DevoteBlock    *big.Int `json:"devoteBlock,omitempty"`    // Devote switch block (nil = no fork, 0 = already on byzantium)
 
 	ConstantinopleBlock *big.Int `json:"constantinopleBlock,omitempty"` // Constantinople switch block (nil = no fork, 0 = already activated)
 	EWASMBlock          *big.Int `json:"ewasmBlock,omitempty"`          // EWASM switch block (nil = no fork, 0 = already activated)
@@ -202,6 +184,8 @@ func (c *CliqueConfig) String() string {
 
 // MasternodeConfig is the consensus engine configs for devote + delegated proof-of-stake based sealing.
 type DevoteConfig struct {
+	Period    uint64   `json:"period"`    // Number of seconds between blocks to enforce
+	Epoch     uint64   `json:"epoch"`     // Epoch length to reset votes and checkpoint
 	Witnesses []string `json:"witnesses"` // Genesis witness list
 }
 
@@ -218,10 +202,12 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
+	case c.Devote != nil:
+		engine = c.Devote
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Devote: %v Constantinople: %v Engine: %v}",
 		c.ChainID,
 		c.HomesteadBlock,
 		c.DAOForkBlock,
@@ -230,9 +216,15 @@ func (c *ChainConfig) String() string {
 		c.EIP155Block,
 		c.EIP158Block,
 		c.ByzantiumBlock,
+		c.DevoteBlock,
 		c.ConstantinopleBlock,
 		engine,
 	)
+}
+
+// IsDevote returns whether num is either equal to the Devote fork block or greater.
+func (c *ChainConfig) IsDevote(num *big.Int) bool {
+	return isForked(c.DevoteBlock, num)
 }
 
 // IsHomestead returns whether num is either equal to the homestead block or greater.
@@ -345,6 +337,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.ConstantinopleBlock, newcfg.ConstantinopleBlock, head) {
 		return newCompatError("Constantinople fork block", c.ConstantinopleBlock, newcfg.ConstantinopleBlock)
 	}
+	if isForkIncompatible(c.DevoteBlock, newcfg.DevoteBlock, head) {
+		return newCompatError("Devote fork block", c.DevoteBlock, newcfg.DevoteBlock)
+	}
 	if isForkIncompatible(c.EWASMBlock, newcfg.EWASMBlock, head) {
 		return newCompatError("ewasm fork block", c.EWASMBlock, newcfg.EWASMBlock)
 	}
@@ -414,7 +409,7 @@ func (err *ConfigCompatError) Error() string {
 type Rules struct {
 	ChainID                                   *big.Int
 	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
-	IsByzantium, IsConstantinople             bool
+	IsByzantium, IsDevote, IsConstantinople   bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -430,6 +425,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsEIP155:         c.IsEIP155(num),
 		IsEIP158:         c.IsEIP158(num),
 		IsByzantium:      c.IsByzantium(num),
+		IsDevote:         c.IsDevote(num),
 		IsConstantinople: c.IsConstantinople(num),
 	}
 }

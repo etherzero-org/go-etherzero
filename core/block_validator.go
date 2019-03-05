@@ -23,6 +23,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/params"
+	"log"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -106,9 +107,9 @@ func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	localRoot := block.DevoteDB.Root()
 	remoteRoot := header.Protocol.Root()
 	if remoteRoot != localRoot {
-		fmt.Printf(" StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
-		fmt.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
-		fmt.Printf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
+		log.Printf("StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
+		log.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
+		log.Printf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}
 	return nil
