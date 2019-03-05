@@ -26,31 +26,138 @@ import (
 	"sort"
 	"sync"
 
+	"encoding/json"
+	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/hashicorp/golang-lru"
 )
 
-type Controller struct {
-	devoteDB  *devotedb.DevoteDB
+type Snapshot struct {
+	devoteDB *devotedb.DevoteDB
+	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
+	Hash     common.Hash          //Block hash where the snapshot was created
+	Number   uint64               //Cycle number where the snapshot was created
+	Cycle    uint64               //Cycle number where the snapshot was created
+	Signers  map[string]struct{}  `json:"signers"` // Set of authorized signers at this moment
+	Recents  map[uint64]string    // set of recent masternodes for spam protections
+
 	TimeStamp uint64
 	mu        sync.Mutex
 }
 
-func Newcontroller(devoteDB *devotedb.DevoteDB) *Controller {
-	controller := &Controller{
-		devoteDB: devoteDB,
+//newSnapshot return snapshot by devoteDB
+func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
+	snap := &Snapshot{
+		config:   config,
+		devoteDB: db,
+		Signers:  make(map[string]struct{}),
+		Recents:  make(map[uint64]string),
 	}
-	return controller
+	ary, err := db.GetWitnesses(db.GetCycle())
+	if err != nil {
+		log.Error("devote create Snapshot failed ", "cycle",db.GetCycle(),"err", err)
+	}
+	for _, s := range ary {
+		snap.Signers[s] = struct{}{}
+	}
+	return snap
+}
+
+// copy creates a deep copy of the snapshot, though not the individual votes.
+func (s *Snapshot) copy() *Snapshot {
+	cpy := &Snapshot{
+		sigcache: s.sigcache,
+		Number:   s.Number,
+		Hash:     s.Hash,
+		Signers:  make(map[string]struct{}),
+		Recents:  make(map[uint64]string),
+	}
+	for signer := range s.Signers {
+		cpy.Signers[signer] = struct{}{}
+	}
+	for block, signer := range s.Recents {
+		cpy.Recents[block] = signer
+	}
+
+	return cpy
+}
+
+// apply creates a new authorization snapshot by applying the given headers to
+// the original one.
+func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
+	// Allow passing in no headers for cleaner code
+	if len(headers) == 0 {
+		return s, nil
+	}
+	// Iterate through the headers and create a new snapshot
+	snap := s.copy()
+
+	for _, header := range headers {
+		// Remove any recent blocks on new cycle
+		cycle := header.Time.Uint64()
+		if cycle%params.Epoch == 0 {
+			snap.Recents = make(map[uint64]string)
+		}
+		number := header.Number.Uint64()
+		// Delete the oldest signer from the recent list to allow it signing again
+		if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
+			delete(snap.Recents, number-limit)
+		}
+		// Resolve the authorization key and check against signers
+		signer, err := ecrecover(header, s.sigcache)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := snap.Signers[signer]; !ok {
+			log.Error("devote apply  not in the current sigers:\n", "blockNumber", header.Number, "signer", header.Witness)
+			return nil, errUnauthorizedSigner
+		}
+		if number%params.Epoch != 0 {
+			snap.Recents[number] = signer
+		}
+	}
+	//snap.Number += uint64(len(headers))
+	snap.Number = headers[0].Number.Uint64()
+	snap.Hash = headers[len(headers)-1].Hash()
+	snap.Cycle = headers[len(headers)-1].Time.Uint64() / params.Epoch
+	return snap, nil
+}
+
+// loadSnapshot loads an existing snapshot from the database.
+func loadSnapshot(config *params.DevoteConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+	blob, err := db.Get(append([]byte("devote-"), hash[:]...))
+	if err != nil {
+		return nil, err
+	}
+	snap := new(Snapshot)
+	if err := json.Unmarshal(blob, snap); err != nil {
+		return nil, err
+	}
+	snap.config = config
+	snap.sigcache = sigcache
+
+	return snap, nil
+}
+
+// store inserts the snapshot into the database.
+func (s *Snapshot) store(db ethdb.Database) error {
+	blob, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	return db.Put(append([]byte("devote-"), s.Hash[:]...), blob)
 }
 
 // masternodes return  masternode list in the Cycle.
 // key   -- nodeid
 // value -- votes count
-
-func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
+func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes []string) (map[string]*big.Int, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -71,10 +178,10 @@ func (self *Controller) masternodes(parent *types.Header, isFirstCycle bool, nod
 	return list, nil
 }
 
-//when a node does't work in the current cycle, Remove from candidate nodes.
-func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
+//Remove from candidate nodes when a node does't work in the current cycle
+func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 
-	witnesses, err := ec.devoteDB.GetWitnesses(cycle)
+	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
 		return nodes, fmt.Errorf("failed to get witness: %s", err)
 	}
@@ -89,7 +196,7 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 		key = append(key, []byte(witness)...)
 
 		size := uint64(0)
-		size = ec.devoteDB.GetStatsNumber(key)
+		size = snap.devoteDB.GetStatsNumber(key)
 		if size < 1 {
 			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
 		}
@@ -112,76 +219,101 @@ func (ec *Controller) uncast(cycle uint64, nodes []string) ([]string, error) {
 	return nodes, nil
 }
 
-func (ec *Controller) lookup(now uint64) (witness string, err error) {
+func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
 
-	offset := now % params.CycleInterval
-	if offset%params.BlockInterval != 0 {
+	var (
+		cycle uint64
+	)
+	offset := now % params.Epoch
+	if offset%params.Period != 0 {
 		err = ErrInvalidMinerBlockTime
 		return
 	}
-	offset /= params.BlockInterval
-	witnesses, err := ec.devoteDB.GetWitnesses(ec.devoteDB.GetCycle())
+	offset /= params.Period
+	cycle = snap.devoteDB.GetCycle()
+	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
+		log.Error("failed to get witness list", "cycle", cycle, "error", err)
 		return
 	}
-
-	witnessSize := len(witnesses)
-	if witnessSize == 0 {
-		err = errors.New("failed to lookup witness")
+	size := len(witnesses)
+	if size == 0 {
+		log.Error("failed to get witness list", "cycle", cycle, "error", err)
+		err = errors.New("failed to lookup witness,size=0")
 		return
 	}
-	offset %= uint64(witnessSize)
+	offset %= uint64(size)
 	witness = witnesses[offset]
 	return
 }
 
-func (self *Controller) election(genesis, first, parent *types.Header, nodes []string, safeSize int, maxWitnessSize uint64) error {
-
-	genesisCycle := genesis.Time.Uint64() / params.CycleInterval
-	prevCycle := parent.Time.Uint64() / params.CycleInterval
-	currentCycle := self.TimeStamp / params.CycleInterval
-
-	prevCycleIsGenesis := (prevCycle == genesisCycle)
-	if prevCycleIsGenesis && prevCycle < currentCycle {
-		prevCycle = currentCycle - 1
+// signers retrieves the list of current cycle authorized signers
+func (snap *Snapshot) signers() []string {
+	signers := make([]string, 0, len(snap.Signers))
+	for signer := range snap.Signers {
+		signers = append(signers, signer)
 	}
-	prevCycleBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(prevCycleBytes, uint64(prevCycle))
+	return signers
+}
 
-	for i := prevCycle; i < currentCycle; i++ {
-		// if prevCycle is not genesis, uncast not active masternode
+func (snap *Snapshot) setSigners(ary []string) {
+	for _, s := range ary {
+		snap.Signers[s] = struct{}{}
+	}
+}
+
+// Recording accumulating the total number of signature blocks each signer in the current cycle,return devoteDB hash
+func (snap *Snapshot) recording(parent uint64, header uint64, witness string) *devotedb.DevoteProtocol {
+	snap.devoteDB.Rolling(parent, header, witness)
+	snap.devoteDB.Commit()
+	return snap.devoteDB.Protocol()
+}
+
+//election record the current witness list into the Blockchain
+func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, safeSize int, maxWitnessSize int64) ([]string, error) {
+
+	var (
+		sortedWitnesses []string
+		genesiscycle    = genesis.Time.Uint64() / params.Epoch
+		prevcycle       = parent.Time.Uint64() / params.Epoch
+		currentcycle    = snap.TimeStamp / params.Epoch
+	)
+	preisgenesis := (prevcycle == genesiscycle)
+	if preisgenesis && prevcycle < currentcycle {
+		prevcycle = currentcycle - 1
+	}
+	for i := prevcycle; i < currentcycle; i++ {
+		// if prevcycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
 		copy(list, nodes)
-		if !prevCycleIsGenesis {
-			list, _ = self.uncast(prevCycle, nodes)
+		if !preisgenesis {
+			list, _ = snap.uncast(prevcycle, nodes)
 		}
 
-		votes, err := self.masternodes(parent, prevCycleIsGenesis, list)
+		count, err := snap.calculate(parent, preisgenesis, list)
 		if err != nil {
-			log.Error("init masternodes ", "err", err)
-			return err
+			log.Error("snapshot init masternodes failed", "err", err)
+			return nil, err
 		}
 		masternodes := sortableAddresses{}
-		for masternode, cnt := range votes {
+		for masternode, cnt := range count {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
-			return fmt.Errorf(" too few masternodes current :%d, safesize:%d", len(masternodes), safeSize)
+			return nil, fmt.Errorf(" too few masternodes ,cycle:%d, current :%d, safesize:%d",currentcycle, len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
-		var sortedWitnesses []string
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Controller election witnesses ", "currentCycle", currentCycle, "sortedWitnesses", sortedWitnesses)
-		self.devoteDB.SetWitnesses(currentCycle, sortedWitnesses)
-		self.devoteDB.Commit()
-		log.Debug("Initializing a new cycle", "witnesses count", len(sortedWitnesses), "prev", i, "next", i+1)
+		log.Debug("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
+		snap.devoteDB.Commit()
 	}
-	return nil
+	return sortedWitnesses, nil
 }
 
 // nodeid  masternode nodeid

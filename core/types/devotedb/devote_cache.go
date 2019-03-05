@@ -115,12 +115,12 @@ func (self *DevoteCache) Hash() (h common.Hash) {
 // update counts in MinerRollingTrie for the miner of newBlock
 func (self *DevoteCache) Rolling(db Database, parentBlockTime, currentBlockTime uint64, witness string) (Trie, error) {
 
-	currentCycle := parentBlockTime / params.CycleInterval
+	currentCycle := parentBlockTime / params.Epoch
 	currentCycleBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentCycleBytes, uint64(currentCycle))
 
 	cnt := uint64(0)
-	newCycle := currentBlockTime / params.CycleInterval
+	newCycle := currentBlockTime / params.Epoch
 	key := common.Hash{}
 	// still during the currentCycleID
 	if currentCycle == newCycle {

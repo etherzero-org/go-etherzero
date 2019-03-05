@@ -283,8 +283,6 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	block := g.ToBlock(db)
 
-	fmt.Printf("genesis devoteProtocol Commit begin block.DevoteProtocol :%x\n", block.DevoteDB)
-
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
@@ -351,7 +349,7 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 	)
 
 	count := int64(len(masternodes))
-	for i := int64(21) ; i < count; i++ {
+	for i := int64(21); i < count; i++ {
 		addresses = append(addresses, common.BytesToAddress(big.NewInt(i).Bytes()))
 	}
 	for index, n := range masternodes {
@@ -424,8 +422,21 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
 	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
+	configMainnet := params.DevoteChainConfig
+	var witnesses []string
+	for _, n := range params.MainnetMasternodes {
+		node := enode.MustParseV4(n)
+		pubkey := node.Pubkey()
+		xBytes := pubkey.X.Bytes()
+		var x [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		id1 := common.BytesToHash(x[:])
+		id := fmt.Sprintf("%x", id1[:8])
+		witnesses = append(witnesses, id)
+	}
+	configMainnet.Devote.Witnesses = witnesses
 	return &Genesis{
-		Config:     params.DevoteChainConfig,
+		Config:     configMainnet,
 		Nonce:      66,
 		Timestamp:  1531551970,
 		GasLimit:   10000000,
@@ -506,7 +517,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
-			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }
@@ -531,7 +542,7 @@ func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB
 		return nil
 	}
 	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
-		genesisCycle := g.Timestamp / params.CycleInterval
+		genesisCycle := g.Timestamp / params.Epoch
 		devoteDB.SetWitnesses(genesisCycle, g.Config.Devote.Witnesses)
 	}
 	return devoteDB

@@ -11,12 +11,16 @@
 ROOTDIR = $(shell pwd)
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+DEFAULTBRANCH := master
 
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
-	cp ${ROOTDIR}/init.bin.1 $(GOBIN)/init.bin.1
-	cp ${ROOTDIR}/init.bin.2 $(GOBIN)/init.bin.2
-	cp ${ROOTDIR}/init.bin.3 $(GOBIN)/init.bin.3
+ifeq ($(BRANCH), $(DEFAULTBRANCH))
+		cp ${ROOTDIR}/init.bin.1 $(GOBIN)/init.bin.1
+		cp ${ROOTDIR}/init.bin.2 $(GOBIN)/init.bin.2
+		cp ${ROOTDIR}/init.bin.3 $(GOBIN)/init.bin.3
+endif
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
