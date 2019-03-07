@@ -60,7 +60,7 @@ const (
 )
 
 var errServerStopped = errors.New("server stopped")
-
+var LocalNodeSigner string
 // Config holds Server options.
 type Config struct {
 	// This field must be set to a valid secp256k1 private key.
@@ -361,6 +361,7 @@ func (srv *Server) Self() *enode.Node {
 	if ln == nil {
 		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0)
 	}
+
 	return ln.Node()
 }
 
@@ -449,6 +450,8 @@ func (srv *Server) Start() (err error) {
 	if err := srv.setupLocalNode(); err != nil {
 		return err
 	}
+	LocalNodeSigner = srv.localnode.Node().String()
+	LocalNodeSigner = LocalNodeSigner[8:8+16]//8==len("enode://")
 	if srv.ListenAddr != "" {
 		if err := srv.setupListening(); err != nil {
 			return err

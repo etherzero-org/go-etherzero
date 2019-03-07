@@ -18,6 +18,7 @@ package miner
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -257,7 +258,9 @@ func (self *worker) mine(now int64) {
 		log.Error("Only the devote engine was allowed")
 		return
 	}
-
+	if engine.IsInEpoch == false{
+		return
+	}
 	err := engine.CheckWitness(self.chain.CurrentBlock(), now)
 	if err != nil {
 		switch err {
@@ -705,4 +708,31 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 	env.receipts = append(env.receipts, receipt)
 
 	return nil, receipt.Logs
+}
+
+func (self *worker) lookup(now uint64) (witness string, err error) {
+	var (
+		cycle uint64
+	)
+	offset := now % params.Epoch
+	if offset%params.Period != 0 {
+		err = devote.ErrInvalidMinerBlockTime
+		return
+	}
+	offset /= params.Period
+	cycle = self.current.devoteDB.GetCycle()
+	witnesses, err := self.current.devoteDB.GetWitnesses(cycle)
+	if err != nil {
+		log.Error("failed to get witness list", "cycle", cycle, "error", err)
+		return
+	}
+	size := len(witnesses)
+	if size == 0 {
+		log.Error("failed to get witness list", "cycle", cycle, "error", err)
+		err = errors.New("failed to lookup witness,size=0")
+		return
+	}
+	offset %= uint64(size)
+	witness = witnesses[offset]
+	return
 }

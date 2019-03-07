@@ -123,7 +123,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 	}
 	//snap.Number += uint64(len(headers))
-	snap.Number = headers[0].Number.Uint64()
+	snap.Number = headers[0].Number.Uint64()//t guazike
 	snap.Hash = headers[len(headers)-1].Hash()
 	snap.Cycle = headers[len(headers)-1].Time.Uint64() / params.Epoch
 	return snap, nil
@@ -220,7 +220,6 @@ func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 }
 
 func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
-
 	var (
 		cycle uint64
 	)
@@ -271,9 +270,8 @@ func (snap *Snapshot) recording(parent uint64, header uint64, witness string) *d
 
 //election record the current witness list into the Blockchain
 func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, safeSize int, maxWitnessSize int64) ([]string, error) {
-
 	var (
-		sortedWitnesses []string
+		sortedWitnesses []string = nil
 		genesiscycle    = genesis.Time.Uint64() / params.Epoch
 		prevcycle       = parent.Time.Uint64() / params.Epoch
 		currentcycle    = snap.TimeStamp / params.Epoch
@@ -306,10 +304,12 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
+		sortedWitnesses = []string{}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		//log.Debug("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Info("Initializing a new cycle ", " cycle", currentcycle, " blockNumnber",parent.Number, " count", len(sortedWitnesses), " sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}

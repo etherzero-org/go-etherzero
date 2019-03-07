@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/etherzero/go-etherzero/p2p"
 	"math/big"
 	"sync"
 	"time"
@@ -52,6 +53,11 @@ const (
 	//safeSize              = maxWitnessSize*2/3 + 1
 	//consensusSize         = maxWitnessSize*2/3 + 1
 )
+
+type EpochMsg struct {
+	Mux sync.RWMutex
+	EpochChan chan bool
+}
 
 var (
 	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
@@ -89,6 +95,8 @@ var (
 	ErrNilBlockHeader           = errors.New("nil block header returned")
 	ErrMismatchSignerAndWitness = errors.New("mismatch block signer and witness")
 	ErrInvalidMinerBlockTime    = errors.New("invalid time to miner the block")
+
+	EpochEvent *EpochMsg = new(EpochMsg)
 )
 
 // SignerFn
@@ -151,6 +159,8 @@ type Devote struct {
 	mu   sync.RWMutex
 	lock sync.RWMutex
 	stop chan bool
+	IsMasterNode *uint32
+	IsInEpoch bool
 }
 
 func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
@@ -163,6 +173,7 @@ func NewDevote(config *params.DevoteConfig, db ethdb.Database) *Devote {
 		signatures: signatures,
 		recents:    recents,
 		proposals:  make(map[string]bool),
+		IsInEpoch: true,
 	}
 }
 
@@ -296,6 +307,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		maxWitnessSize = 1
 		safeSize = 1
 	}
+
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(maxWitnessSize))
 	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
@@ -308,6 +320,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+
 	cycle := header.Time.Uint64() / params.Epoch
 	devoteDB.SetCycle(cycle)
 	snap := &Snapshot{
@@ -330,13 +343,51 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	//Record the current witness list into the blockchain
 	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
 	if err != nil {
+
 		return nil, err
 	}
+
 	d.signatures.Add(cycle, list)
 	//accumulating the signer of block
 	log.Debug("rolling ", "Number", header.Number, "parentTime", parent.Time.Uint64(), "headerTime", header.Time.Uint64(), "witness", header.Witness)
 	header.Protocol = snap.recording(parent.Time.Uint64(), header.Time.Uint64(), header.Witness)
 	return types.NewBlock(header, txs, uncles, receipts), nil
+}
+
+//check is this localnode in Epoch
+func (d *Devote) CheckInEpoch(header *types.Header) bool{
+	epoch := header.Time.Uint64() / params.Epoch
+	var lastEpoch uint64 = 0
+	lastCachEpoch, hasEpoch := d.signatures.Get("lastEpoch")
+	if hasEpoch{
+		var able bool
+		lastEpoch, able = lastCachEpoch.(uint64)
+		if !able{
+			return d.IsInEpoch
+		}
+	}
+	if epoch > lastEpoch{
+		devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), header.Protocol)
+		if err != nil {
+			log.Error("devote consensus verifySeal failed", "err", err)
+			return d.IsInEpoch
+		}
+		devoteDB.SetCycle(epoch)
+		d.signatures.Add("lastEpoch", epoch)
+		inEpoch := false
+		list, witnessErr := devoteDB.GetWitnesses(epoch)
+		if witnessErr == nil{
+			for _, witness := range list{
+				if p2p.LocalNodeSigner == witness{
+					inEpoch = true
+
+					break
+				}
+			}
+		}
+		d.IsInEpoch = inEpoch
+	}
+	return d.IsInEpoch
 }
 
 // Author implements consensus.Engine, returning the header's coinbase as the
@@ -450,12 +501,10 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		log.Error("devote consensus verifySeal failed", "err", err)
 		return err
 	}
-
 	currentcycle := parent.Time.Uint64() / params.Epoch
 	devoteDB.SetCycle(currentcycle)
 	snap := newSnapshot(d.config, devoteDB)
 	snap.sigcache = d.signatures
-
 	witness, err := snap.lookup(header.Time.Uint64())
 	if err != nil {
 		return err
@@ -463,6 +512,8 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	if err := d.verifyBlockSigner(witness, header); err != nil {
 		return err
 	}
+	d.CheckInEpoch(parent)
+	log.Info("1------------------------------------", "d.IsInEpoch", d.IsInEpoch, " blockNumber",header.Number)
 	return d.updateConfirmedBlockHeader(chain)
 }
 
@@ -493,6 +544,12 @@ func (d *Devote) checkTime(lastBlock *types.Block, now uint64) error {
 	return ErrWaitForPrevBlock
 }
 
+func (d *Devote) Lookup(now uint64, devoteDB *devotedb.DevoteDB) (string, error) {
+	snap := newSnapshot(d.config, devoteDB)
+	snap.sigcache = d.signatures
+	return snap.lookup(uint64(now))
+}
+
 func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
@@ -503,14 +560,14 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	}
 	currentCycle := lastBlock.Time().Uint64() / params.Epoch
 	devoteDB.SetCycle(currentCycle)
-	snap := newSnapshot(d.config, devoteDB)
-	snap.sigcache = d.signatures
-
-	witness, err := snap.lookup(uint64(now))
+	//snap := newSnapshot(d.config, devoteDB)
+	//snap.sigcache = d.signatures
+	//witness, err := snap.lookup(uint64(now))
+	witness, err := d.Lookup(uint64(now), devoteDB)
 	if err != nil {
 		return err
 	}
-	//log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
+	//log.Info("--------------devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
 
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
@@ -575,6 +632,10 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, err
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+	d.CheckInEpoch(header)
+	//parentHead := chain.GetHeaderByHash(header.ParentHash)
+	//d.CheckInEpoch(parentHead)
+	log.Info("2------------------------------------", "d.IsInEpoch", d.IsInEpoch, " blockNumber",header.Number)
 	return block.WithSeal(header), nil
 }
 

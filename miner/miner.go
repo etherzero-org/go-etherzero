@@ -19,6 +19,8 @@ package miner
 
 import (
 	"fmt"
+	"github.com/etherzero/go-etherzero/consensus/devote"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/etherzero/go-etherzero/accounts"
@@ -56,6 +58,7 @@ type Miner struct {
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
+	inEpoch		int32 // is this node in current masternode epoch
 }
 
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
@@ -65,11 +68,47 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		engine:   engine,
 		worker:   newWorker(config, engine, common.Address{}, eth, mux),
 		canStart: 1,
+		inEpoch: 1,
 	}
 	//miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	//go miner.listentEpoch()//t g
 	go miner.update()
 
 	return miner
+}
+
+func (self *Miner) listentEpoch(){
+	if devote.EpochEvent.EpochChan == nil{
+		devote.EpochEvent.EpochChan = make(chan bool, 0)
+	}
+	for{
+		select {
+		case isInEpoch := <- devote.EpochEvent.EpochChan:
+			log.Info("--------<<<<------------- receive InEpoch", "isInEpoch", strconv.FormatBool(isInEpoch))
+			if isInEpoch{
+				atomic.StoreInt32(&self.inEpoch, 1)
+				if self.Mining(){
+					log.Info("-------- is mining")
+					continue
+				}
+				atomic.StoreInt32(&self.shouldStart, 1)
+				atomic.StoreInt32(&self.canStart, 1)//t enforce start
+				if atomic.LoadInt32(&self.canStart) == 1 {
+					log.Info("---------!! start by Epoch")
+					self.Start(self.coinbase)
+				}
+			}else{
+				atomic.StoreInt32(&self.inEpoch, 0)
+				//var ismining int32 = self.mining
+				if self.Mining(){
+					self.Stop()
+					log.Info("stop by Epoch")
+				}
+				//atomic.StoreInt32(&self.shouldStart, ismining)
+				//atomic.StoreInt32(&self.canStart, ismining)
+			}
+		}
+	}
 }
 
 // update keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
@@ -112,11 +151,16 @@ func (self *Miner) Start(coinbase common.Address) {
 		log.Info("Network syncing, will start miner afterwards")
 		return
 	}
+	if atomic.LoadInt32(&self.inEpoch) == 0 {
+		log.Warn("This node is not in current Epoch")
+		//t
+		return
+	}
 	atomic.StoreInt32(&self.mining, 1)
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	self.worker.commitNewWork()
+	//self.worker.commitNewWork()//t 多余的？ 上面的方法正常工作流中也包含了这个操作worker.go ->start()->mineLoop()->mine()->commitNewWork()
 }
 
 func (self *Miner) Stop() {
