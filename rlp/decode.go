@@ -26,7 +26,6 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
-	"github.com/etherzero/go-etherzero/common"
 )
 
 var (
@@ -281,8 +280,8 @@ func decodeBigInt(s *Stream, val reflect.Value) error {
 	}
 	// Reject leading zero bytes
 	if len(b) > 0 && b[0] == 0 {
-		fmt.Println("bytes:", common.Bytes2Hex(b), wrapStreamError(ErrCanonInt, val.Type()))
-		// return wrapStreamError(ErrCanonInt, val.Type())
+		//fmt.Println("bytes:", common.Bytes2Hex(b), wrapStreamError(ErrCanonInt, val.Type()))
+		return wrapStreamError(ErrCanonInt, val.Type())
 	}
 	i.SetBytes(b)
 	return nil
