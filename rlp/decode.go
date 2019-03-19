@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 var (
@@ -554,7 +555,7 @@ func decodeDecoder(s *Stream, val reflect.Value) error {
 type Kind int
 
 const (
-	Byte Kind = iota
+	Byte   Kind = iota
 	String
 	List
 )
