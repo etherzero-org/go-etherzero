@@ -50,7 +50,7 @@ import (
 	"github.com/etherzero/go-etherzero/swarm/network"
 	"github.com/etherzero/go-etherzero/swarm/pot"
 	"github.com/etherzero/go-etherzero/swarm/state"
-	whisper "github.com/etherzero/go-etherzero/whisper/whisperv5"
+	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 )
 
 var (
@@ -170,6 +170,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	ps := newTestPss(privkey, nil, nil)
+	defer ps.Stop()
 	pp := NewPssParams().WithPrivateKey(privkey)
 	data := []byte("foo")
 	datatwo := []byte("bar")
@@ -407,7 +408,7 @@ func TestProxShortCircuit(t *testing.T) {
 
 	// try the same prox message with sym and asym send
 	proxAddrPss := PssAddress(proxMessageAddress)
-	symKeyId, err := ps.GenerateSymmetricKey(topic, &proxAddrPss, true)
+	symKeyId, err := ps.GenerateSymmetricKey(topic, proxAddrPss, true)
 	go func() {
 		err := ps.SendSym(symKeyId, topic, []byte("baz"))
 		if err != nil {
@@ -424,7 +425,7 @@ func TestProxShortCircuit(t *testing.T) {
 		t.Fatal("sym timeout")
 	}
 
-	err = ps.SetPeerPublicKey(&privKey.PublicKey, topic, &proxAddrPss)
+	err = ps.SetPeerPublicKey(&privKey.PublicKey, topic, proxAddrPss)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,12 +492,12 @@ func TestAddressMatchProx(t *testing.T) {
 	// meanwhile test regression for kademlia since we are compiling the test parameters from different packages
 	var proxes int
 	var conns int
-	kad.EachConn(nil, peerCount, func(p *network.Peer, po int, prox bool) bool {
+	depth := kad.NeighbourhoodDepth()
+	kad.EachConn(nil, peerCount, func(p *network.Peer, po int) bool {
 		conns++
-		if prox {
+		if po >= depth {
 			proxes++
 		}
-		log.Trace("kadconn", "po", po, "peer", p, "prox", prox)
 		return true
 	})
 	if proxes != nnPeerCount {
@@ -648,6 +649,7 @@ func TestMessageProcessing(t *testing.T) {
 	addr := make([]byte, 32)
 	addr[0] = 0x01
 	ps := newTestPss(privkey, network.NewKademlia(addr, network.NewKadParams()), NewPssParams())
+	defer ps.Stop()
 
 	// message should pass
 	msg := newPssMsg(&msgParams{})
@@ -780,20 +782,21 @@ func TestKeys(t *testing.T) {
 		t.Fatalf("failed to retrieve 'their' private key")
 	}
 	ps := newTestPss(ourprivkey, nil, nil)
+	defer ps.Stop()
 
 	// set up peer with mock address, mapped to mocked publicaddress and with mocked symkey
 	addr := make(PssAddress, 32)
 	copy(addr, network.RandomAddr().Over())
 	outkey := network.RandomAddr().Over()
 	topicobj := BytesToTopic([]byte("foo:42"))
-	ps.SetPeerPublicKey(&theirprivkey.PublicKey, topicobj, &addr)
-	outkeyid, err := ps.SetSymmetricKey(outkey, topicobj, &addr, false)
+	ps.SetPeerPublicKey(&theirprivkey.PublicKey, topicobj, addr)
+	outkeyid, err := ps.SetSymmetricKey(outkey, topicobj, addr, false)
 	if err != nil {
 		t.Fatalf("failed to set 'our' outgoing symmetric key")
 	}
 
 	// make a symmetric key that we will send to peer for encrypting messages to us
-	inkeyid, err := ps.GenerateSymmetricKey(topicobj, &addr, true)
+	inkeyid, err := ps.GenerateSymmetricKey(topicobj, addr, true)
 	if err != nil {
 		t.Fatalf("failed to set 'our' incoming symmetric key")
 	}
@@ -816,8 +819,8 @@ func TestKeys(t *testing.T) {
 
 	// check that the key is stored in the peerpool
 	psp := ps.symKeyPool[inkeyid][topicobj]
-	if psp.address != &addr {
-		t.Fatalf("inkey address does not match; %p != %p", psp.address, &addr)
+	if !bytes.Equal(psp.address, addr) {
+		t.Fatalf("inkey address does not match; %p != %p", psp.address, addr)
 	}
 }
 
@@ -829,6 +832,7 @@ func TestGetPublickeyEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	ps := newTestPss(privkey, nil, nil)
+	defer ps.Stop()
 
 	peeraddr := network.RandomAddr().Over()
 	topicaddr := make(map[Topic]PssAddress)
@@ -932,6 +936,7 @@ func TestPeerCapabilityMismatch(t *testing.T) {
 		Payload: &whisper.Envelope{},
 	}
 	ps := newTestPss(privkey, kad, nil)
+	defer ps.Stop()
 
 	// run the forward
 	// it is enough that it completes; trying to send to incapable peers would create segfault
@@ -950,6 +955,7 @@ func TestRawAllow(t *testing.T) {
 	baseAddr := network.RandomAddr()
 	kad := network.NewKademlia((baseAddr).Over(), network.NewKadParams())
 	ps := newTestPss(privKey, kad, nil)
+	defer ps.Stop()
 	topic := BytesToTopic([]byte{0x2a})
 
 	// create handler innards that increments every time a message hits it
@@ -1005,6 +1011,34 @@ func TestRawAllow(t *testing.T) {
 	ps.handlePssMsg(context.TODO(), pssMsg)
 	if receives != prevReceives {
 		t.Fatalf("Expected handler not to be executed when raw handler is retracted")
+	}
+}
+
+// BELOW HERE ARE TESTS USING THE SIMULATION FRAMEWORK
+
+// tests that the API layer can handle edge case values
+func TestApi(t *testing.T) {
+	clients, err := setupNetwork(2, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	topic := "0xdeadbeef"
+
+	err = clients[0].Call(nil, "pss_sendRaw", "0x", topic, "0x666f6f")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = clients[0].Call(nil, "pss_sendRaw", "0xabcdef", topic, "0x")
+	if err == nil {
+		t.Fatal("expected error on empty msg")
+	}
+
+	overflowAddr := [33]byte{}
+	err = clients[0].Call(nil, "pss_sendRaw", hexutil.Encode(overflowAddr[:]), topic, "0x666f6f")
+	if err == nil {
+		t.Fatal("expected error on send too big address")
 	}
 }
 
@@ -1064,7 +1098,7 @@ func testSendRaw(t *testing.T) {
 
 	// send and verify delivery
 	lmsg := []byte("plugh")
-	err = clients[1].Call(nil, "pss_sendRaw", loaddrhex, topic, lmsg)
+	err = clients[1].Call(nil, "pss_sendRaw", loaddrhex, topic, hexutil.Encode(lmsg))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1077,7 +1111,7 @@ func testSendRaw(t *testing.T) {
 		t.Fatalf("test message (left) timed out: %v", cerr)
 	}
 	rmsg := []byte("xyzzy")
-	err = clients[0].Call(nil, "pss_sendRaw", roaddrhex, topic, rmsg)
+	err = clients[0].Call(nil, "pss_sendRaw", roaddrhex, topic, hexutil.Encode(rmsg))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1663,12 +1697,13 @@ func benchmarkSymKeySend(b *testing.B) {
 	keys, err := wapi.NewKeyPair(ctx)
 	privkey, err := w.GetPrivateKey(keys)
 	ps := newTestPss(privkey, nil, nil)
+	defer ps.Stop()
 	msg := make([]byte, msgsize)
 	rand.Read(msg)
 	topic := BytesToTopic([]byte("foo"))
 	to := make(PssAddress, 32)
 	copy(to[:], network.RandomAddr().Over())
-	symkeyid, err := ps.GenerateSymmetricKey(topic, &to, true)
+	symkeyid, err := ps.GenerateSymmetricKey(topic, to, true)
 	if err != nil {
 		b.Fatalf("could not generate symkey: %v", err)
 	}
@@ -1676,7 +1711,7 @@ func benchmarkSymKeySend(b *testing.B) {
 	if err != nil {
 		b.Fatalf("could not retrieve symkey: %v", err)
 	}
-	ps.SetSymmetricKey(symkey, topic, &to, false)
+	ps.SetSymmetricKey(symkey, topic, to, false)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -1707,12 +1742,13 @@ func benchmarkAsymKeySend(b *testing.B) {
 	keys, err := wapi.NewKeyPair(ctx)
 	privkey, err := w.GetPrivateKey(keys)
 	ps := newTestPss(privkey, nil, nil)
+	defer ps.Stop()
 	msg := make([]byte, msgsize)
 	rand.Read(msg)
 	topic := BytesToTopic([]byte("foo"))
 	to := make(PssAddress, 32)
 	copy(to[:], network.RandomAddr().Over())
-	ps.SetPeerPublicKey(&privkey.PublicKey, topic, &to)
+	ps.SetPeerPublicKey(&privkey.PublicKey, topic, to)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ps.SendAsym(common.ToHex(crypto.FromECDSAPub(&privkey.PublicKey)), topic, msg)
@@ -1757,11 +1793,12 @@ func benchmarkSymkeyBruteforceChangeaddr(b *testing.B) {
 	} else {
 		ps = newTestPss(privkey, nil, nil)
 	}
+	defer ps.Stop()
 	topic := BytesToTopic([]byte("foo"))
 	for i := 0; i < int(keycount); i++ {
 		to := make(PssAddress, 32)
 		copy(to[:], network.RandomAddr().Over())
-		keyid, err = ps.GenerateSymmetricKey(topic, &to, true)
+		keyid, err = ps.GenerateSymmetricKey(topic, to, true)
 		if err != nil {
 			b.Fatalf("cant generate symkey #%d: %v", i, err)
 		}
@@ -1840,10 +1877,11 @@ func benchmarkSymkeyBruteforceSameaddr(b *testing.B) {
 	} else {
 		ps = newTestPss(privkey, nil, nil)
 	}
+	defer ps.Stop()
 	topic := BytesToTopic([]byte("foo"))
 	for i := 0; i < int(keycount); i++ {
 		copy(addr[i], network.RandomAddr().Over())
-		keyid, err = ps.GenerateSymmetricKey(topic, &addr[i], true)
+		keyid, err = ps.GenerateSymmetricKey(topic, addr[i], true)
 		if err != nil {
 			b.Fatalf("cant generate symkey #%d: %v", i, err)
 		}
@@ -1937,7 +1975,7 @@ func newServices(allowRaw bool) adapters.Services {
 			return k
 		}
 		params := network.NewKadParams()
-		params.MinProxBinSize = 2
+		params.NeighbourhoodSize = 2
 		params.MaxBinSize = 3
 		params.MinBinSize = 1
 		params.MaxRetries = 1000
@@ -2017,7 +2055,7 @@ func newTestPss(privkey *ecdsa.PrivateKey, kad *network.Kademlia, ppextra *PssPa
 	// set up routing if kademlia is not passed to us
 	if kad == nil {
 		kp := network.NewKadParams()
-		kp.MinProxBinSize = 3
+		kp.NeighbourhoodSize = 3
 		kad = network.NewKademlia(nid[:], kp)
 	}
 
@@ -2044,12 +2082,13 @@ func NewAPITest(ps *Pss) *APITest {
 	return &APITest{Pss: ps}
 }
 
-func (apitest *APITest) SetSymKeys(pubkeyid string, recvsymkey []byte, sendsymkey []byte, limit uint16, topic Topic, to PssAddress) ([2]string, error) {
-	recvsymkeyid, err := apitest.SetSymmetricKey(recvsymkey, topic, &to, true)
+func (apitest *APITest) SetSymKeys(pubkeyid string, recvsymkey []byte, sendsymkey []byte, limit uint16, topic Topic, to hexutil.Bytes) ([2]string, error) {
+
+	recvsymkeyid, err := apitest.SetSymmetricKey(recvsymkey, topic, PssAddress(to), true)
 	if err != nil {
 		return [2]string{}, err
 	}
-	sendsymkeyid, err := apitest.SetSymmetricKey(sendsymkey, topic, &to, false)
+	sendsymkeyid, err := apitest.SetSymmetricKey(sendsymkey, topic, PssAddress(to), false)
 	if err != nil {
 		return [2]string{}, err
 	}

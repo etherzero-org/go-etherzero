@@ -36,9 +36,12 @@ func ReadDatabaseVersion(db DatabaseReader) int {
 }
 
 // WriteDatabaseVersion stores the version number of the database
-func WriteDatabaseVersion(db DatabaseWriter, version int) {
-	enc, _ := rlp.EncodeToBytes(version)
-	if err := db.Put(databaseVerisionKey, enc); err != nil {
+func WriteDatabaseVersion(db DatabaseWriter, version uint64) {
+	enc, err := rlp.EncodeToBytes(version)
+	if err != nil {
+		log.Crit("Failed to encode database version", "err", err)
+	}
+	if err = db.Put(databaseVerisionKey, enc); err != nil {
 		log.Crit("Failed to store the database version", "err", err)
 	}
 }

@@ -199,7 +199,7 @@ func TestGetSetOverwrite(t *testing.T) {
 // TestSignEncodeAndDecode tests signing, RLP encoding and RLP decoding of a record.
 func TestSignEncodeAndDecode(t *testing.T) {
 	var r Record
-	r.Set(UDP(21212))
+	r.Set(UDP(30303))
 	r.Set(IP{127, 0, 0, 1})
 	require.NoError(t, signTest([]byte{5}, &r))
 

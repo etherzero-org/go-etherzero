@@ -34,7 +34,6 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 var (
@@ -1489,7 +1488,15 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 	}
 	if index, err := d.blockchain.InsertChain(blocks); err != nil {
-		log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+		if index < len(results) {
+			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+		} else {
+			// The InsertChain method in blockchain.go will sometimes return an out-of-bounds index,
+			// when it needs to preprocess blocks to import a sidechain.
+			// The importer will put together a new list of blocks to import, which is a superset
+			// of the blocks delivered from the downloader, and the indexing will be off.
+			log.Debug("Downloaded item processing failed on sidechain import", "index", index, "err", err)
+		}
 		return errInvalidChain
 	}
 	return nil
@@ -1549,25 +1556,14 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 				pivot = height - uint64(fsMinFullBlocks)
 			}
 		}
-		P, preP, beforeP, afterP := splitAroundPivot(pivot, results)
+		P, beforeP, afterP := splitAroundPivot(pivot, results)
 		if err := d.commitFastSyncData(beforeP, stateSync); err != nil {
 			return err
-		}
-		if len(preP) > 0 {
-			for _, pp := range preP {
-				if err := d.syncState(pp.Header.Root).Wait(); err != nil {
-					return err
-				}
-			}
 		}
 		if P != nil {
 			// If new pivot block found, cancel old state retrieval and restart
 			if oldPivot != P {
 				stateSync.Cancel()
-
-				if err := d.syncDevoteProtocolState(P.Header.Protocol); err != nil {
-					return err
-				}
 
 				stateSync = d.syncState(P.Header.Root)
 				defer stateSync.Cancel()
@@ -1601,18 +1597,11 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	}
 }
 
-func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, prep []*fetchResult, before, after []*fetchResult) {
-	prePivot := pivot - 22
-	if prePivot < 0 {
-		prePivot = 0
-	}
+func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, before, after []*fetchResult) {
 	for _, result := range results {
 		num := result.Header.Number.Uint64()
 		switch {
 		case num < pivot:
-			if num > prePivot {
-				prep = append(prep, result)
-			}
 			before = append(before, result)
 		case num == pivot:
 			p = result
@@ -1620,20 +1609,7 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, pre
 			after = append(after, result)
 		}
 	}
-	return p, prep, before, after
-}
-
-func (d *Downloader) syncDevoteProtocolState(protocol *devotedb.DevoteProtocol) error {
-	roots := []common.Hash{
-		protocol.CycleHash,
-		protocol.StatsHash,
-	}
-	for _, root := range roots {
-		if err := d.syncDevote(root).Wait(); err != nil {
-			return err
-		}
-	}
-	return nil
+	return p, before, after
 }
 
 func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *stateSync) error {

@@ -26,7 +26,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/swarm/storage"
-	whisper "github.com/etherzero/go-etherzero/whisper/whisperv5"
+	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 )
 
 const (

@@ -56,7 +56,7 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 
 		// Assemble the log context and send it to the logger
 		context := []interface{}{
-			"blocks", st.processed, "txs", txs, "witness", end.Header().Witness,
+			"blocks", st.processed, "txs", txs, "mgas", float64(st.usedGas) / 1000000,
 			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
 			"number", end.Number(), "hash", end.Hash(),
 		}
@@ -109,14 +109,6 @@ func (it *insertIterator) next() (*types.Block, error) {
 		return it.chain[it.index], err
 	}
 	return it.chain[it.index], it.validator.ValidateBody(it.chain[it.index])
-}
-
-// current returns the current block that's being processed.
-func (it *insertIterator) current() *types.Block {
-	if it.index < 0 || it.index+1 >= len(it.chain) {
-		return nil
-	}
-	return it.chain[it.index]
 }
 
 // previous returns the previous block was being processed, or nil

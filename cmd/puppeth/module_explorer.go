@@ -58,7 +58,7 @@ var explorerEthstats = `[
     {
       "NODE_ENV"        : "production",
       "RPC_HOST"        : "localhost",
-      "RPC_PORT"        : "9646",
+      "RPC_PORT"        : "8545",
       "LISTENING_PORT"  : "{{.Port}}",
       "INSTANCE_NAME"   : "{{.Name}}",
       "CONTACT_DETAILS" : "",
@@ -77,6 +77,7 @@ services:
   explorer:
     build: .
     image: {{.Network}}/explorer
+    container_name: {{.Network}}_explorer_1
     ports:
       - "{{.NodePort}}:{{.NodePort}}"
       - "{{.NodePort}}:{{.NodePort}}/udp"{{if not .VHost}}

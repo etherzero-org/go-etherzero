@@ -50,7 +50,7 @@ func (w *wizard) deployExplorer() {
 	infos, err := checkExplorer(client, w.network)
 	if err != nil {
 		infos = &explorerInfos{
-			nodePort: 21212, webPort: 80, webHost: client.server,
+			nodePort: 30303, webPort: 80, webHost: client.server,
 		}
 	}
 	existed := err == nil
@@ -100,7 +100,7 @@ func (w *wizard) deployExplorer() {
 	if existed {
 		fmt.Println()
 		fmt.Printf("Should the explorer be built from scratch (y/n)? (default = no)\n")
-		nocache = w.readDefaultString("n") != "n"
+		nocache = w.readDefaultYesNo(false)
 	}
 	if out, err := deployExplorer(client, w.network, chain, infos, nocache); err != nil {
 		log.Error("Failed to deploy explorer container", "err", err)

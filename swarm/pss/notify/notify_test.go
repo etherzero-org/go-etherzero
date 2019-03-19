@@ -19,7 +19,7 @@ import (
 	"github.com/etherzero/go-etherzero/swarm/network"
 	"github.com/etherzero/go-etherzero/swarm/pss"
 	"github.com/etherzero/go-etherzero/swarm/state"
-	whisper "github.com/etherzero/go-etherzero/whisper/whisperv5"
+	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 )
 
 var (
@@ -209,7 +209,7 @@ func newServices(allowRaw bool) adapters.Services {
 			return k
 		}
 		params := network.NewKadParams()
-		params.MinProxBinSize = 2
+		params.NeighbourhoodSize = 2
 		params.MaxBinSize = 3
 		params.MinBinSize = 1
 		params.MaxRetries = 1000

@@ -33,6 +33,8 @@ var (
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
 )
 
+
+
 var (
 	DevoteChainConfig = &ChainConfig{
 		ChainID:        big.NewInt(90),

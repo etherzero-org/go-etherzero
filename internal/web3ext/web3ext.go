@@ -18,6 +18,7 @@
 package web3ext
 
 var Modules = map[string]string{
+	"accounting": Accounting_JS,
 	"admin":      Admin_JS,
 	"chequebook": Chequebook_JS,
 	"clique":     Clique_JS,
@@ -31,7 +32,6 @@ var Modules = map[string]string{
 	"shh":        Shh_JS,
 	"swarmfs":    SWARMFS_JS,
 	"txpool":     TxPool_JS,
-	"devote":     Devote_JS,
 }
 
 const Chequebook_JS = `
@@ -386,6 +386,18 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
+			name: 'standardTraceBadBlockToFile',
+			call: 'debug_standardTraceBadBlockToFile',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
+			name: 'standardTraceBlockToFile',
+			call: 'debug_standardTraceBlockToFile',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
 			name: 'traceBlockByNumber',
 			call: 'debug_traceBlockByNumber',
 			params: 2,
@@ -694,33 +706,45 @@ web3._extend({
 });
 `
 
-const Devote_JS = `
+const Accounting_JS = `
 web3._extend({
-	property: 'devote',
+	property: 'accounting',
 	methods: [
-		new web3._extend.Method({
-			name: 'getSigners',
-			call: 'devote_getSigners',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		new web3._extend.Property({
+			name: 'balance',
+			getter: 'account_balance'
 		}),
-		new web3._extend.Method({
-			name: 'getSignersByEpoch',
-			call: 'devote_getSignersByEpoch',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.uint64]
+		new web3._extend.Property({
+			name: 'balanceCredit',
+			getter: 'account_balanceCredit'
 		}),
-		new web3._extend.Method({
-			name: 'getConfirmedBlockNumber',
-			call: 'devote_getConfirmedBlockNumber',
-			params: 0,
-			outputFormatter: web3._extend.utils.toBigNumber
+		new web3._extend.Property({
+			name: 'balanceDebit',
+			getter: 'account_balanceDebit'
 		}),
-		new web3._extend.Method({
-			name: 'getSnapshot',
-			call: 'devote_getSnapshot',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		new web3._extend.Property({
+			name: 'bytesCredit',
+			getter: 'account_bytesCredit'
+		}),
+		new web3._extend.Property({
+			name: 'bytesDebit',
+			getter: 'account_bytesDebit'
+		}),
+		new web3._extend.Property({
+			name: 'msgCredit',
+			getter: 'account_msgCredit'
+		}),
+		new web3._extend.Property({
+			name: 'msgDebit',
+			getter: 'account_msgDebit'
+		}),
+		new web3._extend.Property({
+			name: 'peerDrops',
+			getter: 'account_peerDrops'
+		}),
+		new web3._extend.Property({
+			name: 'selfDrops',
+			getter: 'account_selfDrops'
 		}),
 	]
 });

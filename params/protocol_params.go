@@ -25,7 +25,7 @@ var (
 const (
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 21000000 // Gas limit of the Genesis block.
+	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
 
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
@@ -78,7 +78,6 @@ const (
 	// Precompiled contract gas prices
 
 	EcrecoverGas            uint64 = 3000   // Elliptic curve sender recovery gas price
-	PeeridrecoverGas        uint64 = 3000
 	Sha256BaseGas           uint64 = 60     // Base price for a SHA256 operation
 	Sha256PerWordGas        uint64 = 12     // Per-word price for a SHA256 operation
 	Ripemd160BaseGas        uint64 = 600    // Base price for a RIPEMD160 operation
@@ -90,7 +89,6 @@ const (
 	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
-
 	Epoch           uint64 = 600
 	Period           uint64 = 1
 )

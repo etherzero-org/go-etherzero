@@ -44,7 +44,7 @@ func TestPythonInterop(t *testing.T) {
 		wantID  = HexID("a448f24c6d18e575453db13171562b71999873db5b286df957af199ec94617f7")
 		wantSeq = uint64(1)
 		wantIP  = enr.IP{127, 0, 0, 1}
-		wantUDP = enr.UDP(21212)
+		wantUDP = enr.UDP(30303)
 	)
 	if n.Seq() != wantSeq {
 		t.Errorf("wrong seq: got %d, want %d", n.Seq(), wantSeq)

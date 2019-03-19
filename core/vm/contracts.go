@@ -27,8 +27,6 @@ import (
 	"github.com/etherzero/go-etherzero/crypto/bn256"
 	"github.com/etherzero/go-etherzero/params"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/etherzero/go-etherzero/crypto/secp256k1"
-	"crypto/ecdsa"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -59,8 +57,6 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}): &bn256Add{},
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
-	common.BytesToAddress([]byte{9}): &peeridrecover{},
-	common.BytesToAddress([]byte{11}): &ecrecoverByPublicKey{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -361,42 +357,4 @@ func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
 		return true32Byte, nil
 	}
 	return false32Byte, nil
-}
-type peeridrecover struct{}
-
-func (c *peeridrecover) RequiredGas(input []byte) uint64 {
-	return params.PeeridrecoverGas
-}
-
-func (c *peeridrecover) Run(input []byte) ([]byte, error) {
-	if len(input) < 97 {
-		return nil, nil
-	}
-	key, err := secp256k1.RecoverPubkey(input[:32], input[32:97])
-	if err != nil || len(key) != 65 {
-		return nil, nil
-	}
-	return key[1:9], nil
-}
-
-type ecrecoverByPublicKey struct{}
-
-func (c *ecrecoverByPublicKey) RequiredGas(input []byte) uint64 {
-	return params.EcrecoverGas
-}
-
-func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
-	if len(input) < 64 {
-		return nil, nil
-	}
-	id := input[0:64]
-	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
-	half := len(id) / 2
-	p.X.SetBytes(id[:half])
-	p.Y.SetBytes(id[half:])
-	if !p.Curve.IsOnCurve(p.X, p.Y) {
-		return nil, nil
-	}
-	addr := crypto.PubkeyToAddress(*p)
-	return common.LeftPadBytes(addr[:], 32), nil
 }
