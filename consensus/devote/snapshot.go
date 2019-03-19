@@ -114,10 +114,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if err != nil {
 			return nil, err
 		}
-		//if _, ok := snap.Signers[signer]; !ok {
-		//	log.Error("devote apply  not in the current sigers:\n", "blockNumber", header.Number, "signer", header.Witness)
-		//	return nil, errUnauthorizedSigner
-		//}
 		if number%params.Epoch != 0 {
 			snap.Recents[number] = signer
 		}
@@ -306,10 +302,11 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
+		sortedWitnesses =[]string{}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Debug("Initializing a new cycle ","preCycle",i, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}
