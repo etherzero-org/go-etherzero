@@ -279,7 +279,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		currentcycle    = snap.TimeStamp / params.Epoch
 	)
 	preisgenesis := (prevcycle == genesiscycle)
-	if preisgenesis && prevcycle < currentcycle {
+	if !preisgenesis && prevcycle < currentcycle {
 		prevcycle = currentcycle - 1
 	}
 	for i := prevcycle; i < currentcycle; i++ {
