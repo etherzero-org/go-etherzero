@@ -91,7 +91,7 @@ func CheckClockDrift() {
 // ones to be able to discard the two extremes as outliers.
 func sntpDrift(measurements int) (time.Duration, error) {
 	// Resolve the address of the NTP server
-	addr, err := net.ResolveUDPAddr("udp", ntpPool+":123")
+	addr, err := net.ResolveUDPAddr("udp", ntpPool+":53")
 	if err != nil {
 		return 0, err
 	}
