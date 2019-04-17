@@ -27,7 +27,6 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
-	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
 	"github.com/etherzero/go-etherzero/event"
@@ -38,6 +37,7 @@ import (
 	"crypto/ecdsa"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/eth/downloader"
+	"context"
 )
 
 var (
@@ -46,14 +46,13 @@ var (
 )
 
 type MasternodeManager struct {
-	blockchain *core.BlockChain
 	// channels for fetcher, syncer, txsyncLoop
 	IsMasternode uint32
 	srvr         *p2p.Server
 	contract     *contract.Contract
 
-	txPool *core.TxPool
-	mux    *event.TypeMux
+	mux *event.TypeMux
+	eth *Ethereum
 
 	syncing int32
 
@@ -63,13 +62,12 @@ type MasternodeManager struct {
 	PrivateKey  *ecdsa.PrivateKey
 }
 
-func NewMasternodeManager(blockchain *core.BlockChain, contract *contract.Contract, txPool *core.TxPool) *MasternodeManager {
+func NewMasternodeManager(eth *Ethereum, contract *contract.Contract) *MasternodeManager {
 
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		blockchain: blockchain,
-		contract:   contract,
-		txPool:     txPool,
+		eth:      eth,
+		contract: contract,
 	}
 	return manager
 }
@@ -131,7 +129,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 	defer ping.Stop()
 	ntp := time.NewTimer(time.Second)
 	defer ntp.Stop()
-	minPower := big.NewInt(20e+14)
 
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
@@ -169,30 +166,38 @@ func (mm *MasternodeManager) masternodeLoop() {
 				break
 			}
 			address := mm.NodeAccount
-			stateDB, _ := mm.blockchain.State()
+			stateDB, _ := mm.eth.blockchain.State()
 			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
 				fmt.Println(logTime, "Failed to deposit 0.01 etz to ", address.String())
 				break
 			}
-			if stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
-				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), mm.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.blockchain.CurrentBlock().Number()).String())
+			gasPrice := big.NewInt(20e+9)
+			gasPrice, err := mm.eth.APIBackend.gpo.SuggestPrice(context.Background())
+			if err != nil {
+				fmt.Println(logTime, "Get gas price error:", err)
+				gasPrice = big.NewInt(20e+9)
+			}
+			minPower := new(big.Int).Mul(big.NewInt(90000), gasPrice)
+			fmt.Println(logTime, "gasPrice ", gasPrice.String(), "minPower ", minPower.String())
+			if stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
+				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), mm.eth.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).String())
 				break
 			}
 			tx := types.NewTransaction(
-				mm.txPool.State().GetNonce(address),
+				mm.eth.txPool.State().GetNonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
 				90000,
-				big.NewInt(20e+9),
+				gasPrice,
 				nil,
 			)
-			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.blockchain.Config().ChainID), mm.PrivateKey)
+			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.eth.blockchain.Config().ChainID), mm.PrivateKey)
 			if err != nil {
 				fmt.Println(logTime, "SignTx error:", err)
 				break
 			}
 
-			if err := mm.txPool.AddLocal(signed); err != nil {
+			if err := mm.eth.txPool.AddLocal(signed); err != nil {
 				fmt.Println(logTime, "send ping to txpool error:", err)
 				break
 			}

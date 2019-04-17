@@ -185,7 +185,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	contractBackend := NewContractBackend(eth)
 	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(eth.blockchain, contract, eth.txPool); err != nil {
+	if eth.masternodeManager = NewMasternodeManager(eth, contract); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
