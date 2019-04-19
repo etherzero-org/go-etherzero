@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereumproject/go-ethereum/logger"
-	"github.com/ethereumproject/go-ethereum/logger/glog"
 	"os"
 	"runtime"
 	"strconv"
@@ -500,19 +498,19 @@ func Rollback(ctx *cli.Context) error {
 	bc, chainDB := utils.MakeChain(ctx,stack)
 	defer chainDB.Close()
 
-	glog.D(logger.Warn).Infoln("Rolling back blockchain...")
+	log.Info("Rolling back blockchain...")
 
 	if err := bc.SetHead(blockIndex); err != nil {
-		glog.D(logger.Error).Errorf("error setting head: %v", err)
+		log.Error("error setting head: %v", err)
 	}
 
 	// Check if *neither* block nor fastblock numbers match desired head number
 	nowCurrentHead := bc.CurrentBlock().Number().Uint64()
 	nowCurrentFastHead := bc.CurrentFastBlock().Number().Uint64()
 	if nowCurrentHead != blockIndex && nowCurrentFastHead != blockIndex {
-		glog.Fatalf("ERROR: Wanted rollback to set head to: %v, instead current head is: %v", blockIndex, nowCurrentHead)
+		log.Info("ERROR: Wanted rollback to set head to: %v, instead current head is: %v", blockIndex, nowCurrentHead)
 	}
-	glog.D(logger.Error).Infof("Success. Head block set to: %v", nowCurrentHead)
+	log.Info("Success. Head block set to: %v", nowCurrentHead)
 	return nil
 }
 
