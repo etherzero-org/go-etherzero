@@ -630,6 +630,11 @@ var (
 		Usage: "External EVM configuration (default = built-in interpreter)",
 		Value: "",
 	}
+	BlockHeightFlag = cli.Int64Flag{
+		Name:  "height",
+		Usage: "Enable masternode",
+	}
+
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating

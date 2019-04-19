@@ -18,7 +18,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/ethereumproject/go-ethereum/logger"
+	"github.com/ethereumproject/go-ethereum/logger/glog"
 	"os"
 	"runtime"
 	"strconv"
@@ -167,6 +170,22 @@ Remove blockchain and state databases`,
 		Description: `
 The arguments are interpreted as block numbers or hashes.
 Use "ethereum dump 0" to dump the genesis block.`,
+	}
+	rollbackCommand = cli.Command{
+		Action:    utils.MigrateFlags(Rollback),
+		Name:      "rollback",
+		Usage:     "Set current head for blockchain, purging antecedent blocks",
+		Aliases: []string{"roll-back", "set-head", "sethead"},
+		ArgsUsage: "<height>",
+		Flags: []cli.Flag{
+			utils.BlockHeightFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+Rollback set the current head block for block chain already in the database.
+	This is a destructive action, purging any block more recent than the index specified.
+	Syncing will require downloading contemporary block information from the index onwards.
+		`,
 	}
 )
 
@@ -462,6 +481,38 @@ func dump(ctx *cli.Context) error {
 		}
 	}
 	chainDb.Close()
+	return nil
+}
+
+func Rollback(ctx *cli.Context) error {
+	index := ctx.Args().First()
+	if len(index) == 0 {
+		utils.Fatalf("missing argument: use `rollback 12345` to specify required block number to roll back to")
+		return errors.New("invalid flag usage")
+	}
+
+	blockIndex, err := strconv.ParseUint(index, 10, 64)
+	if err != nil {
+		utils.Fatalf("invalid argument: use `rollback 12345`, were '12345' is a required number specifying which block number to roll back to")
+		return errors.New("invalid flag usage")
+	}
+	stack:=makeFullNode(ctx)
+	bc, chainDB := utils.MakeChain(ctx,stack)
+	defer chainDB.Close()
+
+	glog.D(logger.Warn).Infoln("Rolling back blockchain...")
+
+	if err := bc.SetHead(blockIndex); err != nil {
+		glog.D(logger.Error).Errorf("error setting head: %v", err)
+	}
+
+	// Check if *neither* block nor fastblock numbers match desired head number
+	nowCurrentHead := bc.CurrentBlock().Number().Uint64()
+	nowCurrentFastHead := bc.CurrentFastBlock().Number().Uint64()
+	if nowCurrentHead != blockIndex && nowCurrentFastHead != blockIndex {
+		glog.Fatalf("ERROR: Wanted rollback to set head to: %v, instead current head is: %v", blockIndex, nowCurrentHead)
+	}
+	glog.D(logger.Error).Infof("Success. Head block set to: %v", nowCurrentHead)
 	return nil
 }
 
