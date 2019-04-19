@@ -109,7 +109,7 @@ func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	if remoteRoot != localRoot {
 		log.Printf("StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
 		log.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
-		log.Printf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
+		log.Printf("invalid devote blockNumber %d ,root (remote: %x local: %x)", block.Number(),remoteRoot, localRoot)
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}
 	return nil

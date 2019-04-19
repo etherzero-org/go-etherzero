@@ -34,7 +34,7 @@ type Validator interface {
 	// gas used.
 	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error
 
-	// ValidateDposState validates the given dpos state
+	// ValidateMPoSState validates the given MPoS state
 	ValidateDevoteState(block *types.Block) error
 }
 

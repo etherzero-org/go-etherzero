@@ -114,10 +114,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if err != nil {
 			return nil, err
 		}
-		//if _, ok := snap.Signers[signer]; !ok {
-		//	log.Error("devote apply  not in the current sigers:\n", "blockNumber", header.Number, "signer", header.Witness)
-		//	return nil, errUnauthorizedSigner
-		//}
 		if number%params.Epoch != 0 {
 			snap.Recents[number] = signer
 		}
