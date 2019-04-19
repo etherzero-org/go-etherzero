@@ -18,16 +18,12 @@ package core
 
 import (
 	"fmt"
-	"math/big"
-
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/params"
 	"log"
 )
-
-var skipBlock = big.NewInt(12153042)
 
 // BlockValidator is responsible for validating block headers, uncles and
 // processed state.
@@ -109,7 +105,7 @@ func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
 	header := block.Header()
 	localRoot := block.DevoteDB.Root()
 	remoteRoot := header.Protocol.Root()
-	if remoteRoot != localRoot  && block.Number().Cmp(skipBlock)!=0{
+	if remoteRoot != localRoot{
 		log.Printf("StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
 		log.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
 		log.Printf("invalid devote blockNumber %d ,root (remote: %x local: %x)", block.Number(),remoteRoot, localRoot)

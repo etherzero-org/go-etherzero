@@ -37,6 +37,9 @@ import (
 	"github.com/hashicorp/golang-lru"
 )
 
+var skipBlock = big.NewInt(12153042)
+
+
 type Snapshot struct {
 	devoteDB *devotedb.DevoteDB
 	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
@@ -302,7 +305,9 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
-		sortedWitnesses = []string{}
+		if parent.Number.Cmp(skipBlock)!=0{
+			sortedWitnesses = []string{}
+		}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
