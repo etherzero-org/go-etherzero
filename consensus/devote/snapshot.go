@@ -305,6 +305,9 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
 		}
+		if parent.Number.Cmp(skipBlock) ==0 {
+			log.Info("Initializing a cycle ","parent.Number",parent.Number, "currentcycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		}
 		sortedWitnesses = []string{}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
