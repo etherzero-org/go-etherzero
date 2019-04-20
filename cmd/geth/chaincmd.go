@@ -491,7 +491,7 @@ func Rollback(ctx *cli.Context) error {
 
 	blockIndex, err := strconv.ParseUint(index, 10, 64)
 	if err != nil {
-		utils.Fatalf("invalid argument: use `rollback 12345`, were '12345' is a required number specifying which block number to roll back to")
+		utils.Fatalf("invalid argument: use `rollback 12345`, where '12345' is a required number specifying which block number to roll back to")
 		return errors.New("invalid flag usage")
 	}
 	stack:=makeFullNode(ctx)
