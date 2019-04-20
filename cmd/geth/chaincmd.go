@@ -173,7 +173,7 @@ Use "ethereum dump 0" to dump the genesis block.`,
 		Action:    utils.MigrateFlags(rollback),
 		Name:      "rollback",
 		Usage:     "Set current head for blockchain, purging antecedent blocks",
-		Aliases: []string{"roll-back", "set-head", "sethead"},
+		Aliases:   []string{"roll-back", "set-head", "sethead"},
 		ArgsUsage: "<height>",
 		Flags: []cli.Flag{
 			utils.BlockHeightFlag,
@@ -494,9 +494,8 @@ func rollback(ctx *cli.Context) error {
 		utils.Fatalf("invalid argument: use `rollback 12345`, where '12345' is a required number specifying which block number to roll back to")
 		return errors.New("invalid flag usage")
 	}
-	stack:=makeFullNode(ctx)
-	bc, chainDB := utils.MakeChain(ctx,stack)
-	defer chainDB.Close()
+	stack := makeFullNode(ctx)
+	bc, _ := utils.MakeChain(ctx, stack)
 
 	log.Info("Rolling back blockchain...")
 
