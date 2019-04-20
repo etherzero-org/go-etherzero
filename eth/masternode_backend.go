@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 	"time"
 	"errors"
+	"context"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
@@ -37,7 +38,6 @@ import (
 	"crypto/ecdsa"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/eth/downloader"
-	"context"
 )
 
 var (
