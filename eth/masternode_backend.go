@@ -171,7 +171,6 @@ func (mm *MasternodeManager) masternodeLoop() {
 				fmt.Println(logTime, "Failed to deposit 0.01 etz to ", address.String())
 				break
 			}
-			gasPrice := big.NewInt(20e+9)
 			gasPrice, err := mm.eth.APIBackend.gpo.SuggestPrice(context.Background())
 			if err != nil {
 				fmt.Println(logTime, "Get gas price error:", err)
