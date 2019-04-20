@@ -632,7 +632,7 @@ var (
 	}
 	BlockHeightFlag = cli.Int64Flag{
 		Name:  "height",
-		Usage: "Enable masternode",
+		Usage: "block height when used in rollbackCommand",
 	}
 
 )
