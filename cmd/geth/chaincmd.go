@@ -170,7 +170,7 @@ The arguments are interpreted as block numbers or hashes.
 Use "ethereum dump 0" to dump the genesis block.`,
 	}
 	rollbackCommand = cli.Command{
-		Action:    utils.MigrateFlags(Rollback),
+		Action:    utils.MigrateFlags(rollback),
 		Name:      "rollback",
 		Usage:     "Set current head for blockchain, purging antecedent blocks",
 		Aliases: []string{"roll-back", "set-head", "sethead"},
@@ -482,7 +482,7 @@ func dump(ctx *cli.Context) error {
 	return nil
 }
 
-func Rollback(ctx *cli.Context) error {
+func rollback(ctx *cli.Context) error {
 	index := ctx.Args().First()
 	if len(index) == 0 {
 		utils.Fatalf("missing argument: use `rollback 12345` to specify required block number to roll back to")
@@ -508,9 +508,9 @@ func Rollback(ctx *cli.Context) error {
 	nowCurrentHead := bc.CurrentBlock().Number().Uint64()
 	nowCurrentFastHead := bc.CurrentFastBlock().Number().Uint64()
 	if nowCurrentHead != blockIndex && nowCurrentFastHead != blockIndex {
-		log.Info("ERROR: Wanted rollback to set head to: %v, instead current head is: %v", blockIndex, nowCurrentHead)
+		fmt.Printf("ERROR: Wanted rollback to set head to: %v, instead current head is: %v", blockIndex, nowCurrentHead)
 	}
-	log.Info("Success. Head block set to: %v", nowCurrentHead)
+	fmt.Printf("Success. Head block set to: %v\n", nowCurrentHead)
 	return nil
 }
 
