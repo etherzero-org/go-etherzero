@@ -273,14 +273,21 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 
 	var (
 		sortedWitnesses []string
-		genesiscycle    = genesis.Time.Uint64() / params.Epoch
-		prevcycle       = parent.Time.Uint64() / params.Epoch
-		currentcycle    = snap.TimeStamp / params.Epoch
+		isbad           bool   = false
+		size            uint64 = 1
+		genesiscycle           = genesis.Time.Uint64() / params.Epoch
+		prevcycle              = parent.Time.Uint64() / params.Epoch
+		currentcycle           = snap.TimeStamp / params.Epoch
 	)
+
 	preisgenesis := (prevcycle == genesiscycle)
 	if !preisgenesis && prevcycle < currentcycle {
 		prevcycle = currentcycle - 1
 	}
+	if size, isbad = params.BadCycye[currentcycle]; isbad {
+		prevcycle = currentcycle - size
+	}
+
 	for i := prevcycle; i < currentcycle; i++ {
 		// if prevcycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
@@ -294,25 +301,46 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			log.Error("snapshot init masternodes failed", "err", err)
 			return nil, err
 		}
+
 		masternodes := sortableAddresses{}
+
 		for masternode, cnt := range count {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
-			return nil, fmt.Errorf(" too few masternodes ,cycle:%d, current :%d, safesize:%d",currentcycle, len(masternodes), safeSize)
+			return nil, fmt.Errorf(" too few masternodes ,cycle:%d, current :%d, safesize:%d", currentcycle, len(masternodes), safeSize)
 		}
 		sort.Sort(masternodes)
-		if len(masternodes) > int(maxWitnessSize) {
+
+		if isbad {
 			masternodes = masternodes[:maxWitnessSize]
+			sizeTmp := size - 1
+			masternodesTmp := masternodes
+			for {
+				if sizeTmp == 0 {
+					break
+				}
+				masternodes = append(masternodes, masternodesTmp...)
+				sizeTmp--
+			}
+		} else {
+			if len(masternodes) > int(maxWitnessSize) {
+				masternodes = masternodes[:maxWitnessSize]
+			}
 		}
-		if parent.Number.Cmp(skipBlock) ==0 {
-			log.Info("Initializing a cycle ","parent.Number",parent.Number, "currentcycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		if parent.Number.Cmp(skipBlock) == 0 {
+			log.Info("Initializing a cycle ", "parent.Number", parent.Number, "currentcycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		}
 		sortedWitnesses = []string{}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		// for special process for cycle 2588019
+		if currentcycle == params.BadWitnessOfCycle_2588019 {
+			sortedWitnesses = []string{}
+			sortedWitnesses = params.WitnessesOfCycle_2588019
+		}
+		log.Debug("Initializing a new cycle ", "prevcycle", prevcycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}
