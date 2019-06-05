@@ -34,6 +34,17 @@ var (
 )
 
 var (
+	// witnessofCycle_2588019 is the witness for the bad cycle
+	WitnessesOfCycle_2588019  = []string{"1e327ad8a2fe97ce", "eb8da1836ac3f078", "b529e0790a2a0eb5", "946478e35c9484ab", "cb45dec265bbd237", "628d7a9104c79c18", "9abfb1f76545c0bc", "9e4c25b55a6a1375", "c4688a727620c6bc", "f1fd1ee99ee99e75", "73aafdb33ae3d44c", "3bfea657917ff8b6", "710585d2eebf1f60", "2e268eb4bb019acc", "bafdc9e2633f9772", "11ef7b9340748bdc", "d09082b2945ecd6a", "ba785492d9c046d6", "d79f657b57010940", "193731b20a555c1a", "ea98faa0ae1466dd", "1e327ad8a2fe97ce", "eb8da1836ac3f078", "b529e0790a2a0eb5", "946478e35c9484ab", "cb45dec265bbd237", "628d7a9104c79c18", "9abfb1f76545c0bc", "9e4c25b55a6a1375", "c4688a727620c6bc", "f1fd1ee99ee99e75", "73aafdb33ae3d44c", "3bfea657917ff8b6", "710585d2eebf1f60", "2e268eb4bb019acc", "bafdc9e2633f9772", "11ef7b9340748bdc", "d09082b2945ecd6a", "ba785492d9c046d6", "d79f657b57010940", "193731b20a555c1a", "ea98faa0ae1466dd", "1e327ad8a2fe97ce", "eb8da1836ac3f078", "b529e0790a2a0eb5", "946478e35c9484ab", "cb45dec265bbd237", "628d7a9104c79c18", "9abfb1f76545c0bc", "9e4c25b55a6a1375", "c4688a727620c6bc", "f1fd1ee99ee99e75", "73aafdb33ae3d44c", "3bfea657917ff8b6", "710585d2eebf1f60", "2e268eb4bb019acc", "bafdc9e2633f9772", "11ef7b9340748bdc", "d09082b2945ecd6a", "ba785492d9c046d6", "d79f657b57010940", "193731b20a555c1a", "ea98faa0ae1466dd"}
+	BadWitnessOfCycle_2588019 = uint64(2588019)
+	BadCycye                  = map[uint64]uint64{
+		2588010: 15,
+		2588012: 2,
+		2588016: 4,
+		2588019: 3,
+		2588026: 3,
+	}
+
 	DevoteChainConfig = &ChainConfig{
 		ChainID:        big.NewInt(90),
 		EtherzeroBlock: big.NewInt(0),
