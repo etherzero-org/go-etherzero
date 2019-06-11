@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -23,7 +23,7 @@ import (
 	"math/big"
 	"regexp"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 // The validation package contains validation checks for transactions
@@ -118,7 +118,7 @@ func (v *Validator) validate(msgs *ValidationMessages, txargs *SendTxArgs, metho
 	if txargs.To == nil {
 		//Contract creation should contain sufficient data to deploy a contract
 		// A typical error is omitting sender due to some quirk in the javascript call
-		// e.g. https://github.com/ethereum/go-ethereum/issues/16106
+		// e.g. https://github.com/etherzero/go-etherzero/issues/16106
 		if len(data) == 0 {
 			if txargs.Value.ToInt().Cmp(big.NewInt(0)) > 0 {
 				// Sending ether into black hole

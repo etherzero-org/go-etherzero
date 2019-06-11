@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package eth
 
@@ -21,24 +21,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/internal/ethapi"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/trie"
 	"io"
 	"math/big"
 	"os"
 	"runtime"
 	"strings"
-	"time"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related
@@ -145,14 +143,9 @@ func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
 	return true
 }
 
-// SetRecommitInterval updates the interval for miner sealing work recommitting.
-func (api *PrivateMinerAPI) SetRecommitInterval(interval int) {
-	api.e.Miner().SetRecommitInterval(time.Duration(interval) * time.Millisecond)
-}
-
 // GetHashrate returns the current hashrate of the miner.
 func (api *PrivateMinerAPI) GetHashrate() uint64 {
-	return api.e.miner.HashRate()
+	return uint64(api.e.miner.HashRate())
 }
 
 // PrivateAdminAPI is the collection of Ethereum full node-related APIs

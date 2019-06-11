@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package localstore
 
@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 )
 
 // TestModePutRequest validates ModePutRequest index values on the provided DB.
@@ -208,11 +208,11 @@ func TestModePutUpload_parallel(t *testing.T) {
 //
 // Measurements on MacBook Pro (Retina, 15-inch, Mid 2014)
 //
-// # go test -benchmem -run=none github.com/ethereum/go-ethereum/swarm/storage/localstore -bench BenchmarkPutUpload -v
+// # go test -benchmem -run=none github.com/etherzero/go-etherzero/swarm/storage/localstore -bench BenchmarkPutUpload -v
 //
 // goos: darwin
 // goarch: amd64
-// pkg: github.com/ethereum/go-ethereum/swarm/storage/localstore
+// pkg: github.com/etherzero/go-etherzero/swarm/storage/localstore
 // BenchmarkPutUpload/count_100_parallel_1-8         	     300	   5107704 ns/op	 2081461 B/op	    2374 allocs/op
 // BenchmarkPutUpload/count_100_parallel_2-8         	     300	   5411742 ns/op	 2081608 B/op	    2364 allocs/op
 // BenchmarkPutUpload/count_100_parallel_4-8         	     500	   3704964 ns/op	 2081696 B/op	    2324 allocs/op

@@ -1,24 +1,25 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package types contains data types related to Ethereum consensus.
 package types
 
 import (
 	"encoding/binary"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
 	"sort"
@@ -26,9 +27,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/rlp"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -83,6 +84,9 @@ type Header struct {
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
 	MixDigest   common.Hash    `json:"mixHash"`
 	Nonce       BlockNonce     `json:"nonce"`
+	Witness     string                   `json:"witness"          gencodec:"required"`
+	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
+
 }
 
 // field type overrides for gencodec
@@ -100,6 +104,26 @@ type headerMarshaling struct {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	return rlpHash(h)
+}
+
+// HashNoNonce returns the hash which is used as input for the proof-of-work search.
+func (h *Header) HashNoNonce() common.Hash {
+	return rlpHash([]interface{}{
+		h.ParentHash,
+		h.UncleHash,
+		h.Coinbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Witness,
+		h.Time,
+		h.Extra,
+	})
 }
 
 // Size returns the approximate memory used by all internal contents. It is used
@@ -140,6 +164,8 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+
+	DevoteDB     *devotedb.DevoteDB
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -301,6 +327,9 @@ func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
+
+func (b *Block) Witness() string { return b.header.Witness }
+func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.

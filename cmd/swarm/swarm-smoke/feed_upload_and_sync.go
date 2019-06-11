@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/swarm/storage/feed"
-	"github.com/ethereum/go-ethereum/swarm/testutil"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/swarm/storage/feed"
+	"github.com/etherzero/go-etherzero/swarm/testutil"
 	"github.com/pborman/uuid"
 	cli "gopkg.in/urfave/cli.v1"
 )

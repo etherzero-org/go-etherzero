@@ -20,11 +20,12 @@ package consensus
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -84,14 +85,14 @@ type Engine interface {
 	// Note: The block header and state database might be updated to reflect any
 	// consensus rules that happen at finalization (e.g. block rewards).
 	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error)
+		uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error)
 
 	// Seal generates a new sealing request for the given input block and pushes
 	// the result into the given channel.
 	//
 	// Note, the method returns immediately and will send the result async. More
 	// than one result may also be returned depending on the consensus algorithm.
-	Seal(chain ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error
+	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)
 
 	// SealHash returns the hash of a block prior to it being sealed.
 	SealHash(header *types.Header) common.Hash

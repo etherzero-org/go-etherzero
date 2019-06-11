@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -29,24 +29,24 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/console"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/swarm"
-	bzzapi "github.com/ethereum/go-ethereum/swarm/api"
-	swarmmetrics "github.com/ethereum/go-ethereum/swarm/metrics"
-	"github.com/ethereum/go-ethereum/swarm/storage/mock"
-	mockrpc "github.com/ethereum/go-ethereum/swarm/storage/mock/rpc"
-	"github.com/ethereum/go-ethereum/swarm/tracing"
-	sv "github.com/ethereum/go-ethereum/swarm/version"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/accounts/keystore"
+	"github.com/etherzero/go-etherzero/cmd/utils"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/console"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/internal/debug"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/node"
+	"github.com/etherzero/go-etherzero/p2p/enode"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/swarm"
+	bzzapi "github.com/etherzero/go-etherzero/swarm/api"
+	swarmmetrics "github.com/etherzero/go-etherzero/swarm/metrics"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock"
+	mockrpc "github.com/etherzero/go-etherzero/swarm/storage/mock/rpc"
+	"github.com/etherzero/go-etherzero/swarm/tracing"
+	sv "github.com/etherzero/go-etherzero/swarm/version"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -108,7 +108,7 @@ var app = utils.NewApp("", "Ethereum Swarm")
 func init() {
 	app.Action = bzzd
 	app.Version = sv.ArchiveVersion(gitCommit)
-	app.Copyright = "Copyright 2013-2016 The go-ethereum Authors"
+	app.Copyright = "Copyright 2013-2016 The go-etherzero Authors"
 	app.Commands = []cli.Command{
 		{
 			Action:             version,

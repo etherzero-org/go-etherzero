@@ -1,20 +1,20 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
-// Package utils contains internal helper functions for go-ethereum commands.
+// Package utils contains internal helper functions for go-etherzero commands.
 package utils
 
 import (
@@ -28,35 +28,35 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/fdlimit"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/dashboard"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/les"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/metrics/influxdb"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
-	"github.com/ethereum/go-ethereum/params"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/accounts/keystore"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/fdlimit"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/clique"
+	"github.com/etherzero/go-etherzero/consensus/ethash"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/dashboard"
+	"github.com/etherzero/go-etherzero/eth"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/eth/gasprice"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/ethstats"
+	"github.com/etherzero/go-etherzero/les"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/metrics/influxdb"
+	"github.com/etherzero/go-etherzero/node"
+	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/discv5"
+	"github.com/etherzero/go-etherzero/p2p/enode"
+	"github.com/etherzero/go-etherzero/p2p/nat"
+	"github.com/etherzero/go-etherzero/p2p/netutil"
+	"github.com/etherzero/go-etherzero/params"
+	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -520,6 +520,10 @@ var (
 		Usage: "Comma separated enode URLs for P2P discovery bootstrap (set v4+v5 instead for light servers)",
 		Value: "",
 	}
+	MasternodeFlag = cli.BoolFlag{
+		Name:  "masternode",
+		Usage: "Enable masternode",
+	}
 	BootnodesV4Flag = cli.StringFlag{
 		Name:  "bootnodesv4",
 		Usage: "Comma separated enode URLs for P2P v4 discovery bootstrap (light server, full nodes)",
@@ -642,6 +646,10 @@ var (
 		Usage: "External EVM configuration (default = built-in interpreter)",
 		Value: "",
 	}
+	BlockHeightFlag = cli.Int64Flag{
+		Name:  "height",
+		Usage: "block height when used in rollbackCommand",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -727,6 +735,13 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
 	}
 }
+
+func setMasternode(ctx *cli.Context, cfg *p2p.Config) {
+	if ctx.GlobalIsSet(MasternodeFlag.Name) {
+		cfg.IsMasternode = true
+	}
+}
+
 
 // setBootstrapNodesV5 creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
@@ -928,6 +943,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setListenAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
+	setMasternode(ctx, cfg)
 
 	lightClient := ctx.GlobalString(SyncModeFlag.Name) == "light"
 	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0

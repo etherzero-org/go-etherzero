@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package clique implements the proof-of-authority consensus engine.
 package clique
@@ -20,24 +20,25 @@ package clique
 import (
 	"bytes"
 	"errors"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/misc"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/rpc"
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/sha3"
 )
@@ -579,7 +580,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
-func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt,d *devotedb.DevoteDB) (*types.Block, error) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -600,18 +601,18 @@ func (c *Clique) Authorize(signer common.Address, signFn SignerFn) {
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
-func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
-		return errUnknownBlock
+		return nil,errUnknownBlock
 	}
 	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
 	if c.config.Period == 0 && len(block.Transactions()) == 0 {
 		log.Info("Sealing paused, waiting for transactions")
-		return nil
+		return nil,errUnknownBlock
 	}
 	// Don't hold the signer fields for the entire sealing procedure
 	c.lock.RLock()
@@ -621,10 +622,10 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, results c
 	// Bail out if we're unauthorized to sign a block
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
-		return err
+		return nil,err
 	}
 	if _, authorized := snap.Signers[signer]; !authorized {
-		return errUnauthorizedSigner
+		return nil,errUnauthorizedSigner
 	}
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {
@@ -632,7 +633,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, results c
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
 				log.Info("Signed recently, must wait for others")
-				return nil
+				return nil,nil
 			}
 		}
 	}
@@ -648,26 +649,18 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, results c
 	// Sign all the things!
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
-		return err
+		return nil,err
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
 	// Wait until sealing is terminated or delay timeout.
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
-	go func() {
-		select {
-		case <-stop:
-			return
-		case <-time.After(delay):
-		}
+	select {
+	case <-stop:
+		return nil, nil
+	case <-time.After(delay):
+	}
 
-		select {
-		case results <- block.WithSeal(header):
-		default:
-			log.Warn("Sealing result is not read by miner", "sealhash", c.SealHash(header))
-		}
-	}()
-
-	return nil
+	return block.WithSeal(header), nil
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty

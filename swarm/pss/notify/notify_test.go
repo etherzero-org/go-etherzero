@@ -9,17 +9,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/simulations"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
-	"github.com/ethereum/go-ethereum/swarm/network"
-	"github.com/ethereum/go-ethereum/swarm/pss"
-	"github.com/ethereum/go-ethereum/swarm/state"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/node"
+	"github.com/etherzero/go-etherzero/p2p/enode"
+	"github.com/etherzero/go-etherzero/p2p/simulations"
+	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
+	"github.com/etherzero/go-etherzero/swarm/network"
+	"github.com/etherzero/go-etherzero/swarm/pss"
+	"github.com/etherzero/go-etherzero/swarm/state"
+	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
 )
 
 var (

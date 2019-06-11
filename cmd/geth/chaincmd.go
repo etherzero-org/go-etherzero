@@ -1,23 +1,24 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -25,17 +26,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/console"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/etherzero/go-etherzero/cmd/utils"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/console"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -168,6 +169,23 @@ Remove blockchain and state databases`,
 The arguments are interpreted as block numbers or hashes.
 Use "ethereum dump 0" to dump the genesis block.`,
 	}
+	rollbackCommand = cli.Command{
+		Action:    utils.MigrateFlags(rollback),
+		Name:      "rollback",
+		Usage:     "Set current head for blockchain, purging antecedent blocks",
+		Aliases:   []string{"roll-back", "set-head", "sethead"},
+		ArgsUsage: "<height>",
+		Flags: []cli.Flag{
+			utils.BlockHeightFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+Rollback set the current head block for block chain already in the database.
+	This is a destructive action, purging any block more recent than the index specified.
+	Syncing will require downloading contemporary block information from the index onwards.
+		`,
+	}
+
 )
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
@@ -462,6 +480,37 @@ func dump(ctx *cli.Context) error {
 		}
 	}
 	chainDb.Close()
+	return nil
+}
+
+func rollback(ctx *cli.Context) error {
+	index := ctx.Args().First()
+	if len(index) == 0 {
+		utils.Fatalf("missing argument: use `rollback 12345` to specify required block number to roll back to")
+		return errors.New("invalid flag usage")
+	}
+
+	blockIndex, err := strconv.ParseUint(index, 10, 64)
+	if err != nil {
+		utils.Fatalf("invalid argument: use `rollback 12345`, where '12345' is a required number specifying which block number to roll back to")
+		return errors.New("invalid flag usage")
+	}
+	stack := makeFullNode(ctx)
+	bc, _ := utils.MakeChain(ctx, stack)
+
+	log.Info("Rolling back blockchain...")
+
+	if err := bc.SetHead(blockIndex); err != nil {
+		log.Error("error setting head: %v", err)
+	}
+
+	// Check if *neither* block nor fastblock numbers match desired head number
+	nowCurrentHead := bc.CurrentBlock().Number().Uint64()
+	nowCurrentFastHead := bc.CurrentFastBlock().Number().Uint64()
+	if nowCurrentHead != blockIndex && nowCurrentFastHead != blockIndex {
+		fmt.Printf("ERROR: Wanted rollback to set head to: %v, instead current head is: %v", blockIndex, nowCurrentHead)
+	}
+	fmt.Printf("Success. Head block set to: %v\n", nowCurrentHead)
 	return nil
 }
 

@@ -1,39 +1,43 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package eth
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
+	"github.com/etherzero/go-etherzero/p2p/discover"
 	"math/big"
+	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/math"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/bloombits"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/eth/gasprice"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -226,4 +230,73 @@ func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
+}
+// Masternodes return masternode info
+func (b *EthAPIBackend) Masternodes() []string {
+	list, _ := b.eth.masternodeManager.MasternodeList(b.eth.blockchain.CurrentBlock().Number())
+	return list
+}
+
+// GetInfo return related info in masternode contract
+func (b *EthAPIBackend) GetInfo(nodeid string) string {
+	var id [8]byte
+	node, err := hex.DecodeString(strings.TrimPrefix(nodeid, "0x"))
+	if err != nil {
+		fmt.Printf("err %v\n", err)
+		return ""
+	} else if len(node) != len(id) {
+		return ""
+	}
+	copy(id[:], node)
+	fmt.Println("nodeid ", nodeid)
+
+	info, err := b.eth.masternodeManager.contract.GetInfo(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has error %v", err)
+		return ""
+	}
+
+	return fmt.Sprintf("Id1: %v,Id2:%v,PreId:0x%v,NextId:0x%v,BlockNumber:%v,Account:%v,BlockOnlineAcc:%v,BloakLastPing:%v",
+		common.BytesToHash(info.Id1[:]).String(), common.BytesToHash(info.Id2[:]).String(), common.Bytes2Hex(info.PreId[:]), common.Bytes2Hex(info.NextId[:]), info.BlockNumber.String(), info.Account.String(),
+		info.BlockOnlineAcc.String(), info.BlockLastPing.String())
+}
+
+// Data
+// Masternodes return masternode contract data
+func (b *EthAPIBackend) Data() (strPromotion string) {
+	if b.eth.masternodeManager.srvr.Self() == nil {
+		strPromotion = "wait for more 10 seconds to initial the geth"
+		return
+	}
+	xy := b.eth.masternodeManager.srvr.Self().XY()
+
+	var id [8]byte
+	copy(id[:], xy[0:8])
+	has, err := b.eth.masternodeManager.contract.Has(nil, id)
+	if err != nil {
+		fmt.Errorf("contract.Has error %v", err)
+		return
+	}
+	if has {
+		strPromotion = fmt.Sprintf("### It's already been a masternode!,don't send your masternode data any more!")
+	}
+	data := "0x2f926732" + common.Bytes2Hex(xy[:])
+	return fmt.Sprintf("%v your masternode data is %v", strPromotion, data)
+}
+
+// Masternodes return masternode contract data
+func (b *EthAPIBackend) Ns() int64 {
+	return discover.NanoDrift()
+}
+
+// StartMasternode
+// TODO StartMasternode just call the start function of instantx
+func (b *EthAPIBackend) StartMasternode() bool {
+	return true
+}
+
+// StopMasternode
+// TODO stop masternode
+func (b *EthAPIBackend) StopMasternode() bool {
+	return true
 }

@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package params
 
@@ -20,15 +20,19 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/etherzero/go-etherzero/common"
 )
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
+	MainnetGenesisHash = common.HexToHash("0x3db016c328e0f776ea3cabc6139e2f5d51c2528393987ed8361bdb27b3f29f98")
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
 	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
 	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
+
+	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
+	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
+
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -41,20 +45,37 @@ var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{
 }
 
 var (
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
-		HomesteadBlock:      big.NewInt(1150000),
-		DAOForkBlock:        big.NewInt(1920000),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(2463000),
-		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(2675000),
-		EIP158Block:         big.NewInt(2675000),
-		ByzantiumBlock:      big.NewInt(4370000),
-		ConstantinopleBlock: big.NewInt(7280000),
-		PetersburgBlock:     big.NewInt(7280000),
-		Ethash:              new(EthashConfig),
+
+	// witnessofCycle_2588019 is the witness for the bad cycle
+	WitnessesOfCycle_2588019  = []string{"1e327ad8a2fe97ce", "eb8da1836ac3f078", "b529e0790a2a0eb5", "946478e35c9484ab", "cb45dec265bbd237", "628d7a9104c79c18", "9abfb1f76545c0bc", "9e4c25b55a6a1375", "c4688a727620c6bc", "f1fd1ee99ee99e75", "73aafdb33ae3d44c", "3bfea657917ff8b6", "710585d2eebf1f60", "2e268eb4bb019acc", "bafdc9e2633f9772", "11ef7b9340748bdc", "d09082b2945ecd6a", "ba785492d9c046d6", "d79f657b57010940", "193731b20a555c1a", "ea98faa0ae1466dd", "1e327ad8a2fe97ce", "eb8da1836ac3f078", "b529e0790a2a0eb5", "946478e35c9484ab", "cb45dec265bbd237", "628d7a9104c79c18", "9abfb1f76545c0bc", "9e4c25b55a6a1375", "c4688a727620c6bc", "f1fd1ee99ee99e75", "73aafdb33ae3d44c", "3bfea657917ff8b6", "710585d2eebf1f60", "2e268eb4bb019acc", "bafdc9e2633f9772", "11ef7b9340748bdc", "d09082b2945ecd6a", "ba785492d9c046d6", "d79f657b57010940", "193731b20a555c1a", "ea98faa0ae1466dd", "1e327ad8a2fe97ce", "eb8da1836ac3f078", "b529e0790a2a0eb5", "946478e35c9484ab", "cb45dec265bbd237", "628d7a9104c79c18", "9abfb1f76545c0bc", "9e4c25b55a6a1375", "c4688a727620c6bc", "f1fd1ee99ee99e75", "73aafdb33ae3d44c", "3bfea657917ff8b6", "710585d2eebf1f60", "2e268eb4bb019acc", "bafdc9e2633f9772", "11ef7b9340748bdc", "d09082b2945ecd6a", "ba785492d9c046d6", "d79f657b57010940", "193731b20a555c1a", "ea98faa0ae1466dd"}
+	BadWitnessOfCycle_2588019 = uint64(2588019)
+	// BadCycle when the previous version code make the generating block process break down for a few hours
+	BadCycye                  = map[uint64]uint64{
+		2588010: 15,
+		2588012: 2,
+		2588016: 4,
+		2588019: 3,
+		2588026: 3,
+	}
+
+	DevoteChainConfig = &ChainConfig{
+		ChainID:        big.NewInt(90),
+		EtherzeroBlock: big.NewInt(0),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   nil,
+		DAOForkSupport: false,
+		EIP150Block:    big.NewInt(0),
+		EIP150Hash:     common.Hash{},
+		EIP155Block:    big.NewInt(0),
+		EIP158Block:    big.NewInt(0),
+		ByzantiumBlock: big.NewInt(0),
+		DevoteBlock:    big.NewInt(10000000),
+		Devote: &DevoteConfig{
+			Period: 1,
+			Epoch:  600,
+			Witnesses: []string{
+			},
+		},
 	}
 
 	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
@@ -94,6 +115,7 @@ var (
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	RinkebyChainConfig = &ChainConfig{
 		ChainID:             big.NewInt(4),
+		EtherzeroBlock:      big.NewInt(1),
 		HomesteadBlock:      big.NewInt(1),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -102,11 +124,17 @@ var (
 		EIP155Block:         big.NewInt(3),
 		EIP158Block:         big.NewInt(3),
 		ByzantiumBlock:      big.NewInt(1035301),
-		ConstantinopleBlock: big.NewInt(3660663),
-		PetersburgBlock:     big.NewInt(4321234),
+		ConstantinopleBlock: nil,
 		Clique: &CliqueConfig{
 			Period: 15,
 			Epoch:  30000,
+		},
+		Devote: &DevoteConfig{
+			Witnesses: []string{
+				"c34c967d399d38f0",
+				"ffb14ca8e65770b4",
+				"de4e2e0521f16469",
+			},
 		},
 	}
 
@@ -151,16 +179,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),nil, nil, nil, new(EthashConfig), nil, nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),nil, nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, &DevoteConfig{Period: 1, Epoch: 600}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0),big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig),nil,nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -185,6 +213,7 @@ type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
 	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
+	EtherzeroBlock *big.Int `json:"EtherzeroBlock,omitempty"` // Etherzero switch block (nil = no fork, 0 = already on Etherzero)
 
 	DAOForkBlock   *big.Int `json:"daoForkBlock,omitempty"`   // TheDAO hard-fork switch block (nil = no fork)
 	DAOForkSupport bool     `json:"daoForkSupport,omitempty"` // Whether the nodes supports or opposes the DAO hard-fork
@@ -200,10 +229,12 @@ type ChainConfig struct {
 	ConstantinopleBlock *big.Int `json:"constantinopleBlock,omitempty"` // Constantinople switch block (nil = no fork, 0 = already activated)
 	PetersburgBlock     *big.Int `json:"petersburgBlock,omitempty"`     // Petersburg switch block (nil = same as Constantinople)
 	EWASMBlock          *big.Int `json:"ewasmBlock,omitempty"`          // EWASM switch block (nil = no fork, 0 = already activated)
+	DevoteBlock    *big.Int `json:"devoteBlock,omitempty"`    // Devote switch block (nil = no fork, 0 = already on byzantium)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+	Devote *DevoteConfig `json:"devote,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -225,6 +256,18 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
+// MasternodeConfig is the consensus engine configs for devote + delegated proof-of-stake based sealing.
+type DevoteConfig struct {
+	Period    uint64   `json:"period"`    // Number of seconds between blocks to enforce
+	Epoch     uint64   `json:"epoch"`     // Epoch length to reset votes and checkpoint
+	Witnesses []string `json:"witnesses"` // Genesis witness list
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (d *DevoteConfig) String() string {
+	return "devote"
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -233,10 +276,12 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
+	case c.Devote != nil:
+		engine = c.Devote
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v  ConstantinopleFix: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Devote: %v Constantinople: %v Engine: %v}",
 		c.ChainID,
 		c.HomesteadBlock,
 		c.DAOForkBlock,
@@ -245,6 +290,7 @@ func (c *ChainConfig) String() string {
 		c.EIP155Block,
 		c.EIP158Block,
 		c.ByzantiumBlock,
+		c.DevoteBlock,
 		c.ConstantinopleBlock,
 		c.PetersburgBlock,
 		engine,
@@ -254,6 +300,11 @@ func (c *ChainConfig) String() string {
 // IsHomestead returns whether num is either equal to the homestead block or greater.
 func (c *ChainConfig) IsHomestead(num *big.Int) bool {
 	return isForked(c.HomesteadBlock, num)
+}
+
+// IsDevote returns whether num is either equal to the Devote fork block or greater.
+func (c *ChainConfig) IsDevote(num *big.Int) bool {
+	return isForked(c.DevoteBlock, num)
 }
 
 // IsDAOFork returns whether num is either equal to the DAO fork block or greater.
@@ -279,6 +330,11 @@ func (c *ChainConfig) IsEIP158(num *big.Int) bool {
 // IsByzantium returns whether num is either equal to the Byzantium fork block or greater.
 func (c *ChainConfig) IsByzantium(num *big.Int) bool {
 	return isForked(c.ByzantiumBlock, num)
+}
+
+// IsEtherzero returns whether num is either equal to the Etherzero masternode fork block or greater.
+func (c *ChainConfig) IsEtherzero(num *big.Int) bool {
+	return isForked(c.EtherzeroBlock, num)
 }
 
 // IsConstantinople returns whether num is either equal to the Constantinople fork block or greater.
@@ -360,6 +416,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
 		return newCompatError("Byzantium fork block", c.ByzantiumBlock, newcfg.ByzantiumBlock)
 	}
+	if isForkIncompatible(c.DevoteBlock, newcfg.DevoteBlock, head) {
+		return newCompatError("Devote fork block", c.DevoteBlock, newcfg.DevoteBlock)
+	}
 	if isForkIncompatible(c.ConstantinopleBlock, newcfg.ConstantinopleBlock, head) {
 		return newCompatError("Constantinople fork block", c.ConstantinopleBlock, newcfg.ConstantinopleBlock)
 	}
@@ -434,8 +493,8 @@ func (err *ConfigCompatError) Error() string {
 // phases.
 type Rules struct {
 	ChainID                                     *big.Int
-	IsHomestead, IsEIP150, IsEIP155, IsEIP158   bool
-	IsByzantium, IsConstantinople, IsPetersburg bool
+	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
+	IsByzantium, IsDevote, IsConstantinople,IsPetersburg   bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -451,6 +510,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsEIP155:         c.IsEIP155(num),
 		IsEIP158:         c.IsEIP158(num),
 		IsByzantium:      c.IsByzantium(num),
+		IsDevote:         c.IsDevote(num),
 		IsConstantinople: c.IsConstantinople(num),
 		IsPetersburg:     c.IsPetersburg(num),
 	}

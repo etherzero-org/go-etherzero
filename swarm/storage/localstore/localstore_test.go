@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package localstore
 
@@ -28,9 +28,9 @@ import (
 	"testing"
 	"time"
 
-	ch "github.com/ethereum/go-ethereum/swarm/chunk"
-	"github.com/ethereum/go-ethereum/swarm/shed"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	ch "github.com/etherzero/go-etherzero/swarm/chunk"
+	"github.com/etherzero/go-etherzero/swarm/shed"
+	"github.com/etherzero/go-etherzero/swarm/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -130,10 +130,10 @@ func TestDB_updateGCSem(t *testing.T) {
 // Measurements on MacBook Pro (Retina, 15-inch, Mid 2014) show
 // that New function executes around 1s for database with 1M chunks.
 //
-// # go test -benchmem -run=none github.com/ethereum/go-ethereum/swarm/storage/localstore -bench BenchmarkNew -v -timeout 20m
+// # go test -benchmem -run=none github.com/etherzero/go-etherzero/swarm/storage/localstore -bench BenchmarkNew -v -timeout 20m
 // goos: darwin
 // goarch: amd64
-// pkg: github.com/ethereum/go-ethereum/swarm/storage/localstore
+// pkg: github.com/etherzero/go-etherzero/swarm/storage/localstore
 // BenchmarkNew/1000-8         	     200	  11672414 ns/op	 9570960 B/op	   10008 allocs/op
 // BenchmarkNew/10000-8        	     100	  14890609 ns/op	10490118 B/op	    7759 allocs/op
 // BenchmarkNew/100000-8       	      20	  58334080 ns/op	17763157 B/op	   22978 allocs/op

@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package les
 
@@ -20,22 +20,22 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/etherzero/go-etherzero/accounts"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/math"
+	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/bloombits"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/eth/gasprice"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/light"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 type LesApiBackend struct {
@@ -203,4 +203,48 @@ func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
+}
+
+// Masternodes return masternode info
+// TODO LesApiBackend interface does not implemente this api for now(2018-05-30)
+func (b *LesApiBackend) Masternodes() []string {
+	return nil
+}
+
+// Data return masternode contract data
+func (b *LesApiBackend) Data() string {
+	return ""
+}
+
+
+func (b *LesApiBackend) Ns() int64 {
+	return 0
+}
+
+// GetInfo return related info in masternode contract
+func (b *LesApiBackend) GetInfo(nodeid string) string {
+	return ""
+}
+
+// GetEnode return related Enodeinfo in enodeinfo contract
+func (b *LesApiBackend) GetEnode(nodeid string) string {
+	return ""
+}
+
+
+// EnodeCount
+// get the numbers contains in the enodeinfo contract
+func (b *LesApiBackend) EnodeCount() (ret uint64) {
+	return
+}
+
+
+// Start the masternode insfo
+func (s *LesApiBackend) StartMasternode() bool {
+	return false
+}
+
+// Stop the masternode insfo
+func (s *LesApiBackend) StopMasternode() bool {
+	return false
 }

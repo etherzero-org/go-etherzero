@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains the NTP time drift detection via the SNTP protocol:
 //   https://tools.ietf.org/html/rfc4330
@@ -22,10 +22,12 @@ package discover
 import (
 	"fmt"
 	"net"
+	"runtime/debug"
 	"sort"
+	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/etherzero/go-etherzero/log"
 )
 
 const (
@@ -40,6 +42,47 @@ type durationSlice []time.Duration
 func (s durationSlice) Len() int           { return len(s) }
 func (s durationSlice) Less(i, j int) bool { return s[i] < s[j] }
 func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+var (
+	nanoDrift = int64(0)
+)
+
+func NanoDrift() int64 {
+	return atomic.LoadInt64(&nanoDrift)
+}
+
+// CheckClockDrift An interface for queries an NTP server for clock drifts and warns the user if
+// one large enough is detected.
+// return nanoseconds
+func CheckClockDrift() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warn("CheckClockDrift recover", "err", err)
+			debug.PrintStack()
+		}
+	}()
+
+	for {
+		times := uint8(3)
+	begin:
+		drift, err := sntpDrift(ntpChecks)
+		if err != nil {
+			log.Warn("When NTP drift", "err", err)
+			times--
+			if times == 0 {
+				return
+			}
+			time.Sleep((1 << (uint8(times + 1 - times))) * time.Second) //1,2,4
+			goto begin
+		}
+		atomic.StoreInt64(&nanoDrift, int64(drift))
+		if (drift) >= time.Second {
+			log.Warn("NTP drift is bigger than one second", "drift", drift)
+		}
+		break
+	}
+
+}
 
 // checkClockDrift queries an NTP server for clock drifts and warns the user if
 // one large enough is detected.

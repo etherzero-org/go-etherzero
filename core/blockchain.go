@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package core implements the Ethereum consensus protocol.
 package core
@@ -20,6 +20,8 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/etherzero/go-etherzero/consensus/devote"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -27,22 +29,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/mclock"
+	"github.com/etherzero/go-etherzero/common/prque"
+	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/core/rawdb"
+	"github.com/etherzero/go-etherzero/core/state"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/vm"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/event"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/metrics"
+	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/rlp"
+	"github.com/etherzero/go-etherzero/trie"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -946,6 +948,10 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 	rawdb.WriteBlock(bc.db, block)
 
+	if _, err := block.DevoteDB.Commit(); err != nil {
+		return NonStatTy, err
+	}
+
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
 	if err != nil {
 		return NonStatTy, err
@@ -1197,6 +1203,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		if parent == nil {
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
 		}
+
+		block.DevoteDB, err = devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), parent.Header().Protocol)
+		if err != nil {
+			return it.index, events, coalescedLogs, err
+		}
+
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return it.index, events, coalescedLogs, err
@@ -1216,6 +1228,22 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		}
 		t2 := time.Now()
 		proctime := time.Since(start)
+
+		// Validate the devote state using the default validator
+		err = bc.Validator().ValidateDevoteState(block)
+		if err != nil {
+			bc.reportBlock(block, receipts, err)
+			return it.index, events, coalescedLogs, err
+		}
+		// Validate validator
+		devoteEngine, isDevote := bc.engine.(*devote.Devote)
+		if isDevote {
+			err = devoteEngine.VerifySeal(bc, block.Header())
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return it.index, events, coalescedLogs, err
+			}
+		}
 
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, state)

@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -22,9 +22,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/rlp"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -98,6 +98,8 @@ func (s *stateObject) empty() bool {
 type Account struct {
 	Nonce    uint64
 	Balance  *big.Int
+	Power       *big.Int
+	BlockNumber *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
 }
@@ -106,6 +108,12 @@ type Account struct {
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	if data.Balance == nil {
 		data.Balance = new(big.Int)
+	}
+	if data.Power == nil {
+		data.Power = new(big.Int)
+	}
+	if data.BlockNumber == nil {
+		data.BlockNumber = new(big.Int)
 	}
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
@@ -272,6 +280,18 @@ func (c *stateObject) AddBalance(amount *big.Int) {
 	c.SetBalance(new(big.Int).Add(c.Balance(), amount))
 }
 
+// AddPower removes amount from c's power.
+func (c *stateObject) AddPower(amount *big.Int) {
+	if amount.Sign() == 0 {
+		if c.empty() {
+			c.touch()
+		}
+
+		return
+	}
+	c.SetPower(new(big.Int).Add(c.Power(), amount))
+}
+
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
 func (c *stateObject) SubBalance(amount *big.Int) {
@@ -280,6 +300,16 @@ func (c *stateObject) SubBalance(amount *big.Int) {
 	}
 	c.SetBalance(new(big.Int).Sub(c.Balance(), amount))
 }
+
+// SubPower removes amount from c's power.
+func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
+	if amount.Sign() == 0 {
+		return
+	}
+	c.UpdatePower(blockNumber)
+	c.SetPower(new(big.Int).Sub(c.Power(), amount))
+}
+
 
 func (self *stateObject) SetBalance(amount *big.Int) {
 	self.db.journal.append(balanceChange{
@@ -292,6 +322,27 @@ func (self *stateObject) SetBalance(amount *big.Int) {
 func (self *stateObject) setBalance(amount *big.Int) {
 	self.data.Balance = amount
 }
+
+func (self *stateObject) SetPower(amount *big.Int) {
+	self.db.journal.append(powerChange{
+		account: &self.address,
+		prev:    new(big.Int).Set(self.data.Power),
+	})
+	self.setPower(amount)
+}
+
+func (self *stateObject) UpdatePower(blockNumber *big.Int) {
+	prevpower := self.data.Power
+	prevblock := self.data.BlockNumber
+	power := CalculatePower(prevblock, blockNumber, prevpower, self.data.Balance)
+	self.db.journal.append(blockChange{
+		account:   &self.address,
+		prevpower: prevpower,
+		prevblock: prevblock,
+	})
+	self.setPowerAndBlock(power, blockNumber)
+}
+
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}
@@ -380,4 +431,21 @@ func (self *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (self *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func (self *stateObject) setPower(amount *big.Int) {
+	self.data.Power = amount
+}
+
+func (self *stateObject) setPowerAndBlock(amount *big.Int, blockNumber *big.Int) {
+	self.data.Power = amount
+	self.data.BlockNumber = blockNumber
+}
+
+func (self *stateObject) Power() *big.Int {
+	return self.data.Power
+}
+
+func (self *stateObject) BlockNumber() *big.Int {
+	return self.data.BlockNumber
 }

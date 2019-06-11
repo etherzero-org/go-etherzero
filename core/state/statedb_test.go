@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -30,9 +30,9 @@ import (
 
 	check "gopkg.in/check.v1"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/ethdb"
 )
 
 // Tests that updating a state trie does not leak any database writes prior to
@@ -119,7 +119,7 @@ func TestIntermediateLeaks(t *testing.T) {
 
 // TestCopy tests that copying a statedb object indeed makes the original and
 // the copy independent of each other. This test is a regression test against
-// https://github.com/ethereum/go-ethereum/pull/15549.
+// https://github.com/etherzero/go-etherzero/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
 	orig, _ := New(common.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
@@ -422,7 +422,7 @@ func (s *StateSuite) TestTouchDelete(c *check.C) {
 }
 
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
-// See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
+// See https://github.com/etherzero/go-etherzero/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
 	sdb, _ := New(common.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
 	addr := common.HexToAddress("aaaa")

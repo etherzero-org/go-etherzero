@@ -1,18 +1,18 @@
-// Copyright 2019 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2019 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -21,11 +21,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/swarm/storage/mock"
-	"github.com/ethereum/go-ethereum/swarm/storage/mock/db"
-	"github.com/ethereum/go-ethereum/swarm/storage/mock/mem"
+	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock/db"
+	"github.com/etherzero/go-etherzero/swarm/storage/mock/mem"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
