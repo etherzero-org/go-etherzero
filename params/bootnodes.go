@@ -1,0 +1,96 @@
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
+//
+// The go-etherzero library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-etherzero library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+
+package params
+
+// MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
+// the main Ethereum network.
+var MainnetBootnodes = []string{
+	"enode://3b9471c1b4d93a45a1f7aff368d027dc7eeac7c526d80848d9848773b0426f41931ecdafa6f513800f68b5425f5b1a482ccbd6eb4b0f39982c4d3ff0cefe085e@35.182.48.79:21212", // Canada
+	"enode://58b0c020981e62942f1a724aa060cabd504098e49f3e4ab028da7aa0f7e12ca581224692052fbd0448bd83b4f1a45be83083f4929855cef08db37e2625adf664@47.90.101.201:21212", // Hongkong
+	"enode://c4fed9426ad1355c845edbc6442ef6bc3e9edb9eacdc42f613c297e8b986dc8099956a1b79c3d2ad12118d77e20c71fc22e2876773d5508cd0d7707b91767e35@52.47.202.205:21212", // Paris
+	"enode://33e3f4ea45c3b20d1703be686ce6f6e1726fe6279451eda864a8e63d57324c89ebe3ba0167c457850e50a9ec153e063e4f4ff6344c821db93d06c0ab87d092f5@3.0.240.110:21212", // Singapore
+	"enode://3e5655447985a71d2c46097fe790c95310a7d075f7333ed3019897cbbde057624f31285999da192aa27ac48f801d24bbb61fac5bf1bacd30439018843d676e59@13.52.109.169:21212", // California
+}
+
+var MainnetMasternodes = []string{
+	"enode://81e4a6821a4d7117b4740ffd50826b823acef0e5161df7cfca3bde8764e294cbe70eabbc99e85cd01e8456fd2c66b5ec900fb658910360ebe0648e3e47c5dc26", // [1]
+	"enode://754ae5a877ff913ec0f735c462fa4edd81dc6be347d9eea6beeb04cbdf6ff50ae7e276adf89e44f11389c6b3224f7ce991347e564d5f3c004b4d85513040088b", // [2]
+	"enode://9e2ebf310caf945d5e3abfa9968413755a6f3cb9fe044ac154d306726c9e54eae5c6266e42f5d5c6c81ec43afe48f8b7ad9c153e95be2131922edb0724b66825", // [3]
+	"enode://5ca084808222e3c8fc213a3d7c5ab4a15a54726f6801489311b9de355267086478c67ce82b4eba47d691a440ff7dcb91ba3e6392b9de15ff283bb30ddfea73fb", // [4]
+	"enode://b553bcf51ae5f42bf93c8ace9970f8fc56846c1ba3cba425bb13bdfefec4d1a2c37691f900455f0c7020890d163edcd85efea95977d6e76d79083ffbebe9b4e1", // [5]
+	"enode://bbdf34418a2630cf456eec69565e53d7462869a5c672312fc64126acda848437a05269fee2fe313a16f77bb0e871f7a4caf3abd7695d6ac3f19324a62bbe9979", // [6]
+	"enode://7f0dcd95f323b9f28d9ba631ffa3738318e4234190483c7e29a9cb61795ccc1f8eff96619e8e94a4547af4837b99b2fbfea49a713d323801b5369e35d4121c37", // [7]
+	"enode://35b680724f0cdfed0e1e8687d3627fa7fe7e6e0d46028938449952e460abd02beff51d135410b2d154c22a0211ce9a2067cd6f891ef0af90af999a42accfd0fe", // [8]
+	"enode://65fed3a560cd231a3a56490776a0af02bd1de92821033dd17cc7ad98a63a59aabfeeb3022e2e6b0ca19f62dde1c7524928ddc0d421d1b8ac6e3e472945d85078", // [9]
+	"enode://2cbd44f1b7b4d8bec0460c8d2770b8bbd514cc9b8a023a615fd16d32fb7b8aae5f07d13655b4895f8a05b59ed9daaae178aac68a62e8ca96132ec283df368013", // [10]
+	"enode://3b9639dadd18a258f9615166861693897049bf6dd1ce2da4f3b78394b6c7f44a32163f4e39320455dddebea62f0f8690fb57205198c761ed7cf3d8e13ef72f99", // [11]
+	"enode://53da176be1538aed11ca42608c8576c3591e2894c5aebb0c35bb49ff66710f63ca87668d0310f29a3ad23da2db87bbc540071b485e5b8cffddeb07b831c2bdd6", // [12]
+	"enode://017c131b2ae66403717d218906840b0c374c0c75337e5573e0abe3eb63c5dad6e1decd3bfb31941f6cc6dbbcdc820cc103a0dabf7cc65763a508c295c1cf30af", // [13]
+	"enode://4fa67b765794778372a86e7f6678d2044c9933b14c645e321718b280b74e0452dcd9d92199e90f38fca83023745ff91c8cda65f09d44bf1bc45797da97136d88", // [14]
+	"enode://4717417a9605535deb1e2f5241e2682b8165b06807d4a3bf0ab9ec4e4b2b49a039968cedeba98b1a8e43782e9c7b740d810de8a046251353f267401e0ba902e3", // [15]
+	"enode://b371992843eaf7cdedeccd6bd422e3229a86b639ffddfcaf45fc0b57cefdb6baf1a2b461c2e062f718130f3366d2b6df68dfdbdec21eeb6ec525111fc8570e31", // [16]
+	"enode://98da296630899f29522c90824cbba193e6d799eca04f20160031ef1f3f9fd711c9e8d84f91b598d49a619809979e8ed00b9a8cb3a8dfe41d998fb6d2b61c802f", // [17]
+	"enode://3beabd9d5fceccf6cb2c9d7f408f65df16065967c45d3d97882f9f2394430512b4a19036553d84950c8a5a6efe20bfba38e6921e94f2954f253c215a8c58caf8", // [18]
+	"enode://6f5381470fb24553e54e75a28216e6a630f93b81f8dcb0c8ab43796100d7e8f97b869b119ced8a3f22e5a0475d173528fea1e2ac61ab31f0d82db9ee788c1e85", // [19]
+	"enode://3b9471c1b4d93a45a1f7aff368d027dc7eeac7c526d80848d9848773b0426f41931ecdafa6f513800f68b5425f5b1a482ccbd6eb4b0f39982c4d3ff0cefe085e", // [20]
+	"enode://8375c6b34607d06b5d5b4df1a375cecc1df1237f420cb201c37900f856260e7b90d6fe8f64a30a01a4216c9c9627e22baa0089dee385f27aa0398f6fd2f085e4", // [21]
+}
+
+// TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Ropsten test network.
+var TestnetBootnodes = []string{
+	"enode://30b7ab30a01c124a6cceca36863ece12c4f5fa68e3ba9b0b51407ccc002eeed3b3102d20a88f1c1d3c3154e2449317b8ef95090e77b312d5cc39354f86d5d606@52.176.7.10:30303",    // US-Azure geth
+	"enode://865a63255b3bb68023b6bffd5095118fcc13e79dcf014fe4e47e065c350c7cc72af2e53eff895f11ba1bbb6a2b33271c1116ee870f266618eadfc2e78aa7349c@52.176.100.77:30303",  // US-Azure parity
+	"enode://6332792c4a00e3e4ee0926ed89e0d27ef985424d97b6a45bf0f23e51f0dcb5e66b875777506458aea7af6f9e4ffb69f43f3778ee73c81ed9d34c51c4b16b0b0f@52.232.243.152:30303", // Parity
+	"enode://94c15d1b9e2fe7ce56e458b9a3b672ef11894ddedd0c6f247e0f1d3487f52b66208fb4aeb8179fce6e3a749ea93ed147c37976d67af557508d199d9594c35f09@192.81.208.223:30303", // @gpip
+}
+
+var TestnetMasternodes = []string{
+	"enode://59ca967b2c9c1442e81026f5ffc2b24f4b3787512194a41e4ab14dfac97e75b700988cac80f973641d40cd65f775f41955b93d2e843ebb03555b16dd9bf983d4", // nodekey: a9b50794ab7a9987aa416c455c13aa6cc8c0448c501a3ce8e4840efe47cb5c29
+}
+
+
+// RinkebyBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Rinkeby test network.
+var RinkebyBootnodes = []string{
+	"enode://a24ac7c5484ef4ed0c5eb2d36620ba4e4aa13b8c84684e1b4aab0cebea2ae45cb4d375b77eab56516d34bfbd3c1a833fc51296ff084b770b94fb9028c4d25ccf@52.169.42.101:30303", // IE
+	"enode://343149e4feefa15d882d9fe4ac7d88f885bd05ebb735e547f12e12080a9fa07c8014ca6fd7f373123488102fe5e34111f8509cf0b7de3f5b44339c9f25e87cb8@52.3.158.184:30303",  // INFURA
+	"enode://b6b28890b006743680c52e64e0d16db57f28124885595fa03a562be1d2bf0f3a1da297d56b13da25fb992888fd556d4c1a27b1f39d531bde7de1921c90061cc6@159.89.28.211:30303", // AKASHA
+}
+
+// GoerliBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Görli test network.
+var GoerliBootnodes = []string{
+	// Upstrem bootnodes
+	"enode://011f758e6552d105183b1761c5e2dea0111bc20fd5f6422bc7f91e0fabbec9a6595caf6239b37feb773dddd3f87240d99d859431891e4a642cf2a0a9e6cbb98a@51.141.78.53:30303",
+	"enode://176b9417f511d05b6b2cf3e34b756cf0a7096b3094572a8f6ef4cdcb9d1f9d00683bf0f83347eebdf3b81c3521c2332086d9592802230bf528eaf606a1d9677b@13.93.54.137:30303",
+	"enode://46add44b9f13965f7b9875ac6b85f016f341012d84f975377573800a863526f4da19ae2c620ec73d11591fa9510e992ecc03ad0751f53cc02f7c7ed6d55c7291@94.237.54.114:30313",
+	"enode://c1f8b7c2ac4453271fa07d8e9ecf9a2e8285aa0bd0c07df0131f47153306b0736fd3db8924e7a9bf0bed6b1d8d4f87362a71b033dc7c64547728d953e43e59b2@52.64.155.147:30303",
+	"enode://f4a9c6ee28586009fb5a96c8af13a58ed6d8315a9eee4772212c1d4d9cebe5a8b8a78ea4434f318726317d04a3f531a1ef0420cf9752605a562cfe858c46e263@213.186.16.82:30303",
+
+	// Ethereum Foundation bootnode
+	"enode://573b6607cd59f241e30e4c4943fd50e99e2b6f42f9bd5ca111659d309c06741247f4f1e93843ad3e8c8c18b6e2d94c161b7ef67479b3938780a97134b618b5ce@52.56.136.200:30303",
+}
+
+// DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
+// experimental RLPx v5 topic-discovery network.
+var DiscoveryV5Bootnodes = []string{
+	"enode://06051a5573c81934c9554ef2898eb13b33a34b94cf36b202b69fde139ca17a85051979867720d4bdae4323d4943ddf9aeeb6643633aa656e0be843659795007a@35.177.226.168:30303",
+	"enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b6530992ac706e2cb946b90a34f1f19548cd3c7baccbcaea354531e5983c7d1bc0dee16ce4b6440b@40.118.3.223:30304",
+	"enode://1c7a64d76c0334b0418c004af2f67c50e36a3be60b5e4790bdac0439d21603469a85fad36f2473c9a80eb043ae60936df905fa28f1ff614c3e5dc34f15dcd2dc@40.118.3.223:30306",
+	"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f247d2c75c45c6b4a60335060d072d7f5b35dd1d4c45f76941f62a4f83b6e75daaf@40.118.3.223:30307",
+}
