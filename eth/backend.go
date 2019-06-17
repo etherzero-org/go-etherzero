@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
@@ -89,7 +90,7 @@ type Ethereum struct {
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
-
+	witness           string
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
 	masternodeManager *MasternodeManager
@@ -236,6 +237,10 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+	// If Masternode is requested, set it up
+	if chainConfig.Devote != nil {
+		return devote.NewDevote(chainConfig.Devote, db)
+	}
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -412,6 +417,25 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.miner.SetEtherbase(etherbase)
 }
 
+func (s *Ethereum) Witness() (witness string, err error) {
+	s.lock.RLock()
+	witness = s.witness
+	s.lock.RUnlock()
+
+	if witness != "" {
+		return witness, nil
+	}
+	// no need to verify master node
+	return s.masternodeManager.ID, nil
+}
+
+// set in js console via admin interface or wrapper from cli flags
+func (self *Ethereum) SetWitness(witness string) {
+	self.lock.Lock()
+	self.witness = witness
+	self.lock.Unlock()
+}
+
 // StartMining starts the miner with the given number of CPU threads. If mining
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
@@ -440,6 +464,16 @@ func (s *Ethereum) StartMining(threads int) error {
 		if err != nil {
 			log.Error("Cannot start mining without etherbase", "err", err)
 			return fmt.Errorf("etherbase missing: %v", err)
+		}
+		witness, err := s.Witness()
+		fmt.Printf("backend StartMining witness:%s\n", witness)
+		if err != nil {
+			log.Error("Cannot start mining without Witness", "err", err)
+			return fmt.Errorf("Witness missing: %v", err)
+		}
+		// no need to verify
+		if devote, ok := s.engine.(*devote.Devote); ok {
+			devote.Authorize(witness, s.masternodeManager.SignHash)
 		}
 		if clique, ok := s.engine.(*clique.Clique); ok {
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
@@ -514,10 +548,21 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	}
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
+	go s.startMasternode(srvr)
+
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
 	return nil
+}
+
+func (s *Ethereum) startMasternode(srvr *p2p.Server) {
+	t := time.NewTimer(3 * time.Second)
+	select {
+	case <-t.C:
+		s.masternodeManager.Start(srvr, s.EventMux())
+	}
+
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
