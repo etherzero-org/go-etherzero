@@ -43,7 +43,7 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-	NetworkId:      1,
+	NetworkId:      90,
 	LightPeers:     100,
 	DatabaseCache:  512,
 	TrieCleanCache: 256,
@@ -52,7 +52,7 @@ var DefaultConfig = Config{
 	MinerGasFloor:  8000000,
 	MinerGasCeil:   8000000,
 	MinerGasPrice:  big.NewInt(params.GWei),
-	MinerRecommit:  3 * time.Second,
+	MinerRecommit:  1 * time.Second,
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
