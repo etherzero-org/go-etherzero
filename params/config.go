@@ -59,7 +59,7 @@ var (
 	}
 
 	DevoteChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(90),
+		ChainID:        big.NewInt(190),
 		EtherzeroBlock: big.NewInt(0),
 		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   nil,
