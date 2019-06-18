@@ -923,6 +923,12 @@
 			"revisionTime": "2016-12-08T18:13:25Z"
 		},
 		{
+			"checksumSHA1": "/DCXa5obr/jSH2X9+dG+xOWovmA=",
+			"path": "gopkg.in/fatih/set.v0",
+			"revision": "2c768e3c5489976167bfc42b5c7c92ca783f4389",
+			"revisionTime": "2018-08-03T06:55:37Z"
+		},
+		{
 			"checksumSHA1": "0xgs8lwcWLUffemlj+SsgKlxvDU=",
 			"path": "gopkg.in/natefinch/npipe.v2",
 			"revision": "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
@@ -953,5 +959,5 @@
 			"revisionTime": "2017-08-11T01:42:03Z"
 		}
 	],
-	"rootPath": "github.com/ethereum/go-ethereum"
+	"rootPath": "github.com/etherzero/go-etherzero"
 }
