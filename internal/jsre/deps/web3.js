@@ -2513,6 +2513,7 @@ var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
 var Personal = require('./web3/methods/personal');
+var Masternode = require('./web3/methods/masternode');
 var Swarm = require('./web3/methods/swarm');
 var Settings = require('./web3/settings');
 var version = require('./version.json');
@@ -2535,6 +2536,7 @@ function Web3 (provider) {
     this.shh = new Shh(this);
     this.net = new Net(this);
     this.personal = new Personal(this);
+    this.masternode = new Masternode(this);
     this.bzz = new Swarm(this);
     this.settings = new Settings();
     this.version = {
@@ -2617,7 +2619,12 @@ var properties = function () {
             name: 'version.whisper',
             getter: 'shh_version',
             inputFormatter: utils.toDecimal
-        })
+        }),
+      new Property({
+        name: 'masternodes',
+        getter: 'eth_masternodes',
+        outputFormatter: formatters.outputLogFormatter
+      })
     ];
 };
 
@@ -3160,6 +3167,7 @@ module.exports = {
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
+
 
     You should have received a copy of the GNU Lesser General Public License
     along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
@@ -5275,6 +5283,14 @@ var methods = function () {
         outputFormatter: formatters.outputBigNumberFormatter
     });
 
+    var getPower = new Method({
+      name: 'getPower',
+      call: 'eth_getPower',
+      params: 2,
+      inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
+      outputFormatter: formatters.outputBigNumberFormatter
+    });
+
     var getStorageAt = new Method({
         name: 'getStorageAt',
         call: 'eth_getStorageAt',
@@ -5496,6 +5512,11 @@ var properties = function () {
         new Property({
             name: 'protocolVersion',
             getter: 'eth_protocolVersion'
+        }),
+        new Property({
+          name: 'masternodes',
+          getter: 'eth_masternodes',
+          outputFormatter: formatters.outputLogFormatter
         })
     ];
 };
@@ -6561,22 +6582,120 @@ var Settings = function () {
 module.exports = Settings;
 
 
-},{}],48:[function(require,module,exports){
-/*
-    This file is part of web3.js.
+  }, {}],
+  48: [function (require, module, exports) {
 
-    web3.js is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    /*
+            This file is part of web3.js.
 
-    web3.js is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+            web3.js is free software: you can redistribute it and/or modify
+            it under the terms of the GNU Lesser General Public License as published by
+            the Free Software Foundation, either version 3 of the License, or
+            (at your option) any later version.
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
+            web3.js is distributed in the hope that it will be useful,
+            but WITHOUT ANY WARRANTY; without even the implied warranty of
+            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+            GNU Lesser General Public License for more details.
+
+            You should have received a copy of the GNU Lesser General Public License
+            along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
+        */
+    /**
+     * @file eth.js
+     * @author Marek Kotewicz <marek@ethdev.com>
+     * @author Fabian Vogelsteller <fabian@ethdev.com>
+     * @date 2015
+     */
+
+    "use strict";
+
+    var Method = require('../method');
+    var Property = require('../property');
+    var formatters = require('../formatters');
+
+    function Masternode(web3) {
+      this._requestManager = web3._requestManager;
+
+      var self = this;
+
+      methods().forEach(function (method) {
+        method.attachToObject(self);
+        method.setRequestManager(self._requestManager);
+      });
+
+      properties().forEach(function (p) {
+        p.attachToObject(self);
+        p.setRequestManager(self._requestManager);
+      });
+    }
+
+    var methods = function () {
+      var startMasternode = new Method({
+        name: 'startMasternode',
+        call: 'masternode_startMasternode',
+      });
+      var stopMasternode = new Method({
+        name: 'stopMasternode',
+        call: 'masternode_stopMasternode',
+      });
+      var joinMasternode = new Method({
+        name: 'joinMasternode',
+        call: 'masternode_joinMasternode',
+        params: 1,
+        inputFormatter: [formatters.formatInputString],
+      });
+      var getInfo = new Method({
+        name: 'getInfo',
+        call: 'masternode_getInfo',
+        params: 1,
+        inputFormatter: [formatters.formatInputString],
+      });
+      return [
+        startMasternode,
+        stopMasternode,
+        joinMasternode,
+        getInfo
+      ];
+    };
+
+    var properties = function () {
+      return [
+        new Property({
+          name: 'list',
+          getter: 'masternode_list'
+        }),
+        new Property({
+          name: 'ns',
+          getter: 'masternode_ns'
+        }),
+        new Property({
+          name: 'data',
+          getter: 'masternode_data'
+        })
+      ];
+    };
+
+
+    module.exports = Masternode;
+
+  }, {"../formatters": 30, "../method": 36, "../property": 45}],
+  49: [function (require, module, exports) {
+    /*
+This file is part of web3.js.
+
+web3.js is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+web3.js is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
 */
 /** @file syncing.js
  * @authors:
