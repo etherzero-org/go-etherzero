@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package ethapi
 
@@ -77,6 +77,7 @@ func (s *PublicEthereumAPI) Masternodes() []string {
 	return nil
 	//return s.ms.AllNodes()
 }
+
 // Data return masternode contract node data
 func (s *PublicEthereumAPI) Data() string {
 	return ""
@@ -260,6 +261,35 @@ func (s *PrivateAccountAPI) ListAccounts() []common.Address {
 		}
 	}
 	return addresses
+}
+
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) List() []string {
+	return s.b.Masternodes()
+}
+
+// Masternodes will return a list master nodes messages.
+func (s *PrivateAccountAPI) Data() string {
+	return s.b.Data()
+}
+
+func (s *PrivateAccountAPI) Ns() int64 {
+	return s.b.Ns()
+}
+
+// GetInfo return related info in masternode contract
+func (s *PrivateAccountAPI) GetInfo(nodeid string) string {
+	return s.b.GetInfo(nodeid)
+}
+
+// Start  the masternodewinner info
+func (s *PrivateAccountAPI) StartMasternode() bool {
+	return s.b.StartMasternode()
+}
+
+// Stop return the masternodewinner info
+func (s *PrivateAccountAPI) StopMasternode() bool {
+	return s.b.StopMasternode()
 }
 
 // rawWallet is a JSON representation of an accounts.Wallet interface, with its
@@ -514,6 +544,16 @@ func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args Sen
 	return s.SendTransaction(ctx, args, passwd)
 }
 
+func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
+	b := state.GetPower(address, header.Number)
+	return b, state.Error()
+}
+
 // PublicBlockChainAPI provides an API to access the Ethereum blockchain.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicBlockChainAPI struct {
@@ -523,16 +563,6 @@ type PublicBlockChainAPI struct {
 // NewPublicBlockChainAPI creates a new Ethereum blockchain API.
 func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 	return &PublicBlockChainAPI{b}
-}
-
-func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
-	if state == nil || err != nil {
-		return nil, err
-	}
-	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
-	b := state.GetPower(address, header.Number)
-	return b, state.Error()
 }
 
 // BlockNumber returns the block number of the chain head.
@@ -727,7 +757,7 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 }
 
-func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, bool, error) {
+func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
@@ -744,18 +774,14 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		}
 	}
 	// Set default gas & gas price if none were set
-	gas := uint64(args.Gas)
+	gas, gasPrice := uint64(args.Gas), args.GasPrice.ToInt()
 	if gas == 0 {
 		gas = math.MaxUint64 / 2
 	}
-	if globalGasCap != nil && globalGasCap.Uint64() < gas {
-		log.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
-		gas = globalGasCap.Uint64()
-	}
-	gasPrice := args.GasPrice.ToInt()
 	if gasPrice.Sign() == 0 {
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
+
 	// Create new call message
 	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, false)
 
@@ -796,7 +822,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, _, err := s.doCall(ctx, args, blockNr, 5*time.Second, s.b.RPCGasCap())
+	result, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{}, 5*time.Second)
 	return (hexutil.Bytes)(result), err
 }
 
@@ -819,18 +845,13 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 		}
 		hi = block.GasLimit()
 	}
-	gasCap := s.b.RPCGasCap()
-	if gasCap != nil && hi > gasCap.Uint64() {
-		log.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
-		hi = gasCap.Uint64()
-	}
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) bool {
 		args.Gas = hexutil.Uint64(gas)
 
-		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, 0, gasCap)
+		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{}, 0)
 		if err != nil || failed {
 			return false
 		}
@@ -848,7 +869,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		if !executable(hi) {
-			return 0, fmt.Errorf("gas required exceeds allowance (%d) or always failing transaction", cap)
+			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
 		}
 	}
 	return hexutil.Uint64(hi), nil
@@ -935,7 +956,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		"size":             hexutil.Uint64(b.Size()),
 		"gasLimit":         hexutil.Uint64(head.GasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
-		"timestamp":        hexutil.Uint64(head.Time),
+		"timestamp":        head.Time,
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
 	}
@@ -1127,15 +1148,6 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx cont
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number
 func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
-	// Ask transaction pool for the nonce which includes pending transactions
-	if blockNr == rpc.PendingBlockNumber {
-		nonce, err := s.b.GetPoolNonce(ctx, address)
-		if err != nil {
-			return nil, err
-		}
-		return (*hexutil.Uint64)(&nonce), nil
-	}
-	// Resolve block number and use its state to ask for the nonce
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
