@@ -300,9 +300,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			log.Error("snapshot init masternodes failed", "err", err)
 			return nil, err
 		}
-
 		masternodes := sortableAddresses{}
-
 		for masternode, cnt := range count {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}

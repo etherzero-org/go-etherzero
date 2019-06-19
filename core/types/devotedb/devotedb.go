@@ -188,7 +188,7 @@ func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	//dc.SetWitnesses(cycle, witnesses)
+	log.Info("devotedb get witnesses by cycle size:","size",len(witnesses),"witness",witnesses,"cycle",cycle)
 	return witnesses, nil
 }
 
