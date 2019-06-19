@@ -69,24 +69,23 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
-	Time        uint64         `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"`
-	Nonce       BlockNonce     `json:"nonce"`
+	ParentHash  common.Hash              `json:"parentHash"       gencodec:"required"`
+	UncleHash   common.Hash              `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase    common.Address           `json:"miner"            gencodec:"required"`
+	Root        common.Hash              `json:"stateRoot"        gencodec:"required"`
+	TxHash      common.Hash              `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash common.Hash              `json:"receiptsRoot"     gencodec:"required"`
+	Bloom       Bloom                    `json:"logsBloom"        gencodec:"required"`
+	Difficulty  *big.Int                 `json:"difficulty"       gencodec:"required"`
+	Number      *big.Int                 `json:"number"           gencodec:"required"`
+	GasLimit    uint64                   `json:"gasLimit"         gencodec:"required"`
+	GasUsed     uint64                   `json:"gasUsed"          gencodec:"required"`
+	Time        uint64                   `json:"timestamp"        gencodec:"required"`
+	Extra       []byte                   `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash              `json:"mixHash"`
+	Nonce       BlockNonce               `json:"nonce"`
 	Witness     string                   `json:"witness"          gencodec:"required"`
 	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
-
 }
 
 // field type overrides for gencodec
@@ -165,7 +164,7 @@ type Block struct {
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
 
-	DevoteDB     *devotedb.DevoteDB
+	DevoteDB *devotedb.DevoteDB
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -328,7 +327,7 @@ func (b *Block) Header() *Header { return CopyHeader(b.header) }
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
 
-func (b *Block) Witness() string { return b.header.Witness }
+func (b *Block) Witness() string              { return b.header.Witness }
 func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
@@ -363,6 +362,7 @@ func (b *Block) WithSeal(header *Header) *Block {
 		header:       &cpy,
 		transactions: b.transactions,
 		uncles:       b.uncles,
+		DevoteDB:     b.DevoteDB,
 	}
 }
 
