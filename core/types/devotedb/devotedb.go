@@ -188,7 +188,6 @@ func (d *DevoteDB) GetWitnesses(cycle uint64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("devotedb get witnesses by cycle size:","size",len(witnesses),"witness",witnesses,"cycle",cycle)
 	return witnesses, nil
 }
 
