@@ -35,7 +35,6 @@ import (
 	"github.com/etherzero/go-etherzero/metrics"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
-
 )
 
 var (
