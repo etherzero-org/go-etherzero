@@ -325,7 +325,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
 	genesis := chain.GetHeaderByNumber(0)
-	log.Debug("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
+	fmt.Println("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
 
 	//Record the current witness list into the blockchain
 	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
