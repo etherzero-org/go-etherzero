@@ -157,6 +157,17 @@ func (mm *MasternodeManager) masternodeLoop() {
 			go discover.CheckClockDrift()
 		case <-ping.C:
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
+			// rescheck the masternode agagin
+			has, err := mm.contract.Has(nil, mm.srvr.Self().X8())
+			if err != nil {
+				log.Error("contract.Has", "error", err)
+			}
+			// if masternode ，set again
+			if has {
+				fmt.Println("### set the Masternode flag ")
+				atomic.StoreUint32(&mm.IsMasternode, 1)
+			}
+
 			if atomic.LoadUint32(&mm.IsMasternode) == 0 {
 				break
 			}
@@ -231,11 +242,9 @@ func (self *MasternodeManager) checkSyncing() {
 	}
 }
 
-
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
 }
-
 
 func (self *MasternodeManager) GetGovernanceContractAddress(number *big.Int) (common.Address, error) {
 	return masternode.GetGovernanceAddress(self.contract, number)
