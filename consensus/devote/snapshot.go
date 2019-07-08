@@ -262,6 +262,9 @@ func (snap *Snapshot) setSigners(ary []string) {
 
 // Recording accumulating the total number of signature blocks each signer in the current cycle,return devoteDB hash
 func (snap *Snapshot) recording(parent uint64, header uint64, witness string) *devotedb.DevoteProtocol {
+	snap.mu.Lock()
+	defer snap.mu.Unlock()
+
 	snap.devoteDB.Rolling(parent, header, witness)
 	snap.devoteDB.Commit()
 	return snap.devoteDB.Protocol()
