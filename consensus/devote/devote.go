@@ -320,12 +320,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
-	if ary, isok := d.signatures.Get(cycle); isok {
-		d.mu.Lock()
-		snap.devoteDB.SetWitnesses(cycle, ary.([]string))
-		snap.devoteDB.Commit()
-		d.mu.Unlock()
-	} else {
+	if _, isok := d.signatures.Get(cycle); !isok {
 		nodes, err := d.masternodeListFn(stableBlockNumber)
 		if err != nil {
 			return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
