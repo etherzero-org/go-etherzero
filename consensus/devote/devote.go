@@ -321,8 +321,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 	if ary,isok := d.signatures.Get(cycle);isok {
-		fmt.Println("finalize get masternode Hit Cache ", "blockNumber", header.Number, "cycle", cycle, "nodes", ary)
-
 		snap.devoteDB.SetWitnesses(cycle, ary.([]string))
 		snap.devoteDB.Commit()
 	}else{
@@ -331,7 +329,6 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 		}
 		genesis := chain.GetHeaderByNumber(0)
-		fmt.Println("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
 
 		//Record the current witness list into the blockchain
 		list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
