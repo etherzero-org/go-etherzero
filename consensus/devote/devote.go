@@ -320,19 +320,27 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
-	nodes, err := d.masternodeListFn(stableBlockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
-	}
-	genesis := chain.GetHeaderByNumber(0)
-	fmt.Println("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
+	if ary,isok := d.signatures.Get(cycle);isok {
+		fmt.Println("finalize get masternode Hit Cache ", "blockNumber", header.Number, "cycle", cycle, "nodes", ary)
 
-	//Record the current witness list into the blockchain
-	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
-	if err != nil {
-		return nil, err
+		snap.devoteDB.SetWitnesses(cycle, ary.([]string))
+		snap.devoteDB.Commit()
+	}else{
+		nodes, err := d.masternodeListFn(stableBlockNumber)
+		if err != nil {
+			return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
+		}
+		genesis := chain.GetHeaderByNumber(0)
+		fmt.Println("finalize get masternode ", "blockNumber", header.Number, "cycle", cycle, "nodes", nodes)
+
+		//Record the current witness list into the blockchain
+		list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
+		if err != nil {
+			return nil, err
+		}
+		d.signatures.Add(cycle, list)
 	}
-	d.signatures.Add(cycle, list)
+
 	//accumulating the signer of block
 	log.Debug("rolling ", "Number", header.Number, "parentTime", parent.Time, "headerTime", header.Time, "witness", header.Witness)
 	header.Protocol = snap.recording(parent.Time, header.Time, header.Witness)
