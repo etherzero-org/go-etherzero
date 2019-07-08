@@ -290,8 +290,8 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
-	maxWitnessSize := int64(2)
-	safeSize := int(2)
+	maxWitnessSize := int64(4)
+	safeSize := int(4)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
 		safeSize = 1
@@ -320,16 +320,16 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
-	if ary,isok := d.signatures.Get(cycle);isok {
+	if ary, isok := d.signatures.Get(cycle); isok {
 		snap.devoteDB.SetWitnesses(cycle, ary.([]string))
 		snap.devoteDB.Commit()
-	}else{
+	} else {
 		nodes, err := d.masternodeListFn(stableBlockNumber)
 		if err != nil {
 			return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 		}
 		genesis := chain.GetHeaderByNumber(0)
-
+		log.Info("devote Finalize get mastenrodes from contract", "nodes", nodes, "stableBlockNumber", stableBlockNumber)
 		//Record the current witness list into the blockchain
 		list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
 		if err != nil {
@@ -399,7 +399,7 @@ func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time +params.Period > header.Time {
+	if parent.Time+params.Period > header.Time {
 		return ErrInvalidTimestamp
 	}
 	return nil
@@ -536,32 +536,32 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	}
 	// Don't hold the signer fields for the entire sealing procedure
 	d.lock.RLock()
-	signer, signFn := d.signer, d.signFn
+	_, signFn := d.signer, d.signFn
 	d.lock.RUnlock()
 	// Bail out if we're unauthorized to sign a block
-	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	last := chain.CurrentHeader()
+	//snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//last := chain.CurrentHeader()
 	now := time.Now().Unix()
-	diff := now - int64(last.Time)
-	if diff > 30 {
-		snap.Recents = make(map[uint64]string)
-	}
-	singerMap := snap.Signers
-	// If we're amongst the recent signers, wait for the next block
-	for seen, recent := range snap.Recents {
-		if recent == signer {
-			// Signer is among recents, only wait if the current block doesn't shift it out
-			if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
-				return nil, nil
-			}
-			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
-		}
-	}
+	//diff := now - int64(last.Time)
+	//if diff > 30 {
+	//	snap.Recents = make(map[uint64]string)
+	//}
+	//singerMap := snap.Signers
+	//// If we're amongst the recent signers, wait for the next block
+	//for seen, recent := range snap.Recents {
+	//	if recent == signer {
+	//		// Signer is among recents, only wait if the current block doesn't shift it out
+	//		if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
+	//			log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
+	//			return nil, nil
+	//		}
+	//		log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
+	//	}
+	//}
 
 	NextSlot := int64(NextSlot(uint64(now)))
 	delay := NextSlot - now
