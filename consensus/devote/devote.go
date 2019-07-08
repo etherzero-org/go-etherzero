@@ -536,32 +536,32 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	}
 	// Don't hold the signer fields for the entire sealing procedure
 	d.lock.RLock()
-	_, signFn := d.signer, d.signFn
+	signer, signFn := d.signer, d.signFn
 	d.lock.RUnlock()
 	// Bail out if we're unauthorized to sign a block
-	//snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//last := chain.CurrentHeader()
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	last := chain.CurrentHeader()
 	now := time.Now().Unix()
-	//diff := now - int64(last.Time)
-	//if diff > 30 {
-	//	snap.Recents = make(map[uint64]string)
-	//}
-	//singerMap := snap.Signers
-	//// If we're amongst the recent signers, wait for the next block
-	//for seen, recent := range snap.Recents {
-	//	if recent == signer {
-	//		// Signer is among recents, only wait if the current block doesn't shift it out
-	//		if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
-	//			log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
-	//			return nil, nil
-	//		}
-	//		log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
-	//	}
-	//}
+	diff := now - int64(last.Time)
+	if diff > 30 {
+		snap.Recents = make(map[uint64]string)
+	}
+	singerMap := snap.Signers
+	// If we're amongst the recent signers, wait for the next block
+	for seen, recent := range snap.Recents {
+		if recent == signer {
+			// Signer is among recents, only wait if the current block doesn't shift it out
+			if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
+				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
+				return nil, nil
+			}
+			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
+		}
+	}
 
 	NextSlot := int64(NextSlot(uint64(now)))
 	delay := NextSlot - now
