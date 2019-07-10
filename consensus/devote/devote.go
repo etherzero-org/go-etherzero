@@ -320,13 +320,17 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
-	if _, isok := d.signatures.Get(cycle); !isok {
+
+	if ary, isok := d.signatures.Get(cycle); isok {
+		snap.devoteDB.SetWitnesses(cycle,ary.([]string))
+		snap.devoteDB.Commit();
+	}else{
 		nodes, err := d.masternodeListFn(stableBlockNumber)
 		if err != nil {
 			return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 		}
 		genesis := chain.GetHeaderByNumber(0)
-		log.Debug("devote Finalize get mastenrodes from contract", "nodes", nodes, "stableBlockNumber", stableBlockNumber)
+		//log.Debug("devote Finalize get mastenrodes from contract", "nodes", nodes, "stableBlockNumber", stableBlockNumber)
 		//Record the current witness list into the blockchain
 		list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
 		if err != nil {
