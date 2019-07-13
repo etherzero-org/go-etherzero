@@ -18,26 +18,27 @@ package eth
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
-	"errors"
-	"context"
 
+	"crypto/ecdsa"
+	"github.com/etherzero/go-etherzero"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
-	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/p2p/discover"
-	"crypto/ecdsa"
-	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 var (
@@ -47,9 +48,10 @@ var (
 
 type MasternodeManager struct {
 	// channels for fetcher, syncer, txsyncLoop
-	IsMasternode uint32
-	srvr         *p2p.Server
-	contract     *contract.Contract
+	IsMasternode    uint32
+	srvr            *p2p.Server
+	contractBackend *ContractBackend
+	contract        *contract.Contract
 
 	mux *event.TypeMux
 	eth *Ethereum
@@ -63,11 +65,12 @@ type MasternodeManager struct {
 }
 
 func NewMasternodeManager(eth *Ethereum, contract *contract.Contract) *MasternodeManager {
-
+	contractBackend := NewContractBackend(eth)
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		eth:      eth,
-		contract: contract,
+		eth:             eth,
+		contractBackend: contractBackend,
+		contract:        contract,
 	}
 	return manager
 }
@@ -176,17 +179,23 @@ func (mm *MasternodeManager) masternodeLoop() {
 				fmt.Println(logTime, "Get gas price error:", err)
 				gasPrice = big.NewInt(20e+9)
 			}
-			minPower := new(big.Int).Mul(big.NewInt(90000), gasPrice)
-			fmt.Println(logTime, "gasPrice ", gasPrice.String(), "minPower ", minPower.String())
+			msg := ethereum.CallMsg{From: address, To: &params.MasterndeContractAddress}
+			gas, err := mm.contractBackend.EstimateGas(context.Background(), msg)
+			if err != nil {
+				fmt.Println("Get gas error:", err)
+				continue
+			}
+			minPower := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
+			fmt.Println("Gas:", gas, "GasPrice:", gasPrice.String(), "minPower:", minPower.String())
 			if stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
 				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), mm.eth.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).String())
-				break
+				continue
 			}
 			tx := types.NewTransaction(
 				mm.eth.txPool.State().GetNonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
-				90000,
+				gas,
 				gasPrice,
 				nil,
 			)
@@ -231,11 +240,9 @@ func (self *MasternodeManager) checkSyncing() {
 	}
 }
 
-
 func (self *MasternodeManager) MasternodeList(number *big.Int) ([]string, error) {
 	return masternode.GetIdsByBlockNumber(self.contract, number)
 }
-
 
 func (self *MasternodeManager) GetGovernanceContractAddress(number *big.Int) (common.Address, error) {
 	return masternode.GetGovernanceAddress(self.contract, number)
