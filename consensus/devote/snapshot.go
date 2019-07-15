@@ -27,6 +27,7 @@ import (
 	"sync"
 
 	"encoding/json"
+
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
@@ -34,20 +35,20 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 var skipBlock = big.NewInt(12153042)
 
 type Snapshot struct {
 	devoteDB *devotedb.DevoteDB
-	config   *params.DevoteConfig                 // Consensus engine parameters to fine tune behavior
-	sigcache *lru.ARCCache                        // Cache of recent block signatures to speed up ecrecover
-	Hash     common.Hash                          //Block hash where the snapshot was created
-	Number   uint64                               //Cycle number where the snapshot was created
-	Cycle    uint64                               //Cycle number where the snapshot was created
-	Signers  map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
-	Recents  map[uint64]string                    // set of recent masternodes for spam protections
+	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
+	Hash     common.Hash          //Block hash where the snapshot was created
+	Number   uint64               //Cycle number where the snapshot was created
+	Cycle    uint64               //Cycle number where the snapshot was created
+	Signers  map[string]struct{}  `json:"signers"` // Set of authorized signers at this moment
+	Recents  map[uint64]string    // set of recent masternodes for spam protections
 
 	TimeStamp uint64
 	mu        sync.Mutex
@@ -177,8 +178,7 @@ func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes [
 }
 
 //Remove from candidate nodes when a node does't work in the current cycle
-func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
-
+func (snap *Snapshot) uncast(cycle uint64, nodes []string, safeSize int) ([]string, error) {
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
 		return nodes, fmt.Errorf("failed to get witness: %s", err)
@@ -186,35 +186,54 @@ func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 	if len(witnesses) == 0 {
 		return nodes, errors.New("no witness could be uncast")
 	}
-	needUncastWitnesses := sortableAddresses{}
-	for _, witness := range witnesses {
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, cycle)
-		// TODO
-		key = append(key, []byte(witness)...)
 
-		size := uint64(0)
-		size = snap.devoteDB.GetStatsNumber(key)
-		if size < 1 {
-			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
-		}
-		log.Debug("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
+	weightedNodes := make(sortableAddresses, 0, len(nodes))
+	for _, node := range nodes {
+		weightedNodes = append(weightedNodes, &sortableAddress{
+			nodeid: node,
+			weight: big.NewInt(9223372036854775807), // initially give the biggest weight
+		})
 	}
-	// no witnessees need uncast
-	needUncastWitnessCnt := len(needUncastWitnesses)
-	if needUncastWitnessCnt <= 0 {
-		return nodes, nil
-	}
-	for _, witness := range needUncastWitnesses {
-		j := 0
-		for _, s := range nodes {
-			if s != witness.nodeid {
-				nodes[j] = s
-				j++
+
+	// updates node weight if necessary
+	for _, wn := range weightedNodes {
+		for _, witness := range witnesses {
+			if witness == wn.nodeid {
+				// get real weight
+				key := make([]byte, 8)
+				binary.BigEndian.PutUint64(key, cycle)
+				// TODO
+				key = append(key, []byte(witness)...)
+
+				wn.weight.SetUint64(snap.devoteDB.GetStatsNumber(key))
+				break
 			}
 		}
 	}
-	return nodes, nil
+
+	sort.Sort(weightedNodes)
+
+	// eliminates under weight nodes, but make sure have enough nodes finally
+	from := -1
+	zero := big.NewInt(0)
+	for i, node := range weightedNodes {
+		if node.weight.Cmp(zero) > 0 {
+			from = i
+			break
+		}
+	}
+	if from == -1 {
+		from = 0
+	} else if len(weightedNodes)-from < safeSize {
+		from = len(weightedNodes) - safeSize
+	}
+
+	result := make([]string, 0, len(weightedNodes)-from)
+	for _, node := range weightedNodes {
+		result = append(result, node.nodeid)
+	}
+
+	return result, nil
 }
 
 func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
@@ -295,7 +314,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		list := make([]string, len(nodes))
 		copy(list, nodes)
 		if !preisgenesis {
-			list, _ = snap.uncast(prevcycle, nodes)
+			list, _ = snap.uncast(prevcycle, nodes, safeSize)
 		}
 
 		count, err := snap.calculate(parent, preisgenesis, list)
