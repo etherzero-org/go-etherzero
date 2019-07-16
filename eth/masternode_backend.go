@@ -50,7 +50,6 @@ type MasternodeManager struct {
 	// channels for fetcher, syncer, txsyncLoop
 	IsMasternode    uint32
 	srvr            *p2p.Server
-	contractBackend *ContractBackend
 	contract        *contract.Contract
 
 	mux *event.TypeMux
@@ -65,11 +64,9 @@ type MasternodeManager struct {
 }
 
 func NewMasternodeManager(eth *Ethereum, contract *contract.Contract) *MasternodeManager {
-	contractBackend := NewContractBackend(eth)
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
 		eth:             eth,
-		contractBackend: contractBackend,
 		contract:        contract,
 	}
 	return manager
@@ -180,7 +177,8 @@ func (mm *MasternodeManager) masternodeLoop() {
 				gasPrice = big.NewInt(20e+9)
 			}
 			msg := ethereum.CallMsg{From: address, To: &params.MasterndeContractAddress}
-			gas, err := mm.contractBackend.EstimateGas(context.Background(), msg)
+			contractBackend := NewContractBackend(mm.eth)
+			gas, err := contractBackend.EstimateGas(context.Background(), msg)
 			if err != nil {
 				fmt.Println("Get gas error:", err)
 				continue
