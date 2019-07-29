@@ -19,6 +19,7 @@ package core
 import (
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/vm"
 )
 
@@ -35,7 +36,7 @@ type Validator interface {
 	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error
 
 	// ValidateMPoSState validates the given MPoS state
-	ValidateDevoteState(block *types.Block) error
+	ValidateDevoteState(block *types.Block, db *devotedb.DevoteDB) error
 }
 
 // Processor is an interface for processing blocks using a given initial state.

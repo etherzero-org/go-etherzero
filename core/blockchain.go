@@ -948,10 +948,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 	rawdb.WriteBlock(bc.db, block)
 
-	if _, err := block.DevoteDB.Commit(); err != nil {
-		return NonStatTy, err
-	}
-
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
 	if err != nil {
 		return NonStatTy, err
@@ -1204,7 +1200,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
 		}
 
-		block.DevoteDB, err = devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), parent.Header().Protocol)
+		mdb, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), parent.Header().Protocol)
 		if err != nil {
 			return it.index, events, coalescedLogs, err
 		}
@@ -1230,7 +1226,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		proctime := time.Since(start)
 
 		// Validate the devote state using the default validator
-		err = bc.Validator().ValidateDevoteState(block)
+		err = bc.Validator().ValidateDevoteState(block,mdb)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return it.index, events, coalescedLogs, err

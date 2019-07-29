@@ -74,6 +74,12 @@ func New(db Database, cycleRoot, statsRoot common.Hash) (*DevoteDB, error) {
 
 func NewDevoteByProtocol(db Database, protocol *DevoteProtocol) (*DevoteDB, error) {
 
+	if db == nil {
+		fmt.Printf("db is nil")
+	}
+	if protocol == nil {
+		fmt.Printf("protocol is nil")
+	}
 	cycleTrie, err := db.OpenTrie(protocol.CycleHash)
 	if err != nil {
 		return nil, err

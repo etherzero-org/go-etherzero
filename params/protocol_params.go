@@ -92,7 +92,7 @@ const (
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 
 	Epoch           uint64 = 600
-	Period           uint64 = 1
+	Period          uint64 = 1
 )
 
 var (

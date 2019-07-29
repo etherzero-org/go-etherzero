@@ -121,7 +121,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			snap.Recents[number] = signer
 		}
 	}
-	//snap.Number += uint64(len(headers))
 	snap.Number = headers[0].Number.Uint64()
 	snap.Hash = headers[len(headers)-1].Hash()
 	snap.Cycle = headers[len(headers)-1].Time / params.Epoch
@@ -223,7 +222,7 @@ func (snap *Snapshot) uncast(cycle uint64, nodes []string, safeSize int) ([]stri
 func (snap *Snapshot) uncastImproved(cycle uint64, nodes []string, safeSize int) ([]string, error) {
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
-		return nodes, fmt.Errorf("failed to get witness: %s", err)
+		return nodes, fmt.Errorf("failed to get witness from DB: %s", err)
 	}
 	if len(witnesses) == 0 {
 		return nodes, errors.New("no witness could be uncast")
@@ -339,24 +338,24 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		isbad           bool   = false
 		size            uint64 = 1
 		genesiscycle           = genesis.Time / params.Epoch
-		prevcycle              = parent.Time / params.Epoch
+		precycle              = parent.Time / params.Epoch
 		currentcycle           = snap.TimeStamp / params.Epoch
 	)
 
-	preisgenesis := (prevcycle == genesiscycle)
-	if !preisgenesis && prevcycle < currentcycle {
-		prevcycle = currentcycle - 1
+	preisgenesis := (precycle == genesiscycle)
+	if !preisgenesis && precycle < currentcycle {
+		precycle = currentcycle - 1
 	}
 	if size, isbad = params.BadCycye[currentcycle]; isbad {
-		prevcycle = currentcycle - size
+		precycle = currentcycle - size
 	}
 
-	for i := prevcycle; i < currentcycle; i++ {
+	for i := precycle; i < currentcycle; i++ {
 		// if prevcycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
 		copy(list, nodes)
 		if !preisgenesis {
-			list, _ = snap.uncast(prevcycle, nodes, safeSize)
+			list, _ = snap.uncast(precycle, nodes, safeSize)
 		}
 
 		count, err := snap.calculate(parent, preisgenesis, list)
@@ -398,7 +397,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			sortedWitnesses = []string{}
 			sortedWitnesses = params.WitnessesOfCycle_2588019
 		}
-		log.Debug("Initializing a new cycle ", "prevcycle", prevcycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}

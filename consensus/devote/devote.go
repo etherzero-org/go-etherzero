@@ -289,7 +289,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt, devoteDB *devotedb.DevoteDB) (*types.Block, error) {
+	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	maxWitnessSize := int64(21)
 	safeSize := int(15)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
@@ -300,6 +300,10 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(maxWitnessSize))
 	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
 		stableBlockNumber = big.NewInt(0)
+	}
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
+	if err != nil {
+		return nil, fmt.Errorf("Can't create DevoteDB by header Protocol , Header.number : %d ", header.Number)
 	}
 	// Accumulate block rewards and commit the final state root
 	govaddress, err := d.governanceContractAddressFn(stableBlockNumber)
@@ -683,14 +687,14 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 }
 
 // store inserts the snapshot into the database.
-func (s *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
-	db.Put(confirmedBlockHead, s.confirmedBlockHeader.Hash().Bytes())
+func (d *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
+	db.Put(confirmedBlockHead, d.confirmedBlockHeader.Hash().Bytes())
 	return nil
 }
 
-func (s *Devote) loadConfirmedBlockHeader(chain consensus.ChainReader) (*types.Header, error) {
+func (d *Devote) loadConfirmedBlockHeader(chain consensus.ChainReader) (*types.Header, error) {
 
-	key, err := s.db.Get(confirmedBlockHead)
+	key, err := d.db.Get(confirmedBlockHead)
 	if err != nil {
 		return nil, err
 	}
@@ -720,11 +724,15 @@ func (d *Devote) APIs(chain consensus.ChainReader) []rpc.API {
 }
 
 // Close implements consensus.Engine. It's a noop for Devote as there is are no background threads.
-func (c *Devote) Close() error {
+func (d *Devote) Close() error {
 	return nil
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-func (c *Devote) SealHash(header *types.Header) common.Hash {
+func (d *Devote) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
+}
+
+func (d *Devote) SetDevoteDB(db ethdb.Database) {
+	d.db = db
 }

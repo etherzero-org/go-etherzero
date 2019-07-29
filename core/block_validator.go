@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"log"
 
 	"github.com/etherzero/go-etherzero/consensus"
@@ -102,14 +103,14 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	return nil
 }
 
-func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
+func (v *BlockValidator) ValidateDevoteState(block *types.Block, db *devotedb.DevoteDB) error {
 	header := block.Header()
-	localRoot := block.DevoteDB.Root()
+	localRoot := db.Protocol().Root()
 	remoteRoot := header.Protocol.Root()
-	if remoteRoot != localRoot{
-		log.Printf("StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
-		log.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
-		log.Printf("invalid devote blockNumber %d ,root (remote: %x local: %x)", block.Number(),remoteRoot, localRoot)
+	if remoteRoot != localRoot {
+		log.Printf("StatsHash block hash:%x header: hash:%x \n", db.Protocol().StatsHash, header.Protocol.StatsHash)
+		log.Printf("Cycle block hash:%x header:  hash:%x \n", db.Protocol().CycleHash, header.Protocol.CycleHash)
+		log.Printf("invalid devote blockNumber %d ,root (remote: %x local: %x)", block.Number(), remoteRoot, localRoot)
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}
 	return nil

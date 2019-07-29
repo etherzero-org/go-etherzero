@@ -190,10 +190,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.protocolManager.mm = eth.masternodeManager
 
-	if devote, ok := eth.engine.(*devote.Devote); ok {
-		devote.Masternodes(eth.masternodeManager.MasternodeList)
-		devote.GovernanceContract(eth.masternodeManager.GetGovernanceContractAddress)
+	if engine, ok := eth.engine.(*devote.Devote); ok {
+		engine.Masternodes(eth.masternodeManager.MasternodeList)
+		engine.GovernanceContract(eth.masternodeManager.GetGovernanceContractAddress)
+		engine.SetDevoteDB(chainDb)
 	}
+
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.MinerExtraData))
 
