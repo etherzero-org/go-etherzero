@@ -179,6 +179,48 @@ func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes [
 
 //Remove from candidate nodes when a node does't work in the current cycle
 func (snap *Snapshot) uncast(cycle uint64, nodes []string, safeSize int) ([]string, error) {
+
+	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
+	if err != nil {
+		return nodes, fmt.Errorf("failed to get witness: %s", err)
+	}
+	if len(witnesses) == 0 {
+		return nodes, errors.New("no witness could be uncast")
+	}
+	needUncastWitnesses := sortableAddresses{}
+	for _, witness := range witnesses {
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, cycle)
+		// TODO
+		key = append(key, []byte(witness)...)
+
+		size := uint64(0)
+		size = snap.devoteDB.GetStatsNumber(key)
+		if size < 1 {
+			needUncastWitnesses = append(needUncastWitnesses, &sortableAddress{witness, big.NewInt(int64(size))})
+		}
+		log.Debug("uncast masternode", "prevCycleID", cycle, "witness", witness, "miner count", int64(size))
+	}
+	// no witnessees need uncast
+	needUncastWitnessCnt := len(needUncastWitnesses)
+	if needUncastWitnessCnt <= 0 {
+		return nodes, nil
+	}
+	for _, witness := range needUncastWitnesses {
+		j := 0
+		for _, s := range nodes {
+			if s != witness.nodeid {
+				nodes[j] = s
+				j++
+			}
+		}
+	}
+	return nodes, nil
+}
+
+// Remove from candidate nodes when a node does't work in the current cycle.
+// This is an improved version to previous implementation.
+func (snap *Snapshot) uncastImproved(cycle uint64, nodes []string, safeSize int) ([]string, error) {
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
 		return nodes, fmt.Errorf("failed to get witness: %s", err)
