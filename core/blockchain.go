@@ -1200,11 +1200,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
 		}
 
-		mdb, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), parent.Header().Protocol)
-		if err != nil {
-			return it.index, events, coalescedLogs, err
-		}
-
 		state, err := state.New(parent.Root(), bc.stateCache)
 		if err != nil {
 			return it.index, events, coalescedLogs, err
@@ -1225,15 +1220,21 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		t2 := time.Now()
 		proctime := time.Since(start)
 
-		// Validate the devote state using the default validator
-		err = bc.Validator().ValidateDevoteState(block, mdb)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			return it.index, events, coalescedLogs, err
-		}
 		// Validate validator
 		devoteEngine, isDevote := bc.engine.(*devote.Devote)
 		if isDevote {
+			mdb, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), block.Header().Protocol)
+			if err != nil {
+				return it.index, events, coalescedLogs, err
+			}
+
+			// Validate the devote state using the default validator
+			err = bc.Validator().ValidateDevoteState(block, mdb)
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return it.index, events, coalescedLogs, err
+			}
+
 			err = devoteEngine.VerifySeal(bc, block.Header())
 			if err != nil {
 				bc.reportBlock(block, receipts, err)

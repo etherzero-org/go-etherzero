@@ -290,8 +290,8 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 // setting the final state and assembling the block.
 func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	maxWitnessSize := int64(21)
-	safeSize := int(15)
+	maxWitnessSize := int64(2)
+	safeSize := int(2)
 	if chain.Config().ChainID.Cmp(big.NewInt(90)) != 0 {
 		maxWitnessSize = 1
 		safeSize = 1
@@ -314,9 +314,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	cycle := header.Time / params.Epoch
 	devoteDB.SetCycle(cycle)
-	snap := &Snapshot{
-		config:   d.config,
-		devoteDB: devoteDB}
+	snap := &Snapshot{ config:   d.config, devoteDB: devoteDB}
 	snap.TimeStamp = header.Time
 
 	if timeOfFirstBlock == 0 {
@@ -325,22 +323,17 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		}
 	}
 
-	if ary, isok := d.signatures.Get(cycle); isok {
-		snap.devoteDB.SetWitnesses(cycle, ary.([]string))
-		snap.devoteDB.Commit()
-	} else {
-		nodes, err := d.masternodeListFn(stableBlockNumber)
-		if err != nil {
-			return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
-		}
-		genesis := chain.GetHeaderByNumber(0)
-		//Record the current witness list into the blockchain
-		list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
-		if err != nil {
-			return nil, err
-		}
-		d.signatures.Add(cycle, list)
+	nodes, err := d.masternodeListFn(stableBlockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
+	genesis := chain.GetHeaderByNumber(0)
+	//Record the current witness list into the blockchain
+	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
+	if err != nil {
+		return nil, err
+	}
+	d.signatures.Add(cycle, list)
 
 	//accumulating the signer of block
 	log.Debug("rolling ", "Number", header.Number, "parentTime", parent.Time, "headerTime", header.Time, "witness", header.Witness)
@@ -564,17 +557,6 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 				return nil, nil
 			}
 			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
-		}
-	}
-
-	NextSlot := int64(NextSlot(uint64(now)))
-	delay := NextSlot - now
-	log.Info("Devote Seal delay time :", "delay", delay, "NextSlot", NextSlot, "now", now)
-	if delay > 0 {
-		select {
-		case <-stop:
-			return nil, nil
-		case <-time.After(time.Duration(delay) * time.Second):
 		}
 	}
 
