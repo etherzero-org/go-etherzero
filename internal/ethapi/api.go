@@ -959,6 +959,9 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		"timestamp":        head.Time,
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"witness":          head.Witness,
+		"signature":        head.Signature,
+		"protocol":         head.Protocol.Root(),
 	}
 
 	if inclTx {
@@ -988,6 +991,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 	}
 	fields["uncles"] = uncleHashes
 	fields["witness"] = b.Witness()
+	fields["signature"] = b.Signaute()
 	return fields, nil
 }
 

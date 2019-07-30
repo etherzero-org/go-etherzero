@@ -84,6 +84,7 @@ type Header struct {
 	Extra       []byte                   `json:"extraData"        gencodec:"required"`
 	MixDigest   common.Hash              `json:"mixHash"`
 	Nonce       BlockNonce               `json:"nonce"`
+	Signature   common.Hash              `json:"signature"        gencodec:"required"`
 	Witness     string                   `json:"witness"          gencodec:"required"`
 	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
 }
@@ -122,6 +123,8 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Witness,
 		h.Time,
 		h.Extra,
+		h.Protocol.Root(),
+		h.Signature,
 	})
 }
 
@@ -325,7 +328,11 @@ func (b *Block) Header() *Header { return CopyHeader(b.header) }
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
 
-func (b *Block) Witness() string              { return b.header.Witness }
+func (b *Block) Witness() string { return b.header.Witness }
+
+func (b *Block) Protocol() *devotedb.DevoteProtocol { return b.header.Protocol }
+
+func (b *Block) Signaute() common.Hash { return b.header.Signature }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.
