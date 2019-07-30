@@ -335,8 +335,6 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 
 	var (
 		sortedWitnesses []string
-		isbad           bool   = false
-		size            uint64 = 1
 		genesiscycle           = genesis.Time / params.Epoch
 		precycle              = parent.Time / params.Epoch
 		currentcycle           = snap.TimeStamp / params.Epoch
@@ -346,18 +344,13 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 	if !preisgenesis && precycle < currentcycle {
 		precycle = currentcycle - 1
 	}
-	if size, isbad = params.BadCycye[currentcycle]; isbad {
-		precycle = currentcycle - size
-	}
-
 	for i := precycle; i < currentcycle; i++ {
 		// if prevcycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
 		copy(list, nodes)
 		if !preisgenesis {
-			list, _ = snap.uncast(precycle, nodes, safeSize)
+			list, _ = snap.uncastImproved(precycle, nodes, safeSize)
 		}
-
 		count, err := snap.calculate(parent, preisgenesis, list)
 		if err != nil {
 			log.Error("snapshot init masternodes failed", "err", err)
@@ -372,30 +365,12 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		}
 		sort.Sort(masternodes)
 
-		if isbad {
+		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
-			sizeTmp := size - 1
-			masternodesTmp := masternodes
-			for {
-				if sizeTmp == 0 {
-					break
-				}
-				masternodes = append(masternodes, masternodesTmp...)
-				sizeTmp--
-			}
-		} else {
-			if len(masternodes) > int(maxWitnessSize) {
-				masternodes = masternodes[:maxWitnessSize]
-			}
 		}
 		sortedWitnesses = []string{}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
-		}
-		// for special process for cycle 2588019
-		if currentcycle == params.BadWitnessOfCycle_2588019 {
-			sortedWitnesses = []string{}
-			sortedWitnesses = params.WitnessesOfCycle_2588019
 		}
 		log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)

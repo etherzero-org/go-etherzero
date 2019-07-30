@@ -1226,7 +1226,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 		proctime := time.Since(start)
 
 		// Validate the devote state using the default validator
-		err = bc.Validator().ValidateDevoteState(block,mdb)
+		err = bc.Validator().ValidateDevoteState(block, mdb)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return it.index, events, coalescedLogs, err
@@ -1261,7 +1261,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 			coalescedLogs = append(coalescedLogs, logs...)
 			events = append(events, ChainEvent{block, block.Hash(), logs})
 			lastCanon = block
-
 			// Only count canonical blocks for GC processing time
 			bc.gcproc += proctime
 
