@@ -38,7 +38,7 @@ const (
 )
 
 const (
-	MASTERNODE_PING_INTERVAL = 1200 * time.Second
+	MASTERNODE_PING_INTERVAL = 600 * time.Second
 )
 
 var (
@@ -61,7 +61,6 @@ type Masternode struct {
 }
 
 func newMasternode(nodeId discv5.NodeID, account common.Address, block, blockOnlineAcc, blockLastPing *big.Int) *Masternode {
-
 	id := GetMasternodeID(nodeId)
 	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
 	p.X.SetBytes(nodeId[:32])
@@ -119,7 +118,9 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 		}
 		lastId = ctx.pre
 		if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
-			if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(3600)) > 0 {
+			if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(1800)) > 0 {
+				continue
+			}else if ctx.Node.BlockOnlineAcc.Cmp(big.NewInt(1800)) < 0 {
 				continue
 			}
 		} else if ctx.Node.OriginBlock.Cmp(common.Big0) > 0 {
@@ -140,16 +141,14 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 			}
 			lastId = ctx.pre
 			if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
-				if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(3600)) <= 0 {
-					repeat := false
-					for _, n := range ids {
-						if n == ctx.Node.ID {
-							repeat = true
-						}
+				repeat := false
+				for _, n := range ids {
+					if n == ctx.Node.ID {
+						repeat = true
 					}
-					if !repeat {
-						ids = append(ids, ctx.Node.ID)
-					}
+				}
+				if !repeat {
+					ids = append(ids, ctx.Node.ID)
 				}
 			}
 		}
@@ -168,7 +167,6 @@ type MasternodeContext struct {
 }
 
 func GetMasternodeContext(opts *bind.CallOpts, contract *contract.Contract, id [8]byte) (*MasternodeContext, error) {
-
 	data, err := contract.ContractCaller.GetInfo(opts, id)
 	if err != nil {
 		return &MasternodeContext{}, err
