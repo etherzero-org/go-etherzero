@@ -38,6 +38,7 @@ import (
 	"crypto/ecdsa"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero"
 )
 
 var (
@@ -187,7 +188,14 @@ func (mm *MasternodeManager) masternodeLoop() {
 				fmt.Println(logTime, "Get gas price error:", err)
 				gasPrice = big.NewInt(20e+9)
 			}
-			minPower := new(big.Int).Mul(big.NewInt(90000), gasPrice)
+			msg := ethereum.CallMsg{From: address, To: &params.MasterndeContractAddress}
+			contractBackend := NewContractBackend(mm.eth)
+			gas, err := contractBackend.EstimateGas(context.Background(), msg)
+			if err != nil {
+				fmt.Println("Get gas error:", err)
+				continue
+			}
+			minPower := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
 			fmt.Println(logTime, "gasPrice ", gasPrice.String(), "minPower ", minPower.String())
 			if stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
 				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), mm.eth.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).String())
@@ -197,7 +205,7 @@ func (mm *MasternodeManager) masternodeLoop() {
 				mm.eth.txPool.State().GetNonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
-				90000,
+				gas,
 				gasPrice,
 				nil,
 			)
