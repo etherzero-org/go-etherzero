@@ -97,11 +97,11 @@ func GetGovernanceAddress(contract *contract.Contract, blockNumber *big.Int) (co
 }
 
 func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
-	if blockNumber.Uint64() < (params.GenesisBlockNumber + 1800) {
-		return params.MainnetInitIds, nil
-	}
 	if blockNumber == nil {
 		blockNumber = new(big.Int)
+	}
+	if blockNumber.Uint64() < (params.GenesisBlockNumber + 1800) {
+		return params.MainnetInitIds, nil
 	}
 	opts := new(bind.CallOpts)
 	opts.BlockNumber = blockNumber
@@ -121,41 +121,12 @@ func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]s
 			break
 		}
 		lastId = ctx.pre
-		if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
-			if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(1800)) > 0 {
-				continue
-			}else if ctx.Node.BlockOnlineAcc.Cmp(big.NewInt(1800)) < 0 {
-				continue
-			}
-		} else if ctx.Node.OriginBlock.Cmp(common.Big0) > 0 {
+		if new(big.Int).Sub(blockNumber, ctx.Node.BlockLastPing).Cmp(big.NewInt(1800)) > 0 {
+			continue
+		}else if ctx.Node.BlockOnlineAcc.Cmp(big.NewInt(900)) < 0 {
 			continue
 		}
 		ids = append(ids, ctx.Node.ID)
-	}
-	if len(ids) < 21 {
-		lastId, err = contract.LastId(opts)
-		if err != nil {
-			return ids, err
-		}
-		for lastId != ([8]byte{}) {
-			ctx, err = GetMasternodeContext(opts, contract, lastId)
-			if err != nil {
-				log.Error("GetIdsByBlockNumber", "error", err)
-				break
-			}
-			lastId = ctx.pre
-			if ctx.Node.BlockLastPing.Cmp(common.Big0) > 0 {
-				repeat := false
-				for _, n := range ids {
-					if n == ctx.Node.ID {
-						repeat = true
-					}
-				}
-				if !repeat {
-					ids = append(ids, ctx.Node.ID)
-				}
-			}
-		}
 	}
 	return ids, nil
 }
