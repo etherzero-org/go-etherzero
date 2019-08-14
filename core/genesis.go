@@ -324,7 +324,7 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     configMainnet,
 		Nonce:      1,
-		Timestamp:  1531551970,
+		Timestamp:  1565762386,
 		GasLimit:   10000000,
 		Difficulty: big.NewInt(1),
 		Alloc:      alloc,
