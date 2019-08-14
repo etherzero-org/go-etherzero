@@ -14,9 +14,9 @@ GO ?= latest
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
 ifeq ($(BRANCH), $(DEFAULTBRANCH))
-		cp ./init.bin.1 $(GOBIN)/init.bin.1
-		cp ./init.bin.2 $(GOBIN)/init.bin.2
-		cp ./init.bin.3 $(GOBIN)/init.bin.3
+		cp ./init.data.0 $(GOBIN)/init.data.0
+		cp ./init.data.1 $(GOBIN)/init.data.1
+		cp ./init.data.2 $(GOBIN)/init.data.2
 endif
 
 swarm:

@@ -63,12 +63,9 @@ type MasternodeManager struct {
 	PrivateKey  *ecdsa.PrivateKey
 }
 
-func NewMasternodeManager(eth *Ethereum, contract *contract.Contract) *MasternodeManager {
-
-	// Create the masternode manager with its initial settings
+func NewMasternodeManager(eth *Ethereum) *MasternodeManager {
 	manager := &MasternodeManager{
 		eth:      eth,
-		contract: contract,
 	}
 	return manager
 }

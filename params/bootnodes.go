@@ -17,8 +17,7 @@
 package params
 
 var MainnetBootnodes = []string{
-	"enode://81e7f69a7990b9f2bc26abfba2b052e6fba389961ada8f60687acc1ac221997abc197bc9e56c0c7325b18438344234704e0429fabd75128d94b16d48586b18ee@127.0.0.1:30303", // Canada
-	"enode://190adef951323157d8e1024fc685429599c03e05f1cd62ccd74bd82afaca78a94e80bc92e17227460a9e2126f45097204fb32d67373737017f0dfd348d230abc@127.0.0.1:20202", // Hongkong
+	"enode://255532ad39595d512c7b7028815afefd00a4bc31941c56e683199a5874307f606619e269cc770b5f85afdb7723c304a4491a3499eb1689434f5905afab78958e@127.0.0.1:30303",
 }
 
 var MainnetMasternodes = []string{
@@ -27,27 +26,36 @@ var MainnetMasternodes = []string{
 }
 
 var MainnetInitIds = []string{
-	"20fbe3f4885b2795",
-	"e90b7b9c59200e86",
-	"0af003cc6ad940ee",
-	"da9bd1623e0eb15a",
-	"a388a552859326da",
-	"12a37c42bb749b85",
-	"8349a1d45351f0b8",
-	"8abbabf432ee79b4",
-	"b3f2c4dc7bf22558",
-	"b230915e87951825",
-	"3b9b1020f5dbf112",
-	"f130378ec8d78ff2",
-	"87de9abd41e28914",
-	"8940f5cd32fe86b5",
-	"783eb3ba5dd71e6f",
-	"232447ce7a26363b",
-	"ed886091309e177b",
-	"24355fa7bd81312c",
-	"b77dcea1eaf7d3bd",
-	"ea27dfb907d9383f",
-	"cab342132aae345b",
+	"cde8ff27b83eb1fd",
+	"1a4aa55295ac86f5",
+	"0096774dab8fa7ad",
+	"baa490b7d73c43d5",
+	"f422ea52a3f8a605",
+	"a3f309069a1abd2c",
+	"55ec79cddb871ec0",
+	"e9bd0bf6f5777c17",
+	"352d56d8ef23edfa",
+	"0948bfddf3656a8a",
+	"6079d71555734172",
+	"55bb6a431d35afc6",
+	"782dfb20fb36401f",
+	"8cdfff66a74c0fb1",
+	"d77597358e056f77",
+	"a4889af17694e0e1",
+	"8fdb077e972e6a90",
+	"19c4e94c735db0ab",
+	"9695e1a870a4ad13",
+	"729af40261ba80f4",
+	"87df82258895aae7",
+	"6f3cf020b06c46da",
+	"5428ad714fde5ced",
+	"ca703be1b161ed9e",
+	"a44c83732a87bf7f",
+	"28d324899f27e768",
+	"9cfd67a31406d80c",
+	"495a54b73469ae0c",
+	"0d8bb911a668adbd",
+	"a6c8b8a25e615d67",
 }
 
 var TestnetBootnodes = []string{
