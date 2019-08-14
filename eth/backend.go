@@ -182,7 +182,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, config.Whitelist); err != nil {
 		return nil, err
 	}
-	eth.masternodeManager = NewMasternodeManager(eth)
+	if eth.masternodeManager, err = NewMasternodeManager(eth); err != nil {
+		return nil, err
+	}
 	eth.protocolManager.mm = eth.masternodeManager
 
 	if engine, ok := eth.engine.(*devote.Devote); ok {

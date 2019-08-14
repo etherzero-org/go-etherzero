@@ -63,11 +63,19 @@ type MasternodeManager struct {
 	PrivateKey  *ecdsa.PrivateKey
 }
 
-func NewMasternodeManager(eth *Ethereum) *MasternodeManager {
-	manager := &MasternodeManager{
-		eth:      eth,
+func NewMasternodeManager(eth *Ethereum) (*MasternodeManager, error) {
+	contractBackend := NewContractBackend(eth)
+	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
+	if err != nil {
+		return nil, err
 	}
-	return manager
+	// Create the masternode manager with its initial settings
+	manager := &MasternodeManager{
+		eth:                eth,
+		contract:           contract,
+		syncing:            0,
+	}
+	return manager, nil
 }
 
 func (self *MasternodeManager) Clear() {
