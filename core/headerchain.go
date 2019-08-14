@@ -92,7 +92,7 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 		engine:        engine,
 	}
 
-	hc.genesisHeader = hc.GetHeaderByNumber(0)
+	hc.genesisHeader = hc.GetHeaderByNumber(params.GenesisBlockNumber)
 	if hc.genesisHeader == nil {
 		return nil, ErrNoGenesis
 	}

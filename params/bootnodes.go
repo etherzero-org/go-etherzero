@@ -26,6 +26,30 @@ var MainnetMasternodes = []string{
 	"enode://190adef951323157d8e1024fc685429599c03e05f1cd62ccd74bd82afaca78a94e80bc92e17227460a9e2126f45097204fb32d67373737017f0dfd348d230abc", // [2]
 }
 
+var MainnetInitIds = []string{
+	"20fbe3f4885b2795",
+	"e90b7b9c59200e86",
+	"0af003cc6ad940ee",
+	"da9bd1623e0eb15a",
+	"a388a552859326da",
+	"12a37c42bb749b85",
+	"8349a1d45351f0b8",
+	"8abbabf432ee79b4",
+	"b3f2c4dc7bf22558",
+	"b230915e87951825",
+	"3b9b1020f5dbf112",
+	"f130378ec8d78ff2",
+	"87de9abd41e28914",
+	"8940f5cd32fe86b5",
+	"783eb3ba5dd71e6f",
+	"232447ce7a26363b",
+	"ed886091309e177b",
+	"24355fa7bd81312c",
+	"b77dcea1eaf7d3bd",
+	"ea27dfb907d9383f",
+	"cab342132aae345b",
+}
+
 var TestnetBootnodes = []string{
 	"enode://59ca967b2c9c1442e81026f5ffc2b24f4b3787512194a41e4ab14dfac97e75b700988cac80f973641d40cd65f775f41955b93d2e843ebb03555b16dd9bf983d4@127.0.0.1:9646",
 }

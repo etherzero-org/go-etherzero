@@ -165,7 +165,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		return params.DevoteChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 	// Just commit the new block if there is no stored genesis block.
-	stored := rawdb.ReadCanonicalHash(db, 0)
+	stored := rawdb.ReadCanonicalHash(db, params.GenesisBlockNumber)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
@@ -272,7 +272,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		head.Difficulty = params.GenesisDifficulty
 	}
 	statedb.Commit(false)
-	statedb.Database().TrieDB().Commit(root, true)
+	statedb.Database().TrieDB().Commit(root, false)
 	block := types.NewBlock(head, nil, nil, nil)
 
 	return block
@@ -282,8 +282,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	block := g.ToBlock(db)
-	if block.Number().Sign() != 0 {
-		return nil, fmt.Errorf("can't commit genesis block with number > 0")
+	if block.NumberU64() != params.GenesisBlockNumber {
+		return nil, fmt.Errorf("can't commit genesis block with number != %d", params.GenesisBlockNumber)
 	}
 	rawdb.WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty)
 	rawdb.WriteBlock(db, block)
@@ -319,33 +319,16 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	alloc := decodePrealloc(mainnetAllocData)
-	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
-	//alloc[common.HexToAddress("0xF9037710C273d0321ddd1B6042D211c3703829Db")] = GenesisAccount{
-	//	Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
-	//}
-	//alloc[common.HexToAddress("0xaabe8da4af6ccc2d8def6f4e22dce92b0cc845bd")] = GenesisAccount{
-	//	Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
-	//}
 	configMainnet := params.DevoteChainConfig
-	var witnesses []string
-	for _, n := range params.MainnetMasternodes {
-		node := enode.MustParseV4(n)
-		pubkey := node.Pubkey()
-		xBytes := pubkey.X.Bytes()
-		var x [32]byte
-		copy(x[32-len(xBytes):], xBytes[:])
-		id1 := common.BytesToHash(x[:])
-		id := fmt.Sprintf("%x", id1[:8])
-		witnesses = append(witnesses, id)
-	}
-	configMainnet.Devote.Witnesses = witnesses
+	configMainnet.Devote.Witnesses = params.MainnetInitIds
 	return &Genesis{
 		Config:     configMainnet,
-		Nonce:      66,
+		Nonce:      1,
 		Timestamp:  1531551970,
 		GasLimit:   10000000,
 		Difficulty: big.NewInt(1),
 		Alloc:      alloc,
+		Number:     params.GenesisBlockNumber,
 	}
 }
 
@@ -468,20 +451,18 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
-	triedb := trie.NewDatabase(db)
-	tr, err := trie.New(root, triedb)
+	stateDb := trie.NewDatabase(db)
+	stateTrie, err := trie.New(root, stateDb)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	buf := make([]byte, 43)
 	accountCount := 0
 	emptyRoot := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-	emptyState := crypto.Keccak256Hash(nil).Bytes()
+	emptyHash := crypto.Keccak256Hash(nil)
 
-	var i int = 0
-	for i = 1; i <= 3; i++ {
-		path := strings.Replace(dir, "\\", "/", -1) + "/init.bin." + strconv.Itoa(i)
+	for i := int(0); i < 3; i++ {
+		path := strings.Replace(dir, "\\", "/", -1) + "/init.data." + strconv.Itoa(i)
 		file, err := os.Open(path)
 		if err != nil {
 			return common.Hash{}, err
@@ -490,51 +471,129 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 		bufReader := bufio.NewReader(file)
 
 		for {
-			readNum, err := bufReader.Read(buf[0:43])
-			if err != nil && err != io.EOF {
+			buf, err := myReader(bufReader, 43)
+
+			if err == io.EOF {
+				log.Info("Import initial objects", "count", accountCount, "nth", i)
+				break
+			}else if err != nil {
 				panic(err)
 			}
-			if 0 == readNum {
-				break
-			}
-			for readNum < 43 {
-				n, err := bufReader.Read(buf[readNum:43])
-				if err != nil && err != io.EOF {
+
+			var storageRoot common.Hash
+			var codeHash common.Hash
+
+			if i == 0 {
+				storageRoot = emptyRoot
+				codeHash = emptyHash
+			}else{
+				codeLenB, err := myReader(bufReader, 3)
+				if err != nil {
 					panic(err)
 				}
-				readNum += n
+				codeLen := byte2len(codeLenB)
+				code, err := myReader(bufReader, codeLen)
+				if err != nil {
+					panic(err)
+				}
+				codeHash = crypto.Keccak256Hash(code)
+
+				codeDb := trie.NewDatabase(db)
+				codeDb.InsertBlob(codeHash, code)
+				codeDb.Commit(codeHash, false)
+
+				storageDb := trie.NewDatabase(db)
+				storageTrie, err := trie.New(common.Hash{}, storageDb)
+				if err != nil {
+					return common.Hash{}, err
+				}
+
+				storageLenB, err := myReader(bufReader, 3)
+				if err != nil {
+					panic(err)
+				}
+				storageLen := byte2len(storageLenB)
+
+				for s := 0; s < storageLen; s++ {
+					storageKey, err := myReader(bufReader, 32)
+					if err != nil {
+						panic(err)
+					}
+
+					valueLen := make([]byte, 1)
+					readNum, err := bufReader.Read(valueLen[0:1])
+					if err != nil || readNum != 1 {
+						fmt.Println("valueLen readNum:", readNum)
+						panic(err)
+					}
+					valueLen2 := int(valueLen[0])
+
+					value, err := myReader(bufReader, valueLen2)
+					if err != nil {
+						panic(err)
+					}
+
+					storageTrie.TryUpdate(storageKey, value)
+				}
+
+				storageRoot, err = storageTrie.Commit(nil)
+				if err != nil {
+					panic(err)
+				}
+				storageDb.Commit(storageRoot, false)
 			}
+
 			var account = state.Account{
 				Balance:     new(big.Int).SetBytes(buf[32:43]),
 				Power:       common.Big0,
 				BlockNumber: common.Big0,
-				Root:        emptyRoot,
-				CodeHash:    emptyState,
+				Root:        storageRoot,
+				CodeHash:    codeHash.Bytes(),
 			}
+
 			encodeData, err := rlp.EncodeToBytes(&account)
 			if err != nil {
 				panic(err)
 			}
-			tr.TryUpdate(buf[0:32], encodeData)
-			if accountCount%100000 == 0 {
-				root1, err := tr.Commit(nil)
-				if err != nil {
-					panic(err)
-				}
-				triedb.Commit(root1, true)
-				log.Info("Import initial accounts", "count", accountCount)
-			}
+
+			stateTrie.TryUpdate(buf[0:32], encodeData)
 			accountCount++
+
+			if i > 0 && accountCount % 200 == 0 {
+				log.Info("Import initial objects", "count", accountCount, "nth", i)
+			}
 		}
+		root1, err := stateTrie.Commit(nil)
+		if err != nil {
+			panic(err)
+		}
+		stateDb.Commit(root1, false)
 	}
 
-	log.Info("Import initial accounts done!", "count", accountCount)
-	root2, err := tr.Commit(nil)
+	stateRoot, err := stateTrie.Commit(nil)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	triedb.Commit(root2, true)
-	return root2, nil
+	stateDb.Commit(stateRoot, false)
+	return stateRoot, nil
+}
+
+
+func byte2len(buf []byte) int {
+	return int(buf[0]) * 256 * 256 + int(buf[1]) * 256 + int(buf[2])
+}
+
+func myReader(bufReader *bufio.Reader, len int) ([]byte, error) {
+	buf := make([]byte, len)
+	readNum := 0
+	for readNum < len {
+		n, err := bufReader.Read(buf[readNum:len])
+		if err != nil {
+			return buf, err
+		}
+		readNum += n
+	}
+	return buf, nil
 }
 
 func masternodeContractAccount(masternodes []string) GenesisAccount {

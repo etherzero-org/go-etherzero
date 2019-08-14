@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in
@@ -105,7 +106,7 @@ func NewChainIndexer(chainDb, indexDb ethdb.Database, backend ChainIndexerBacken
 		update:      make(chan struct{}, 1),
 		quit:        make(chan chan error),
 		sectionSize: section,
-		confirmsReq: confirm,
+		confirmsReq: confirm + params.GenesisBlockNumber,
 		throttling:  throttling,
 		log:         log.New("type", kind),
 	}

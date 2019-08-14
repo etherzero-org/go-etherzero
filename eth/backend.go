@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/etherzero/go-etherzero/consensus/devote"
-	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"math/big"
 	"runtime"
 	"sync"
@@ -52,6 +51,7 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/etherzero/go-etherzero/crypto"
 )
 
 type LesServer interface {
@@ -183,9 +183,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, config.Whitelist); err != nil {
 		return nil, err
 	}
-	contractBackend := NewContractBackend(eth)
-	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(eth, contract); err != nil {
+	if eth.masternodeManager, err = NewMasternodeManager(eth); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
@@ -565,7 +563,6 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server) {
 	case <-t.C:
 		s.masternodeManager.Start(srvr, s.EventMux())
 	}
-
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the

@@ -32,6 +32,7 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
+	GenesisBlockNumber = uint64(22100722)
 
 )
 
@@ -57,7 +58,7 @@ var (
 		EIP155Block:    big.NewInt(0),
 		EIP158Block:    big.NewInt(0),
 		ByzantiumBlock: big.NewInt(0),
-		DevoteBlock:    big.NewInt(10000000),
+		DevoteBlock:    big.NewInt(0),
 		Devote: &DevoteConfig{
 			Period: 1,
 			Epoch:  600,

@@ -191,7 +191,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			}
 
 			// If we're at an checkpoint block, make a snapshot if it's known
-			if number == 0 || checkpoint.Time%params.Epoch == 0 {
+			if number == params.GenesisBlockNumber || checkpoint.Time%params.Epoch == 0 {
 				hash := checkpoint.Hash()
 				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), checkpoint.Protocol)
 				if err != nil {
@@ -240,8 +240,9 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	if err != nil {
 		return nil, err
 	}
-	d.recents.Add(snap.Hash, snap)
-
+	if number > (params.GenesisBlockNumber + 1800) {
+		d.recents.Add(snap.Hash, snap)
+	}
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 		if err = snap.store(d.db); err != nil {
@@ -298,8 +299,8 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 	parent := chain.GetHeaderByHash(header.ParentHash)
 	stableBlockNumber := new(big.Int).Sub(parent.Number, big.NewInt(maxWitnessSize))
-	if stableBlockNumber.Cmp(big.NewInt(0)) < 0 {
-		stableBlockNumber = big.NewInt(0)
+	if stableBlockNumber.Cmp(big.NewInt(int64(params.GenesisBlockNumber))) < 0 {
+		stableBlockNumber = big.NewInt(int64(params.GenesisBlockNumber))
 	}
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
 	if err != nil {
@@ -318,7 +319,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	snap.TimeStamp = header.Time
 
 	if timeOfFirstBlock == 0 {
-		if firstBlockHeader := chain.GetHeaderByNumber(1); firstBlockHeader != nil {
+		if firstBlockHeader := chain.GetHeaderByNumber(params.GenesisBlockNumber+1); firstBlockHeader != nil {
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
@@ -327,7 +328,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
-	genesis := chain.GetHeaderByNumber(0)
+	genesis := chain.GetHeaderByNumber(params.GenesisBlockNumber)
 	//Record the current witness list into the blockchain
 	list, err := snap.election(genesis, parent, nodes, safeSize, maxWitnessSize)
 	if err != nil {
@@ -513,7 +514,6 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
-
 	if (witness == "") || witness != d.signer {
 		return ErrInvalidBlockWitness
 	}
@@ -622,7 +622,7 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	if d.confirmedBlockHeader == nil {
 		header, err := d.loadConfirmedBlockHeader(chain)
 		if err != nil {
-			header = chain.GetHeaderByNumber(0)
+			header = chain.GetHeaderByNumber(params.GenesisBlockNumber)
 			if header == nil {
 				return err
 			}

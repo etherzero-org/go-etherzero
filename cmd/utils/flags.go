@@ -57,7 +57,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/netutil"
 	"github.com/etherzero/go-etherzero/params"
 	whisper "github.com/etherzero/go-etherzero/whisper/whisperv6"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -503,7 +503,7 @@ var (
 	MaxPeersFlag = cli.IntFlag{
 		Name:  "maxpeers",
 		Usage: "Maximum number of network peers (network disabled if set to 0)",
-		Value: 25,
+		Value: 50,
 	}
 	MaxPendingPeersFlag = cli.IntFlag{
 		Name:  "maxpendpeers",

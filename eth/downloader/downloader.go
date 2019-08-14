@@ -255,7 +255,7 @@ func (d *Downloader) Progress() ethereum.SyncProgress {
 	d.syncStatsLock.RLock()
 	defer d.syncStatsLock.RUnlock()
 
-	current := uint64(0)
+	current := uint64(params.GenesisBlockNumber)
 	switch d.mode {
 	case FullSync:
 		current = d.blockchain.CurrentBlock().NumberU64()
@@ -643,8 +643,8 @@ func calculateRequestSpan(remoteHeight, localHeight uint64) (int64, int, int, ui
 		count = 2
 	}
 	from = requestHead - (count-1)*span
-	if from < 0 {
-		from = 0
+	if from < int(params.GenesisBlockNumber) {
+		from = int(params.GenesisBlockNumber)
 	}
 	max := from + (count-1)*span
 	return int64(from), count, span - 1, uint64(max)
@@ -776,8 +776,8 @@ func (d *Downloader) findAncestor(p *peerConnection, remoteHeader *types.Header)
 		return number, nil
 	}
 	// Ancestor not found, we need to binary search over our chain
-	start, end := uint64(0), remoteHeight
-	if floor > 0 {
+	start, end := params.GenesisBlockNumber, remoteHeight
+	if floor > int64(params.GenesisBlockNumber) {
 		start = uint64(floor)
 	}
 	p.log.Trace("Binary searching for common ancestor", "start", start, "end", end)

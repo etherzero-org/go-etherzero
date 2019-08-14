@@ -67,7 +67,7 @@ func CheckClockDrift() {
 	begin:
 		drift, err := sntpDrift(ntpChecks)
 		if err != nil {
-			log.Warn("When NTP drift", "err", err)
+			// log.Warn("When NTP drift", "err", err)
 			times--
 			if times == 0 {
 				return

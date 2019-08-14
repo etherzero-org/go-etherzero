@@ -31,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p/discv5"
 	"github.com/etherzero/go-etherzero/p2p/enode"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 const (
@@ -38,7 +39,7 @@ const (
 )
 
 const (
-	MASTERNODE_PING_INTERVAL = 600 * time.Second
+	MASTERNODE_PING_INTERVAL = 1200 * time.Second
 )
 
 var (
@@ -96,6 +97,9 @@ func GetGovernanceAddress(contract *contract.Contract, blockNumber *big.Int) (co
 }
 
 func GetIdsByBlockNumber(contract *contract.Contract, blockNumber *big.Int) ([]string, error) {
+	if blockNumber.Uint64() < (params.GenesisBlockNumber + 1800) {
+		return params.MainnetInitIds, nil
+	}
 	if blockNumber == nil {
 		blockNumber = new(big.Int)
 	}
