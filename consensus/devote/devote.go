@@ -397,9 +397,9 @@ func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time+params.Period > header.Time {
-		return ErrInvalidTimestamp
-	}
+	//if parent.Time+params.Period > header.Time {
+	//	return ErrInvalidTimestamp
+	//}
 	return nil
 }
 
