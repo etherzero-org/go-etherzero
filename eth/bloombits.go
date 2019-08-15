@@ -27,6 +27,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/ethdb"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 const (
@@ -118,7 +119,7 @@ func (b *BloomIndexer) Reset(ctx context.Context, section uint64, lastSectionHea
 // Process implements core.ChainIndexerBackend, adding a new header's bloom into
 // the index.
 func (b *BloomIndexer) Process(ctx context.Context, header *types.Header) error {
-	b.gen.AddBloom(uint(header.Number.Uint64()-b.section*b.size), header.Bloom)
+	b.gen.AddBloom(uint(header.Number.Uint64()-params.GenesisBlockNumber-b.section*b.size), header.Bloom)
 	b.head = header.Hash()
 	return nil
 }

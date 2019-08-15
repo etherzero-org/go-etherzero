@@ -106,7 +106,7 @@ func NewChainIndexer(chainDb, indexDb ethdb.Database, backend ChainIndexerBacken
 		update:      make(chan struct{}, 1),
 		quit:        make(chan chan error),
 		sectionSize: section,
-		confirmsReq: confirm + params.GenesisBlockNumber,
+		confirmsReq: confirm,
 		throttling:  throttling,
 		log:         log.New("type", kind),
 	}
@@ -198,7 +198,7 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainH
 	defer sub.Unsubscribe()
 
 	// Fire the initial new head event to start any outstanding processing
-	c.newHead(currentHeader.Number.Uint64(), false)
+	c.newHead(currentHeader.Number.Uint64()-params.GenesisBlockNumber, false)
 
 	var (
 		prevHeader = currentHeader
@@ -225,11 +225,11 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainH
 
 				if rawdb.ReadCanonicalHash(c.chainDb, prevHeader.Number.Uint64()) != prevHash {
 					if h := rawdb.FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
-						c.newHead(h.Number.Uint64(), true)
+						c.newHead(h.Number.Uint64()-params.GenesisBlockNumber, true)
 					}
 				}
 			}
-			c.newHead(header.Number.Uint64(), false)
+			c.newHead(header.Number.Uint64()-params.GenesisBlockNumber, false)
 
 			prevHeader, prevHash = header, header.Hash()
 		}
@@ -391,13 +391,13 @@ func (c *ChainIndexer) processSection(section uint64, lastHead common.Hash) (com
 	}
 
 	for number := section * c.sectionSize; number < (section+1)*c.sectionSize; number++ {
-		hash := rawdb.ReadCanonicalHash(c.chainDb, number)
+		hash := rawdb.ReadCanonicalHash(c.chainDb, number+params.GenesisBlockNumber)
 		if hash == (common.Hash{}) {
-			return common.Hash{}, fmt.Errorf("canonical block #%d unknown", number)
+			return common.Hash{}, fmt.Errorf("canonical block #%d unknown", number+params.GenesisBlockNumber)
 		}
-		header := rawdb.ReadHeader(c.chainDb, hash, number)
+		header := rawdb.ReadHeader(c.chainDb, hash, number+params.GenesisBlockNumber)
 		if header == nil {
-			return common.Hash{}, fmt.Errorf("block #%d [%x…] not found", number, hash[:4])
+			return common.Hash{}, fmt.Errorf("block #%d [%x…] not found", number+params.GenesisBlockNumber, hash[:4])
 		} else if header.ParentHash != lastHead {
 			return common.Hash{}, fmt.Errorf("chain reorged during section processing")
 		}
