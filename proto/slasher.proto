@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+import "proto/masternode_block.proto";
+import "proto/attestation.proto";
+
+option go_package = "github.com/etherzero/go-etherzero/proto";
+
+// Slasher service API
+// 
+// Slasher service provides an interface for validators and masternode chain server to query
+// and subscribe for slashable events on the network as well as to make sure that the 
+// attestation or proposal they are going to submit to the network are not going to 
+// produce a slashable event.
+service Slasher {
+    // Gets AttesterSlashing container if the attestation that 
+    // was received produces a slashable event.
+    rpc IsSlashableAttestation(Attestation) returns (AttesterSlashing);
+
+    // Gets ProposerSlashing container if the block header that 
+    // was received produces a slashable event.
+    rpc IsSlashableBlock(MasternodeBlockHeader) returns (ProposerSlashing);
+
+    // Subscription to receive all slashable proposer slashing events found by the watchtower.
+    rpc SlashableProposals(google.protobuf.Empty) returns (stream ProposerSlashing);
+    
+    // Subscription to receive all slashable attester slashing events found by the watchtower.
+    rpc SlashableAttestations(google.protobuf.Empty) returns (stream AttesterSlashing);
+}
