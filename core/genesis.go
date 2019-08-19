@@ -168,7 +168,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 	stored := rawdb.ReadCanonicalHash(db, params.GenesisBlockNumber)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			log.Info("Writing default main-net genesis block")
+			log.Info("Writing default main-net genesis block, please wait for a few minutes ...")
 			genesis = DefaultGenesisBlock()
 			root, err := genesisAccounts(common.Hash{}, db)
 			if err != nil {
@@ -474,7 +474,6 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 			buf, err := myReader(bufReader, 43)
 
 			if err == io.EOF {
-				log.Info("Import initial objects", "count", accountCount, "nth", i)
 				break
 			} else if err != nil {
 				panic(err)
@@ -565,10 +564,6 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 
 			stateTrie.TryUpdate(buf[0:32], encodeData)
 			accountCount++
-
-			if i > 0 && accountCount%200 == 0 {
-				log.Info("Import initial objects", "count", accountCount, "nth", i)
-			}
 		}
 		root1, err := stateTrie.Commit(nil)
 		if err != nil {
