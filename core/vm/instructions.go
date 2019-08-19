@@ -764,6 +764,9 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
+	if value.Cmp(common.Big0) > 0 {
+		interpreter.evm.StateDB.AddIntx(contract.Address(), toAddr, value)
+	}
 	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, value)
 	if err != nil {
 		stack.push(interpreter.intPool.getZero())
