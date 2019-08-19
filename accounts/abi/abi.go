@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package abi
 
@@ -58,13 +58,11 @@ func (abi ABI) Pack(name string, args ...interface{}) ([]byte, error) {
 			return nil, err
 		}
 		return arguments, nil
-
 	}
 	method, exist := abi.Methods[name]
 	if !exist {
 		return nil, fmt.Errorf("method '%s' not found", name)
 	}
-
 	arguments, err := method.Inputs.Pack(args...)
 	if err != nil {
 		return nil, err
@@ -82,7 +80,7 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) (err error) {
 	// we need to decide whether we're calling a method or an event
 	if method, ok := abi.Methods[name]; ok {
 		if len(output)%32 != 0 {
-			return fmt.Errorf("abi: improperly formatted output")
+			return fmt.Errorf("abi: improperly formatted output: %s - Bytes: [%+v]", string(output), output)
 		}
 		return method.Outputs.Unpack(v, output)
 	} else if event, ok := abi.Events[name]; ok {

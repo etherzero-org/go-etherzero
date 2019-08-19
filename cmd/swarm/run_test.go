@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -254,7 +254,6 @@ func existingTestNode(t *testing.T, dir string, bzzaccount string) *testNode {
 	node.Cmd = runSwarm(t,
 		"--port", p2pPort,
 		"--nat", "extip:127.0.0.1",
-		"--nodiscover",
 		"--datadir", dir,
 		"--ipcpath", conf.IPCPath,
 		"--ens-api", "",
@@ -330,7 +329,6 @@ func newTestNode(t *testing.T, dir string) *testNode {
 	node.Cmd = runSwarm(t,
 		"--port", p2pPort,
 		"--nat", "extip:127.0.0.1",
-		"--nodiscover",
 		"--datadir", dir,
 		"--ipcpath", conf.IPCPath,
 		"--ens-api", "",

@@ -1,28 +1,30 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
 import (
 	"fmt"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"log"
+
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/params"
-	"log"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -49,21 +51,12 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 // header's transaction and uncle roots. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
-	if block.NumberU64() > 22613000 {
-		return fmt.Errorf("Need upgrade at block 22613000, current block: %d", block.NumberU64())
-	}
 	// Check whether the block's known, and if not, that it's linkable
 	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
 	}
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header()
-	if err := v.engine.VerifyUncles(v.bc, block); err != nil {
-		return err
-	}
-	if hash := types.CalcUncleHash(block.Uncles()); hash != header.UncleHash {
-		return fmt.Errorf("uncle root hash mismatch: have %x, want %x", hash, header.UncleHash)
-	}
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
@@ -104,14 +97,14 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	return nil
 }
 
-func (v *BlockValidator) ValidateDevoteState(block *types.Block) error {
+func (v *BlockValidator) ValidateDevoteState(block *types.Block, db *devotedb.DevoteDB) error {
 	header := block.Header()
-	localRoot := block.DevoteDB.Root()
+	localRoot := db.Protocol().Root()
 	remoteRoot := header.Protocol.Root()
-	if remoteRoot != localRoot{
-		log.Printf("StatsHash block hash:%x header: hash:%x \n", block.DevoteDB.Protocol().StatsHash, header.Protocol.StatsHash)
-		log.Printf("Cycle block hash:%x header:  hash:%x \n", block.DevoteDB.Protocol().CycleHash, header.Protocol.CycleHash)
-		log.Printf("invalid devote blockNumber %d ,root (remote: %x local: %x)", block.Number(),remoteRoot, localRoot)
+	if remoteRoot != localRoot {
+		log.Printf("StatsHash block hash:%x header: hash:%x \n", db.Protocol().StatsHash, header.Protocol.StatsHash)
+		log.Printf("Cycle block hash:%x header:  hash:%x \n", db.Protocol().CycleHash, header.Protocol.CycleHash)
+		log.Printf("invalid devote blockNumber %d ,root (remote: %x local: %x)", block.Number(), remoteRoot, localRoot)
 		return fmt.Errorf("invalid devote root (remote: %x local: %x)", remoteRoot, localRoot)
 	}
 	return nil

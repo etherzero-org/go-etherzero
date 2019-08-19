@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package proto;
+
+import "proto/types.proto";
+import "proto/attestation.proto";
+import "proto/masternode_block.proto";
+import "google/protobuf/timestamp.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message Hello {
+  bytes fork_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
+  bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 finalized_epoch = 3;
+  bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 5;
+}
+
+message Goodbye {
+  Reason reason = 1;
+
+  enum Reason {
+    UNKNOWN = 0;
+    CLIENT_SHUTDOWN = 1;
+    IRRELEVANT_NETWORK = 2;
+    GENERIC_ERROR = 3;
+
+    reserved 4 to 127;
+  }
+}
+
+message MasternodeBlocksRequest {
+  bytes head_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 2;
+  uint64 count = 3;
+  uint64 step = 4;
+}
+
+message MasternodeBlocksResponse {
+  repeated MasternodeBlock blocks = 1;
+}
+
+message RecentMasternodeBlocksRequest {
+  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\""];
+}
+
+// TODO(3147): Delete below this line.
+
+enum Topic {
+  UNKNOWN = 0;
+  BEACON_BLOCK_ANNOUNCE = 1 [deprecated=true];
+  BEACON_BLOCK_REQUEST = 2 [deprecated=true];
+  BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER = 3 [deprecated=true];
+  BEACON_BLOCK_RESPONSE = 4 [deprecated=true];
+  BATCHED_BEACON_BLOCK_REQUEST = 5 [deprecated=true];
+  BATCHED_BEACON_BLOCK_RESPONSE = 6 [deprecated=true];
+  CHAIN_HEAD_REQUEST = 7 [deprecated=true];
+  CHAIN_HEAD_RESPONSE = 8 [deprecated=true];
+  BEACON_STATE_HASH_ANNOUNCE = 9 [deprecated=true];
+  BEACON_STATE_REQUEST = 10 [deprecated=true];
+  BEACON_STATE_RESPONSE = 11 [deprecated=true];
+  BEACON_ATTESTATION = 12 [deprecated=true];
+}
+
+message Envelope {
+  bytes span_context = 1;
+  bytes payload = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message MasternodeBlockAnnounce {
+  option deprecated = true;
+  bytes hash = 1;
+  uint64 slot_number = 2;
+}
+
+message MasternodeBlockRequest {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message MasternodeBlockRequestBySlotNumber {
+  option deprecated = true;
+  uint64 slot_number = 1;
+}
+
+message MasternodeBlockResponse {
+  option deprecated = true;
+  MasternodeBlock block = 1;
+  Attestation attestation = 2;
+}
+
+message BatchedMasternodeBlockRequest {
+  option deprecated = true;
+  uint64 start_slot = 1 [deprecated=true];
+  uint64 end_slot = 2 [deprecated=true];
+  bytes finalized_root = 3;
+  bytes canonical_root = 4;
+}
+
+message BatchedMasternodeBlockResponse {
+  option deprecated = true;
+  repeated MasternodeBlock batched_blocks = 1;
+}
+
+message ChainHeadRequest {
+  option deprecated = true;
+}
+
+message ChainHeadResponse {
+  option deprecated = true;
+  uint64 canonical_slot = 1;
+  bytes canonical_state_root_hash32 = 2;
+  bytes finalized_state_root_hash32s = 3;
+  bytes canonical_block_root = 4;
+  bytes finalized_block_root = 5;
+}
+
+message MasternodeStateHashAnnounce {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message MasternodeStateRequest {
+  option deprecated = true;
+  bytes finalized_state_root_hash32s = 1;
+}
+
+message MasternodeStateResponse {
+  option deprecated = true;
+  MasternodeState finalized_state = 1;
+  MasternodeBlock finalized_block = 2;
+}
+
+message FinalizedStateAnnounce {
+  option deprecated = true;
+  bytes block_root = 1;
+  bytes state_root = 2;
+  uint64 slot = 3;
+}
+
+message ProposerSlashingAnnounce {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message ProposerSlashingRequest {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message ProposerSlashingResponse {
+  option deprecated = true;
+  bytes hash = 1;
+  ProposerSlashing proposer_slashing = 2;
+}
+
+message AttesterSlashingAnnounce {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message AttesterSlashingRequest {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message AttesterSlashingResponse {
+  option deprecated = true;
+  bytes hash = 1;
+  AttesterSlashing Attester_slashing = 2;
+}
+
+message DepositAnnounce {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message DepositRequest {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message DepositResponse {
+  option deprecated = true;
+  bytes hash = 1;
+  Deposit deposit = 2;
+}
+
+message ExitAnnounce {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message ExitRequest {
+  option deprecated = true;
+  bytes hash = 1;
+}
+
+message ExitResponse {
+  option deprecated = true;
+  bytes hash = 1;
+  VoluntaryExit voluntary_exit = 2;
+}
+
+message Handshake {
+  option deprecated = true;
+  string deposit_contract_address = 1;
+}

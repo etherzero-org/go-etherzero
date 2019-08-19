@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulation
 
@@ -59,7 +59,7 @@ func TestPeerEvents(t *testing.T) {
 		}
 	}()
 
-	err = sim.ConnectNodesChain(sim.NodeIDs())
+	err = sim.Net.ConnectNodesChain(sim.NodeIDs())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +81,7 @@ func TestPeerEventsTimeout(t *testing.T) {
 	events := sim.PeerEvents(ctx, sim.NodeIDs())
 
 	done := make(chan struct{})
+	errC := make(chan error)
 	go func() {
 		for e := range events {
 			if e.Error == context.Canceled {
@@ -90,14 +91,16 @@ func TestPeerEventsTimeout(t *testing.T) {
 				close(done)
 				return
 			} else {
-				t.Fatal(e.Error)
+				errC <- e.Error
 			}
 		}
 	}()
 
 	select {
 	case <-time.After(time.Second):
-		t.Error("no context deadline received")
+		t.Fatal("no context deadline received")
+	case err := <-errC:
+		t.Fatal(err)
 	case <-done:
 		// all good, context deadline detected
 	}

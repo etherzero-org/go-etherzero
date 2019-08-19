@@ -45,7 +45,7 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]string, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	currentEpoch:=header.Time.Uint64()/params.Epoch
+	currentEpoch:=header.Time / params.Epoch
 	devoteDB,_:=devotedb.New(devotedb.NewDatabase(api.devote.db),header.Protocol.CycleHash,header.Protocol.StatsHash)
 	signers, err := devoteDB.GetWitnesses(currentEpoch)
 	if err != nil {
@@ -58,7 +58,7 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]string, error) {
 func (api *API) GetSignersByEpoch(epoch uint64) ([]string, error) {
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	currentEpoch:=header.Time.Uint64()/params.Epoch
+	currentEpoch:=header.Time/params.Epoch
 	if epoch > currentEpoch{
 		return []string{} , nil
 	}

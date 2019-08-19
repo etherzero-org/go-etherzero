@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulation
 
@@ -26,10 +26,9 @@ import (
 
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/node"
-	"github.com/etherzero/go-etherzero/p2p"
+	"github.com/etherzero/go-etherzero/p2p/simulations"
 	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
-	"github.com/etherzero/go-etherzero/rpc"
-	colorable "github.com/mattn/go-colorable"
+	"github.com/mattn/go-colorable"
 )
 
 var (
@@ -125,7 +124,7 @@ func TestClose(t *testing.T) {
 
 	var upNodeCount int
 	for _, n := range sim.Net.GetNodes() {
-		if n.Up {
+		if n.Up() {
 			upNodeCount++
 		}
 	}
@@ -141,7 +140,7 @@ func TestClose(t *testing.T) {
 
 	upNodeCount = 0
 	for _, n := range sim.Net.GetNodes() {
-		if n.Up {
+		if n.Up() {
 			upNodeCount++
 		}
 	}
@@ -178,43 +177,27 @@ var noopServiceFuncMap = map[string]ServiceFunc{
 }
 
 // a helper function for most basic noop service
-func noopServiceFunc(ctx *adapters.ServiceContext, b *sync.Map) (node.Service, func(), error) {
+func noopServiceFunc(_ *adapters.ServiceContext, _ *sync.Map) (node.Service, func(), error) {
 	return newNoopService(), nil, nil
 }
-
-// noopService is the service that does not do anything
-// but implements node.Service interface.
-type noopService struct{}
 
 func newNoopService() node.Service {
 	return &noopService{}
 }
 
-func (t *noopService) Protocols() []p2p.Protocol {
-	return []p2p.Protocol{}
-}
-
-func (t *noopService) APIs() []rpc.API {
-	return []rpc.API{}
-}
-
-func (t *noopService) Start(server *p2p.Server) error {
-	return nil
-}
-
-func (t *noopService) Stop() error {
-	return nil
-}
-
-// a helper function for most basic noop service
-// of a different type then noopService to test
+// a helper function for most basic Noop service
+// of a different type then NoopService to test
 // multiple services on one node.
-func noopService2Func(ctx *adapters.ServiceContext, b *sync.Map) (node.Service, func(), error) {
+func noopService2Func(_ *adapters.ServiceContext, _ *sync.Map) (node.Service, func(), error) {
 	return new(noopService2), nil, nil
 }
 
-// noopService2 is the service that does not do anything
+// NoopService2 is the service that does not do anything
 // but implements node.Service interface.
 type noopService2 struct {
-	noopService
+	simulations.NoopService
+}
+
+type noopService struct {
+	simulations.NoopService
 }

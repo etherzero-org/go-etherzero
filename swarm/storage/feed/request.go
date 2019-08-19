@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package feed
 
@@ -171,8 +171,10 @@ func (r *Request) toChunk() (storage.Chunk, error) {
 }
 
 // fromChunk populates this structure from chunk data. It does not verify the signature is valid.
-func (r *Request) fromChunk(updateAddr storage.Address, chunkdata []byte) error {
+func (r *Request) fromChunk(chunk storage.Chunk) error {
 	// for update chunk layout see Request definition
+
+	chunkdata := chunk.Data()
 
 	//deserialize the feed update portion
 	if err := r.Update.binaryGet(chunkdata[:len(chunkdata)-signatureLength]); err != nil {
@@ -189,7 +191,7 @@ func (r *Request) fromChunk(updateAddr storage.Address, chunkdata []byte) error 
 	}
 
 	r.Signature = signature
-	r.idAddr = updateAddr
+	r.idAddr = chunk.Address()
 	r.binaryData = chunkdata
 
 	return nil

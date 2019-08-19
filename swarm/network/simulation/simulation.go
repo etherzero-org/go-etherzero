@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulation
 
@@ -28,12 +28,12 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/p2p/simulations"
 	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
+	"github.com/etherzero/go-etherzero/swarm/network"
 )
 
 // Common errors that are returned by functions in this package.
 var (
 	ErrNodeNotFound = errors.New("node not found")
-	ErrNoPivotNode  = errors.New("no pivot node set")
 )
 
 // Simulation provides methods on network, nodes and services
@@ -43,13 +43,13 @@ type Simulation struct {
 	// of p2p/simulations.Network.
 	Net *simulations.Network
 
-	serviceNames []string
-	cleanupFuncs []func()
-	buckets      map[enode.ID]*sync.Map
-	pivotNodeID  *enode.ID
-	shutdownWG   sync.WaitGroup
-	done         chan struct{}
-	mu           sync.RWMutex
+	serviceNames      []string
+	cleanupFuncs      []func()
+	buckets           map[enode.ID]*sync.Map
+	shutdownWG        sync.WaitGroup
+	done              chan struct{}
+	mu                sync.RWMutex
+	neighbourhoodSize int
 
 	httpSrv *http.Server        //attach a HTTP server via SimulationOptions
 	handler *simulations.Server //HTTP handler for the server
@@ -66,16 +66,16 @@ type Simulation struct {
 // after network shutdown.
 type ServiceFunc func(ctx *adapters.ServiceContext, bucket *sync.Map) (s node.Service, cleanup func(), err error)
 
-// New creates a new Simulation instance with new
-// simulations.Network initialized with provided services.
+// New creates a new simulation instance
 // Services map must have unique keys as service names and
 // every ServiceFunc must return a node.Service of the unique type.
 // This restriction is required by node.Node.Start() function
 // which is used to start node.Service returned by ServiceFunc.
 func New(services map[string]ServiceFunc) (s *Simulation) {
 	s = &Simulation{
-		buckets: make(map[enode.ID]*sync.Map),
-		done:    make(chan struct{}),
+		buckets:           make(map[enode.ID]*sync.Map),
+		done:              make(chan struct{}),
+		neighbourhoodSize: network.NewKadParams().NeighbourhoodSize,
 	}
 
 	adapterServices := make(map[string]adapters.ServiceFunc, len(services))

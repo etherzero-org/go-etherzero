@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 // puppeth is a command to assemble and maintain private networks.
 package main
@@ -43,18 +43,23 @@ func main() {
 			Usage: "log level to emit to the screen",
 		},
 	}
-	app.Action = func(c *cli.Context) error {
+	app.Before = func(c *cli.Context) error {
 		// Set up the logger to print everything and the random generator
 		log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(c.Int("loglevel")), log.StreamHandler(os.Stdout, log.TerminalFormat(true))))
 		rand.Seed(time.Now().UnixNano())
 
-		network := c.String("network")
-		if strings.Contains(network, " ") || strings.Contains(network, "-") {
-			log.Crit("No spaces or hyphens allowed in network name")
-		}
-		// Start the wizard and relinquish control
-		makeWizard(c.String("network")).run()
 		return nil
 	}
+	app.Action = runWizard
 	app.Run(os.Args)
+}
+
+// runWizard start the wizard and relinquish control to it.
+func runWizard(c *cli.Context) error {
+	network := c.String("network")
+	if strings.Contains(network, " ") || strings.Contains(network, "-") || strings.ToLower(network) != network {
+		log.Crit("No spaces, hyphens or capital letters allowed in network name")
+	}
+	makeWizard(c.String("network")).run()
+	return nil
 }

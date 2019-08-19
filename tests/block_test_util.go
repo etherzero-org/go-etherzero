@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package tests implements execution of Ethereum JSON tests.
 package tests
@@ -82,7 +82,7 @@ type btHeader struct {
 	Difficulty       *big.Int
 	GasLimit         uint64
 	GasUsed          uint64
-	Timestamp        *big.Int
+	Timestamp        uint64
 }
 
 type btHeaderMarshaling struct {
@@ -91,7 +91,7 @@ type btHeaderMarshaling struct {
 	Difficulty *math.HexOrDecimal256
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
-	Timestamp  *math.HexOrDecimal256
+	Timestamp  math.HexOrDecimal64
 }
 
 func (t *BlockTest) Run() error {
@@ -146,7 +146,7 @@ func (t *BlockTest) genesis(config *params.ChainConfig) *core.Genesis {
 	return &core.Genesis{
 		Config:     config,
 		Nonce:      t.json.Genesis.Nonce.Uint64(),
-		Timestamp:  t.json.Genesis.Timestamp.Uint64(),
+		Timestamp:  t.json.Genesis.Timestamp,
 		ParentHash: t.json.Genesis.ParentHash,
 		ExtraData:  t.json.Genesis.ExtraData,
 		GasLimit:   t.json.Genesis.GasLimit,
@@ -248,7 +248,7 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	if h.GasUsed != h2.GasUsed {
 		return fmt.Errorf("GasUsed: want: %d have: %d", h.GasUsed, h2.GasUsed)
 	}
-	if h.Timestamp.Cmp(h2.Time) != 0 {
+	if h.Timestamp != h2.Time {
 		return fmt.Errorf("Timestamp: want: %v have: %v", h.Timestamp, h2.Time)
 	}
 	return nil

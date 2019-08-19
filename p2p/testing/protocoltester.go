@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
 the p2p/testing package provides a unit test scheme to check simple
@@ -30,7 +30,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"sync"
-	"testing"
 
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/node"
@@ -52,7 +51,7 @@ type ProtocolTester struct {
 // NewProtocolTester constructs a new ProtocolTester
 // it takes as argument the pivot node id, the number of dummy peers and the
 // protocol run function called on a peer connection by the p2p server
-func NewProtocolTester(t *testing.T, id enode.ID, n int, run func(*p2p.Peer, p2p.MsgReadWriter) error) *ProtocolTester {
+func NewProtocolTester(id enode.ID, n int, run func(*p2p.Peer, p2p.MsgReadWriter) error) *ProtocolTester {
 	services := adapters.Services{
 		"test": func(ctx *adapters.ServiceContext) (node.Service, error) {
 			return &testNode{run}, nil

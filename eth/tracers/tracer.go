@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package tracers
 
@@ -364,6 +364,28 @@ func New(code string) (*Tracer, error) {
 		ctx.Pop2()
 
 		contract := crypto.CreateAddress(from, nonce)
+		copy(makeSlice(ctx.PushFixedBuffer(20), 20), contract[:])
+		return 1
+	})
+	tracer.vm.PushGlobalGoFunction("toContract2", func(ctx *duktape.Context) int {
+		var from common.Address
+		if ptr, size := ctx.GetBuffer(-3); ptr != nil {
+			from = common.BytesToAddress(makeSlice(ptr, size))
+		} else {
+			from = common.HexToAddress(ctx.GetString(-3))
+		}
+		// Retrieve salt hex string from js stack
+		salt := common.HexToHash(ctx.GetString(-2))
+		// Retrieve code slice from js stack
+		var code []byte
+		if ptr, size := ctx.GetBuffer(-1); ptr != nil {
+			code = common.CopyBytes(makeSlice(ptr, size))
+		} else {
+			code = common.FromHex(ctx.GetString(-1))
+		}
+		codeHash := crypto.Keccak256(code)
+		ctx.Pop3()
+		contract := crypto.CreateAddress2(from, salt, codeHash)
 		copy(makeSlice(ctx.PushFixedBuffer(20), 20), contract[:])
 		return 1
 	})

@@ -1,6 +1,9 @@
 package eth
 
 import (
+	"math/big"
+	"sync"
+	"time"
 	"context"
 	"errors"
 
@@ -18,9 +21,6 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
-	"math/big"
-	"sync"
-	"time"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 )
 

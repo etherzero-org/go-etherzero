@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulations
 
@@ -35,7 +35,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/p2p/simulations/adapters"
 	"github.com/etherzero/go-etherzero/rpc"
-	colorable "github.com/mattn/go-colorable"
+	"github.com/mattn/go-colorable"
 )
 
 var (
@@ -294,6 +294,7 @@ var testServices = adapters.Services{
 }
 
 func testHTTPServer(t *testing.T) (*Network, *httptest.Server) {
+	t.Helper()
 	adapter := adapters.NewSimAdapter(testServices)
 	network := NewNetwork(adapter, &NetworkConfig{
 		DefaultService: "test",
@@ -420,14 +421,15 @@ type expectEvents struct {
 }
 
 func (t *expectEvents) nodeEvent(id string, up bool) *Event {
+	node := Node{
+		Config: &adapters.NodeConfig{
+			ID: enode.HexID(id),
+		},
+		up: up,
+	}
 	return &Event{
 		Type: EventTypeNode,
-		Node: &Node{
-			Config: &adapters.NodeConfig{
-				ID: enode.HexID(id),
-			},
-			Up: up,
-		},
+		Node: &node,
 	}
 }
 
@@ -479,6 +481,7 @@ loop:
 }
 
 func (t *expectEvents) expect(events ...*Event) {
+	t.Helper()
 	timeout := time.After(10 * time.Second)
 	i := 0
 	for {
@@ -500,8 +503,8 @@ func (t *expectEvents) expect(events ...*Event) {
 				if event.Node.ID() != expected.Node.ID() {
 					t.Fatalf("expected node event %d to have id %q, got %q", i, expected.Node.ID().TerminalString(), event.Node.ID().TerminalString())
 				}
-				if event.Node.Up != expected.Node.Up {
-					t.Fatalf("expected node event %d to have up=%t, got up=%t", i, expected.Node.Up, event.Node.Up)
+				if event.Node.Up() != expected.Node.Up() {
+					t.Fatalf("expected node event %d to have up=%t, got up=%t", i, expected.Node.Up(), event.Node.Up())
 				}
 
 			case EventTypeConn:

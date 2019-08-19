@@ -17,9 +17,7 @@
 package miner
 
 import (
-	"bytes"
 	"fmt"
-	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,7 +25,6 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/devote"
-	"github.com/etherzero/go-etherzero/consensus/misc"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
@@ -483,8 +480,8 @@ func (self *worker) commitNewWork() (*Work, error) {
 	parent := self.chain.CurrentBlock()
 
 	tstamp := tstart.Unix()
-	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		tstamp = parent.Time().Int64() + 1
+	if int64(parent.Time()) >= tstamp {
+		tstamp = int64(parent.Time()) + 1
 	}
 	// this will ensure we're not going off too far in the future
 	if now := time.Now().Unix(); tstamp > now+1 {
@@ -499,7 +496,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent),
 		Extra:      self.extra,
-		Time:       big.NewInt(tstamp),
+		Time:       uint64(tstamp),
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
@@ -508,19 +505,6 @@ func (self *worker) commitNewWork() (*Work, error) {
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		return nil, fmt.Errorf("got error when preparing header, err: %s", err)
 	}
-	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
-		// Check whether the block is among the fork extra-override range
-		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
-			// Depending whether we support or oppose the fork, override differently
-			if self.config.DAOForkSupport {
-				header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-			} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
-				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
-			}
-		}
-	}
 	// Could potentially happen if starting to mine in an odd state.
 	err := self.makeCurrent(parent, header)
 	if err != nil {
@@ -528,9 +512,6 @@ func (self *worker) commitNewWork() (*Work, error) {
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
-	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
-		misc.ApplyDAOHardFork(work.state)
-	}
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
 		return nil, fmt.Errorf("got error when fetch pending transactions, err: %s", err)
@@ -542,31 +523,15 @@ func (self *worker) commitNewWork() (*Work, error) {
 	// compute uncles for the new block.
 	var (
 		uncles    []*types.Header
-		badUncles []common.Hash
 	)
-	for hash, uncle := range self.possibleUncles {
-		if len(uncles) > 0 {
-			break
-		}
-		if err := self.commitUncle(work, uncle.Header()); err != nil {
-			log.Trace("Bad uncle found and will be removed", "hash", hash)
-			log.Trace(fmt.Sprint(uncle))
+	if engine, ok := self.engine.(*devote.Devote); ok{
+		engine.SetDevoteDB(self.chainDb)
+	}
 
-			badUncles = append(badUncles, hash)
-		} else {
-			log.Debug("Committing new uncle to block", "hash", hash)
-			uncles = append(uncles, uncle.Header())
-		}
-	}
-	for _, hash := range badUncles {
-		delete(self.possibleUncles, hash)
-	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.devoteDB); err != nil {
-		return nil, fmt.Errorf("Finalize block failed:%s", err)
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
+		return nil, fmt.Errorf("Finalize block failed: %s", err)
 	}
-
-	work.Block.DevoteDB = work.devoteDB
 
 	// update the count for the miner of new block
 	// We only care about logging if we're actually mining.

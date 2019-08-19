@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -36,11 +36,15 @@ import (
 )
 
 const (
-	contentType             = "application/json"
 	maxRequestContentLength = 1024 * 512
 )
 
-var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+var (
+	// https://www.jsonrpc.org/historical/json-rpc-over-http.html#id13
+	acceptedContentTypes = []string{"application/json", "application/json-rpc", "application/jsonrequest"}
+	contentType          = acceptedContentTypes[0]
+	nullAddr, _          = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+)
 
 type httpConn struct {
 	client    *http.Client
@@ -263,12 +267,21 @@ func validateRequest(r *http.Request) (int, error) {
 		err := fmt.Errorf("content length too large (%d>%d)", r.ContentLength, maxRequestContentLength)
 		return http.StatusRequestEntityTooLarge, err
 	}
-	mt, _, err := mime.ParseMediaType(r.Header.Get("content-type"))
-	if r.Method != http.MethodOptions && (err != nil || mt != contentType) {
-		err := fmt.Errorf("invalid content type, only %s is supported", contentType)
-		return http.StatusUnsupportedMediaType, err
+	// Allow OPTIONS (regardless of content-type)
+	if r.Method == http.MethodOptions {
+		return 0, nil
 	}
-	return 0, nil
+	// Check content-type
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("content-type")); err == nil {
+		for _, accepted := range acceptedContentTypes {
+			if accepted == mt {
+				return 0, nil
+			}
+		}
+	}
+	// Invalid content-type
+	err := fmt.Errorf("invalid content type, only %s is supported", contentType)
+	return http.StatusUnsupportedMediaType, err
 }
 
 func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {

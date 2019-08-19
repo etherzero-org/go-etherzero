@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package tests
 
@@ -42,9 +42,22 @@ type RLPTest struct {
 	Out string
 }
 
+// FromHex returns the bytes represented by the hexadecimal string s.
+// s may be prefixed with "0x".
+// This is copy-pasted from bytes.go, which does not return the error
+func FromHex(s string) ([]byte, error) {
+	if len(s) > 1 && (s[0:2] == "0x" || s[0:2] == "0X") {
+		s = s[2:]
+	}
+	if len(s)%2 == 1 {
+		s = "0" + s
+	}
+	return hex.DecodeString(s)
+}
+
 // Run executes the test.
 func (t *RLPTest) Run() error {
-	outb, err := hex.DecodeString(t.Out)
+	outb, err := FromHex(t.Out)
 	if err != nil {
 		return fmt.Errorf("invalid hex in Out")
 	}

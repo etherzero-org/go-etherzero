@@ -798,7 +798,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer cancel()
 
 	// Get a new instance of the EVM.
-	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
+	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header)
 	if err != nil {
 		return nil, 0, false, err
 	}
@@ -956,9 +956,12 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		"size":             hexutil.Uint64(b.Size()),
 		"gasLimit":         hexutil.Uint64(head.GasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
-		"timestamp":        (*hexutil.Big)(head.Time),
+		"timestamp":        head.Time,
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"witness":          head.Witness,
+		"signature":        head.Signature,
+		"protocol":         head.Protocol.Root(),
 	}
 
 	if inclTx {
@@ -988,6 +991,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 	}
 	fields["uncles"] = uncleHashes
 	fields["witness"] = b.Witness()
+	fields["signature"] = b.Signaute()
 	return fields, nil
 }
 
@@ -1218,6 +1222,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"contractAddress":   nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
+		"intxs":             receipt.Intxs,
 	}
 
 	// Assign receipt status or post state.
@@ -1228,6 +1233,9 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	}
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
+	}
+	if receipt.Intxs == nil {
+		fields["intxs"] = [][]*types.Intx{}
 	}
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if receipt.ContractAddress != (common.Address{}) {

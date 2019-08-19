@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package abi
 
@@ -56,14 +56,14 @@ func (method Method) Sig() string {
 func (method Method) String() string {
 	inputs := make([]string, len(method.Inputs))
 	for i, input := range method.Inputs {
-		inputs[i] = fmt.Sprintf("%v %v", input.Name, input.Type)
+		inputs[i] = fmt.Sprintf("%v %v", input.Type, input.Name)
 	}
 	outputs := make([]string, len(method.Outputs))
 	for i, output := range method.Outputs {
+		outputs[i] = output.Type.String()
 		if len(output.Name) > 0 {
-			outputs[i] = fmt.Sprintf("%v ", output.Name)
+			outputs[i] += fmt.Sprintf(" %v", output.Name)
 		}
-		outputs[i] += output.Type.String()
 	}
 	constant := ""
 	if method.Const {

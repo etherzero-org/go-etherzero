@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains the NTP time drift detection via the SNTP protocol:
 //   https://tools.ietf.org/html/rfc4330
@@ -20,12 +20,13 @@
 package discover
 
 import (
+	"fmt"
 	"net"
+	"runtime/debug"
 	"sort"
+	"sync/atomic"
 	"time"
 
-	"runtime/debug"
-	"sync/atomic"
 	"github.com/etherzero/go-etherzero/log"
 )
 
@@ -66,7 +67,7 @@ func CheckClockDrift() {
 	begin:
 		drift, err := sntpDrift(ntpChecks)
 		if err != nil {
-			log.Warn("When NTP drift", "err", err)
+			// log.Warn("When NTP drift", "err", err)
 			times--
 			if times == 0 {
 				return
@@ -83,6 +84,21 @@ func CheckClockDrift() {
 
 }
 
+// checkClockDrift queries an NTP server for clock drifts and warns the user if
+// one large enough is detected.
+func checkClockDrift() {
+	drift, err := sntpDrift(ntpChecks)
+	if err != nil {
+		return
+	}
+	if drift < -driftThreshold || drift > driftThreshold {
+		log.Warn(fmt.Sprintf("System clock seems off by %v, which can prevent network connectivity", drift))
+		log.Warn("Please enable network time synchronisation in system settings.")
+	} else {
+		log.Debug("NTP sanity check done", "drift", drift)
+	}
+}
+
 // sntpDrift does a naive time resolution against an NTP server and returns the
 // measured drift. This method uses the simple version of NTP. It's not precise
 // but should be fine for these purposes.
@@ -91,7 +107,7 @@ func CheckClockDrift() {
 // ones to be able to discard the two extremes as outliers.
 func sntpDrift(measurements int) (time.Duration, error) {
 	// Resolve the address of the NTP server
-	addr, err := net.ResolveUDPAddr("udp", ntpPool+":53")
+	addr, err := net.ResolveUDPAddr("udp", ntpPool+":123")
 	if err != nil {
 		return 0, err
 	}

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in
@@ -197,7 +198,7 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainH
 	defer sub.Unsubscribe()
 
 	// Fire the initial new head event to start any outstanding processing
-	c.newHead(currentHeader.Number.Uint64(), false)
+	c.newHead(currentHeader.Number.Uint64()-params.GenesisBlockNumber, false)
 
 	var (
 		prevHeader = currentHeader
@@ -224,11 +225,11 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainH
 
 				if rawdb.ReadCanonicalHash(c.chainDb, prevHeader.Number.Uint64()) != prevHash {
 					if h := rawdb.FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
-						c.newHead(h.Number.Uint64(), true)
+						c.newHead(h.Number.Uint64()-params.GenesisBlockNumber, true)
 					}
 				}
 			}
-			c.newHead(header.Number.Uint64(), false)
+			c.newHead(header.Number.Uint64()-params.GenesisBlockNumber, false)
 
 			prevHeader, prevHash = header, header.Hash()
 		}
@@ -390,13 +391,13 @@ func (c *ChainIndexer) processSection(section uint64, lastHead common.Hash) (com
 	}
 
 	for number := section * c.sectionSize; number < (section+1)*c.sectionSize; number++ {
-		hash := rawdb.ReadCanonicalHash(c.chainDb, number)
+		hash := rawdb.ReadCanonicalHash(c.chainDb, number+params.GenesisBlockNumber)
 		if hash == (common.Hash{}) {
-			return common.Hash{}, fmt.Errorf("canonical block #%d unknown", number)
+			return common.Hash{}, fmt.Errorf("canonical block #%d unknown", number+params.GenesisBlockNumber)
 		}
-		header := rawdb.ReadHeader(c.chainDb, hash, number)
+		header := rawdb.ReadHeader(c.chainDb, hash, number+params.GenesisBlockNumber)
 		if header == nil {
-			return common.Hash{}, fmt.Errorf("block #%d [%x…] not found", number, hash[:4])
+			return common.Hash{}, fmt.Errorf("block #%d [%x…] not found", number+params.GenesisBlockNumber, hash[:4])
 		} else if header.ParentHash != lastHead {
 			return common.Hash{}, fmt.Errorf("chain reorged during section processing")
 		}

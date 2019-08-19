@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package simulation
 
@@ -39,7 +39,7 @@ func (s *Simulation) Service(name string, id enode.ID) node.Service {
 // RandomService returns a single Service by name on a
 // randomly chosen node that is up.
 func (s *Simulation) RandomService(name string) node.Service {
-	n := s.RandomUpNode()
+	n := s.Net.GetRandomUpNode().Node.(*adapters.SimNode)
 	if n == nil {
 		return nil
 	}
@@ -52,7 +52,7 @@ func (s *Simulation) Services(name string) (services map[enode.ID]node.Service) 
 	nodes := s.Net.GetNodes()
 	services = make(map[enode.ID]node.Service)
 	for _, node := range nodes {
-		if !node.Up {
+		if !node.Up() {
 			continue
 		}
 		simNode, ok := node.Node.(*adapters.SimNode)

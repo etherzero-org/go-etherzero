@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package version
 
@@ -23,7 +23,7 @@ import (
 const (
 	VersionMajor = 0        // Major version component of the current release
 	VersionMinor = 3        // Minor version component of the current release
-	VersionPatch = 7        // Patch version component of the current release
+	VersionPatch = 15       // Patch version component of the current release
 	VersionMeta  = "stable" // Version metadata to append to the version string
 )
 
@@ -40,6 +40,9 @@ var VersionWithMeta = func() string {
 	}
 	return v
 }()
+
+// Git SHA1 commit hash of the release, will be set by main.init() function
+var GitCommit string
 
 // ArchiveVersion holds the textual version string used for Swarm archives.
 // e.g. "0.3.0-dea1ce05" for stable releases, or

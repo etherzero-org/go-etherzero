@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package storage
 
@@ -171,5 +171,37 @@ func testFileStoreCapacity(toEncrypt bool, t *testing.T) {
 	}
 	if !bytes.Equal(slice, resultSlice) {
 		t.Fatalf("Comparison error after clearing memStore.")
+	}
+}
+
+// TestGetAllReferences only tests that GetAllReferences returns an expected
+// number of references for a given file
+func TestGetAllReferences(t *testing.T) {
+	tdb, cleanup, err := newTestDbStore(false, false)
+	defer cleanup()
+	if err != nil {
+		t.Fatalf("init dbStore failed: %v", err)
+	}
+	db := tdb.LDBStore
+	memStore := NewMemStore(NewDefaultStoreParams(), db)
+	localStore := &LocalStore{
+		memStore: memStore,
+		DbStore:  db,
+	}
+	fileStore := NewFileStore(localStore, NewFileStoreParams())
+
+	// testRuns[i] and expectedLen[i] are dataSize and expected length respectively
+	testRuns := []int{1024, 8192, 16000, 30000, 1000000}
+	expectedLens := []int{1, 3, 5, 9, 248}
+	for i, r := range testRuns {
+		slice := testutil.RandomBytes(1, r)
+
+		addrs, err := fileStore.GetAllReferences(context.Background(), bytes.NewReader(slice), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(addrs) != expectedLens[i] {
+			t.Fatalf("Expected reference array length to be %d, but is %d", expectedLens[i], len(addrs))
+		}
 	}
 }

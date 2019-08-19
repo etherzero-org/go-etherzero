@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package network
 
@@ -114,7 +114,7 @@ func (h *Hive) Stop() error {
 		}
 	}
 	log.Info(fmt.Sprintf("%08x hive stopped, dropping peers", h.BaseAddr()[:4]))
-	h.EachConn(nil, 255, func(p *Peer, _ int, _ bool) bool {
+	h.EachConn(nil, 255, func(p *Peer, _ int) bool {
 		log.Info(fmt.Sprintf("%08x dropping peer %08x", h.BaseAddr()[:4], p.Address()[:4]))
 		p.Drop(nil)
 		return true
@@ -165,8 +165,8 @@ func (h *Hive) Run(p *BzzPeer) error {
 			// otherwise just send depth to new peer
 			dp.NotifyDepth(depth)
 		}
+		NotifyPeer(p.BzzAddr, h.Kademlia)
 	}
-	NotifyPeer(p.BzzAddr, h.Kademlia)
 	defer h.Off(dp)
 	return dp.Run(dp.HandleMsg)
 }
@@ -228,7 +228,7 @@ func (h *Hive) loadPeers() error {
 // savePeers, savePeer implement persistence callback/
 func (h *Hive) savePeers() error {
 	var peers []*BzzAddr
-	h.Kademlia.EachAddr(nil, 256, func(pa *BzzAddr, i int, _ bool) bool {
+	h.Kademlia.EachAddr(nil, 256, func(pa *BzzAddr, i int) bool {
 		if pa == nil {
 			log.Warn(fmt.Sprintf("empty addr: %v", i))
 			return true

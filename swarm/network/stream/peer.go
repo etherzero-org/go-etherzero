@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package stream
 
@@ -65,6 +65,7 @@ type Peer struct {
 	// on creating a new client in offered hashes handler.
 	clientParams map[Stream]*clientParams
 	quit         chan struct{}
+	spans        sync.Map
 }
 
 type WrappedPriorityMsg struct {
@@ -82,10 +83,16 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		clients:      make(map[Stream]*client),
 		clientParams: make(map[Stream]*clientParams),
 		quit:         make(chan struct{}),
+		spans:        sync.Map{},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go p.pq.Run(ctx, func(i interface{}) {
 		wmsg := i.(WrappedPriorityMsg)
+		defer p.spans.Delete(wmsg.Context)
+		sp, ok := p.spans.Load(wmsg.Context)
+		if ok {
+			defer sp.(opentracing.Span).Finish()
+		}
 		err := p.Send(wmsg.Context, wmsg.Msg)
 		if err != nil {
 			log.Error("Message send error, dropping peer", "peer", p.ID(), "err", err)
@@ -130,7 +137,6 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 // Deliver sends a storeRequestMsg protocol message to the peer
 // Depending on the `syncing` parameter we send different message types
 func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8, syncing bool) error {
-	var sp opentracing.Span
 	var msg interface{}
 
 	spanName := "send.chunk.delivery"
@@ -151,18 +157,22 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 		}
 		spanName += ".retrieval"
 	}
-	ctx, sp = spancontext.StartSpan(
-		ctx,
-		spanName)
-	defer sp.Finish()
 
-	return p.SendPriority(ctx, msg, priority)
+	return p.SendPriority(ctx, msg, priority, spanName)
 }
 
 // SendPriority sends message to the peer using the outgoing priority queue
-func (p *Peer) SendPriority(ctx context.Context, msg interface{}, priority uint8) error {
+func (p *Peer) SendPriority(ctx context.Context, msg interface{}, priority uint8, traceId string) error {
 	defer metrics.GetOrRegisterResettingTimer(fmt.Sprintf("peer.sendpriority_t.%d", priority), nil).UpdateSince(time.Now())
 	metrics.GetOrRegisterCounter(fmt.Sprintf("peer.sendpriority.%d", priority), nil).Inc(1)
+	if traceId != "" {
+		var sp opentracing.Span
+		ctx, sp = spancontext.StartSpan(
+			ctx,
+			traceId,
+		)
+		p.spans.Store(ctx, sp)
+	}
 	wmsg := WrappedPriorityMsg{
 		Context: ctx,
 		Msg:     msg,
@@ -205,7 +215,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 		Stream:        s.stream,
 	}
 	log.Trace("Swarm syncer offer batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
-	return p.SendPriority(ctx, msg, s.priority)
+	return p.SendPriority(ctx, msg, s.priority, "send.offered.hashes")
 }
 
 func (p *Peer) getServer(s Stream) (*server, error) {

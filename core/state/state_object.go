@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -96,12 +96,12 @@ func (s *stateObject) empty() bool {
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
-	Nonce       uint64
-	Balance     *big.Int
+	Nonce    uint64
+	Balance  *big.Int
 	Power       *big.Int
 	BlockNumber *big.Int
-	Root        common.Hash // merkle root of the storage trie
-	CodeHash    []byte
+	Root     common.Hash // merkle root of the storage trie
+	CodeHash []byte
 }
 
 // newObject creates a state object.
@@ -311,6 +311,7 @@ func (c *stateObject) SubPower(amount, blockNumber *big.Int) {
 	c.SetPower(new(big.Int).Sub(c.Power(), amount))
 }
 
+
 func (self *stateObject) SetBalance(amount, blockNumber *big.Int) {
 	self.UpdatePower(blockNumber)
 	self.db.journal.append(balanceChange{
@@ -343,6 +344,7 @@ func (self *stateObject) UpdatePower(blockNumber *big.Int) {
 	})
 	self.setPowerAndBlock(power, blockNumber)
 }
+
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}

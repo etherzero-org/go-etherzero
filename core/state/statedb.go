@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package state provides a caching layer atop the Ethereum state trie.
 package state
@@ -79,6 +79,9 @@ type StateDB struct {
 	logs         map[common.Hash][]*types.Log
 	logSize      uint
 
+	intxs    map[common.Hash][]*types.Intx
+	intxSize uint
+
 	preimages map[common.Hash][]byte
 
 	// Journal of state modifications. This is the backbone of
@@ -100,6 +103,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		stateObjects:      make(map[common.Address]*stateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		logs:              make(map[common.Hash][]*types.Log),
+		intxs:             make(map[common.Hash][]*types.Intx),
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
 	}, nil
@@ -131,6 +135,8 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.txIndex = 0
 	self.logs = make(map[common.Hash][]*types.Log)
 	self.logSize = 0
+	self.intxs = make(map[common.Hash][]*types.Intx)
+	self.intxSize = 0
 	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
 	return nil
@@ -157,6 +163,18 @@ func (self *StateDB) Logs() []*types.Log {
 		logs = append(logs, lgs...)
 	}
 	return logs
+}
+
+func (self *StateDB) AddIntx(from common.Address, to common.Address, value *big.Int) {
+	self.journal.append(addIntxChange{txhash: self.thash})
+	intx := &types.Intx{From: from, To: to}
+	intx.Value.SetBytes(value.Bytes())
+	self.intxs[self.thash] = append(self.intxs[self.thash], intx)
+	self.intxSize++
+}
+
+func (self *StateDB) GetIntxs(hash common.Hash) []*types.Intx {
+	return self.intxs[hash]
 }
 
 // AddPreimage records a SHA3 preimage seen by the VM.
@@ -219,6 +237,7 @@ func (self *StateDB) GetPower(addr common.Address, blockNumber *big.Int) *big.In
 	}
 	return common.Big0
 }
+
 
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.getStateObject(addr)
@@ -368,13 +387,6 @@ func (self *StateDB) SetPower(addr common.Address, amount *big.Int) {
 	}
 }
 
-func (self *StateDB) UpdatePower(addr common.Address, blockNumber *big.Int) {
-	stateObject := self.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.UpdatePower(blockNumber)
-	}
-}
-
 func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
@@ -504,9 +516,9 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address) {
-	new, prev := self.createObject(addr)
+	newObj, prev := self.createObject(addr)
 	if prev != nil {
-		new.setBalance(prev.data.Balance)
+		newObj.setBalance(prev.data.Balance)
 	}
 }
 
@@ -538,6 +550,8 @@ func (self *StateDB) Copy() *StateDB {
 		refund:            self.refund,
 		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
+		intxs:             make(map[common.Hash][]*types.Intx, len(self.intxs)),
+		intxSize:          self.intxSize,
 		preimages:         make(map[common.Hash][]byte),
 		journal:           newJournal(),
 	}
@@ -568,6 +582,14 @@ func (self *StateDB) Copy() *StateDB {
 			*cpy[i] = *l
 		}
 		state.logs[hash] = cpy
+	}
+	for hash, intxs := range self.intxs {
+		cpy := make([]*types.Intx, len(intxs))
+		for i, l := range intxs {
+			cpy[i] = new(types.Intx)
+			*cpy[i] = *l
+		}
+		state.intxs[hash] = cpy
 	}
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage

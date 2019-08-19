@@ -8,21 +8,16 @@
 .PHONY: geth-darwin geth-darwin-386 geth-darwin-amd64
 .PHONY: geth-windows geth-windows-386 geth-windows-amd64
 
-ROOTDIR = $(shell pwd)
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
-BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-DEFAULTBRANCH := master
 
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
 ifeq ($(BRANCH), $(DEFAULTBRANCH))
-		cp ${ROOTDIR}/init.bin.1 $(GOBIN)/init.bin.1
-		cp ${ROOTDIR}/init.bin.2 $(GOBIN)/init.bin.2
-		cp ${ROOTDIR}/init.bin.3 $(GOBIN)/init.bin.3
+		cp ./init.data.0 $(GOBIN)/init.data.0
+		cp ./init.data.1 $(GOBIN)/init.data.1
+		cp ./init.data.2 $(GOBIN)/init.data.2
 endif
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
 swarm:
 	build/env.sh go run build/ci.go install ./cmd/swarm
@@ -49,6 +44,7 @@ lint: ## Run linters.
 	build/env.sh go run build/ci.go lint
 
 clean:
+	./build/clean_go_build_cache.sh
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
 
 # The devtools target installs tools required for 'go generate'.
@@ -63,6 +59,9 @@ devtools:
 	@type "npm" 2> /dev/null || echo 'Please install node.js and npm'
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
+
+swarm-devtools:
+	env GOBIN= go install ./cmd/swarm/mimegen
 
 # Cross Compilation Targets (xgo)
 

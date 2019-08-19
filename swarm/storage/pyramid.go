@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package storage
 
@@ -69,11 +69,6 @@ var (
 const (
 	ChunkProcessors = 8
 	splitTimeout    = time.Minute * 5
-)
-
-const (
-	DataChunk = 0
-	TreeChunk = 1
 )
 
 type PyramidSplitterParams struct {
@@ -206,8 +201,6 @@ func (pc *PyramidChunker) decrementWorkerCount() {
 }
 
 func (pc *PyramidChunker) Split(ctx context.Context) (k Address, wait func(context.Context) error, err error) {
-	log.Debug("pyramid.chunker: Split()")
-
 	pc.wg.Add(1)
 	pc.prepareChunks(ctx, false)
 
@@ -240,7 +233,6 @@ func (pc *PyramidChunker) Split(ctx context.Context) (k Address, wait func(conte
 }
 
 func (pc *PyramidChunker) Append(ctx context.Context) (k Address, wait func(context.Context) error, err error) {
-	log.Debug("pyramid.chunker: Append()")
 	// Load the right most unfinished tree chunks in every level
 	pc.loadTree(ctx)
 
@@ -288,8 +280,6 @@ func (pc *PyramidChunker) processor(ctx context.Context, id int64) {
 }
 
 func (pc *PyramidChunker) processChunk(ctx context.Context, id int64, job *chunkJob) {
-	log.Debug("pyramid.chunker: processChunk()", "id", id)
-
 	ref, err := pc.putter.Put(ctx, job.chunk)
 	if err != nil {
 		select {
@@ -306,7 +296,6 @@ func (pc *PyramidChunker) processChunk(ctx context.Context, id int64, job *chunk
 }
 
 func (pc *PyramidChunker) loadTree(ctx context.Context) error {
-	log.Debug("pyramid.chunker: loadTree()")
 	// Get the root chunk to get the total size
 	chunkData, err := pc.getter.Get(ctx, Reference(pc.key))
 	if err != nil {
@@ -391,7 +380,6 @@ func (pc *PyramidChunker) loadTree(ctx context.Context) error {
 }
 
 func (pc *PyramidChunker) prepareChunks(ctx context.Context, isAppend bool) {
-	log.Debug("pyramid.chunker: prepareChunks", "isAppend", isAppend)
 	defer pc.wg.Done()
 
 	chunkWG := &sync.WaitGroup{}

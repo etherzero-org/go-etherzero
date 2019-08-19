@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // +build !nopsshandshake
 
@@ -321,9 +321,7 @@ func (ctl *HandshakeController) handleKeys(pubkeyid string, keymsg *handshakeMsg
 		for _, key := range keymsg.Keys {
 			sendsymkey := make([]byte, len(key))
 			copy(sendsymkey, key)
-			var address PssAddress
-			copy(address[:], keymsg.From)
-			sendsymkeyid, err := ctl.pss.setSymmetricKey(sendsymkey, keymsg.Topic, &address, false, false)
+			sendsymkeyid, err := ctl.pss.setSymmetricKey(sendsymkey, keymsg.Topic, PssAddress(keymsg.From), false, false)
 			if err != nil {
 				return err
 			}
@@ -356,7 +354,7 @@ func (ctl *HandshakeController) handleKeys(pubkeyid string, keymsg *handshakeMsg
 func (ctl *HandshakeController) sendKey(pubkeyid string, topic *Topic, keycount uint8) ([]string, error) {
 
 	var requestcount uint8
-	to := &PssAddress{}
+	to := PssAddress{}
 	if _, ok := ctl.pss.pubKeyPool[pubkeyid]; !ok {
 		return []string{}, errors.New("Invalid public key")
 	} else if psp, ok := ctl.pss.pubKeyPool[pubkeyid][*topic]; ok {
@@ -564,5 +562,5 @@ func (api *HandshakeAPI) SendSym(symkeyid string, topic Topic, msg hexutil.Bytes
 		api.ctrl.symKeyIndex[symkeyid].count++
 		log.Trace("increment symkey send use", "symkeyid", symkeyid, "count", api.ctrl.symKeyIndex[symkeyid].count, "limit", api.ctrl.symKeyIndex[symkeyid].limit, "receiver", common.ToHex(crypto.FromECDSAPub(api.ctrl.pss.PublicKey())))
 	}
-	return
+	return err
 }

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // callTracer is a full blown transaction tracer that extracts and reports all
 // the internal calls made by a transaction, along with any useful information.
@@ -38,7 +38,7 @@
 			var op = log.op.toString();
 		}
 		// If a new contract is being created, add to the call stack
-		if (syscall && op == 'CREATE') {
+		if (syscall && (op == 'CREATE' || op == "CREATE2")) {
 			var inOff = log.stack.peek(1).valueOf();
 			var inEnd = inOff + log.stack.peek(2).valueOf();
 
@@ -116,7 +116,7 @@
 			// Pop off the last call and get the execution results
 			var call = this.callstack.pop();
 
-			if (call.type == 'CREATE') {
+			if (call.type == 'CREATE' || call.type == "CREATE2") {
 				// If the call was a CREATE, retrieve the contract address and output code
 				call.gasUsed = '0x' + bigInt(call.gasIn - call.gasCost - log.getGas()).toString(16);
 				delete call.gasIn; delete call.gasCost;

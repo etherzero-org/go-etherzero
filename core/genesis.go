@@ -1,49 +1,49 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/p2p/enode"
+	"github.com/etherzero/go-etherzero/trie"
+	"io"
 	"math/big"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
-	"bufio"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/common/math"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
-	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
-	"io"
-	"os"
-	"path/filepath"
-	"github.com/etherzero/go-etherzero/trie"
-	"strconv"
-	"github.com/etherzero/go-etherzero/p2p/enode"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -127,6 +127,7 @@ func (h *storageJSON) UnmarshalText(text []byte) error {
 	}
 	offset := len(h) - len(text)/2 // pad on the left
 	if _, err := hex.Decode(h[offset:], text); err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("invalid hex storage key/value %q", text)
 	}
 	return nil
@@ -164,10 +165,10 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		return params.DevoteChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 	// Just commit the new block if there is no stored genesis block.
-	stored := rawdb.ReadCanonicalHash(db, 0)
+	stored := rawdb.ReadCanonicalHash(db, params.GenesisBlockNumber)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			log.Info("Writing default main-net genesis block")
+			log.Info("Writing default main-net genesis block, please wait for a few minutes ...")
 			genesis = DefaultGenesisBlock()
 			root, err := genesisAccounts(common.Hash{}, db)
 			if err != nil {
@@ -253,7 +254,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
-		Time:       new(big.Int).SetUint64(g.Timestamp),
+		Time:       g.Timestamp,
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
 		GasLimit:   g.GasLimit,
@@ -271,9 +272,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		head.Difficulty = params.GenesisDifficulty
 	}
 	statedb.Commit(false)
-	statedb.Database().TrieDB().Commit(root, true)
+	statedb.Database().TrieDB().Commit(root, false)
 	block := types.NewBlock(head, nil, nil, nil)
-	block.DevoteDB = devoteDB
 
 	return block
 }
@@ -282,9 +282,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	block := g.ToBlock(db)
-
-	if block.Number().Sign() != 0 {
-		return nil, fmt.Errorf("can't commit genesis block with number > 0")
+	if block.NumberU64() != params.GenesisBlockNumber {
+		return nil, fmt.Errorf("can't commit genesis block with number != %d", params.GenesisBlockNumber)
 	}
 	rawdb.WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty)
 	rawdb.WriteBlock(db, block)
@@ -315,6 +314,287 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)
+}
+
+// DefaultGenesisBlock returns the Ethereum main net genesis block.
+func DefaultGenesisBlock() *Genesis {
+	alloc := decodePrealloc(mainnetAllocData)
+	configMainnet := params.DevoteChainConfig
+	configMainnet.Devote.Witnesses = params.MainnetInitIds
+	return &Genesis{
+		Config:     configMainnet,
+		Nonce:      1,
+		Timestamp:  1566225000,
+		GasLimit:   10000000,
+		Difficulty: big.NewInt(1),
+		Alloc:      alloc,
+		Number:     params.GenesisBlockNumber,
+	}
+}
+
+// DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
+func DefaultTestnetGenesisBlock() *Genesis {
+	alloc := decodePrealloc(testnetAllocData)
+	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.TestnetMasternodes)
+	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
+		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
+	}
+	config := params.TestnetChainConfig
+	var witnesses []string
+	for _, n := range params.TestnetMasternodes {
+		node := enode.MustParseV4(n)
+		pubkey := node.Pubkey()
+		//addr := crypto.PubkeyToAddress(*pubkey)
+		//if _, ok := alloc[addr]; !ok {
+		//	alloc[addr] = GenesisAccount{
+		//		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
+		//	}
+		//}
+		xBytes := pubkey.X.Bytes()
+		var x [32]byte
+		copy(x[32-len(xBytes):], xBytes[:])
+		id1 := common.BytesToHash(x[:])
+		id := fmt.Sprintf("%x", id1[:8])
+		witnesses = append(witnesses, id)
+	}
+	config.Devote.Witnesses = witnesses
+	return &Genesis{
+		Config:     config,
+		Nonce:      66,
+		Timestamp:  1531551970,
+		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
+		GasLimit:   16777216,
+		Difficulty: big.NewInt(1048576),
+		Alloc:      alloc,
+	}
+}
+
+// DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
+func DefaultRinkebyGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.RinkebyChainConfig,
+		Timestamp:  1492009146,
+		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   4700000,
+		Difficulty: big.NewInt(1),
+		Alloc:      decodePrealloc(rinkebyAllocData),
+	}
+}
+
+// DefaultGoerliGenesisBlock returns the Görli network genesis block.
+func DefaultGoerliGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.GoerliChainConfig,
+		Timestamp:  1548854791,
+		ExtraData:  hexutil.MustDecode("0x22466c6578692069732061207468696e6722202d204166726900000000000000e0a2bd4258d2768837baa26a28fe71dc079f84c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   10485760,
+		Difficulty: big.NewInt(1),
+		// Alloc:      decodePrealloc(goerliAllocData),
+	}
+}
+
+// DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must
+// be seeded with the
+func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
+	// Override the default period to the user requested one
+	config := *params.AllCliqueProtocolChanges
+	config.Clique.Period = period
+
+	// Assemble and return the genesis with the precompiles and faucet pre-funded
+	return &Genesis{
+		Config:     &config,
+		ExtraData:  append(append(make([]byte, 32), faucet[:]...), make([]byte, 65)...),
+		GasLimit:   6283185,
+		Difficulty: big.NewInt(1),
+		Alloc: map[common.Address]GenesisAccount{
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
+			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
+			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
+			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
+			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
+			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
+			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
+			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+		},
+	}
+}
+
+func decodePrealloc(data string) GenesisAlloc {
+	var p []struct{ Addr, Balance *big.Int }
+	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
+		panic(err)
+	}
+	ga := make(GenesisAlloc, len(p))
+	for _, account := range p {
+		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
+	}
+	return ga
+}
+
+func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB {
+
+	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(db), &devotedb.DevoteProtocol{})
+	if err != nil {
+		return nil
+	}
+	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
+		genesisCycle := g.Timestamp / params.Epoch
+		devoteDB.SetWitnesses(genesisCycle, g.Config.Devote.Witnesses)
+	}
+	return devoteDB
+}
+
+func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	stateDb := trie.NewDatabase(db)
+	stateTrie, err := trie.New(root, stateDb)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	accountCount := 0
+	emptyRoot := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	emptyHash := crypto.Keccak256Hash(nil)
+
+	for i := int(0); i < 3; i++ {
+		path := strings.Replace(dir, "\\", "/", -1) + "/init.data." + strconv.Itoa(i)
+		file, err := os.Open(path)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		defer file.Close()
+		bufReader := bufio.NewReader(file)
+
+		for {
+			buf, err := myReader(bufReader, 43)
+
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				panic(err)
+			}
+
+			var storageRoot common.Hash
+			var codeHash common.Hash
+			var nonce uint64 = 0
+
+			if i == 0 {
+				storageRoot = emptyRoot
+				codeHash = emptyHash
+				nonceB, err := myReader(bufReader, 3)
+				if err != nil {
+					panic(err)
+				}
+				nonce = uint64(byte2len(nonceB))
+			} else {
+				codeLenB, err := myReader(bufReader, 3)
+				if err != nil {
+					panic(err)
+				}
+				codeLen := byte2len(codeLenB)
+				code, err := myReader(bufReader, codeLen)
+				if err != nil {
+					panic(err)
+				}
+				codeHash = crypto.Keccak256Hash(code)
+
+				codeDb := trie.NewDatabase(db)
+				codeDb.InsertBlob(codeHash, code)
+				codeDb.Commit(codeHash, false)
+
+				storageDb := trie.NewDatabase(db)
+				storageTrie, err := trie.New(common.Hash{}, storageDb)
+				if err != nil {
+					return common.Hash{}, err
+				}
+
+				storageLenB, err := myReader(bufReader, 3)
+				if err != nil {
+					panic(err)
+				}
+				storageLen := byte2len(storageLenB)
+
+				for s := 0; s < storageLen; s++ {
+					storageKey, err := myReader(bufReader, 32)
+					if err != nil {
+						panic(err)
+					}
+
+					valueLen := make([]byte, 1)
+					readNum, err := bufReader.Read(valueLen[0:1])
+					if err != nil || readNum != 1 {
+						fmt.Println("valueLen readNum:", readNum)
+						panic(err)
+					}
+					valueLen2 := int(valueLen[0])
+
+					value, err := myReader(bufReader, valueLen2)
+					if err != nil {
+						panic(err)
+					}
+
+					storageTrie.TryUpdate(storageKey, value)
+				}
+
+				storageRoot, err = storageTrie.Commit(nil)
+				if err != nil {
+					panic(err)
+				}
+				storageDb.Commit(storageRoot, false)
+			}
+
+			var account = state.Account{
+				Balance:     new(big.Int).SetBytes(buf[32:43]),
+				Power:       common.Big0,
+				BlockNumber: common.Big0,
+				Root:        storageRoot,
+				CodeHash:    codeHash.Bytes(),
+				Nonce:       nonce,
+			}
+
+			encodeData, err := rlp.EncodeToBytes(&account)
+			if err != nil {
+				panic(err)
+			}
+
+			stateTrie.TryUpdate(buf[0:32], encodeData)
+			accountCount++
+		}
+		root1, err := stateTrie.Commit(nil)
+		if err != nil {
+			panic(err)
+		}
+		stateDb.Commit(root1, false)
+	}
+
+	stateRoot, err := stateTrie.Commit(nil)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	stateDb.Commit(stateRoot, false)
+	return stateRoot, nil
+}
+
+func byte2len(buf []byte) int {
+	return int(buf[0])*256*256 + int(buf[1])*256 + int(buf[2])
+}
+
+func myReader(bufReader *bufio.Reader, len int) ([]byte, error) {
+	buf := make([]byte, len)
+	readNum := 0
+	for readNum < len {
+		n, err := bufReader.Read(buf[readNum:len])
+		if err != nil {
+			return buf, err
+		}
+		readNum += n
+	}
+	return buf, nil
 }
 
 func masternodeContractAccount(masternodes []string) GenesisAccount {
@@ -416,209 +696,4 @@ func masternodeContractAccount(masternodes []string) GenesisAccount {
 		Storage: data,
 		Code:    hexutil.MustDecode("0x6080604052600436106101065763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146105c957806316e7f171146105f05780632c103c79146106265780632f9267321461063b5780636069e56e1461064b57806365f68c8914610672578063691444c1146106b0578063795053d3146106c4578063c1292cc3146106f5578063c27cabb51461070a578063c4e3ed931461071f578063c808021c14610798578063da35c664146107ad578063dc1e30da146107c2578063e3596ce01461081a578063e7b895b61461082f578063e8c74af214610844578063f834f52414610865578063ff5ecad214610879575b60008060008061011461115b565b61011c611176565b6000808080341561012c57600080fd5b3360009081526004602052604090205460c060020a029950600160c060020a03198a161580159061016157506101618a61088e565b1561024b57600160c060020a03198a1660009081526002602052604081206006015499508911156101e0578843039750610e108811156101bd57600160c060020a03198a166000908152600260205260408120600501556101e0565b600160c060020a03198a1660009081526002602052604090206005018054890190555b600160c060020a03198a16600081815260026020908152604091829020436006820181905560059091015483519485529184019190915282820152517fb620b17a993c1ab2769ca9e6d72d178499b0cd9b800d62e9b3d502e01bca76c29181900360600190a16105bd565b3360009081526003602090815260408083205460c060020a02600160c060020a031981168452600290925290912054909a509650341580156102965750600160c060020a03198a1615155b80156102a157508615155b80156102b8575069043c339e0c82f4bf0000303110155b80156102c657506000600154115b15156102d157600080fd5b868652600160c060020a03198a166000908152600260209081526040822060010154818901529086906080908990600b600019f1151561031057600080fd5b8451600160a060020a0381166000908152600460209081526040808320805467ffffffffffffffff19169055600160c060020a03198e811684526002928390529220015491955060c060020a80830295506801000000000000000090920490910292508316156103c257600160c060020a0319831660009081526002602081905260409091200180546fffffffffffffffff000000000000000019166801000000000000000060c060020a8504021790555b600160c060020a031982161561040b57600160c060020a03198216600090815260026020819052604090912001805467ffffffffffffffff191660c060020a8504179055610425565b6000805467ffffffffffffffff191660c060020a85041790555b50600160c060020a031989166000818152600260208181526040808420600481018054835161010081018552878152808601888152818601898152606083018a8152608084018b815260a085018c815260c086018d815260e087018e81528f8f528d8d5296518a5594516001808b019190915593519b89018054935160c060020a9081900468010000000000000000026fffffffffffffffff00000000000000001991909e0467ffffffffffffffff1995861617169c909c17909b555160038089018054600160a060020a039390931673ffffffffffffffffffffffffffffffffffffffff1990931692909217909155995190955590516005860155905160069094019390935533808852958552838720805490921690915581546000190190915581519586529185019290925281519210927f86d1ab9dbf33cb06567fbeb4b47a6a365cf66f632380589591255187f5ca09cd929081900390910190a180156105bd57604051339060009069043c339e0c82f4bf00009082818181858883f193505050501580156105bb573d6000803e3d6000fd5b505b50505050505050505050005b3480156105d557600080fd5b506105de6108ac565b60408051918252519081900360200190f35b3480156105fc57600080fd5b50610612600160c060020a03196004351661088e565b604080519115158252519081900360200190f35b34801561063257600080fd5b506105de6108b2565b6106496004356024356108b9565b005b34801561065757600080fd5b50610612600160a060020a0360043581169060243516610c8f565b34801561067e57600080fd5b50610693600160a060020a0360043516610cbd565b60408051600160c060020a03199092168252519081900360200190f35b610649600160a060020a0360043516610cde565b3480156106d057600080fd5b506106d9610d4e565b60408051600160a060020a039092168252519081900360200190f35b34801561070157600080fd5b50610693610d5d565b34801561071657600080fd5b506105de610d69565b34801561072b57600080fd5b50610741600160c060020a031960043516610d76565b604080519889526020890197909752600160c060020a0319958616888801529390941660608701526080860191909152600160a060020a031660a085015260c084019190915260e083015251908190036101000190f35b3480156107a457600080fd5b506105de610ddc565b3480156107b957600080fd5b506105de610de7565b3480156107ce57600080fd5b506107e3600160a060020a0360043516610ded565b60408051958652602086019490945284840192909252600160a060020a039081166060850152166080830152519081900360a00190f35b34801561082657600080fd5b506105de610e2a565b34801561083b57600080fd5b506106d9610e30565b34801561085057600080fd5b50610649600160a060020a0360043516610e3f565b610649600160a060020a0360043516610ffe565b34801561088557600080fd5b506105de61114d565b600160c060020a031916600090815260026020526040902054151590565b60015481565b62124f8081565b60006108c361115b565b6108cb611176565b849250600083158015906108de57508415155b80156108f35750600160c060020a0319841615155b801561091c57503360009081526003602052604090205460c060020a02600160c060020a031916155b801561093f5750600160c060020a03198416600090815260026020526040902054155b8015610954575069043c33c193756480000034145b151561095f57600080fd5b8583526020808401869052826080856000600b600019f1151561098157600080fd5b508051600160a060020a038116151561099957600080fd5b836003600033600160a060020a0316600160a060020a0316815260200190815260200160002060006101000a81548167ffffffffffffffff021916908360c060020a900402179055506101006040519081016040528087600019168152602001866000191681526020016000809054906101000a900460c060020a02600160c060020a0319168152602001600060c060020a02600160c060020a031916815260200133600160a060020a031681526020014381526020016000815260200160008152506002600086600160c060020a031916600160c060020a0319168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548167ffffffffffffffff021916908360c060020a9004021790555060608201518160020160086101000a81548167ffffffffffffffff021916908360c060020a9004021790555060808201518160030160006101000a815481600160a060020a030219169083600160a060020a0316021790555060a0820151816004015560c0820151816005015560e08201518160060155905050600060c060020a02600160c060020a0319166000809054906101000a900460c060020a02600160c060020a031916141515610bd15760008054600160c060020a031960c060020a918202168252600260208190526040909220909101805491860468010000000000000000026fffffffffffffffff0000000000000000199092169190911790555b6000805460c060020a860467ffffffffffffffff19918216811783556001805481019055600160a060020a03841680845260046020526040808520805490941690921790925551909190662386f26fc100009082818181858883f19350505050158015610c42573d6000803e3d6000fd5b5060408051600160c060020a03198616815233602082015281517ff19f694d42048723a415f5eed7c402ce2c2e5dc0c41580c3f80e220db85ac389929181900390910190a1505050505050565b600160a060020a03918216600090815260086020908152604080832093909416825291909152205460ff1690565b600160a060020a031660009081526003602052604090205460c060020a0290565b600554158015610cf75750600654600160a060020a0316155b8015610d145750610d0733610cbd565b600160c060020a03191615155b1515610d1f57600080fd5b6006805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b600654600160a060020a031681565b60005460c060020a0281565b68056bc75e2d6310000081565b600160c060020a03191660009081526002602081905260409091208054600182015492820154600483015460038401546005850154600690950154939660c060020a808502966801000000000000000090950402949293600160a060020a039092169290565b662386f26fc1000081565b60055481565b600160a060020a03908116600090815260096020526040902080546001820154600283015460038401546004909401549295919490938116921690565b610e1081565b600754600160a060020a031681565b600160a060020a038116600090815260096020526040812090610e6133610cbd565b905060008260010154118015610e7a5750816001015443115b8015610e895750816002015443105b8015610e9e5750600160c060020a0319811615155b8015610ecd5750600160c060020a0319811660009081526002602052604090206004015462124f804391909103115b8015610efd5750600160a060020a038316600090815260086020908152604080832033845290915290205460ff16155b1515610f0857600080fd5b600160a060020a03831660008181526008602090815260408083203380855290835292819020805460ff19166001908117909155865401865580519283529082019290925281517f0b16242fe09b9cf36e327548ad3c0c195442ee19f92b8b57fcf2d8cd765e9c7c929181900390910190a16001546002900482600001541115610ff9574360028301556006805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a03851690811790915560408051338152602081019290925280517f2afa9f59c781db7a7ab5d83a590c0869db90657d3d51d7afe1c8ec41e088a22c9281900390910190a15b505050565b600160a060020a03811660009081526009602052604090205415801561103d5750600160a060020a038116600090815260096020526040902060010154155b8015611051575068056bc75e2d6310000034145b151561105c57600080fd5b6040805160a081018252600080825243602080840182815262124f80909201848601908152336060860181815260078054600160a060020a0390811660808a019081528b8216808a5260098852988b902099518a55965160018a810191909155945160028a0155915160038901805491841673ffffffffffffffffffffffffffffffffffffffff1992831617905595516004909801805498909216978616979097179055855490931684179094556005805490940190935583519081529182015281517ffcb77511a4d50d7ad5235ca4e1d7054d65140fe505eec9d700a69622a813485c929181900390910190a150565b69043c33c193756480000081565b60408051808201825290600290829080388339509192915050565b60206040519081016040528060019060208202803883395091929150505600a165627a7a723058209da18b8e19c5be5a2f68b19a173ff32c8a7ab06560bfa39888b477804964f2750029"),
 	}
-}
-
-// DefaultGenesisBlock returns the Ethereum main net genesis block.
-func DefaultGenesisBlock() *Genesis {
-	alloc := decodePrealloc(mainnetAllocData)
-	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.MainnetMasternodes)
-	configMainnet := params.DevoteChainConfig
-	var witnesses []string
-	for _, n := range params.MainnetMasternodes {
-		node := enode.MustParseV4(n)
-		pubkey := node.Pubkey()
-		xBytes := pubkey.X.Bytes()
-		var x [32]byte
-		copy(x[32-len(xBytes):], xBytes[:])
-		id1 := common.BytesToHash(x[:])
-		id := fmt.Sprintf("%x", id1[:8])
-		witnesses = append(witnesses, id)
-	}
-	configMainnet.Devote.Witnesses = witnesses
-	return &Genesis{
-		Config:     configMainnet,
-		Nonce:      66,
-		Timestamp:  1531551970,
-		GasLimit:   10000000,
-		Difficulty: big.NewInt(1),
-		Alloc:      alloc,
-	}
-}
-
-// DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
-func DefaultTestnetGenesisBlock() *Genesis {
-	alloc := decodePrealloc(testnetAllocData)
-	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.TestnetMasternodes)
-	alloc[common.HexToAddress("0x6b7f544158e4dacf3247125a491241889829a436")] = GenesisAccount{
-		Balance: new(big.Int).Mul(big.NewInt(1e+15), big.NewInt(1e+15)),
-	}
-	config := params.TestnetChainConfig
-	var witnesses []string
-	for _, n := range params.TestnetMasternodes {
-		node := enode.MustParseV4(n)
-		pubkey := node.Pubkey()
-		//addr := crypto.PubkeyToAddress(*pubkey)
-		//if _, ok := alloc[addr]; !ok {
-		//	alloc[addr] = GenesisAccount{
-		//		Balance: new(big.Int).Mul(big.NewInt(1e+16), big.NewInt(1e+15)),
-		//	}
-		//}
-		xBytes := pubkey.X.Bytes()
-		var x [32]byte
-		copy(x[32-len(xBytes):], xBytes[:])
-		id1 := common.BytesToHash(x[:])
-		id := fmt.Sprintf("%x", id1[:8])
-		witnesses = append(witnesses, id)
-	}
-	config.Devote.Witnesses = witnesses
-	return &Genesis{
-		Config:     config,
-		Nonce:      66,
-		Timestamp:  1531551970,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:   16777216,
-		Difficulty: big.NewInt(1048576),
-		Alloc:      alloc,
-	}
-}
-
-// DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
-func DefaultRinkebyGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.RinkebyChainConfig,
-		Timestamp:  1492009146,
-		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   4700000,
-		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(rinkebyAllocData),
-	}
-}
-
-// DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must
-// be seeded with the
-func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
-	// Override the default period to the user requested one
-	config := *params.AllCliqueProtocolChanges
-	config.Clique.Period = period
-	alloc := decodePrealloc(testnetAllocData)
-	alloc[common.BytesToAddress(params.MasterndeContractAddress.Bytes())] = masternodeContractAccount(params.TestnetMasternodes)
-	// Assemble and return the genesis with the precompiles and faucet pre-funded
-	return &Genesis{
-		Config:     &config,
-		ExtraData:  append(append(make([]byte, 32), faucet[:]...), make([]byte, 65)...),
-		GasLimit:   6283185,
-		Difficulty: big.NewInt(1),
-		Alloc: map[common.Address]GenesisAccount{
-			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
-			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
-			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
-			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
-			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
-			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
-			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
-			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
-			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
-		},
-	}
-}
-
-func decodePrealloc(data string) GenesisAlloc {
-	var p []struct{ Addr, Balance *big.Int }
-	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
-		panic(err)
-	}
-
-	ga := make(GenesisAlloc, len(p))
-	for _, account := range p {
-		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
-	}
-	return ga
-}
-
-func initGenesisDevoteProtocol(g *Genesis, db ethdb.Database) *devotedb.DevoteDB {
-
-	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(db), &devotedb.DevoteProtocol{})
-	if err != nil {
-		return nil
-	}
-	if g.Config != nil && g.Config.Devote != nil && g.Config.Devote.Witnesses != nil {
-		genesisCycle := g.Timestamp / params.Epoch
-		devoteDB.SetWitnesses(genesisCycle, g.Config.Devote.Witnesses)
-	}
-	return devoteDB
-}
-
-func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	triedb := trie.NewDatabase(db)
-	tr, err := trie.New(root, triedb)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	buf := make([]byte, 43)
-	accountCount := 0
-	emptyRoot := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-	emptyState := crypto.Keccak256Hash(nil).Bytes()
-
-	var i int = 0
-	for i = 1; i <= 3; i++ {
-		path := strings.Replace(dir, "\\", "/", -1) + "/init.bin." + strconv.Itoa(i)
-		file, err := os.Open(path)
-		if err != nil {
-			return common.Hash{}, err
-		}
-		defer file.Close()
-		bufReader := bufio.NewReader(file)
-
-		for {
-			readNum, err := bufReader.Read(buf[0:43])
-			if err != nil && err != io.EOF {
-				panic(err)
-			}
-			if 0 == readNum {
-				break
-			}
-			for readNum < 43 {
-				n, err := bufReader.Read(buf[readNum:43])
-				if err != nil && err != io.EOF {
-					panic(err)
-				}
-				readNum += n
-			}
-			var account = state.Account{
-				Balance:     new(big.Int).SetBytes(buf[32:43]),
-				Power:       common.Big0,
-				BlockNumber: common.Big0,
-				Root:        emptyRoot,
-				CodeHash:    emptyState,
-			}
-			encodeData, err := rlp.EncodeToBytes(&account)
-			if err != nil {
-				panic(err)
-			}
-			tr.TryUpdate(buf[0:32], encodeData)
-			if accountCount%100000 == 0 {
-				root1, err := tr.Commit(nil)
-				if err != nil {
-					panic(err)
-				}
-				triedb.Commit(root1, true)
-				log.Info("Import initial accounts", "count", accountCount)
-			}
-			accountCount++
-		}
-	}
-
-	log.Info("Import initial accounts done!", "count", accountCount)
-	root2, err := tr.Commit(nil)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	triedb.Commit(root2, true)
-	return root2, nil
 }

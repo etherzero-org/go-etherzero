@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package stream
 
@@ -127,19 +127,9 @@ func (s *SwarmSyncerServer) SetNextBatch(from, to uint64) ([]byte, uint64, uint6
 
 // SwarmSyncerClient
 type SwarmSyncerClient struct {
-	sessionAt     uint64
-	nextC         chan struct{}
-	sessionRoot   storage.Address
-	sessionReader storage.LazySectionReader
-	retrieveC     chan *storage.Chunk
-	storeC        chan *storage.Chunk
-	store         storage.SyncChunkStore
-	// chunker               storage.Chunker
-	currentRoot storage.Address
-	requestFunc func(chunk *storage.Chunk)
-	end, start  uint64
-	peer        *Peer
-	stream      Stream
+	store  storage.SyncChunkStore
+	peer   *Peer
+	stream Stream
 }
 
 // NewSwarmSyncerClient is a contructor for provable data exchange syncer
@@ -207,46 +197,6 @@ func (s *SwarmSyncerClient) BatchDone(stream Stream, from uint64, hashes []byte,
 	// 	return func() (*TakeoverProof, error) { return s.TakeoverProof(stream, from, hashes, root) }
 	// }
 	return nil
-}
-
-func (s *SwarmSyncerClient) TakeoverProof(stream Stream, from uint64, hashes []byte, root storage.Address) (*TakeoverProof, error) {
-	// for provable syncer currentRoot is non-zero length
-	// TODO: reenable this with putter/getter
-	// if s.chunker != nil {
-	// 	if from > s.sessionAt { // for live syncing currentRoot is always updated
-	// 		//expRoot, err := s.chunker.Append(s.currentRoot, bytes.NewReader(hashes), s.retrieveC, s.storeC)
-	// 		expRoot, _, err := s.chunker.Append(s.currentRoot, bytes.NewReader(hashes), s.retrieveC)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		if !bytes.Equal(root, expRoot) {
-	// 			return nil, fmt.Errorf("HandoverProof mismatch")
-	// 		}
-	// 		s.currentRoot = root
-	// 	} else {
-	// 		expHashes := make([]byte, len(hashes))
-	// 		_, err := s.sessionReader.ReadAt(expHashes, int64(s.end*HashSize))
-	// 		if err != nil && err != io.EOF {
-	// 			return nil, err
-	// 		}
-	// 		if !bytes.Equal(expHashes, hashes) {
-	// 			return nil, errors.New("invalid proof")
-	// 		}
-	// 	}
-	// 	return nil, nil
-	// }
-	s.end += uint64(len(hashes)) / HashSize
-	takeover := &Takeover{
-		Stream: stream,
-		Start:  s.start,
-		End:    s.end,
-		Root:   root,
-	}
-	// serialise and sign
-	return &TakeoverProof{
-		Takeover: takeover,
-		Sig:      nil,
-	}, nil
 }
 
 func (s *SwarmSyncerClient) Close() {}

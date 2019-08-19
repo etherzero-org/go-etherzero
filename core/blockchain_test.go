@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package core
 
@@ -884,7 +884,6 @@ func TestChainTxReorgs(t *testing.T) {
 }
 
 func TestLogReorgs(t *testing.T) {
-
 	var (
 		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
@@ -927,6 +926,213 @@ func TestLogReorgs(t *testing.T) {
 		}
 	case <-timeout.C:
 		t.Fatal("Timeout. There is no RemovedLogsEvent has been sent.")
+	}
+}
+
+func TestLogRebirth(t *testing.T) {
+	var (
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		db      = ethdb.NewMemDatabase()
+
+		// this code generates a log
+		code     = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
+		gspec    = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
+		genesis  = gspec.MustCommit(db)
+		signer   = types.NewEIP155Signer(gspec.Config.ChainID)
+		newLogCh = make(chan bool)
+	)
+
+	// listenNewLog checks whether the received logs number is equal with expected.
+	listenNewLog := func(sink chan []*types.Log, expect int) {
+		cnt := 0
+		for {
+			select {
+			case logs := <-sink:
+				cnt += len(logs)
+			case <-time.NewTimer(5 * time.Second).C:
+				// new logs timeout
+				newLogCh <- false
+				return
+			}
+			if cnt == expect {
+				break
+			} else if cnt > expect {
+				// redundant logs received
+				newLogCh <- false
+				return
+			}
+		}
+		select {
+		case <-sink:
+			// redundant logs received
+			newLogCh <- false
+		case <-time.NewTimer(100 * time.Millisecond).C:
+			newLogCh <- true
+		}
+	}
+
+	blockchain, _ := NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil)
+	defer blockchain.Stop()
+
+	logsCh := make(chan []*types.Log)
+	blockchain.SubscribeLogsEvent(logsCh)
+
+	rmLogsCh := make(chan RemovedLogsEvent)
+	blockchain.SubscribeRemovedLogsEvent(rmLogsCh)
+
+	chain, _ := GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), db, 2, func(i int, gen *BlockGen) {
+		if i == 1 {
+			tx, err := types.SignTx(types.NewContractCreation(gen.TxNonce(addr1), new(big.Int), 1000000, new(big.Int), code), signer, key1)
+			if err != nil {
+				t.Fatalf("failed to create tx: %v", err)
+			}
+			gen.AddTx(tx)
+		}
+	})
+
+	// Spawn a goroutine to receive log events
+	go listenNewLog(logsCh, 1)
+	if _, err := blockchain.InsertChain(chain); err != nil {
+		t.Fatalf("failed to insert chain: %v", err)
+	}
+	if !<-newLogCh {
+		t.Fatalf("failed to receive new log event")
+	}
+
+	// Generate long reorg chain
+	forkChain, _ := GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), db, 2, func(i int, gen *BlockGen) {
+		if i == 1 {
+			tx, err := types.SignTx(types.NewContractCreation(gen.TxNonce(addr1), new(big.Int), 1000000, new(big.Int), code), signer, key1)
+			if err != nil {
+				t.Fatalf("failed to create tx: %v", err)
+			}
+			gen.AddTx(tx)
+			// Higher block difficulty
+			gen.OffsetTime(-9)
+		}
+	})
+
+	// Spawn a goroutine to receive log events
+	go listenNewLog(logsCh, 1)
+	if _, err := blockchain.InsertChain(forkChain); err != nil {
+		t.Fatalf("failed to insert forked chain: %v", err)
+	}
+	if !<-newLogCh {
+		t.Fatalf("failed to receive new log event")
+	}
+	// Ensure removedLog events received
+	select {
+	case ev := <-rmLogsCh:
+		if len(ev.Logs) == 0 {
+			t.Error("expected logs")
+		}
+	case <-time.NewTimer(1 * time.Second).C:
+		t.Fatal("Timeout. There is no RemovedLogsEvent has been sent.")
+	}
+
+	newBlocks, _ := GenerateChain(params.TestChainConfig, chain[len(chain)-1], ethash.NewFaker(), db, 1, func(i int, gen *BlockGen) {})
+	go listenNewLog(logsCh, 1)
+	if _, err := blockchain.InsertChain(newBlocks); err != nil {
+		t.Fatalf("failed to insert forked chain: %v", err)
+	}
+	// Ensure removedLog events received
+	select {
+	case ev := <-rmLogsCh:
+		if len(ev.Logs) == 0 {
+			t.Error("expected logs")
+		}
+	case <-time.NewTimer(1 * time.Second).C:
+		t.Fatal("Timeout. There is no RemovedLogsEvent has been sent.")
+	}
+	// Rebirth logs should omit a newLogEvent
+	if !<-newLogCh {
+		t.Fatalf("failed to receive new log event")
+	}
+}
+
+func TestSideLogRebirth(t *testing.T) {
+	var (
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		db      = ethdb.NewMemDatabase()
+
+		// this code generates a log
+		code     = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
+		gspec    = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
+		genesis  = gspec.MustCommit(db)
+		signer   = types.NewEIP155Signer(gspec.Config.ChainID)
+		newLogCh = make(chan bool)
+	)
+
+	// listenNewLog checks whether the received logs number is equal with expected.
+	listenNewLog := func(sink chan []*types.Log, expect int) {
+		cnt := 0
+		for {
+			select {
+			case logs := <-sink:
+				cnt += len(logs)
+			case <-time.NewTimer(5 * time.Second).C:
+				// new logs timeout
+				newLogCh <- false
+				return
+			}
+			if cnt == expect {
+				break
+			} else if cnt > expect {
+				// redundant logs received
+				newLogCh <- false
+				return
+			}
+		}
+		select {
+		case <-sink:
+			// redundant logs received
+			newLogCh <- false
+		case <-time.NewTimer(100 * time.Millisecond).C:
+			newLogCh <- true
+		}
+	}
+
+	blockchain, _ := NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil)
+	defer blockchain.Stop()
+
+	logsCh := make(chan []*types.Log)
+	blockchain.SubscribeLogsEvent(logsCh)
+
+	chain, _ := GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), db, 2, func(i int, gen *BlockGen) {
+		if i == 1 {
+			// Higher block difficulty
+			gen.OffsetTime(-9)
+		}
+	})
+	if _, err := blockchain.InsertChain(chain); err != nil {
+		t.Fatalf("failed to insert forked chain: %v", err)
+	}
+
+	// Generate side chain with lower difficulty
+	sideChain, _ := GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), db, 2, func(i int, gen *BlockGen) {
+		if i == 1 {
+			tx, err := types.SignTx(types.NewContractCreation(gen.TxNonce(addr1), new(big.Int), 1000000, new(big.Int), code), signer, key1)
+			if err != nil {
+				t.Fatalf("failed to create tx: %v", err)
+			}
+			gen.AddTx(tx)
+		}
+	})
+	if _, err := blockchain.InsertChain(sideChain); err != nil {
+		t.Fatalf("failed to insert forked chain: %v", err)
+	}
+
+	// Generate a new block based on side chain
+	newBlocks, _ := GenerateChain(params.TestChainConfig, sideChain[len(sideChain)-1], ethash.NewFaker(), db, 1, func(i int, gen *BlockGen) {})
+	go listenNewLog(logsCh, 1)
+	if _, err := blockchain.InsertChain(newBlocks); err != nil {
+		t.Fatalf("failed to insert forked chain: %v", err)
+	}
+	// Rebirth logs should omit a newLogEvent
+	if !<-newLogCh {
+		t.Fatalf("failed to receive new log event")
 	}
 }
 
@@ -1482,4 +1688,59 @@ func BenchmarkBlockChain_1x1000Executions(b *testing.B) {
 	}
 
 	benchmarkLargeNumberOfValueToNonexisting(b, numTxs, numBlocks, recipientFn, dataFn)
+}
+
+// Tests that importing a very large side fork, which is larger than the canon chain,
+// but where the difficulty per block is kept low: this means that it will not
+// overtake the 'canon' chain until after it's passed canon by about 200 blocks.
+//
+// Details at:
+//  - https://github.com/etherzero/go-etherzero/issues/18977
+//  - https://github.com/etherzero/go-etherzero/pull/18988
+func TestLowDiffLongChain(t *testing.T) {
+	// Generate a canonical chain to act as the main dataset
+	engine := ethash.NewFaker()
+	db := ethdb.NewMemDatabase()
+	genesis := new(Genesis).MustCommit(db)
+
+	// We must use a pretty long chain to ensure that the fork doesn't overtake us
+	// until after at least 128 blocks post tip
+	blocks, _ := GenerateChain(params.TestChainConfig, genesis, engine, db, 6*triesInMemory, func(i int, b *BlockGen) {
+		b.SetCoinbase(common.Address{1})
+		b.OffsetTime(-9)
+	})
+
+	// Import the canonical chain
+	diskdb := ethdb.NewMemDatabase()
+	new(Genesis).MustCommit(diskdb)
+
+	chain, err := NewBlockChain(diskdb, nil, params.TestChainConfig, engine, vm.Config{}, nil)
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	if n, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+	}
+	// Generate fork chain, starting from an early block
+	parent := blocks[10]
+	fork, _ := GenerateChain(params.TestChainConfig, parent, engine, db, 8*triesInMemory, func(i int, b *BlockGen) {
+		b.SetCoinbase(common.Address{2})
+	})
+
+	// And now import the fork
+	if i, err := chain.InsertChain(fork); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", i, err)
+	}
+	head := chain.CurrentBlock()
+	if got := fork[len(fork)-1].Hash(); got != head.Hash() {
+		t.Fatalf("head wrong, expected %x got %x", head.Hash(), got)
+	}
+	// Sanity check that all the canonical numbers are present
+	header := chain.CurrentHeader()
+	for number := head.NumberU64(); number > 0; number-- {
+		if hash := chain.GetHeaderByNumber(number).Hash(); hash != header.Hash() {
+			t.Fatalf("header %d: canonical hash mismatch: have %x, want %x", number, hash, header.Hash())
+		}
+		header = chain.GetHeader(header.ParentHash, number-1)
+	}
 }

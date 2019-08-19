@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package network
 
@@ -20,8 +20,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
@@ -44,31 +44,7 @@ func init() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*loglevel), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 }
 
-type testStore struct {
-	sync.Mutex
-
-	values map[string][]byte
-}
-
-func (t *testStore) Load(key string) ([]byte, error) {
-	t.Lock()
-	defer t.Unlock()
-	v, ok := t.values[key]
-	if !ok {
-		return nil, fmt.Errorf("key not found: %s", key)
-	}
-	return v, nil
-}
-
-func (t *testStore) Save(key string, v []byte) error {
-	t.Lock()
-	defer t.Unlock()
-	t.values[key] = v
-	return nil
-}
-
 func HandshakeMsgExchange(lhs, rhs *HandshakeMsg, id enode.ID) []p2ptest.Exchange {
-
 	return []p2ptest.Exchange{
 		{
 			Expects: []p2ptest.Expect{
@@ -107,7 +83,7 @@ func newBzzBaseTester(t *testing.T, n int, addr *BzzAddr, spec *protocols.Spec, 
 		return srv(&BzzPeer{Peer: protocols.NewPeer(p, rw, spec), BzzAddr: NewAddr(p.Node())})
 	}
 
-	s := p2ptest.NewProtocolTester(t, addr.ID(), n, protocol)
+	s := p2ptest.NewProtocolTester(addr.ID(), n, protocol)
 
 	for _, node := range s.Nodes {
 		cs[node.ID().String()] = make(chan bool)
@@ -140,9 +116,9 @@ func newBzz(addr *BzzAddr, lightNode bool) *Bzz {
 	return bzz
 }
 
-func newBzzHandshakeTester(t *testing.T, n int, addr *BzzAddr, lightNode bool) *bzzTester {
+func newBzzHandshakeTester(n int, addr *BzzAddr, lightNode bool) *bzzTester {
 	bzz := newBzz(addr, lightNode)
-	pt := p2ptest.NewProtocolTester(t, addr.ID(), n, bzz.runBzz)
+	pt := p2ptest.NewProtocolTester(addr.ID(), n, bzz.runBzz)
 
 	return &bzzTester{
 		addr:           addr,
@@ -190,7 +166,7 @@ func correctBzzHandshake(addr *BzzAddr, lightNode bool) *HandshakeMsg {
 func TestBzzHandshakeNetworkIDMismatch(t *testing.T) {
 	lightNode := false
 	addr := RandomAddr()
-	s := newBzzHandshakeTester(t, 1, addr, lightNode)
+	s := newBzzHandshakeTester(1, addr, lightNode)
 	node := s.Nodes[0]
 
 	err := s.testHandshake(
@@ -207,7 +183,7 @@ func TestBzzHandshakeNetworkIDMismatch(t *testing.T) {
 func TestBzzHandshakeVersionMismatch(t *testing.T) {
 	lightNode := false
 	addr := RandomAddr()
-	s := newBzzHandshakeTester(t, 1, addr, lightNode)
+	s := newBzzHandshakeTester(1, addr, lightNode)
 	node := s.Nodes[0]
 
 	err := s.testHandshake(
@@ -224,7 +200,7 @@ func TestBzzHandshakeVersionMismatch(t *testing.T) {
 func TestBzzHandshakeSuccess(t *testing.T) {
 	lightNode := false
 	addr := RandomAddr()
-	s := newBzzHandshakeTester(t, 1, addr, lightNode)
+	s := newBzzHandshakeTester(1, addr, lightNode)
 	node := s.Nodes[0]
 
 	err := s.testHandshake(
@@ -249,7 +225,8 @@ func TestBzzHandshakeLightNode(t *testing.T) {
 	for _, test := range lightNodeTests {
 		t.Run(test.name, func(t *testing.T) {
 			randomAddr := RandomAddr()
-			pt := newBzzHandshakeTester(t, 1, randomAddr, false)
+			pt := newBzzHandshakeTester(1, randomAddr, false)
+
 			node := pt.Nodes[0]
 			addr := NewAddr(node)
 
@@ -262,8 +239,14 @@ func TestBzzHandshakeLightNode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if pt.bzz.handshakes[node.ID()].LightNode != test.lightNode {
-				t.Fatalf("peer LightNode flag is %v, should be %v", pt.bzz.handshakes[node.ID()].LightNode, test.lightNode)
+			select {
+
+			case <-pt.bzz.handshakes[node.ID()].done:
+				if pt.bzz.handshakes[node.ID()].LightNode != test.lightNode {
+					t.Fatalf("peer LightNode flag is %v, should be %v", pt.bzz.handshakes[node.ID()].LightNode, test.lightNode)
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatal("test timeout")
 			}
 		})
 	}

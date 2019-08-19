@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package shed
 
@@ -95,6 +95,44 @@ func (f Uint64Field) IncInBatch(batch *leveldb.Batch) (val uint64, err error) {
 		}
 	}
 	val++
+	f.PutInBatch(batch, val)
+	return val, nil
+}
+
+// Dec decrements a uint64 value in the database.
+// This operation is not goroutine save.
+// The field is protected from overflow to a negative value.
+func (f Uint64Field) Dec() (val uint64, err error) {
+	val, err = f.Get()
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			val = 0
+		} else {
+			return 0, err
+		}
+	}
+	if val != 0 {
+		val--
+	}
+	return val, f.Put(val)
+}
+
+// DecInBatch decrements a uint64 value in the batch
+// by retreiving a value from the database, not the same batch.
+// This operation is not goroutine save.
+// The field is protected from overflow to a negative value.
+func (f Uint64Field) DecInBatch(batch *leveldb.Batch) (val uint64, err error) {
+	val, err = f.Get()
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			val = 0
+		} else {
+			return 0, err
+		}
+	}
+	if val != 0 {
+		val--
+	}
 	f.PutInBatch(batch, val)
 	return val, nil
 }

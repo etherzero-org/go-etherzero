@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Handler is the API for feeds
 // It enables creating, updating, syncing and retrieving feed updates and their data
@@ -23,7 +23,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/etherzero/go-etherzero/swarm/storage/feed/lookup"
 
@@ -32,12 +31,10 @@ import (
 )
 
 type Handler struct {
-	chunkStore      *storage.NetStore
-	HashSize        int
-	cache           map[uint64]*cacheEntry
-	cacheLock       sync.RWMutex
-	storeTimeout    time.Duration
-	queryMaxPeriods uint32
+	chunkStore *storage.NetStore
+	HashSize   int
+	cache      map[uint64]*cacheEntry
+	cacheLock  sync.RWMutex
 }
 
 // HandlerParams pass parameters to the Handler constructor NewHandler
@@ -82,9 +79,8 @@ func (h *Handler) SetStore(store *storage.NetStore) {
 // Validate is a chunk validation method
 // If it looks like a feed update, the chunk address is checked against the userAddr of the update's signature
 // It implements the storage.ChunkValidator interface
-func (h *Handler) Validate(chunkAddr storage.Address, data []byte) bool {
-	dataLength := len(data)
-	if dataLength < minimumSignedUpdateLength {
+func (h *Handler) Validate(chunk storage.Chunk) bool {
+	if len(chunk.Data()) < minimumSignedUpdateLength {
 		return false
 	}
 
@@ -94,8 +90,8 @@ func (h *Handler) Validate(chunkAddr storage.Address, data []byte) bool {
 
 	// First, deserialize the chunk
 	var r Request
-	if err := r.fromChunk(chunkAddr, data); err != nil {
-		log.Debug("Invalid feed update chunk", "addr", chunkAddr.Hex(), "err", err.Error())
+	if err := r.fromChunk(chunk); err != nil {
+		log.Debug("Invalid feed update chunk", "addr", chunk.Address(), "err", err)
 		return false
 	}
 
@@ -198,7 +194,7 @@ func (h *Handler) Lookup(ctx context.Context, query *Query) (*cacheEntry, error)
 		}
 
 		var request Request
-		if err := request.fromChunk(chunk.Address(), chunk.Data()); err != nil {
+		if err := request.fromChunk(chunk); err != nil {
 			return nil, nil
 		}
 		if request.Time <= timeLimit {

@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -27,9 +27,6 @@ import (
 
 // ErrNotFound is returned when no results are returned from the database
 var ErrNotFound = errors.New("ErrorNotFound")
-
-// ErrInvalidArgument is returned when the argument type does not match the expected type
-var ErrInvalidArgument = errors.New("ErrorInvalidArgument")
 
 // Store defines methods required to get, set, delete values for different keys
 // and close the underlying resources.
@@ -91,18 +88,15 @@ func (s *DBStore) Get(key string, i interface{}) (err error) {
 // Put stores an object that implements Binary for a specific key.
 func (s *DBStore) Put(key string, i interface{}) (err error) {
 	var bytes []byte
-
-	marshaler, ok := i.(encoding.BinaryMarshaler)
-	if !ok {
-		if bytes, err = json.Marshal(i); err != nil {
-			return err
-		}
-	} else {
+	if marshaler, ok := i.(encoding.BinaryMarshaler); ok {
 		if bytes, err = marshaler.MarshalBinary(); err != nil {
 			return err
 		}
+	} else {
+		if bytes, err = json.Marshal(i); err != nil {
+			return err
+		}
 	}
-
 	return s.db.Put([]byte(key), bytes, nil)
 }
 

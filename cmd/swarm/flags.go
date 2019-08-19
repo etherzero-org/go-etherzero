@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of go-etherzero.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-etherzero is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-etherzero is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
 
 // Command feed allows the user to create and update signed Swarm feeds
 package main
@@ -156,6 +156,10 @@ var (
 		Name:  "compressed",
 		Usage: "Prints encryption keys in compressed form",
 	}
+	SwarmBootnodeModeFlag = cli.BoolFlag{
+		Name:  "bootnode-mode",
+		Usage: "Run Swarm in Bootnode mode",
+	}
 	SwarmFeedNameFlag = cli.StringFlag{
 		Name:  "name",
 		Usage: "User-defined name for the new feed, limited to 32 characters. If combined with topic, it will refer to a subtopic with this name",
@@ -164,10 +168,6 @@ var (
 		Name:  "topic",
 		Usage: "User-defined topic this feed is tracking, hex encoded. Limited to 64 hexadecimal characters",
 	}
-	SwarmFeedDataOnCreateFlag = cli.StringFlag{
-		Name:  "data",
-		Usage: "Initializes the feed with the given hex-encoded data. Data must be prefixed by 0x",
-	}
 	SwarmFeedManifestFlag = cli.StringFlag{
 		Name:  "manifest",
 		Usage: "Refers to the feed through a manifest",
@@ -175,5 +175,10 @@ var (
 	SwarmFeedUserFlag = cli.StringFlag{
 		Name:  "user",
 		Usage: "Indicates the user who updates the feed",
+	}
+	SwarmGlobalStoreAPIFlag = cli.StringFlag{
+		Name:   "globalstore-api",
+		Usage:  "URL of the Global Store API provider (only for testing)",
+		EnvVar: SWARM_GLOBALSTORE_API,
 	}
 )

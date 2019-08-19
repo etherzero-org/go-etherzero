@@ -1,22 +1,22 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package bind generates Ethereum contract Go bindings.
 //
-// Detailed usage document and tutorial available on the go-ethereum Wiki page:
+// Detailed usage document and tutorial available on the go-etherzero Wiki page:
 // https://github.com/etherzero/go-etherzero/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
 package bind
 
@@ -381,54 +381,23 @@ func namedTypeJava(javaKind string, solKind abi.Type) string {
 // methodNormalizer is a name transformer that modifies Solidity method names to
 // conform to target language naming concentions.
 var methodNormalizer = map[Lang]func(string) string{
-	LangGo:   capitalise,
+	LangGo:   abi.ToCamelCase,
 	LangJava: decapitalise,
 }
 
 // capitalise makes a camel-case string which starts with an upper case character.
 func capitalise(input string) string {
-	for len(input) > 0 && input[0] == '_' {
-		input = input[1:]
-	}
-	if len(input) == 0 {
-		return ""
-	}
-	return toCamelCase(strings.ToUpper(input[:1]) + input[1:])
+	return abi.ToCamelCase(input)
 }
 
 // decapitalise makes a camel-case string which starts with a lower case character.
 func decapitalise(input string) string {
-	for len(input) > 0 && input[0] == '_' {
-		input = input[1:]
-	}
 	if len(input) == 0 {
-		return ""
+		return input
 	}
-	return toCamelCase(strings.ToLower(input[:1]) + input[1:])
-}
 
-// toCamelCase converts an under-score string to a camel-case string
-func toCamelCase(input string) string {
-	toupper := false
-
-	result := ""
-	for k, v := range input {
-		switch {
-		case k == 0:
-			result = strings.ToUpper(string(input[0]))
-
-		case toupper:
-			result += strings.ToUpper(string(v))
-			toupper = false
-
-		case v == '_':
-			toupper = true
-
-		default:
-			result += string(v)
-		}
-	}
-	return result
+	goForm := abi.ToCamelCase(input)
+	return strings.ToLower(goForm[:1]) + goForm[1:]
 }
 
 // structured checks whether a list of ABI data types has enough information to

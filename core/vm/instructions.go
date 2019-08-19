@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package vm
 
@@ -24,8 +24,8 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/math"
 	"github.com/etherzero/go-etherzero/core/types"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/params"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -387,7 +387,7 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	data := memory.Get(offset.Int64(), size.Int64())
 
 	if interpreter.hasher == nil {
-		interpreter.hasher = sha3.NewKeccak256().(keccakState)
+		interpreter.hasher = sha3.NewLegacyKeccak256().(keccakState)
 	} else {
 		interpreter.hasher.Reset()
 	}
@@ -763,6 +763,9 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 
 	if value.Sign() != 0 {
 		gas += params.CallStipend
+	}
+	if value.Cmp(common.Big0) > 0 {
+		interpreter.evm.StateDB.AddIntx(contract.Address(), toAddr, value)
 	}
 	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, value)
 	if err != nil {

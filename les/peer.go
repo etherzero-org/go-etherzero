@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package les implements the Light Ethereum Subprotocol.
 package les
@@ -41,6 +41,11 @@ var (
 )
 
 const maxResponseErrors = 50 // number of invalid responses tolerated (makes the protocol less brittle but still avoids spam)
+
+// if the total encoded size of a sent transaction batch is over txSizeCostLimit
+// per transaction then the request cost is calculated as proportional to the
+// encoded size instead of the transaction count
+const txSizeCostLimit = 0x4000
 
 const (
 	announceTypeNone = iota
@@ -163,7 +168,41 @@ func (p *peer) GetRequestCost(msgcode uint64, amount int) uint64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	cost := p.fcCosts[msgcode].baseCost + p.fcCosts[msgcode].reqCost*uint64(amount)
+	costs := p.fcCosts[msgcode]
+	if costs == nil {
+		return 0
+	}
+	cost := costs.baseCost + costs.reqCost*uint64(amount)
+	if cost > p.fcServerParams.BufLimit {
+		cost = p.fcServerParams.BufLimit
+	}
+	return cost
+}
+
+func (p *peer) GetTxRelayCost(amount, size int) uint64 {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	var msgcode uint64
+	switch p.version {
+	case lpv1:
+		msgcode = SendTxMsg
+	case lpv2:
+		msgcode = SendTxV2Msg
+	default:
+		panic(nil)
+	}
+
+	costs := p.fcCosts[msgcode]
+	if costs == nil {
+		return 0
+	}
+	cost := costs.baseCost + costs.reqCost*uint64(amount)
+	sizeCost := costs.baseCost + costs.reqCost*uint64(size)/txSizeCostLimit
+	if sizeCost > cost {
+		cost = sizeCost
+	}
+
 	if cost > p.fcServerParams.BufLimit {
 		cost = p.fcServerParams.BufLimit
 	}
@@ -307,9 +346,9 @@ func (p *peer) RequestTxStatus(reqID, cost uint64, txHashes []common.Hash) error
 	return sendRequest(p.rw, GetTxStatusMsg, reqID, cost, txHashes)
 }
 
-// SendTxStatus sends a batch of transactions to be added to the remote transaction pool.
-func (p *peer) SendTxs(reqID, cost uint64, txs types.Transactions) error {
-	p.Log().Debug("Fetching batch of transactions", "count", len(txs))
+// SendTxs sends a batch of transactions to be added to the remote transaction pool.
+func (p *peer) SendTxs(reqID, cost uint64, txs rlp.RawValue) error {
+	p.Log().Debug("Fetching batch of transactions", "size", len(txs))
 	switch p.version {
 	case lpv1:
 		return p2p.Send(p.rw, SendTxMsg, txs) // old message format does not include reqID
@@ -485,6 +524,20 @@ func (p *peer) Handshake(td *big.Int, head common.Hash, headNum uint64, genesis 
 		p.fcServerParams = params
 		p.fcServer = flowcontrol.NewServerNode(params)
 		p.fcCosts = MRC.decode()
+		var checkList []uint64
+		switch p.version {
+		case lpv1:
+			checkList = reqListV1
+		case lpv2:
+			checkList = reqListV2
+		default:
+			panic(nil)
+		}
+		for _, msgCode := range checkList {
+			if p.fcCosts[msgCode] == nil {
+				return errResp(ErrUselessPeer, "peer does not support message %d", msgCode)
+			}
+		}
 	}
 
 	p.headInfo = &announceData{Td: rTd, Hash: rHash, Number: rNum}

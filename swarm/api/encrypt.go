@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package api
 
@@ -20,8 +20,8 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/swarm/storage/encryption"
+	"golang.org/x/crypto/sha3"
 )
 
 type RefEncryption struct {
@@ -39,12 +39,12 @@ func NewRefEncryption(refSize int) *RefEncryption {
 }
 
 func (re *RefEncryption) Encrypt(ref []byte, key []byte) ([]byte, error) {
-	spanEncryption := encryption.New(key, 0, uint32(re.refSize/32), sha3.NewKeccak256)
+	spanEncryption := encryption.New(key, 0, uint32(re.refSize/32), sha3.NewLegacyKeccak256)
 	encryptedSpan, err := spanEncryption.Encrypt(re.span)
 	if err != nil {
 		return nil, err
 	}
-	dataEncryption := encryption.New(key, re.refSize, 0, sha3.NewKeccak256)
+	dataEncryption := encryption.New(key, re.refSize, 0, sha3.NewLegacyKeccak256)
 	encryptedData, err := dataEncryption.Encrypt(ref)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (re *RefEncryption) Encrypt(ref []byte, key []byte) ([]byte, error) {
 }
 
 func (re *RefEncryption) Decrypt(ref []byte, key []byte) ([]byte, error) {
-	spanEncryption := encryption.New(key, 0, uint32(re.refSize/32), sha3.NewKeccak256)
+	spanEncryption := encryption.New(key, 0, uint32(re.refSize/32), sha3.NewLegacyKeccak256)
 	decryptedSpan, err := spanEncryption.Decrypt(ref[:8])
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (re *RefEncryption) Decrypt(ref []byte, key []byte) ([]byte, error) {
 		return nil, errors.New("invalid span in encrypted reference")
 	}
 
-	dataEncryption := encryption.New(key, re.refSize, 0, sha3.NewKeccak256)
+	dataEncryption := encryption.New(key, re.refSize, 0, sha3.NewLegacyKeccak256)
 	decryptedRef, err := dataEncryption.Decrypt(ref[8:])
 	if err != nil {
 		return nil, err

@@ -27,6 +27,7 @@ import (
 	"sync"
 
 	"encoding/json"
+
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
@@ -34,20 +35,18 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
-
-var skipBlock = big.NewInt(12153042)
 
 type Snapshot struct {
 	devoteDB *devotedb.DevoteDB
-	config   *params.DevoteConfig                 // Consensus engine parameters to fine tune behavior
-	sigcache *lru.ARCCache                        // Cache of recent block signatures to speed up ecrecover
-	Hash     common.Hash                          //Block hash where the snapshot was created
-	Number   uint64                               //Cycle number where the snapshot was created
-	Cycle    uint64                               //Cycle number where the snapshot was created
-	Signers  map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
-	Recents  map[uint64]string                    // set of recent masternodes for spam protections
+	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
+	Hash     common.Hash          //Block hash where the snapshot was created
+	Number   uint64               //Cycle number where the snapshot was created
+	Cycle    uint64               //Cycle number where the snapshot was created
+	Signers  map[string]struct{}  `json:"signers"` // Set of authorized signers at this moment
+	Recents  map[uint64]string    // set of recent masternodes for spam protections
 
 	TimeStamp uint64
 	mu        sync.Mutex
@@ -102,7 +101,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 	for _, header := range headers {
 		// Remove any recent blocks on new cycle
-		cycle := header.Time.Uint64()
+		cycle := header.Time
 		if cycle%params.Epoch == 0 {
 			snap.Recents = make(map[uint64]string)
 		}
@@ -120,10 +119,9 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			snap.Recents[number] = signer
 		}
 	}
-	//snap.Number += uint64(len(headers))
 	snap.Number = headers[0].Number.Uint64()
 	snap.Hash = headers[len(headers)-1].Hash()
-	snap.Cycle = headers[len(headers)-1].Time.Uint64() / params.Epoch
+	snap.Cycle = headers[len(headers)-1].Time / params.Epoch
 	return snap, nil
 }
 
@@ -177,7 +175,7 @@ func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes [
 }
 
 //Remove from candidate nodes when a node does't work in the current cycle
-func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
+func (snap *Snapshot) uncast(cycle uint64, nodes []string, safeSize int) ([]string, error) {
 
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
@@ -215,6 +213,66 @@ func (snap *Snapshot) uncast(cycle uint64, nodes []string) ([]string, error) {
 		}
 	}
 	return nodes, nil
+}
+
+// Remove from candidate nodes when a node does't work in the current cycle.
+// This is an improved version to previous implementation.
+func (snap *Snapshot) uncastImproved(cycle uint64, nodes []string, safeSize int) ([]string, error) {
+	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
+	if err != nil {
+		return nodes, fmt.Errorf("failed to get witness from DB: %s", err)
+	}
+	if len(witnesses) == 0 {
+		return nodes, errors.New("no witness could be uncast")
+	}
+
+	weightedNodes := make(sortableAddresses, 0, len(nodes))
+	for _, node := range nodes {
+		weightedNodes = append(weightedNodes, &sortableAddress{
+			nodeid: node,
+			weight: big.NewInt(9223372036854775807), // initially give the biggest weight
+		})
+	}
+
+	// updates node weight if necessary
+	for _, wn := range weightedNodes {
+		for _, witness := range witnesses {
+			if witness == wn.nodeid {
+				// get real weight
+				key := make([]byte, 8)
+				binary.BigEndian.PutUint64(key, cycle)
+				// TODO
+				key = append(key, []byte(witness)...)
+
+				wn.weight.SetUint64(snap.devoteDB.GetStatsNumber(key))
+				break
+			}
+		}
+	}
+
+	sort.Sort(weightedNodes)
+
+	// eliminates under weight nodes, but make sure have enough nodes finally
+	from := -1
+	zero := big.NewInt(0)
+	for i, node := range weightedNodes {
+		if node.weight.Cmp(zero) > 0 {
+			from = i
+			break
+		}
+	}
+	if from == -1 {
+		from = 0
+	} else if len(weightedNodes)-from < safeSize {
+		from = len(weightedNodes) - safeSize
+	}
+
+	result := make([]string, 0, len(weightedNodes)-from)
+	for _, node := range weightedNodes {
+		result = append(result, node.nodeid)
+	}
+
+	return result, nil
 }
 
 func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
@@ -262,6 +320,9 @@ func (snap *Snapshot) setSigners(ary []string) {
 
 // Recording accumulating the total number of signature blocks each signer in the current cycle,return devoteDB hash
 func (snap *Snapshot) recording(parent uint64, header uint64, witness string) *devotedb.DevoteProtocol {
+	snap.mu.Lock()
+	defer snap.mu.Unlock()
+
 	snap.devoteDB.Rolling(parent, header, witness)
 	snap.devoteDB.Commit()
 	return snap.devoteDB.Protocol()
@@ -272,37 +333,28 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 
 	var (
 		sortedWitnesses []string
-		isbad           bool   = false
-		size            uint64 = 1
-		genesiscycle           = genesis.Time.Uint64() / params.Epoch
-		prevcycle              = parent.Time.Uint64() / params.Epoch
+		genesiscycle           = genesis.Time / params.Epoch
+		precycle              = parent.Time / params.Epoch
 		currentcycle           = snap.TimeStamp / params.Epoch
 	)
 
-	preisgenesis := (prevcycle == genesiscycle)
-	if !preisgenesis && prevcycle < currentcycle {
-		prevcycle = currentcycle - 1
+	preisgenesis := (precycle == genesiscycle)
+	if !preisgenesis && precycle < currentcycle {
+		precycle = currentcycle - 1
 	}
-	if size, isbad = params.BadCycye[currentcycle]; isbad {
-		prevcycle = currentcycle - size
-	}
-
-	for i := prevcycle; i < currentcycle; i++ {
+	for i := precycle; i < currentcycle; i++ {
 		// if prevcycle is not genesis, uncast not active masternode
 		list := make([]string, len(nodes))
 		copy(list, nodes)
 		if !preisgenesis {
-			list, _ = snap.uncast(prevcycle, nodes)
+			list, _ = snap.uncastImproved(precycle, nodes, safeSize)
 		}
-
 		count, err := snap.calculate(parent, preisgenesis, list)
 		if err != nil {
 			log.Error("snapshot init masternodes failed", "err", err)
 			return nil, err
 		}
-
 		masternodes := sortableAddresses{}
-
 		for masternode, cnt := range count {
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
@@ -311,32 +363,14 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		}
 		sort.Sort(masternodes)
 
-		if isbad {
+		if len(masternodes) > int(maxWitnessSize) {
 			masternodes = masternodes[:maxWitnessSize]
-			sizeTmp := size - 1
-			masternodesTmp := masternodes
-			for {
-				if sizeTmp == 0 {
-					break
-				}
-				masternodes = append(masternodes, masternodesTmp...)
-				sizeTmp--
-			}
-		} else {
-			if len(masternodes) > int(maxWitnessSize) {
-				masternodes = masternodes[:maxWitnessSize]
-			}
 		}
 		sortedWitnesses = []string{}
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		// for special process for cycle 2588019
-		if currentcycle == params.BadWitnessOfCycle_2588019 {
-			sortedWitnesses = []string{}
-			sortedWitnesses = params.WitnessesOfCycle_2588019
-		}
-		log.Debug("Initializing a new cycle ", "prevcycle", prevcycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}

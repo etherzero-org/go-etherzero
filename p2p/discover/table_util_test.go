@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package discover
 
@@ -83,6 +83,14 @@ func fillBucket(tab *Table, n *node) (last *node) {
 	return b.entries[bucketSize-1]
 }
 
+// fillTable adds nodes the table to the end of their corresponding bucket
+// if the bucket is not full. The caller must not hold tab.mutex.
+func fillTable(tab *Table, nodes []*node) {
+	for _, n := range nodes {
+		tab.addSeenNode(n)
+	}
+}
+
 type pingRecorder struct {
 	mu           sync.Mutex
 	dead, pinged map[enode.ID]bool
@@ -109,10 +117,6 @@ func (t *pingRecorder) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPu
 	return nil, nil
 }
 
-func (t *pingRecorder) waitping(from enode.ID) error {
-	return nil // remote always pings
-}
-
 func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -137,15 +141,6 @@ func hasDuplicates(slice []*node) bool {
 			return true
 		}
 		seen[e.ID()] = true
-	}
-	return false
-}
-
-func contains(ns []*node, id enode.ID) bool {
-	for _, n := range ns {
-		if n.ID() == id {
-			return true
-		}
 	}
 	return false
 }

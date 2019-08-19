@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package downloader contains the manual full chain synchronisation.
 package downloader
@@ -76,6 +76,7 @@ var (
 	errUnknownPeer             = errors.New("peer is unknown or unhealthy")
 	errBadPeer                 = errors.New("action from bad peer ignored")
 	errStallingPeer            = errors.New("peer is stalling")
+	errUnsyncedPeer            = errors.New("unsynced peer")
 	errNoPeers                 = errors.New("no peers to keep download active")
 	errTimeout                 = errors.New("timeout")
 	errEmptyHeaderSet          = errors.New("empty header set by peer")
@@ -100,10 +101,11 @@ type Downloader struct {
 	mode SyncMode       // Synchronisation mode defining the strategy used (per sync cycle)
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
-	genesis uint64   // Genesis block number to limit sync to (e.g. light client CHT)
-	queue   *queue   // Scheduler for selecting the hashes to download
-	peers   *peerSet // Set of active peers from which download can proceed
-	stateDB ethdb.Database
+	checkpoint uint64   // Checkpoint block number to enforce head against (e.g. fast sync)
+	genesis    uint64   // Genesis block number to limit sync to (e.g. light client CHT)
+	queue      *queue   // Scheduler for selecting the hashes to download
+	peers      *peerSet // Set of active peers from which download can proceed
+	stateDB    ethdb.Database
 
 	rttEstimate   uint64 // Round trip time to target for download requests
 	rttConfidence uint64 // Confidence in the estimated RTT (unit: millionths to allow atomic ops)
@@ -206,15 +208,15 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
+func New(mode SyncMode, checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
-
 	dl := &Downloader{
 		mode:           mode,
 		stateDB:        stateDb,
 		mux:            mux,
+		checkpoint:     checkpoint,
 		queue:          newQueue(),
 		peers:          newPeerSet(),
 		rttEstimate:    uint64(rttMaxEstimate),
@@ -253,7 +255,7 @@ func (d *Downloader) Progress() ethereum.SyncProgress {
 	d.syncStatsLock.RLock()
 	defer d.syncStatsLock.RUnlock()
 
-	current := uint64(0)
+	current := uint64(params.GenesisBlockNumber)
 	switch d.mode {
 	case FullSync:
 		current = d.blockchain.CurrentBlock().NumberU64()
@@ -327,7 +329,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 	case nil:
 	case errBusy:
 
-	case errTimeout, errBadPeer, errStallingPeer,
+	case errTimeout, errBadPeer, errStallingPeer, errUnsyncedPeer,
 		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
 		errInvalidAncestor, errInvalidChain:
 		log.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
@@ -578,6 +580,10 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 				return nil, errBadPeer
 			}
 			head := headers[0]
+			if d.mode == FastSync && head.Number.Uint64() < d.checkpoint {
+				p.log.Warn("Remote head below checkpoint", "number", head.Number, "hash", head.Hash())
+				return nil, errUnsyncedPeer
+			}
 			p.log.Debug("Remote head header identified", "number", head.Number, "hash", head.Hash())
 			return head, nil
 
@@ -637,8 +643,8 @@ func calculateRequestSpan(remoteHeight, localHeight uint64) (int64, int, int, ui
 		count = 2
 	}
 	from = requestHead - (count-1)*span
-	if from < 0 {
-		from = 0
+	if from < int(params.GenesisBlockNumber) {
+		from = int(params.GenesisBlockNumber)
 	}
 	max := from + (count-1)*span
 	return int64(from), count, span - 1, uint64(max)
@@ -770,8 +776,8 @@ func (d *Downloader) findAncestor(p *peerConnection, remoteHeader *types.Header)
 		return number, nil
 	}
 	// Ancestor not found, we need to binary search over our chain
-	start, end := uint64(0), remoteHeight
-	if floor > 0 {
+	start, end := params.GenesisBlockNumber, remoteHeight
+	if floor > int64(params.GenesisBlockNumber) {
 		start = uint64(floor)
 	}
 	p.log.Trace("Binary searching for common ancestor", "start", start, "end", end)
@@ -1489,7 +1495,15 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 	}
 	if index, err := d.blockchain.InsertChain(blocks); err != nil {
-		log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+		if index < len(results) {
+			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+		} else {
+			// The InsertChain method in blockchain.go will sometimes return an out-of-bounds index,
+			// when it needs to preprocess blocks to import a sidechain.
+			// The importer will put together a new list of blocks to import, which is a superset
+			// of the blocks delivered from the downloader, and the indexing will be off.
+			log.Debug("Downloaded item processing failed on sidechain import", "index", index, "err", err)
+		}
 		return errInvalidChain
 	}
 	return nil
@@ -1564,11 +1578,9 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 			// If new pivot block found, cancel old state retrieval and restart
 			if oldPivot != P {
 				stateSync.Cancel()
-
 				if err := d.syncDevoteProtocolState(P.Header.Protocol); err != nil {
 					return err
 				}
-
 				stateSync = d.syncState(P.Header.Root)
 				defer stateSync.Cancel()
 				go func() {
@@ -1622,7 +1634,6 @@ func splitAroundPivot(pivot uint64, results []*fetchResult) (p *fetchResult, pre
 	}
 	return p, prep, before, after
 }
-
 func (d *Downloader) syncDevoteProtocolState(protocol *devotedb.DevoteProtocol) error {
 	roots := []common.Hash{
 		protocol.CycleHash,

@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package eth implements the Ethereum protocol.
 package eth
@@ -20,10 +20,12 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
@@ -49,9 +51,6 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/consensus/devote"
-	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
-	"time"
 )
 
 type LesServer interface {
@@ -87,14 +86,15 @@ type Ethereum struct {
 
 	APIBackend *EthAPIBackend
 
-	miner             *miner.Miner
-	gasPrice          *big.Int
-	etherbase         common.Address
+	miner     *miner.Miner
+	gasPrice  *big.Int
+	etherbase common.Address
 	witness           string
-	networkID         uint64
-	netRPCService     *ethapi.PublicNetAPI
+	networkID     uint64
+	netRPCService *ethapi.PublicNetAPI
 	masternodeManager *MasternodeManager
-	lock              sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {
@@ -117,7 +117,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		config.MinerGasPrice = new(big.Int).Set(DefaultConfig.MinerGasPrice)
 	}
 	// Assemble the Ethereum object
-	chainDb, err := CreateDB(ctx, config, "chaindata")
+	chainDb, err := CreateDB(ctx, config, "blocks")
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +147,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
-		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, core.BlockChainVersion)
+		if bcVersion != nil && *bcVersion > core.BlockChainVersion {
+			return nil, fmt.Errorf("database version is v%d, Geth %s only supports v%d", *bcVersion, params.VersionWithMeta, core.BlockChainVersion)
+		} else if bcVersion != nil && *bcVersion < core.BlockChainVersion {
+			log.Warn("Upgrade blockchain database version", "from", *bcVersion, "to", core.BlockChainVersion)
 		}
 		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
 	}
@@ -177,23 +179,20 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, eth.chainConfig, eth.blockchain)
 
-	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
+	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, config.Whitelist); err != nil {
 		return nil, err
 	}
-
-	//devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(eth.chainDb), eth.blockchain.CurrentBlock().Header().Protocol)
-
-	contractBackend := NewContractBackend(eth)
-	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
-	if eth.masternodeManager = NewMasternodeManager(eth, contract); err != nil {
+	if eth.masternodeManager, err = NewMasternodeManager(eth); err != nil {
 		return nil, err
 	}
 	eth.protocolManager.mm = eth.masternodeManager
 
-	if devote, ok := eth.engine.(*devote.Devote); ok {
-		devote.Masternodes(eth.masternodeManager.MasternodeList)
-		devote.GovernanceContract(eth.masternodeManager.GetGovernanceContractAddress)
+	if engine, ok := eth.engine.(*devote.Devote); ok {
+		engine.Masternodes(eth.masternodeManager.MasternodeList)
+		engine.GovernanceContract(eth.masternodeManager.GetGovernanceContractAddress)
+		engine.SetDevoteDB(chainDb)
 	}
+
 	eth.miner = miner.New(eth, eth.chainConfig, eth.EventMux(), eth.engine)
 	eth.miner.SetExtra(makeExtraData(config.MinerExtraData))
 
@@ -484,7 +483,6 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			clique.Authorize(eb, wallet.SignHash)
 		}
-
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
@@ -564,7 +562,6 @@ func (s *Ethereum) startMasternode(srvr *p2p.Server) {
 	case <-t.C:
 		s.masternodeManager.Start(srvr, s.EventMux())
 	}
-
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the

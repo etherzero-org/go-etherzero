@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package downloader
 
@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	ethereum "github.com/etherzero/go-etherzero"
+	"github.com/etherzero/go-etherzero"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/ethdb"
@@ -73,7 +73,8 @@ func newTester() *downloadTester {
 	}
 	tester.stateDb = ethdb.NewMemDatabase()
 	tester.stateDb.Put(testGenesis.Root().Bytes(), []byte{0x00})
-	tester.downloader = New(FullSync, tester.stateDb, new(event.TypeMux), tester, nil, tester.dropPeer)
+
+	tester.downloader = New(FullSync, 0, tester.stateDb, new(event.TypeMux), tester, nil, tester.dropPeer)
 	return tester
 }
 
@@ -1049,6 +1050,7 @@ func testBlockHeaderAttackerDropping(t *testing.T, protocol int) {
 		{errUnknownPeer, false},             // Peer is unknown, was already dropped, don't double drop
 		{errBadPeer, true},                  // Peer was deemed bad for some reason, drop it
 		{errStallingPeer, true},             // Peer was detected to be stalling, drop it
+		{errUnsyncedPeer, true},             // Peer was detected to be unsynced, drop it
 		{errNoPeers, false},                 // No peers to download from, soft race, no issue
 		{errTimeout, true},                  // No hashes received in due time, drop the peer
 		{errEmptyHeaderSet, true},           // No headers were returned as a response, drop as it's a dead end
@@ -1565,5 +1567,41 @@ func TestRemoteHeaderRequestSpan(t *testing.T) {
 			fmt.Printf("exp: %v\n", exp)
 			t.Errorf("test %d: wrong values", i)
 		}
+	}
+}
+
+// Tests that peers below a pre-configured checkpoint block are prevented from
+// being fast-synced from, avoiding potential cheap eclipse attacks.
+func TestCheckpointEnforcement62(t *testing.T)      { testCheckpointEnforcement(t, 62, FullSync) }
+func TestCheckpointEnforcement63Full(t *testing.T)  { testCheckpointEnforcement(t, 63, FullSync) }
+func TestCheckpointEnforcement63Fast(t *testing.T)  { testCheckpointEnforcement(t, 63, FastSync) }
+func TestCheckpointEnforcement64Full(t *testing.T)  { testCheckpointEnforcement(t, 64, FullSync) }
+func TestCheckpointEnforcement64Fast(t *testing.T)  { testCheckpointEnforcement(t, 64, FastSync) }
+func TestCheckpointEnforcement64Light(t *testing.T) { testCheckpointEnforcement(t, 64, LightSync) }
+
+func testCheckpointEnforcement(t *testing.T, protocol int, mode SyncMode) {
+	t.Parallel()
+
+	// Create a new tester with a particular hard coded checkpoint block
+	tester := newTester()
+	defer tester.terminate()
+
+	tester.downloader.checkpoint = uint64(fsMinFullBlocks) + 256
+	chain := testChainBase.shorten(int(tester.downloader.checkpoint) - 1)
+
+	// Attempt to sync with the peer and validate the result
+	tester.newPeer("peer", protocol, chain)
+
+	var expect error
+	if mode == FastSync {
+		expect = errUnsyncedPeer
+	}
+	if err := tester.sync("peer", nil, mode); err != expect {
+		t.Fatalf("block sync error mismatch: have %v, want %v", err, expect)
+	}
+	if mode == FastSync {
+		assertOwnChain(t, tester, 1)
+	} else {
+		assertOwnChain(t, tester, chain.len())
 	}
 }

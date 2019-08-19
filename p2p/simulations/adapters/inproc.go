@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package adapters
 
@@ -130,7 +130,7 @@ func (s *SimAdapter) Dial(dest *enode.Node) (conn net.Conn, err error) {
 		return nil, err
 	}
 	// this is simulated 'listening'
-	// asynchronously call the dialed destintion node's p2p server
+	// asynchronously call the dialed destination node's p2p server
 	// to set up connection on the 'listening' side
 	go srv.SetupConn(pipe1, 0, nil)
 	return pipe2, nil
@@ -350,18 +350,4 @@ func (sn *SimNode) NodeInfo() *p2p.NodeInfo {
 		}
 	}
 	return server.NodeInfo()
-}
-
-func setSocketBuffer(conn net.Conn, socketReadBuffer int, socketWriteBuffer int) error {
-	if v, ok := conn.(*net.UnixConn); ok {
-		err := v.SetReadBuffer(socketReadBuffer)
-		if err != nil {
-			return err
-		}
-		err = v.SetWriteBuffer(socketWriteBuffer)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

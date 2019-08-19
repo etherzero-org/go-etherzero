@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package eth
 
@@ -87,6 +87,9 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
+	// Whitelist of required block number -> hash values to accept
+	Whitelist map[uint64]common.Hash `toml:"-"`
+
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
@@ -124,12 +127,18 @@ type Config struct {
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
-	Devote  bool   `toml:"-"`
 
 	// Type of the EWASM interpreter ("" for default)
 	EWASMInterpreter string
+
 	// Type of the EVM interpreter ("" for default)
 	EVMInterpreter string
+
+	// Constantinople block override (TODO: remove after the fork)
+	ConstantinopleOverride *big.Int
+
+	// RPCGasCap is the global gas cap for eth-call variants.
+	RPCGasCap *big.Int `toml:",omitempty"`
 }
 
 type configMarshaling struct {

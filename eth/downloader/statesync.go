@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2017 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package downloader
 
@@ -25,10 +25,10 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/trie"
+	"github.com/etherzero/go-etherzero/crypto/sha3"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into
@@ -60,17 +60,6 @@ type stateSyncStats struct {
 // syncState starts downloading state with the given root hash.
 func (d *Downloader) syncState(root common.Hash) *stateSync {
 	s := newStateSync(d, root)
-	select {
-	case d.stateSyncStart <- s:
-	case <-d.quitCh:
-		s.err = errCancelStateFetch
-		close(s.done)
-	}
-	return s
-}
-
-func (d *Downloader) syncDevote(root common.Hash) *stateSync {
-	s := newDevoteSync(d, root)
 	select {
 	case d.stateSyncStart <- s:
 	case <-d.quitCh:
@@ -163,7 +152,7 @@ func (d *Downloader) runStateSync(s *stateSync) *stateSync {
 			finished = append(finished, req)
 			delete(active, pack.PeerId())
 
-			// Handle dropped peer connections:
+		// Handle dropped peer connections:
 		case p := <-peerDrop:
 			// Skip if no request is currently pending
 			req := active[p.id]
@@ -251,18 +240,6 @@ func newStateSync(d *Downloader, root common.Hash) *stateSync {
 	return &stateSync{
 		d:       d,
 		sched:   state.NewStateSync(root, d.stateDB),
-		keccak:  sha3.NewKeccak256(),
-		tasks:   make(map[common.Hash]*stateTask),
-		deliver: make(chan *stateReq),
-		cancel:  make(chan struct{}),
-		done:    make(chan struct{}),
-	}
-}
-
-func newDevoteSync(d *Downloader, root common.Hash) *stateSync {
-	return &stateSync{
-		d:       d,
-		sched:   trie.NewSync(root, d.stateDB, nil),
 		keccak:  sha3.NewKeccak256(),
 		tasks:   make(map[common.Hash]*stateTask),
 		deliver: make(chan *stateReq),
@@ -421,9 +398,8 @@ func (s *stateSync) fillTasks(n int, req *stateReq) {
 
 // process iterates over a batch of delivered state data, injecting each item
 // into a running state sync, re-queuing any items that were requested but not
-// delivered.
-// Returns whether the peer actually managed to deliver anything of value,
-// and any error that occurred
+// delivered. Returns whether the peer actually managed to deliver anything of
+// value, and any error that occurred.
 func (s *stateSync) process(req *stateReq) (int, error) {
 	// Collect processing stats and update progress if valid data was received
 	duplicate, unexpected, successful := 0, 0, 0
@@ -435,14 +411,12 @@ func (s *stateSync) process(req *stateReq) (int, error) {
 	}(time.Now())
 
 	// Iterate over all the delivered data and inject one-by-one into the trie
-	progress := false
 	for _, blob := range req.response {
-		prog, hash, err := s.processNodeData(blob)
+		_, hash, err := s.processNodeData(blob)
 		switch err {
 		case nil:
 			s.numUncommitted++
 			s.bytesUncommitted += len(blob)
-			progress = progress || prog
 			successful++
 		case trie.ErrNotRequested:
 			unexpected++
@@ -503,5 +477,28 @@ func (s *stateSync) updateStats(written, duplicate, unexpected int, duration tim
 	}
 	if written > 0 {
 		rawdb.WriteFastTrieProgress(s.d.stateDB, s.d.syncStatsState.processed)
+	}
+}
+
+func (d *Downloader) syncDevote(root common.Hash) *stateSync {
+	s := newDevoteSync(d, root)
+	select {
+	case d.stateSyncStart <- s:
+	case <-d.quitCh:
+		s.err = errCancelStateFetch
+		close(s.done)
+	}
+	return s
+}
+
+func newDevoteSync(d *Downloader, root common.Hash) *stateSync {
+	return &stateSync{
+		d:       d,
+		sched:   trie.NewSync(root, d.stateDB, nil),
+		keccak:  sha3.NewKeccak256(),
+		tasks:   make(map[common.Hash]*stateTask),
+		deliver: make(chan *stateReq),
+		cancel:  make(chan struct{}),
+		done:    make(chan struct{}),
 	}
 }

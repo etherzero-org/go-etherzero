@@ -18,27 +18,27 @@ package eth
 
 import (
 	"bytes"
-	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+	"errors"
+	"context"
 
-	"crypto/ecdsa"
-	"github.com/etherzero/go-etherzero"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
-	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
-	"github.com/etherzero/go-etherzero/p2p/discover"
 	"github.com/etherzero/go-etherzero/params"
+	"github.com/etherzero/go-etherzero/p2p/discover"
+	"crypto/ecdsa"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/eth/downloader"
+	"github.com/etherzero/go-etherzero"
 )
 
 var (
@@ -48,9 +48,9 @@ var (
 
 type MasternodeManager struct {
 	// channels for fetcher, syncer, txsyncLoop
-	IsMasternode    uint32
-	srvr            *p2p.Server
-	contract        *contract.Contract
+	IsMasternode uint32
+	srvr         *p2p.Server
+	contract     *contract.Contract
 
 	mux *event.TypeMux
 	eth *Ethereum
@@ -63,13 +63,19 @@ type MasternodeManager struct {
 	PrivateKey  *ecdsa.PrivateKey
 }
 
-func NewMasternodeManager(eth *Ethereum, contract *contract.Contract) *MasternodeManager {
+func NewMasternodeManager(eth *Ethereum) (*MasternodeManager, error) {
+	contractBackend := NewContractBackend(eth)
+	contract, err := contract.NewContract(params.MasterndeContractAddress, contractBackend)
+	if err != nil {
+		return nil, err
+	}
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		eth:             eth,
-		contract:        contract,
+		eth:                eth,
+		contract:           contract,
+		syncing:            0,
 	}
-	return manager
+	return manager, nil
 }
 
 func (self *MasternodeManager) Clear() {
@@ -95,18 +101,18 @@ func (self *MasternodeManager) Stop() {
 
 }
 
-func (mm *MasternodeManager) masternodeLoop() {
-	xy := mm.srvr.Self().XY()
-	has, err := mm.contract.Has(nil, mm.srvr.Self().X8())
+func (self *MasternodeManager) masternodeLoop() {
+	xy := self.srvr.Self().XY()
+	has, err := self.contract.Has(nil, self.srvr.Self().X8())
 	if err != nil {
 		log.Error("contract.Has", "error", err)
 	}
 	if has {
 		fmt.Println("### It's already been a masternode! ")
-		atomic.StoreUint32(&mm.IsMasternode, 1)
+		atomic.StoreUint32(&self.IsMasternode, 1)
 	} else {
-		atomic.StoreUint32(&mm.IsMasternode, 0)
-		if mm.srvr.IsMasternode {
+		atomic.StoreUint32(&self.IsMasternode, 0)
+		if self.srvr.IsMasternode {
 			data := "0x2f926732" + common.Bytes2Hex(xy[:])
 			fmt.Printf("### Masternode Transaction Data: %s\n", data)
 		}
@@ -114,12 +120,12 @@ func (mm *MasternodeManager) masternodeLoop() {
 
 	joinCh := make(chan *contract.ContractJoin, 32)
 	quitCh := make(chan *contract.ContractQuit, 32)
-	joinSub, err1 := mm.contract.WatchJoin(nil, joinCh)
+	joinSub, err1 := self.contract.WatchJoin(nil, joinCh)
 	if err1 != nil {
 		// TODO: exit
 		return
 	}
-	quitSub, err2 := mm.contract.WatchQuit(nil, quitCh)
+	quitSub, err2 := self.contract.WatchQuit(nil, quitCh)
 	if err2 != nil {
 		// TODO: exit
 		return
@@ -137,12 +143,12 @@ func (mm *MasternodeManager) masternodeLoop() {
 		select {
 		case join := <-joinCh:
 			if bytes.Equal(join.Id[:], xy[:]) {
-				atomic.StoreUint32(&mm.IsMasternode, 1)
+				atomic.StoreUint32(&self.IsMasternode, 1)
 				fmt.Println("### Become a masternode! ")
 			}
 		case quit := <-quitCh:
 			if bytes.Equal(quit.Id[:], xy[0:8]) {
-				atomic.StoreUint32(&mm.IsMasternode, 0)
+				atomic.StoreUint32(&self.IsMasternode, 0)
 				fmt.Println("### Remove a masternode! ")
 			}
 		case err := <-joinSub.Err():
@@ -157,53 +163,59 @@ func (mm *MasternodeManager) masternodeLoop() {
 			go discover.CheckClockDrift()
 		case <-ping.C:
 			ping.Reset(masternode.MASTERNODE_PING_INTERVAL)
-			if atomic.LoadUint32(&mm.IsMasternode) == 0 {
-				break
+			if atomic.LoadUint32(&self.IsMasternode) == 0 {
+				has, err := self.contract.Has(nil, self.srvr.Self().X8())
+				if has && err == nil {
+					fmt.Println("### Set masternode flag")
+					atomic.StoreUint32(&self.IsMasternode, 1)
+				}else{
+					continue
+				}
 			}
 			logTime := time.Now().Format("2006-01-02 15:04:05")
-			if atomic.LoadInt32(&mm.syncing) == 1 {
+			if atomic.LoadInt32(&self.syncing) == 1 {
 				fmt.Println(logTime, " syncing...")
 				break
 			}
-			address := mm.NodeAccount
-			stateDB, _ := mm.eth.blockchain.State()
+			address := self.NodeAccount
+			stateDB, _ := self.eth.blockchain.State()
 			if stateDB.GetBalance(address).Cmp(big.NewInt(1e+16)) < 0 {
 				fmt.Println(logTime, "Failed to deposit 0.01 etz to ", address.String())
 				break
 			}
-			gasPrice, err := mm.eth.APIBackend.gpo.SuggestPrice(context.Background())
+			gasPrice, err := self.eth.APIBackend.gpo.SuggestPrice(context.Background())
 			if err != nil {
 				fmt.Println(logTime, "Get gas price error:", err)
 				gasPrice = big.NewInt(20e+9)
 			}
 			msg := ethereum.CallMsg{From: address, To: &params.MasterndeContractAddress}
-			contractBackend := NewContractBackend(mm.eth)
+			contractBackend := NewContractBackend(self.eth)
 			gas, err := contractBackend.EstimateGas(context.Background(), msg)
 			if err != nil {
 				fmt.Println("Get gas error:", err)
 				continue
 			}
 			minPower := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
-			fmt.Println("Gas:", gas, "GasPrice:", gasPrice.String(), "minPower:", minPower.String())
-			if stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
-				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), mm.eth.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, mm.eth.blockchain.CurrentBlock().Number()).String())
-				continue
+			fmt.Println(logTime, "gasPrice ", gasPrice.String(), "minPower ", minPower.String())
+			if stateDB.GetPower(address, self.eth.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
+				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), self.eth.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, self.eth.blockchain.CurrentBlock().Number()).String())
+				break
 			}
 			tx := types.NewTransaction(
-				mm.eth.txPool.State().GetNonce(address),
+				self.eth.txPool.State().GetNonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
 				gas,
 				gasPrice,
 				nil,
 			)
-			signed, err := types.SignTx(tx, types.NewEIP155Signer(mm.eth.blockchain.Config().ChainID), mm.PrivateKey)
+			signed, err := types.SignTx(tx, types.NewEIP155Signer(self.eth.blockchain.Config().ChainID), self.PrivateKey)
 			if err != nil {
 				fmt.Println(logTime, "SignTx error:", err)
 				break
 			}
 
-			if err := mm.eth.txPool.AddLocal(signed); err != nil {
+			if err := self.eth.txPool.AddLocal(signed); err != nil {
 				fmt.Println(logTime, "send ping to txpool error:", err)
 				break
 			}

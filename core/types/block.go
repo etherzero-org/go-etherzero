@@ -1,24 +1,25 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package types contains data types related to Ethereum consensus.
 package types
 
 import (
 	"encoding/binary"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
 	"sort"
@@ -28,9 +29,8 @@ import (
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -80,10 +80,11 @@ type Header struct {
 	Number      *big.Int                 `json:"number"           gencodec:"required"`
 	GasLimit    uint64                   `json:"gasLimit"         gencodec:"required"`
 	GasUsed     uint64                   `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int                 `json:"timestamp"        gencodec:"required"`
+	Time        uint64                   `json:"timestamp"        gencodec:"required"`
 	Extra       []byte                   `json:"extraData"        gencodec:"required"`
 	MixDigest   common.Hash              `json:"mixHash"`
 	Nonce       BlockNonce               `json:"nonce"`
+	Signature   common.Hash              `json:"signature"        gencodec:"required"`
 	Witness     string                   `json:"witness"          gencodec:"required"`
 	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
 }
@@ -94,7 +95,7 @@ type headerMarshaling struct {
 	Number     *hexutil.Big
 	GasLimit   hexutil.Uint64
 	GasUsed    hexutil.Uint64
-	Time       *hexutil.Big
+	Time       hexutil.Uint64
 	Extra      hexutil.Bytes
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
@@ -122,17 +123,19 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Witness,
 		h.Time,
 		h.Extra,
+		h.Protocol.Root(),
+		h.Signature,
 	})
 }
 
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
+	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen())/8)
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
+	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
@@ -163,7 +166,6 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
-	DevoteDB     *devotedb.DevoteDB
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -245,9 +247,6 @@ func NewBlockWithHeader(header *Header) *Block {
 // modifying a header variable.
 func CopyHeader(h *Header) *Header {
 	cpy := *h
-	if cpy.Time = new(big.Int); h.Time != nil {
-		cpy.Time.Set(h.Time)
-	}
 	if cpy.Difficulty = new(big.Int); h.Difficulty != nil {
 		cpy.Difficulty.Set(h.Difficulty)
 	}
@@ -310,7 +309,7 @@ func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number)
 func (b *Block) GasLimit() uint64     { return b.header.GasLimit }
 func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
 func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
-func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
+func (b *Block) Time() uint64         { return b.header.Time }
 
 func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
 func (b *Block) MixDigest() common.Hash   { return b.header.MixDigest }
@@ -323,18 +322,17 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
-func (b *Block) Witness() string { return b.header.Witness }
-
-func (b *Block) DevoteDb() *devotedb.DevoteDB { return b.DevoteDB }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
 
-func (b *Block) HashNoNonce() common.Hash {
-	return b.header.HashNoNonce()
-}
+func (b *Block) Witness() string { return b.header.Witness }
+
+func (b *Block) Protocol() *devotedb.DevoteProtocol { return b.header.Protocol }
+
+func (b *Block) Signaute() common.Hash { return b.header.Signature }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.
@@ -368,7 +366,6 @@ func (b *Block) WithSeal(header *Header) *Block {
 		header:       &cpy,
 		transactions: b.transactions,
 		uncles:       b.uncles,
-		DevoteDB:     b.DevoteDB,
 	}
 }
 

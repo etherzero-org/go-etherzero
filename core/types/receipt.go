@@ -1,18 +1,18 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package types
 
@@ -25,6 +25,7 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/rlp"
+	"math/big"
 )
 
 //go:generate gencodec -type Receipt -field-override receiptMarshaling -out gen_receipt_json.go
@@ -33,6 +34,13 @@ var (
 	receiptStatusFailedRLP     = []byte{}
 	receiptStatusSuccessfulRLP = []byte{0x01}
 )
+
+// Internal Transaction of Contract
+type Intx struct {
+	From  common.Address `json:"from" gencodec:"required"`
+	To    common.Address `json:"to" gencodec:"required"`
+	Value big.Int        `json:"value" gencodec:"required"`
+}
 
 const (
 	// ReceiptStatusFailed is the status code of a transaction if execution failed.
@@ -52,6 +60,7 @@ type Receipt struct {
 	Logs              []*Log `json:"logs"              gencodec:"required"`
 
 	// Implementation fields (don't reorder!)
+	Intxs           []*Intx        `json:"intxs"`
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
@@ -79,6 +88,7 @@ type receiptStorageRLP struct {
 	TxHash            common.Hash
 	ContractAddress   common.Address
 	Logs              []*LogForStorage
+	Intxs             []*Intx
 	GasUsed           uint64
 }
 
@@ -146,6 +156,7 @@ func (r *Receipt) Size() common.StorageSize {
 	for _, log := range r.Logs {
 		size += common.StorageSize(len(log.Topics)*common.HashLength + len(log.Data))
 	}
+	size += common.StorageSize(len(r.Intxs)) * common.StorageSize(unsafe.Sizeof(Intx{}))
 	return size
 }
 
@@ -163,6 +174,7 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 		TxHash:            r.TxHash,
 		ContractAddress:   r.ContractAddress,
 		Logs:              make([]*LogForStorage, len(r.Logs)),
+		Intxs:             r.Intxs,
 		GasUsed:           r.GasUsed,
 	}
 	for i, log := range r.Logs {
@@ -187,6 +199,7 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 	for i, log := range dec.Logs {
 		r.Logs[i] = (*Log)(log)
 	}
+	r.Intxs = dec.Intxs
 	// Assign the implementation fields
 	r.TxHash, r.ContractAddress, r.GasUsed = dec.TxHash, dec.ContractAddress, dec.GasUsed
 	return nil

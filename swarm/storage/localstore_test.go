@@ -1,18 +1,18 @@
-// Copyright 2018 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package storage
 
@@ -118,7 +118,7 @@ func TestValidator(t *testing.T) {
 
 type boolTestValidator bool
 
-func (self boolTestValidator) Validate(addr Address, data []byte) bool {
+func (self boolTestValidator) Validate(chunk Chunk) bool {
 	return bool(self)
 }
 
@@ -208,4 +208,37 @@ func setupLocalStore(t *testing.T, ldbCap int) (ls *LocalStore, cleanup func()) 
 	}
 
 	return store, cleanup
+}
+
+func TestHas(t *testing.T) {
+	ldbCap := defaultGCRatio
+	store, cleanup := setupLocalStore(t, ldbCap)
+	defer cleanup()
+
+	nonStoredAddr := GenerateRandomChunk(128).Address()
+
+	has := store.Has(context.Background(), nonStoredAddr)
+	if has {
+		t.Fatal("Expected Has() to return false, but returned true!")
+	}
+
+	storeChunks := GenerateRandomChunks(128, 3)
+	for _, ch := range storeChunks {
+		err := store.Put(context.Background(), ch)
+		if err != nil {
+			t.Fatalf("Expected store to store chunk, but it failed: %v", err)
+		}
+
+		has := store.Has(context.Background(), ch.Address())
+		if !has {
+			t.Fatal("Expected Has() to return true, but returned false!")
+		}
+	}
+
+	//let's be paranoic and test again that the non-existent chunk returns false
+	has = store.Has(context.Background(), nonStoredAddr)
+	if has {
+		t.Fatal("Expected Has() to return false, but returned true!")
+	}
+
 }

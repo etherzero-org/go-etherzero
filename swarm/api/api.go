@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2016 The go-etherzero Authors
+// This file is part of the go-etherzero library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherzero library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-etherzero library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
 
 package api
 
@@ -48,10 +48,6 @@ import (
 	"github.com/etherzero/go-etherzero/swarm/storage/feed/lookup"
 
 	opentracing "github.com/opentracing/opentracing-go"
-)
-
-var (
-	ErrNotFound = errors.New("not found")
 )
 
 var (
@@ -136,13 +132,6 @@ func MultiResolverOptionWithResolver(r ResolveValidator, tld string) MultiResolv
 	}
 }
 
-// MultiResolverOptionWithNameHash is unused at the time of this writing
-func MultiResolverOptionWithNameHash(nameHash func(string) common.Hash) MultiResolverOption {
-	return func(m *MultiResolver) {
-		m.nameHash = nameHash
-	}
-}
-
 // NewMultiResolver creates a new instance of MultiResolver.
 func NewMultiResolver(opts ...MultiResolverOption) (m *MultiResolver) {
 	m = &MultiResolver{
@@ -173,40 +162,6 @@ func (m *MultiResolver) Resolve(addr string) (h common.Hash, err error) {
 	return
 }
 
-// ValidateOwner checks the ENS to validate that the owner of the given domain is the given eth address
-func (m *MultiResolver) ValidateOwner(name string, address common.Address) (bool, error) {
-	rs, err := m.getResolveValidator(name)
-	if err != nil {
-		return false, err
-	}
-	var addr common.Address
-	for _, r := range rs {
-		addr, err = r.Owner(m.nameHash(name))
-		// we hide the error if it is not for the last resolver we check
-		if err == nil {
-			return addr == address, nil
-		}
-	}
-	return false, err
-}
-
-// HeaderByNumber uses the validator of the given domainname and retrieves the header for the given block number
-func (m *MultiResolver) HeaderByNumber(ctx context.Context, name string, blockNr *big.Int) (*types.Header, error) {
-	rs, err := m.getResolveValidator(name)
-	if err != nil {
-		return nil, err
-	}
-	for _, r := range rs {
-		var header *types.Header
-		header, err = r.HeaderByNumber(ctx, blockNr)
-		// we hide the error if it is not for the last resolver we check
-		if err == nil {
-			return header, nil
-		}
-	}
-	return nil, err
-}
-
 // getResolveValidator uses the hostname to retrieve the resolver associated with the top level domain
 func (m *MultiResolver) getResolveValidator(name string) ([]ResolveValidator, error) {
 	rs := m.resolvers[""]
@@ -222,11 +177,6 @@ func (m *MultiResolver) getResolveValidator(name string) ([]ResolveValidator, er
 		return rs, NewNoResolverError(tld)
 	}
 	return rs, nil
-}
-
-// SetNameHash sets the hasher function that hashes the domain into a name hash that ENS uses
-func (m *MultiResolver) SetNameHash(nameHash func(string) common.Hash) {
-	m.nameHash = nameHash
 }
 
 /*
@@ -264,9 +214,6 @@ func (a *API) Store(ctx context.Context, data io.Reader, size int64, toEncrypt b
 	log.Debug("api.store", "size", size)
 	return a.fileStore.Store(ctx, data, size, toEncrypt)
 }
-
-// ErrResolve is returned when an URI cannot be resolved from ENS.
-type ErrResolve error
 
 // Resolve a name into a content-addressed hash
 // where address could be an ENS name, or a content addressed hash
@@ -978,11 +925,6 @@ func (a *API) FeedsNewRequest(ctx context.Context, feed *feed.Feed) (*feed.Reque
 // FeedsUpdate publishes a new update on the given feed
 func (a *API) FeedsUpdate(ctx context.Context, request *feed.Request) (storage.Address, error) {
 	return a.feed.Update(ctx, request)
-}
-
-// FeedsHashSize returned the size of the digest produced by Swarm feeds' hashing function
-func (a *API) FeedsHashSize() int {
-	return a.feed.HashSize
 }
 
 // ErrCannotLoadFeedManifest is returned when looking up a feeds manifest fails
