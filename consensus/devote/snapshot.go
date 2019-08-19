@@ -38,8 +38,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
-var skipBlock = big.NewInt(12153042)
-
 type Snapshot struct {
 	devoteDB *devotedb.DevoteDB
 	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior

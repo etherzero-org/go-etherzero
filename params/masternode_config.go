@@ -1,16 +1,16 @@
 // Package params defines important constants that are essential to the
-// Ethereum 2.0 services.
+// Etherzero 2.0 services.
 package params
 
 import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/etherzero/go-etherzero/common/bytesutil"
 )
 
-// BeaconChainConfig contains constant configs for node to participate in beacon chain.
-type BeaconChainConfig struct {
+// MasternodeChainConfig contains constant configs for node to participate in masternode chain.
+type MasternodeChainConfig struct {
 	// Constants (non-configurable)
 	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
@@ -25,8 +25,8 @@ type BeaconChainConfig struct {
 	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
-	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
+	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off masternode chain.
+	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off masternode chain. Currently set to Jan/3/2020.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -39,12 +39,12 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
+	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for masternode block.
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
 	ActivationExitDelay              uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // ActivationExitDelay is the duration a validator has to wait for entry and exit in epoch.
-	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in masternode node.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
@@ -53,7 +53,7 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
 	// State list lengths
-	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
+	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in masternode state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
 	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT"`       // HistoricalRootsLimit the define max historical roots can be saved in state before roll over.
 	ValidatorRegistryLimit    uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
@@ -68,20 +68,20 @@ type BeaconChainConfig struct {
 	// Max operations per block constants.
 	MaxProposerSlashings uint64 `yaml:"MAX_PROPOSER_SLASHINGS"` // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
 	MaxAttesterSlashings uint64 `yaml:"MAX_ATTESTER_SLASHINGS"` // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
-	MaxAttestations      uint64 `yaml:"MAX_ATTESTATIONS"`       // MaxAttestations defines the maximum allowed attestations in a beacon block.
+	MaxAttestations      uint64 `yaml:"MAX_ATTESTATIONS"`       // MaxAttestations defines the maximum allowed attestations in a masternode block.
 	MaxDeposits          uint64 `yaml:"MAX_DEPOSITS"`           // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 	MaxTransfers         uint64 `yaml:"MAX_TRANSFERS"`          // MaxTransfers defines the maximum number of balance transfers in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainMasternodeProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainMasternodeProposer defines the BLS signature domain for masternode proposal verification.
 	DomainRandao         []byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
 	DomainAttestation    []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
 	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
 	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
 	DomainTransfer       []byte `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
 
-	// Prysm constants.
+	// Masternode Sharding constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
 	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
@@ -90,7 +90,7 @@ type BeaconChainConfig struct {
 	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
-	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
+	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Etherzero testnet.
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
@@ -100,7 +100,7 @@ type BeaconChainConfig struct {
 
 // DepositContractConfig contains the deposits for
 type DepositContractConfig struct {
-	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
+	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off masternode chain.
 	MinDepositAmount               *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
 	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
@@ -111,7 +111,7 @@ type ShardChainConfig struct {
 	MaxShardBlockSize uint64 // MaxShardBlockSize defines the max size of each shard block in bytes.
 }
 
-var defaultBeaconConfig = &BeaconChainConfig{
+var defaultMasternodeConfig = &MasternodeChainConfig{
 	// Constants (Non-configurable)
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      5,
@@ -175,14 +175,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxTransfers:         0,
 
 	// BLS domain values.
-	DomainBeaconProposer: bytesutil.Bytes4(0),
+	DomainMasternodeProposer: bytesutil.Bytes4(0),
 	DomainRandao:         bytesutil.Bytes4(1),
 	DomainAttestation:    bytesutil.Bytes4(2),
 	DomainDeposit:        bytesutil.Bytes4(3),
 	DomainVoluntaryExit:  bytesutil.Bytes4(4),
 	DomainTransfer:       bytesutil.Bytes4(5),
 
-	// Prysm constants.
+	// Etherzero Masternode sharding constants.
 	GweiPerEth:                1000000000,
 	LogBlockDelay:             2,
 	BLSPubkeyLength:           48,
@@ -197,7 +197,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxPageSize:               500,
 
 	// Testnet misc values.
-	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
+	TestnetContractEndpoint: "https://www.etherzero.org/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardConfig = &ShardChainConfig{
@@ -211,27 +211,24 @@ var defaultDepositContractConfig = &DepositContractConfig{
 	MaxEffectiveBalance:            big.NewInt(32e9),
 }
 
-var beaconConfig = defaultBeaconConfig
+var masternodeConfig = defaultMasternodeConfig
 var shardConfig = defaultShardConfig
 var contractConfig = defaultDepositContractConfig
 
-// BeaconConfig retrieves beacon chain config.
-func BeaconConfig() *BeaconChainConfig {
-	return beaconConfig
+// MasternodeConfig retrieves masternode chain config.
+func MasternodeConfig() *MasternodeChainConfig {
+	return masternodeConfig
 }
 
 // MainnetConfig returns the default config to
 // be used in the mainnet.
-func MainnetConfig() *BeaconChainConfig {
-	return defaultBeaconConfig
+func MainnetConfig() *MasternodeChainConfig {
+	return defaultMasternodeConfig
 }
 
-// DemoBeaconConfig retrieves the demo beacon chain config.
-// Notable changes from minimal config:
-//   - Max effective balance is 3.2 ETH
-//   - Ejection threshold is 3.175 ETH
+// DemoMasternodeConfig retrieves the demo masternode chain config.
 //   - Genesis threshold is disabled (minimum date to start the chain)
-func DemoBeaconConfig() *BeaconChainConfig {
+func DemoMasternodeConfig() *MasternodeChainConfig {
 	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
@@ -245,8 +242,8 @@ func DemoBeaconConfig() *BeaconChainConfig {
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
-func MinimalSpecConfig() *BeaconChainConfig {
-	minimalConfig := *defaultBeaconConfig
+func MinimalSpecConfig() *MasternodeChainConfig {
+	minimalConfig := *defaultMasternodeConfig
 	minimalConfig.ShardCount = 8
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 4096
@@ -288,7 +285,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxTransfers = 0
-	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
+	minimalConfig.DomainMasternodeProposer = bytesutil.Bytes4(0)
 	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
 	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
@@ -309,15 +306,15 @@ func ContractConfig() *DepositContractConfig {
 	return contractConfig
 }
 
-// UseDemoBeaconConfig for beacon chain services.
-func UseDemoBeaconConfig() {
-	beaconConfig = DemoBeaconConfig()
+// UseDemoMasternodeConfig for masternode chain services.
+func UseDemoMasternodeConfig() {
+	masternodeConfig = DemoMasternodeConfig()
 }
 
-// OverrideBeaconConfig by replacing the config. The preferred pattern is to
-// call BeaconConfig(), change the specific parameters, and then call
-// OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
+// OverrideMasternodeConfig by replacing the config. The preferred pattern is to
+// call MasternodeConfig(), change the specific parameters, and then call
+// OverrideMasternodeConfig(c). Any subsequent calls to params.MasternodeConfig() will
 // return this new configuration.
-func OverrideBeaconConfig(c *BeaconChainConfig) {
-	beaconConfig = c
+func OverrideMasternodeConfig(c *MasternodeChainConfig) {
+	masternodeConfig = c
 }
