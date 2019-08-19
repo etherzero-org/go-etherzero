@@ -32,7 +32,7 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
-	GenesisBlockNumber = uint64(22437300)
+	GenesisBlockNumber = uint64(22613000)
 
 )
 
