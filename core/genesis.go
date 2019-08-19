@@ -476,17 +476,23 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 			if err == io.EOF {
 				log.Info("Import initial objects", "count", accountCount, "nth", i)
 				break
-			}else if err != nil {
+			} else if err != nil {
 				panic(err)
 			}
 
 			var storageRoot common.Hash
 			var codeHash common.Hash
+			var nonce uint64 = 0
 
 			if i == 0 {
 				storageRoot = emptyRoot
 				codeHash = emptyHash
-			}else{
+				nonceB, err := myReader(bufReader, 3)
+				if err != nil {
+					panic(err)
+				}
+				nonce = uint64(byte2len(nonceB))
+			} else {
 				codeLenB, err := myReader(bufReader, 3)
 				if err != nil {
 					panic(err)
@@ -549,6 +555,7 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 				BlockNumber: common.Big0,
 				Root:        storageRoot,
 				CodeHash:    codeHash.Bytes(),
+				Nonce:       nonce,
 			}
 
 			encodeData, err := rlp.EncodeToBytes(&account)
@@ -559,7 +566,7 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 			stateTrie.TryUpdate(buf[0:32], encodeData)
 			accountCount++
 
-			if i > 0 && accountCount % 200 == 0 {
+			if i > 0 && accountCount%200 == 0 {
 				log.Info("Import initial objects", "count", accountCount, "nth", i)
 			}
 		}
@@ -578,9 +585,8 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 	return stateRoot, nil
 }
 
-
 func byte2len(buf []byte) int {
-	return int(buf[0]) * 256 * 256 + int(buf[1]) * 256 + int(buf[2])
+	return int(buf[0])*256*256 + int(buf[1])*256 + int(buf[2])
 }
 
 func myReader(bufReader *bufio.Reader, len int) ([]byte, error) {
