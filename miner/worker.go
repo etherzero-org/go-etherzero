@@ -254,7 +254,7 @@ func (self *worker) mine(now int64) {
 		log.Error("Only the devote engine was allowed")
 		return
 	}
-
+	engine.SetDevoteDB(self.chainDb)
 	err := engine.CheckWitness(self.chain.CurrentBlock(), now)
 	if err != nil {
 		switch err {

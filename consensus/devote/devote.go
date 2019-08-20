@@ -193,10 +193,9 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			// If we're at an checkpoint block, make a snapshot if it's known
 			if number == params.GenesisBlockNumber || checkpoint.Time%params.Epoch == 0 {
 				hash := checkpoint.Hash()
-				parent := chain.GetHeaderByHash(checkpoint.ParentHash)
-				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
+				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), checkpoint.Protocol)
 				if err != nil {
-					log.Error("snapshot create devoteDB failed by checkpoint.protocol", "number", parent.Number, "err", err)
+					log.Error("snapshot create devoteDB failed by checkpoint.protocol", "number", checkpoint.Number, "err", err)
 					return nil, err
 				}
 				currentcycle := checkpoint.Time / params.Epoch
