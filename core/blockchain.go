@@ -1614,7 +1614,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 			i, receipt.CumulativeGasUsed, receipt.GasUsed, receipt.ContractAddress.Hex(),
 			receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.Bloom, receipt.PostState)
 	}
-	log.Error(fmt.Sprintf(`
+	log.Debug(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
 
