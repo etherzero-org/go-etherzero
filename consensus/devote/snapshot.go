@@ -35,18 +35,18 @@ import (
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 )
 
 type Snapshot struct {
 	devoteDB *devotedb.DevoteDB
-	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
-	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
-	Hash     common.Hash          //Block hash where the snapshot was created
-	Number   uint64               //Cycle number where the snapshot was created
-	Cycle    uint64               //Cycle number where the snapshot was created
-	Signers  map[string]struct{}  `json:"signers"` // Set of authorized signers at this moment
-	Recents  map[uint64]string    // set of recent masternodes for spam protections
+	config   *params.DevoteConfig                 // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache                        // Cache of recent block signatures to speed up ecrecover
+	Hash     common.Hash                          //Block hash where the snapshot was created
+	Number   uint64                               //Cycle number where the snapshot was created
+	Cycle    uint64                               //Cycle number where the snapshot was created
+	Signers  map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
+	Recents  map[uint64]string                    // set of recent masternodes for spam protections
 
 	TimeStamp uint64
 	mu        sync.Mutex
@@ -62,7 +62,7 @@ func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
 	}
 	ary, err := db.GetWitnesses(db.GetCycle())
 	if err != nil {
-		log.Error("devote create Snapshot failed ", "cycle", db.GetCycle(), "err", err)
+		log.Error("devote newSnapshot failed ", "cycle", db.GetCycle(), "err", err)
 	}
 	for _, s := range ary {
 		snap.Signers[s] = struct{}{}
@@ -73,7 +73,6 @@ func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		sigcache: s.sigcache,
 		Number:   s.Number,
 		Hash:     s.Hash,
 		Signers:  make(map[string]struct{}),
@@ -111,7 +110,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			delete(snap.Recents, number-limit)
 		}
 		// Resolve the authorization key and check against signers
-		signer, err := ecrecover(header, s.sigcache)
+		signer, err := ecrecover(header, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -167,10 +166,10 @@ func (self *Snapshot) calculate(parent *types.Header, isFirstCycle bool, nodes [
 
 		score := big.NewInt(0)
 		score.Add(score, big.NewInt(weight))
-		log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
+		// log.Debug("masternodes ", "score", score.Uint64(), "masternode", masternode)
 		list[masternode] = score
 	}
-	log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
+	// log.Debug("controller nodes ", "context", nodes, "count", len(nodes))
 	return list, nil
 }
 
@@ -333,9 +332,9 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 
 	var (
 		sortedWitnesses []string
-		genesiscycle           = genesis.Time / params.Epoch
-		precycle              = parent.Time / params.Epoch
-		currentcycle           = snap.TimeStamp / params.Epoch
+		genesiscycle    = genesis.Time / params.Epoch
+		precycle        = parent.Time / params.Epoch
+		currentcycle    = snap.TimeStamp / params.Epoch
 	)
 
 	preisgenesis := (precycle == genesiscycle)
@@ -359,7 +358,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 			masternodes = append(masternodes, &sortableAddress{nodeid: masternode, weight: cnt})
 		}
 		if len(masternodes) < safeSize {
-			return nil, fmt.Errorf(" too few masternodes ,cycle:%d, current :%d, safesize:%d", currentcycle, len(masternodes), safeSize)
+			return nil, fmt.Errorf(" too few masternodes ,cycle:%d, current :%d, count%d, safesize:%d", currentcycle, len(masternodes), count, safeSize)
 		}
 		sort.Sort(masternodes)
 
@@ -370,7 +369,7 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		// log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}

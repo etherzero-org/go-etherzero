@@ -138,8 +138,8 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer     string          // master node nodeid
-	signFn     SignerFn        // signature function
+	signer     string   // master node nodeid
+	signFn     SignerFn // signature function
 	recents    *lru.ARCCache   // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache   // Signatures of recent blocks to speed up mining
 	proposals  map[string]bool // Current list of proposals we are pushing
@@ -178,38 +178,34 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 		if checkpoint != nil {
 			// If an in-memory snapshot was found, use that
 			if s, ok := d.recents.Get(hash); ok {
+				log.Debug("Loaded snapshot from Cache", "number", number, "hash", hash)
 				snap = s.(*Snapshot)
 				break
 			}
-			// If an on-disk checkpoint snapshot can be found, use that
-			if number%checkpointInterval == 0 {
-				if s, err := loadSnapshot(d.config, d.signatures, d.db, hash); err == nil {
-					log.Info("Loaded voting snapshot from disk", "number", number, "hash", hash)
-					snap = s
-					break
-				}
-			}
-
 			// If we're at an checkpoint block, make a snapshot if it's known
 			if number == params.GenesisBlockNumber || checkpoint.Time%params.Epoch == 0 {
 				hash := checkpoint.Hash()
 				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), checkpoint.Protocol)
-				if err != nil {
-					log.Error("snapshot create devoteDB failed by checkpoint.protocol", "number", checkpoint.Number, "err", err)
+				if err != nil || devoteDB == nil {
+					log.Info("Snapshot of devote create devoteDB failed by checkpoint.Protocol", "Number", checkpoint.Number, "err", err)
 					return nil, err
 				}
-				currentcycle := checkpoint.Time / params.Epoch
-				devoteDB.SetCycle(currentcycle)
-				snap = newSnapshot(d.config, devoteDB)
-				snap.sigcache = d.signatures
-				ary, know := d.signatures.Get(currentcycle)
-				if know {
-					snap.setSigners(ary.([]string))
+				newcycle := checkpoint.Time / params.Epoch
+				devoteDB.SetCycle(newcycle)
+				snap = &Snapshot{
+					Number:    number,
+					Cycle:     newcycle,
+					Hash:      checkpoint.Hash(),
+					TimeStamp: checkpoint.Time,
+					config:    d.config,
+					devoteDB:  devoteDB,
+					Signers:   make(map[string]struct{}),
+					Recents:   make(map[uint64]string),
 				}
 				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
-				log.Info("Stored checkpoint snapshot to disk", "number", number, "cycle", currentcycle, "hash", hash)
+				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
 				break
 			}
 		}
@@ -224,7 +220,7 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			parents = parents[:len(parents)-1]
 		} else {
 			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
+			header = chain.GetHeaderByNumber(number)
 			if header == nil {
 				return nil, consensus.ErrUnknownAncestor
 			}
@@ -240,15 +236,14 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	if err != nil {
 		return nil, err
 	}
-	if number > (params.GenesisBlockNumber + 1800) {
-		d.recents.Add(snap.Hash, snap)
-	}
+	d.recents.Add(snap.Hash, snap)
+
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
-		log.Info("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		log.Info("Stored snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
 }
@@ -303,7 +298,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		stableBlockNumber = big.NewInt(int64(params.GenesisBlockNumber))
 	}
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
-	if err != nil {
+	if err != nil || devoteDB == nil {
 		return nil, fmt.Errorf("Can't create DevoteDB by header Protocol , Header.number : %d ", header.Number)
 	}
 	// Accumulate block rewards and commit the final state root
@@ -446,7 +441,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	}
 
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
-	if err != nil {
+	if err != nil || devoteDB == nil {
 		log.Error("devote consensus verifySeal failed", "err", err)
 		return err
 	}
@@ -498,7 +493,8 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
-	if err != nil {
+	if err != nil || devoteDB == nil {
+		log.Error("CheckWitness Failed ", "BlockNumber", lastBlock.Number(), "err", err)
 		return err
 	}
 	currentCycle := lastBlock.Time() / params.Epoch
@@ -595,11 +591,6 @@ func (d *Devote) GovernanceContract(fn GetGovernanceContractAddress) {
 
 // ecrecover extracts the Masternode account ID from a signed header.
 func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
-	// If the signature's already cached, return that
-	hash := header.Hash()
-	if signer, known := sigcache.Get(hash); known {
-		return signer.(string), nil
-	}
 	// Retrieve the signature from the header extra-data
 	if len(header.Extra) < extraSeal {
 		return "", errMissingSignature
@@ -611,7 +602,6 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
 		return "", err
 	}
 	id := fmt.Sprintf("%x", pubkey[1:9])
-	sigcache.Add(hash, id)
 	return id, nil
 }
 
