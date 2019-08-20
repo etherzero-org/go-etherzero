@@ -193,9 +193,10 @@ func (d *Devote) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			// If we're at an checkpoint block, make a snapshot if it's known
 			if number == params.GenesisBlockNumber || checkpoint.Time%params.Epoch == 0 {
 				hash := checkpoint.Hash()
-				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), checkpoint.Protocol)
+				parent := chain.GetHeaderByHash(checkpoint.ParentHash)
+				devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), parent.Protocol)
 				if err != nil {
-					log.Error("devote consensus verifySeal failed", "err", err)
+					log.Error("snapshot create devoteDB failed by checkpoint.protocol", "number", parent.Number, "err", err)
 					return nil, err
 				}
 				currentcycle := checkpoint.Time / params.Epoch
@@ -315,11 +316,11 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	cycle := header.Time / params.Epoch
 	devoteDB.SetCycle(cycle)
-	snap := &Snapshot{ config:   d.config, devoteDB: devoteDB}
+	snap := &Snapshot{config: d.config, devoteDB: devoteDB}
 	snap.TimeStamp = header.Time
 
 	if timeOfFirstBlock == 0 {
-		if firstBlockHeader := chain.GetHeaderByNumber(params.GenesisBlockNumber+1); firstBlockHeader != nil {
+		if firstBlockHeader := chain.GetHeaderByNumber(params.GenesisBlockNumber + 1); firstBlockHeader != nil {
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
