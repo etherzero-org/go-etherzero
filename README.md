@@ -1,4 +1,4 @@
-## Go Ethezero
+## Go Etherzero
 
 Official golang implementation of the Etherzero(Ethereum) protocol.
 
