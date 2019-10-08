@@ -279,9 +279,9 @@ func decodeBigInt(s *Stream, val reflect.Value) error {
 		val.Set(reflect.ValueOf(i))
 	}
 	// Reject leading zero bytes
-	if len(b) > 0 && b[0] == 0 {
-		return wrapStreamError(ErrCanonInt, val.Type())
-	}
+	//if len(b) > 0 && b[0] == 0 {
+	//	return wrapStreamError(ErrCanonInt, val.Type())
+	//}
 	i.SetBytes(b)
 	return nil
 }
