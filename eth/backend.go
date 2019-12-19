@@ -20,7 +20,6 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/etherzero/go-etherzero/consensus/devote"
 	"math/big"
 	"runtime"
 	"sync"
@@ -32,6 +31,7 @@ import (
 	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/clique"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/consensus/ethash"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/bloombits"
@@ -86,12 +86,12 @@ type Ethereum struct {
 
 	APIBackend *EthAPIBackend
 
-	miner     *miner.Miner
-	gasPrice  *big.Int
-	etherbase common.Address
+	miner             *miner.Miner
+	gasPrice          *big.Int
+	etherbase         common.Address
 	witness           string
-	networkID     uint64
-	netRPCService *ethapi.PublicNetAPI
+	networkID         uint64
+	netRPCService     *ethapi.PublicNetAPI
 	masternodeManager *MasternodeManager
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
