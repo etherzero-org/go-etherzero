@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package discv5
 
@@ -30,72 +30,6 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto"
 )
-
-type nullTransport struct{}
-
-func (nullTransport) sendPing(remote *Node, remoteAddr *net.UDPAddr) []byte { return []byte{1} }
-func (nullTransport) sendPong(remote *Node, pingHash []byte)                {}
-func (nullTransport) sendFindnode(remote *Node, target NodeID)              {}
-func (nullTransport) sendNeighbours(remote *Node, nodes []*Node)            {}
-func (nullTransport) localAddr() *net.UDPAddr                               { return new(net.UDPAddr) }
-func (nullTransport) Close()                                                {}
-
-// func TestTable_pingReplace(t *testing.T) {
-// 	doit := func(newNodeIsResponding, lastInBucketIsResponding bool) {
-// 		transport := newPingRecorder()
-// 		tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{})
-// 		defer tab.Close()
-// 		pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"), net.IP{}, 99, 99)
-//
-// 		// fill up the sender's bucket.
-// 		last := fillBucket(tab, 253)
-//
-// 		// this call to bond should replace the last node
-// 		// in its bucket if the node is not responding.
-// 		transport.responding[last.ID] = lastInBucketIsResponding
-// 		transport.responding[pingSender.ID] = newNodeIsResponding
-// 		tab.bond(true, pingSender.ID, &net.UDPAddr{}, 0)
-//
-// 		// first ping goes to sender (bonding pingback)
-// 		if !transport.pinged[pingSender.ID] {
-// 			t.Error("table did not ping back sender")
-// 		}
-// 		if newNodeIsResponding {
-// 			// second ping goes to oldest node in bucket
-// 			// to see whether it is still alive.
-// 			if !transport.pinged[last.ID] {
-// 				t.Error("table did not ping last node in bucket")
-// 			}
-// 		}
-//
-// 		tab.mutex.Lock()
-// 		defer tab.mutex.Unlock()
-// 		if l := len(tab.buckets[253].entries); l != bucketSize {
-// 			t.Errorf("wrong bucket size after bond: got %d, want %d", l, bucketSize)
-// 		}
-//
-// 		if lastInBucketIsResponding || !newNodeIsResponding {
-// 			if !contains(tab.buckets[253].entries, last.ID) {
-// 				t.Error("last entry was removed")
-// 			}
-// 			if contains(tab.buckets[253].entries, pingSender.ID) {
-// 				t.Error("new entry was added")
-// 			}
-// 		} else {
-// 			if contains(tab.buckets[253].entries, last.ID) {
-// 				t.Error("last entry was not removed")
-// 			}
-// 			if !contains(tab.buckets[253].entries, pingSender.ID) {
-// 				t.Error("new entry was not added")
-// 			}
-// 		}
-// 	}
-//
-// 	doit(true, true)
-// 	doit(false, true)
-// 	doit(true, false)
-// 	doit(false, false)
-// }
 
 func TestBucket_bumpNoDuplicates(t *testing.T) {
 	t.Parallel()
@@ -139,17 +73,6 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 	}
 }
 
-// fillBucket inserts nodes into the given bucket until
-// it is full. The node's IDs dont correspond to their
-// hashes.
-func fillBucket(tab *Table, ld int) (last *Node) {
-	b := tab.buckets[ld]
-	for len(b.entries) < bucketSize {
-		b.entries = append(b.entries, nodeAtDistance(tab.self.sha, ld))
-	}
-	return b.entries[bucketSize-1]
-}
-
 // nodeAtDistance creates a node for which logdist(base, n.sha) == ld.
 // The node's ID does not correspond to n.sha.
 func nodeAtDistance(base common.Hash, ld int) (n *Node) {
@@ -157,28 +80,6 @@ func nodeAtDistance(base common.Hash, ld int) (n *Node) {
 	n.sha = hashAtDistance(base, ld)
 	copy(n.ID[:], n.sha[:]) // ensure the node still has a unique ID
 	return n
-}
-
-type pingRecorder struct{ responding, pinged map[NodeID]bool }
-
-func newPingRecorder() *pingRecorder {
-	return &pingRecorder{make(map[NodeID]bool), make(map[NodeID]bool)}
-}
-
-func (t *pingRecorder) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node, error) {
-	panic("findnode called on pingRecorder")
-}
-func (t *pingRecorder) close() {}
-func (t *pingRecorder) waitping(from NodeID) error {
-	return nil // remote always pings
-}
-func (t *pingRecorder) ping(toid NodeID, toaddr *net.UDPAddr) error {
-	t.pinged[toid] = true
-	if t.responding[toid] {
-		return nil
-	} else {
-		return errTimeout
-	}
 }
 
 func TestTable_closest(t *testing.T) {

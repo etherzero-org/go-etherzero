@@ -1,18 +1,18 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package params
 
@@ -32,13 +32,8 @@ const (
 	// considered probably final and its rotated bits are calculated.
 	BloomConfirms = 256
 
-	// CHTFrequencyClient is the block frequency for creating CHTs on the client side.
-	CHTFrequencyClient = 32768
-
-	// CHTFrequencyServer is the block frequency for creating CHTs on the server side.
-	// Eventually this can be merged back with the client version, but that requires a
-	// full database upgrade, so that should be left for a suitable moment.
-	CHTFrequencyServer = 4096
+	// CHTFrequency is the block frequency for creating CHTs
+	CHTFrequency = 32768
 
 	// BloomTrieFrequency is the block frequency for creating BloomTrie on both
 	// server/client sides.
@@ -51,4 +46,16 @@ const (
 	// HelperTrieProcessConfirmations is the number of confirmations before a HelperTrie
 	// is generated
 	HelperTrieProcessConfirmations = 256
+
+	// CheckpointFrequency is the block frequency for creating checkpoint
+	CheckpointFrequency = 32768
+
+	// CheckpointProcessConfirmations is the number before a checkpoint is generated
+	CheckpointProcessConfirmations = 256
+
+	// ImmutabilityThreshold is the number of blocks after which a chain segment is
+	// considered immutable (i.e. soft finality). It is used by the downloader as a
+	// hard limit against deep ancestors, by the blockchain against deep reorgs, by
+	// the freezer as the cutoff treshold and by clique as the snapshot trust limit.
+	ImmutabilityThreshold = 90000
 )

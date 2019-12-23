@@ -1,25 +1,24 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package adapters
 
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,7 +40,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/rpc"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 func init() {
@@ -92,22 +91,33 @@ func (e *ExecAdapter) NewNode(config *NodeConfig) (Node, error) {
 		return nil, fmt.Errorf("error creating node directory: %s", err)
 	}
 
+	err := config.initDummyEnode()
+	if err != nil {
+		return nil, err
+	}
+
 	// generate the config
 	conf := &execNodeConfig{
 		Stack: node.DefaultConfig,
 		Node:  config,
 	}
-	conf.Stack.DataDir = filepath.Join(dir, "data")
+	if config.DataDir != "" {
+		conf.Stack.DataDir = config.DataDir
+	} else {
+		conf.Stack.DataDir = filepath.Join(dir, "data")
+	}
+
+	// these parameters are crucial for execadapter node to run correctly
 	conf.Stack.WSHost = "127.0.0.1"
 	conf.Stack.WSPort = 0
 	conf.Stack.WSOrigins = []string{"*"}
 	conf.Stack.WSExposeAll = true
-	conf.Stack.P2P.EnableMsgEvents = false
+	conf.Stack.P2P.EnableMsgEvents = config.EnableMsgEvents
 	conf.Stack.P2P.NoDiscovery = true
 	conf.Stack.P2P.NAT = nil
 	conf.Stack.NoUSB = true
 
-	// listen on a localhost port, which we set when we
+	// Listen on a localhost port, which we set when we
 	// initialise NodeConfig (usually a random port)
 	conf.Stack.P2P.ListenAddr = fmt.Sprintf(":%d", config.Port)
 
@@ -135,7 +145,6 @@ type ExecNode struct {
 	client  *rpc.Client
 	wsAddr  string
 	newCmd  func() *exec.Cmd
-	key     *ecdsa.PrivateKey
 }
 
 // Addr returns the node's enode URL
@@ -194,17 +203,17 @@ func (n *ExecNode) Start(snapshots map[string][]byte) (err error) {
 	}
 	n.Cmd = cmd
 
-	// read the WebSocket address from the stderr logs
+	// Wait for the node to start.
 	status := <-statusC
 	if status.Err != "" {
 		return errors.New(status.Err)
 	}
-	client, err := rpc.DialWebsocket(ctx, status.WSEndpoint, "http://localhost")
+	client, err := rpc.DialWebsocket(ctx, status.WSEndpoint, "")
 	if err != nil {
 		return fmt.Errorf("can't connect to RPC server: %v", err)
 	}
 
-	// node ready :)
+	// Node ready :)
 	n.client = client
 	n.wsAddr = status.WSEndpoint
 	n.Info = status.NodeInfo
@@ -303,29 +312,35 @@ func (n *ExecNode) NodeInfo() *p2p.NodeInfo {
 
 // ServeRPC serves RPC requests over the given connection by dialling the
 // node's WebSocket address and joining the two connections
-func (n *ExecNode) ServeRPC(clientConn net.Conn) error {
-	conn, err := websocket.Dial(n.wsAddr, "", "http://localhost")
+func (n *ExecNode) ServeRPC(clientConn *websocket.Conn) error {
+	conn, _, err := websocket.DefaultDialer.Dial(n.wsAddr, nil)
 	if err != nil {
 		return err
 	}
 	var wg sync.WaitGroup
 	wg.Add(2)
-	join := func(src, dst net.Conn) {
-		defer wg.Done()
-		io.Copy(dst, src)
-		// close the write end of the destination connection
-		if cw, ok := dst.(interface {
-			CloseWrite() error
-		}); ok {
-			cw.CloseWrite()
-		} else {
-			dst.Close()
+	go wsCopy(&wg, conn, clientConn)
+	go wsCopy(&wg, clientConn, conn)
+	wg.Wait()
+	conn.Close()
+	return nil
+}
+
+func wsCopy(wg *sync.WaitGroup, src, dst *websocket.Conn) {
+	defer wg.Done()
+	for {
+		msgType, r, err := src.NextReader()
+		if err != nil {
+			return
+		}
+		w, err := dst.NextWriter(msgType)
+		if err != nil {
+			return
+		}
+		if _, err = io.Copy(w, r); err != nil {
+			return
 		}
 	}
-	go join(conn, clientConn)
-	go join(clientConn, conn)
-	wg.Wait()
-	return nil
 }
 
 // Snapshots creates snapshots of the services by calling the
@@ -403,6 +418,13 @@ func startExecNodeStack() (*node.Node, error) {
 	if err := json.Unmarshal([]byte(confEnv), &conf); err != nil {
 		return nil, fmt.Errorf("error decoding %s: %v", envNodeConfig, err)
 	}
+
+	// create enode record
+	nodeTcpConn, _ := net.ResolveTCPAddr("tcp", conf.Stack.P2P.ListenAddr)
+	if nodeTcpConn.IP == nil {
+		nodeTcpConn.IP = net.IPv4(127, 0, 0, 1)
+	}
+	conf.Node.initEnode(nodeTcpConn.IP, nodeTcpConn.Port, nodeTcpConn.Port)
 	conf.Stack.P2P.PrivateKey = conf.Node.PrivateKey
 	conf.Stack.Logger = log.New("node.id", conf.Node.ID.String())
 

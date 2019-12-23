@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package discv5
 
@@ -27,7 +27,6 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/crypto"
 	"github.com/etherzero/go-etherzero/log"
-	"github.com/etherzero/go-etherzero/p2p/nat"
 	"github.com/etherzero/go-etherzero/p2p/netutil"
 	"github.com/etherzero/go-etherzero/rlp"
 )
@@ -38,15 +37,12 @@ const Version = 4
 var (
 	errPacketTooSmall = errors.New("too small")
 	errBadPrefix      = errors.New("bad prefix")
-	errTimeout        = errors.New("RPC timeout")
 )
 
 // Timeouts
 const (
 	respTimeout = 500 * time.Millisecond
 	expiration  = 20 * time.Second
-
-	driftThreshold = 10 * time.Second // Allowed clock drift before warning user
 )
 
 // RPC request structures
@@ -187,10 +183,6 @@ func makeEndpoint(addr *net.UDPAddr, tcpPort uint16) rpcEndpoint {
 	return rpcEndpoint{IP: ip, UDP: uint16(addr.Port), TCP: tcpPort}
 }
 
-func (e1 rpcEndpoint) equal(e2 rpcEndpoint) bool {
-	return e1.UDP == e2.UDP && e1.TCP == e2.TCP && e1.IP.Equal(e2.IP)
-}
-
 func nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
 	if err := netutil.CheckRelayIP(sender.IP, rn.IP); err != nil {
 		return nil, err
@@ -225,7 +217,6 @@ type udp struct {
 	conn        conn
 	priv        *ecdsa.PrivateKey
 	ourEndpoint rpcEndpoint
-	nat         nat.Interface
 	net         *Network
 }
 
@@ -272,13 +263,6 @@ func (t *udp) sendPing(remote *Node, toaddr *net.UDPAddr, topics []Topic) (hash 
 		Topics:     topics,
 	})
 	return hash
-}
-
-func (t *udp) sendFindnode(remote *Node, target NodeID) {
-	t.sendPacket(remote.ID, remote.addr(), byte(findnodePacket), findnode{
-		Target:     target,
-		Expiration: uint64(time.Now().Add(expiration).Unix()),
-	})
 }
 
 func (t *udp) sendNeighbours(remote *Node, results []*Node) {

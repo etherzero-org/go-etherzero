@@ -1,11 +1,11 @@
 package eth
 
 import (
+	"context"
+	"errors"
 	"math/big"
 	"sync"
 	"time"
-	"context"
-	"errors"
 
 	"github.com/etherzero/go-etherzero"
 	"github.com/etherzero/go-etherzero/common"
@@ -13,6 +13,7 @@ import (
 	"github.com/etherzero/go-etherzero/consensus/ethash"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/bloombits"
+	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/vm"
@@ -21,7 +22,6 @@ import (
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rpc"
-	"github.com/etherzero/go-etherzero/core/rawdb"
 )
 
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
@@ -47,9 +47,9 @@ func NewContractBackend(eth *Ethereum) *ContractBackend {
 		blockchain: eth.blockchain,
 		config:     eth.chainConfig,
 		//events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
-		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
+		events: filters.NewEventSystem(new(event.TypeMux), &filterBackend{eth.chainDb, eth.blockchain}, false),
 
-		txPool:     eth.txPool,
+		txPool: eth.txPool,
 	}
 	backend.rollback()
 	return backend
@@ -71,7 +71,7 @@ func (b *ContractBackend) rollback() {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
 }
 
-func(b *ContractBackend) getStateByBlockNumber(blockNumber *big.Int) (*state.StateDB, error) {
+func (b *ContractBackend) getStateByBlockNumber(blockNumber *big.Int) (*state.StateDB, error) {
 	var statedb *state.StateDB
 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
 		header := b.blockchain.GetHeaderByNumber(blockNumber.Uint64())
@@ -80,7 +80,7 @@ func(b *ContractBackend) getStateByBlockNumber(blockNumber *big.Int) (*state.Sta
 		}
 		statedb, _ = b.blockchain.StateAt(header.Root)
 
-	}else{
+	} else {
 		statedb, _ = b.blockchain.State()
 	}
 	if statedb == nil {
@@ -141,7 +141,7 @@ func (b *ContractBackend) StorageAt(ctx context.Context, contract common.Address
 
 // TransactionReceipt returns the receipt of a transaction.
 func (b *ContractBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	receipt, _, _, _ := rawdb.ReadReceipt(b.database, txHash)
+	receipt, _, _, _ := rawdb.ReadReceipt(b.database, txHash, b.config)
 	return receipt, nil
 }
 
@@ -182,7 +182,7 @@ func (b *ContractBackend) PendingNonceAt(ctx context.Context, account common.Add
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	return b.txPool.State().GetNonce(account), nil
+	return b.txPool.Nonce(account), nil
 }
 
 // SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
@@ -256,8 +256,7 @@ func (b *ContractBackend) callContract(ctx context.Context, call ethereum.CallMs
 	}
 	// Set infinite balance to the fake caller account.
 	from := statedb.GetOrNewStateObject(call.From)
-	from.SetBalance(math.MaxBig256, block.Number())
-	from.SetPower(math.MaxBig256)
+	from.SetBalance(math.MaxBig256)
 	// Execute the call.
 	msg := callmsg{call}
 
@@ -404,7 +403,7 @@ func (fb *filterBackend) GetReceipts(ctx context.Context, hash common.Hash) (typ
 	if number == nil {
 		return nil, nil
 	}
-	return rawdb.ReadReceipts(fb.db, hash, *number), nil
+	return rawdb.ReadReceipts(fb.db, hash, *number, fb.bc.Config()), nil
 }
 
 func (fb *filterBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
@@ -412,7 +411,7 @@ func (fb *filterBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*ty
 	if number == nil {
 		return nil, nil
 	}
-	receipts := rawdb.ReadReceipts(fb.db, hash, *number)
+	receipts := rawdb.ReadReceipts(fb.db, hash, *number, fb.bc.Config())
 	if receipts == nil {
 		return nil, nil
 	}

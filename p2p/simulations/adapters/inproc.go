@@ -1,18 +1,18 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package adapters
 
@@ -30,6 +30,7 @@ import (
 	"github.com/etherzero/go-etherzero/p2p/enode"
 	"github.com/etherzero/go-etherzero/p2p/simulations/pipes"
 	"github.com/etherzero/go-etherzero/rpc"
+	"github.com/gorilla/websocket"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and
@@ -71,8 +72,13 @@ func (s *SimAdapter) NewNode(config *NodeConfig) (Node, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	// check a node with the ID doesn't already exist
 	id := config.ID
+	// verify that the node has a private key in the config
+	if config.PrivateKey == nil {
+		return nil, fmt.Errorf("node is missing private key: %s", id)
+	}
+
+	// check a node with the ID doesn't already exist
 	if _, exists := s.nodes[id]; exists {
 		return nil, fmt.Errorf("node already exists: %s", id)
 	}
@@ -85,6 +91,11 @@ func (s *SimAdapter) NewNode(config *NodeConfig) (Node, error) {
 		if _, exists := s.services[service]; !exists {
 			return nil, fmt.Errorf("unknown node service %q", service)
 		}
+	}
+
+	err := config.initDummyEnode()
+	if err != nil {
+		return nil, err
 	}
 
 	n, err := node.New(&node.Config{
@@ -172,6 +183,12 @@ type SimNode struct {
 	registerOnce sync.Once
 }
 
+// Close closes the underlaying node.Node to release
+// acquired resources.
+func (sn *SimNode) Close() error {
+	return sn.node.Close()
+}
+
 // Addr returns the node's discovery address
 func (sn *SimNode) Addr() []byte {
 	return []byte(sn.Node().String())
@@ -194,13 +211,14 @@ func (sn *SimNode) Client() (*rpc.Client, error) {
 }
 
 // ServeRPC serves RPC requests over the given connection by creating an
-// in-memory client to the node's RPC server
-func (sn *SimNode) ServeRPC(conn net.Conn) error {
+// in-memory client to the node's RPC server.
+func (sn *SimNode) ServeRPC(conn *websocket.Conn) error {
 	handler, err := sn.node.RPCHandler()
 	if err != nil {
 		return err
 	}
-	handler.ServeCodec(rpc.NewJSONCodec(conn), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+	codec := rpc.NewFuncCodec(conn, conn.WriteJSON, conn.ReadJSON)
+	handler.ServeCodec(codec, 0)
 	return nil
 }
 

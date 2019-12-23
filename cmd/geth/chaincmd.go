@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of go-etherzero.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-etherzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-etherzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync/atomic"
@@ -30,14 +31,13 @@ import (
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/console"
 	"github.com/etherzero/go-etherzero/core"
+	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/eth/downloader"
-	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/trie"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -163,12 +163,33 @@ Remove blockchain and state databases`,
 			utils.DataDirFlag,
 			utils.CacheFlag,
 			utils.SyncModeFlag,
+			utils.IterativeOutputFlag,
+			utils.ExcludeCodeFlag,
+			utils.ExcludeStorageFlag,
+			utils.IncludeIncompletesFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
 The arguments are interpreted as block numbers or hashes.
 Use "ethereum dump 0" to dump the genesis block.`,
 	}
+	inspectCommand = cli.Command{
+		Action:    utils.MigrateFlags(inspect),
+		Name:      "inspect",
+		Usage:     "Inspect the storage size for each type of data in the database",
+		ArgsUsage: " ",
+		Flags: []cli.Flag{
+			utils.DataDirFlag,
+			utils.AncientFlag,
+			utils.CacheFlag,
+			utils.TestnetFlag,
+			utils.RinkebyFlag,
+			utils.GoerliFlag,
+			utils.SyncModeFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+	}
+
 	rollbackCommand = cli.Command{
 		Action:    utils.MigrateFlags(rollback),
 		Name:      "rollback",
@@ -185,8 +206,8 @@ Rollback set the current head block for block chain already in the database.
 	Syncing will require downloading contemporary block information from the index onwards.
 		`,
 	}
-
 )
+
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
@@ -208,8 +229,10 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	// Open an initialise both full and light databases
 	stack := makeFullNode(ctx)
+	defer stack.Close()
+
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := stack.OpenDatabase(name, 0, 0)
+		chaindb, err := stack.OpenDatabase(name, 0, 0, "")
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
@@ -217,6 +240,7 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
+		chaindb.Close()
 		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
 	}
 	return nil
@@ -227,8 +251,10 @@ func importChain(ctx *cli.Context) error {
 		utils.Fatalf("This command requires an argument.")
 	}
 	stack := makeFullNode(ctx)
-	chain, chainDb := utils.MakeChain(ctx, stack)
-	defer chainDb.Close()
+	defer stack.Close()
+
+	chain, db := utils.MakeChain(ctx, stack)
+	defer db.Close()
 
 	// Start periodically gathering memory profiles
 	var peakMemAlloc, peakMemSys uint64
@@ -263,22 +289,17 @@ func importChain(ctx *cli.Context) error {
 	fmt.Printf("Import done in %v.\n\n", time.Since(start))
 
 	// Output pre-compaction stats mostly to see the import trashing
-	db := chainDb.(*ethdb.LDBDatabase)
-
-	stats, err := db.LDB().GetProperty("leveldb.stats")
+	stats, err := db.Stat("leveldb.stats")
 	if err != nil {
 		utils.Fatalf("Failed to read database stats: %v", err)
 	}
 	fmt.Println(stats)
 
-	ioStats, err := db.LDB().GetProperty("leveldb.iostats")
+	ioStats, err := db.Stat("leveldb.iostats")
 	if err != nil {
 		utils.Fatalf("Failed to read database iostats: %v", err)
 	}
 	fmt.Println(ioStats)
-
-	fmt.Printf("Trie cache misses:  %d\n", trie.CacheMisses())
-	fmt.Printf("Trie cache unloads: %d\n\n", trie.CacheUnloads())
 
 	// Print the memory statistics used by the importing
 	mem := new(runtime.MemStats)
@@ -289,30 +310,29 @@ func importChain(ctx *cli.Context) error {
 	fmt.Printf("Allocations:   %.3f million\n", float64(mem.Mallocs)/1000000)
 	fmt.Printf("GC pause:      %v\n\n", time.Duration(mem.PauseTotalNs))
 
-	if ctx.GlobalIsSet(utils.NoCompactionFlag.Name) {
+	if ctx.GlobalBool(utils.NoCompactionFlag.Name) {
 		return nil
 	}
 
 	// Compact the entire database to more accurately measure disk io and print the stats
 	start = time.Now()
 	fmt.Println("Compacting entire database...")
-	if err = db.LDB().CompactRange(util.Range{}); err != nil {
+	if err = db.Compact(nil, nil); err != nil {
 		utils.Fatalf("Compaction failed: %v", err)
 	}
 	fmt.Printf("Compaction done in %v.\n\n", time.Since(start))
 
-	stats, err = db.LDB().GetProperty("leveldb.stats")
+	stats, err = db.Stat("leveldb.stats")
 	if err != nil {
 		utils.Fatalf("Failed to read database stats: %v", err)
 	}
 	fmt.Println(stats)
 
-	ioStats, err = db.LDB().GetProperty("leveldb.iostats")
+	ioStats, err = db.Stat("leveldb.iostats")
 	if err != nil {
 		utils.Fatalf("Failed to read database iostats: %v", err)
 	}
 	fmt.Println(ioStats)
-
 	return nil
 }
 
@@ -321,6 +341,8 @@ func exportChain(ctx *cli.Context) error {
 		utils.Fatalf("This command requires an argument.")
 	}
 	stack := makeFullNode(ctx)
+	defer stack.Close()
+
 	chain, _ := utils.MakeChain(ctx, stack)
 	start := time.Now()
 
@@ -354,10 +376,12 @@ func importPreimages(ctx *cli.Context) error {
 		utils.Fatalf("This command requires an argument.")
 	}
 	stack := makeFullNode(ctx)
-	diskdb := utils.MakeChainDatabase(ctx, stack).(*ethdb.LDBDatabase)
+	defer stack.Close()
 
+	db := utils.MakeChainDatabase(ctx, stack)
 	start := time.Now()
-	if err := utils.ImportPreimages(diskdb, ctx.Args().First()); err != nil {
+
+	if err := utils.ImportPreimages(db, ctx.Args().First()); err != nil {
 		utils.Fatalf("Import error: %v\n", err)
 	}
 	fmt.Printf("Import done in %v\n", time.Since(start))
@@ -370,10 +394,12 @@ func exportPreimages(ctx *cli.Context) error {
 		utils.Fatalf("This command requires an argument.")
 	}
 	stack := makeFullNode(ctx)
-	diskdb := utils.MakeChainDatabase(ctx, stack).(*ethdb.LDBDatabase)
+	defer stack.Close()
 
+	db := utils.MakeChainDatabase(ctx, stack)
 	start := time.Now()
-	if err := utils.ExportPreimages(diskdb, ctx.Args().First()); err != nil {
+
+	if err := utils.ExportPreimages(db, ctx.Args().First()); err != nil {
 		utils.Fatalf("Export error: %v\n", err)
 	}
 	fmt.Printf("Export done in %v\n", time.Since(start))
@@ -382,18 +408,27 @@ func exportPreimages(ctx *cli.Context) error {
 
 func copyDb(ctx *cli.Context) error {
 	// Ensure we have a source chain directory to copy
-	if len(ctx.Args()) != 1 {
+	if len(ctx.Args()) < 1 {
 		utils.Fatalf("Source chaindata directory path argument missing")
+	}
+	if len(ctx.Args()) < 2 {
+		utils.Fatalf("Source ancient chain directory path argument missing")
 	}
 	// Initialize a new chain for the running node to sync into
 	stack := makeFullNode(ctx)
-	chain, chainDb := utils.MakeChain(ctx, stack)
+	defer stack.Close()
 
-	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*downloader.SyncMode)
-	dl := downloader.New(syncmode, 0, chainDb, new(event.TypeMux), chain, nil, nil)
+	chain, chainDb := utils.MakeChain(ctx, stack)
+	syncMode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*downloader.SyncMode)
+
+	var syncBloom *trie.SyncBloom
+	if syncMode == downloader.FastSync {
+		syncBloom = trie.NewSyncBloom(uint64(ctx.GlobalInt(utils.CacheFlag.Name)/2), chainDb)
+	}
+	dl := downloader.New(0, chainDb, syncBloom, new(event.TypeMux), chain, nil, nil)
 
 	// Create a source peer to satisfy downloader requests from
-	db, err := ethdb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
+	db, err := rawdb.NewLevelDBDatabaseWithFreezer(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name)/2, 256, ctx.Args().Get(1), "")
 	if err != nil {
 		return err
 	}
@@ -409,7 +444,7 @@ func copyDb(ctx *cli.Context) error {
 	start := time.Now()
 
 	currentHeader := hc.CurrentHeader()
-	if err = dl.Synchronise("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncmode); err != nil {
+	if err = dl.Synchronise("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncMode); err != nil {
 		return err
 	}
 	for dl.Synchronising() {
@@ -420,46 +455,79 @@ func copyDb(ctx *cli.Context) error {
 	// Compact the entire database to remove any sync overhead
 	start = time.Now()
 	fmt.Println("Compacting entire database...")
-	if err = chainDb.(*ethdb.LDBDatabase).LDB().CompactRange(util.Range{}); err != nil {
+	if err = db.Compact(nil, nil); err != nil {
 		utils.Fatalf("Compaction failed: %v", err)
 	}
 	fmt.Printf("Compaction done in %v.\n\n", time.Since(start))
-
 	return nil
 }
 
 func removeDB(ctx *cli.Context) error {
-	stack, _ := makeConfigNode(ctx)
+	stack, config := makeConfigNode(ctx)
 
-	for _, name := range []string{"chaindata", "lightchaindata"} {
-		// Ensure the database exists in the first place
-		logger := log.New("database", name)
-
-		dbdir := stack.ResolvePath(name)
-		if !common.FileExist(dbdir) {
-			logger.Info("Database doesn't exist, skipping", "path", dbdir)
-			continue
-		}
-		// Confirm removal and execute
-		fmt.Println(dbdir)
-		confirm, err := console.Stdin.PromptConfirm("Remove this database?")
-		switch {
-		case err != nil:
-			utils.Fatalf("%v", err)
-		case !confirm:
-			logger.Warn("Database deletion aborted")
-		default:
-			start := time.Now()
-			os.RemoveAll(dbdir)
-			logger.Info("Database successfully deleted", "elapsed", common.PrettyDuration(time.Since(start)))
-		}
+	// Remove the full node state database
+	path := stack.ResolvePath("chaindata")
+	if common.FileExist(path) {
+		confirmAndRemoveDB(path, "full node state database")
+	} else {
+		log.Info("Full node state database missing", "path", path)
+	}
+	// Remove the full node ancient database
+	path = config.Eth.DatabaseFreezer
+	switch {
+	case path == "":
+		path = filepath.Join(stack.ResolvePath("chaindata"), "ancient")
+	case !filepath.IsAbs(path):
+		path = config.Node.ResolvePath(path)
+	}
+	if common.FileExist(path) {
+		confirmAndRemoveDB(path, "full node ancient database")
+	} else {
+		log.Info("Full node ancient database missing", "path", path)
+	}
+	// Remove the light node database
+	path = stack.ResolvePath("lightchaindata")
+	if common.FileExist(path) {
+		confirmAndRemoveDB(path, "light node database")
+	} else {
+		log.Info("Light node database missing", "path", path)
 	}
 	return nil
 }
 
+// confirmAndRemoveDB prompts the user for a last confirmation and removes the
+// folder if accepted.
+func confirmAndRemoveDB(database string, kind string) {
+	confirm, err := console.Stdin.PromptConfirm(fmt.Sprintf("Remove %s (%s)?", kind, database))
+	switch {
+	case err != nil:
+		utils.Fatalf("%v", err)
+	case !confirm:
+		log.Info("Database deletion skipped", "path", database)
+	default:
+		start := time.Now()
+		filepath.Walk(database, func(path string, info os.FileInfo, err error) error {
+			// If we're at the top level folder, recurse into
+			if path == database {
+				return nil
+			}
+			// Delete all the files, but not subfolders
+			if !info.IsDir() {
+				os.Remove(path)
+				return nil
+			}
+			return filepath.SkipDir
+		})
+		log.Info("Database successfully deleted", "path", database, "elapsed", common.PrettyDuration(time.Since(start)))
+	}
+}
+
 func dump(ctx *cli.Context) error {
 	stack := makeFullNode(ctx)
+	defer stack.Close()
+
 	chain, chainDb := utils.MakeChain(ctx, stack)
+	defer chainDb.Close()
 	for _, arg := range ctx.Args() {
 		var block *types.Block
 		if hashish(arg) {
@@ -476,12 +544,33 @@ func dump(ctx *cli.Context) error {
 			if err != nil {
 				utils.Fatalf("could not create new state: %v", err)
 			}
-			fmt.Printf("%s\n", state.Dump())
+			excludeCode := ctx.Bool(utils.ExcludeCodeFlag.Name)
+			excludeStorage := ctx.Bool(utils.ExcludeStorageFlag.Name)
+			includeMissing := ctx.Bool(utils.IncludeIncompletesFlag.Name)
+			if ctx.Bool(utils.IterativeOutputFlag.Name) {
+				state.IterativeDump(excludeCode, excludeStorage, !includeMissing, json.NewEncoder(os.Stdout))
+			} else {
+				if includeMissing {
+					fmt.Printf("If you want to include accounts with missing preimages, you need iterative output, since" +
+						" otherwise the accounts will overwrite each other in the resulting mapping.")
+				}
+				fmt.Printf("%v %s\n", includeMissing, state.Dump(excludeCode, excludeStorage, false))
+			}
 		}
 	}
-	chainDb.Close()
 	return nil
 }
+
+func inspect(ctx *cli.Context) error {
+	node, _ := makeConfigNode(ctx)
+	defer node.Close()
+
+	_, chainDb := utils.MakeChain(ctx, node)
+	defer chainDb.Close()
+
+	return rawdb.InspectDatabase(chainDb)
+}
+
 
 func rollback(ctx *cli.Context) error {
 	index := ctx.Args().First()
@@ -513,7 +602,6 @@ func rollback(ctx *cli.Context) error {
 	fmt.Printf("Success. Head block set to: %v\n", nowCurrentHead)
 	return nil
 }
-
 // hashish returns true for strings that look like hashes.
 func hashish(x string) bool {
 	_, err := strconv.Atoi(x)

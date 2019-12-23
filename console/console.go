@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package console
 
@@ -120,10 +120,10 @@ func (c *Console) init(preload []string) error {
 	consoleObj.Object().Set("error", c.consoleOutput)
 
 	// Load all the internal utility JavaScript libraries
-	if err := c.jsre.Compile("bignumber.js", jsre.BigNumber_JS); err != nil {
+	if err := c.jsre.Compile("bignumber.js", jsre.BignumberJs); err != nil {
 		return fmt.Errorf("bignumber.js: %v", err)
 	}
-	if err := c.jsre.Compile("web3.js", jsre.Web3_JS); err != nil {
+	if err := c.jsre.Compile("web3.js", jsre.Web3Js); err != nil {
 		return fmt.Errorf("web3.js: %v", err)
 	}
 	if _, err := c.jsre.Run("var Web3 = require('web3');"); err != nil {
@@ -236,7 +236,7 @@ func (c *Console) clearHistory() {
 // consoleOutput is an override for the console.log and console.error methods to
 // stream the output into the configured output stream instead of stdout.
 func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
-	output := []string{}
+	var output []string
 	for _, argument := range call.ArgumentList {
 		output = append(output, fmt.Sprintf("%v", argument))
 	}
@@ -274,14 +274,22 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 // Welcome show summary of current Geth instance and some metadata about the
 // console's available modules.
 func (c *Console) Welcome() {
+	message := "Welcome to the Geth JavaScript console!\n\n"
+
 	// Print some generic Geth metadata
-	fmt.Fprintf(c.printer, "Welcome to the Geth JavaScript console!\n\n")
-	c.jsre.Run(`
-		console.log("instance: " + web3.version.node);
-		console.log("coinbase: " + eth.coinbase);
-		console.log("at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")");
-		console.log(" datadir: " + admin.datadir);
-	`)
+	if res, err := c.jsre.Run(`
+		var message = "instance: " + web3.version.node + "\n";
+		try {
+			message += "coinbase: " + eth.coinbase + "\n";
+		} catch (err) {}
+		message += "at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")\n";
+		try {
+			message += " datadir: " + admin.datadir + "\n";
+		} catch (err) {}
+		message
+	`); err == nil {
+		message += res.String()
+	}
 	// List all the supported modules for the user to call
 	if apis, err := c.client.SupportedModules(); err == nil {
 		modules := make([]string, 0, len(apis))
@@ -289,9 +297,9 @@ func (c *Console) Welcome() {
 			modules = append(modules, fmt.Sprintf("%s:%s", api, version))
 		}
 		sort.Strings(modules)
-		fmt.Fprintln(c.printer, " modules:", strings.Join(modules, " "))
+		message += " modules: " + strings.Join(modules, " ") + "\n"
 	}
-	fmt.Fprintln(c.printer)
+	fmt.Fprintln(c.printer, message)
 }
 
 // Evaluate executes code and pretty prints the result to the specified output

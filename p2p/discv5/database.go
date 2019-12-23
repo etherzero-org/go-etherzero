@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains the node database, storing previously seen nodes and any collected
 // metadata about them for QoS purposes.
@@ -58,12 +58,11 @@ var (
 	nodeDBVersionKey = []byte("version") // Version of the database to flush if changes
 	nodeDBItemPrefix = []byte("n:")      // Identifier to prefix node entries with
 
-	nodeDBDiscoverRoot          = ":discover"
-	nodeDBDiscoverPing          = nodeDBDiscoverRoot + ":lastping"
-	nodeDBDiscoverPong          = nodeDBDiscoverRoot + ":lastpong"
-	nodeDBDiscoverFindFails     = nodeDBDiscoverRoot + ":findfail"
-	nodeDBDiscoverLocalEndpoint = nodeDBDiscoverRoot + ":localendpoint"
-	nodeDBTopicRegTickets       = ":tickets"
+	nodeDBDiscoverRoot      = ":discover"
+	nodeDBDiscoverPing      = nodeDBDiscoverRoot + ":lastping"
+	nodeDBDiscoverPong      = nodeDBDiscoverRoot + ":lastpong"
+	nodeDBDiscoverFindFails = nodeDBDiscoverRoot + ":findfail"
+	nodeDBTopicRegTickets   = ":tickets"
 )
 
 // newNodeDB creates a new node database for storing and retrieving infos about
@@ -309,20 +308,6 @@ func (db *nodeDB) findFails(id NodeID) int {
 // updateFindFails updates the number of findnode failures since bonding.
 func (db *nodeDB) updateFindFails(id NodeID, fails int) error {
 	return db.storeInt64(makeKey(id, nodeDBDiscoverFindFails), int64(fails))
-}
-
-// localEndpoint returns the last local endpoint communicated to the
-// given remote node.
-func (db *nodeDB) localEndpoint(id NodeID) *rpcEndpoint {
-	var ep rpcEndpoint
-	if err := db.fetchRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep); err != nil {
-		return nil
-	}
-	return &ep
-}
-
-func (db *nodeDB) updateLocalEndpoint(id NodeID, ep rpcEndpoint) error {
-	return db.storeRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep)
 }
 
 // querySeeds retrieves random nodes to be used as potential seed nodes

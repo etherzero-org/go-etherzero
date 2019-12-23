@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package discv5
 
@@ -77,14 +77,6 @@ type Network struct {
 	nursery       []*Node
 	nodes         map[NodeID]*Node // tracks active nodes with state != known
 	timeoutTimers map[timeoutEvent]*time.Timer
-
-	// Revalidation queues.
-	// Nodes put on these queues will be pinged eventually.
-	slowRevalidateQueue []*Node
-	fastRevalidateQueue []*Node
-
-	// Buffers for state transition.
-	sendBuf []*ingressPacket
 }
 
 // transport is implemented by the UDP transport.
@@ -104,10 +96,9 @@ type transport interface {
 }
 
 type findnodeQuery struct {
-	remote   *Node
-	target   common.Hash
-	reply    chan<- []*Node
-	nresults int // counter for received nodes
+	remote *Node
+	target common.Hash
+	reply  chan<- []*Node
 }
 
 type topicRegisterReq struct {
@@ -650,10 +641,10 @@ loop:
 	if net.conn != nil {
 		net.conn.Close()
 	}
-	if refreshDone != nil {
-		// TODO: wait for pending refresh.
-		//<-refreshResults
-	}
+	// TODO: wait for pending refresh.
+	// if refreshDone != nil {
+	// 	<-refreshResults
+	// }
 	// Cancel all pending timeouts.
 	for _, timer := range net.timeoutTimers {
 		timer.Stop()

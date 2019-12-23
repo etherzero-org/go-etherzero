@@ -1,23 +1,24 @@
-// Copyright 2018 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2018 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package enode
 
 import (
 	"crypto/ecdsa"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -28,7 +29,10 @@ import (
 	"strings"
 
 	"github.com/etherzero/go-etherzero/p2p/enr"
+	"github.com/etherzero/go-etherzero/rlp"
 )
+
+var errMissingPrefix = errors.New("missing 'enr:' prefix for base64-encoded record")
 
 // Node represents a host on the network.
 type Node struct {
@@ -49,25 +53,37 @@ func New(validSchemes enr.IdentityScheme, r *enr.Record) (*Node, error) {
 	return node, nil
 }
 
+// MustParse parses a node record or enode:// URL. It panics if the input is invalid.
+func MustParse(rawurl string) *Node {
+	n, err := Parse(ValidSchemes, rawurl)
+	if err != nil {
+		panic("invalid node: " + err.Error())
+	}
+	return n
+}
+
+// Parse decodes and verifies a base64-encoded node record.
+func Parse(validSchemes enr.IdentityScheme, input string) (*Node, error) {
+	if strings.HasPrefix(input, "enode://") {
+		return ParseV4(input)
+	}
+	if !strings.HasPrefix(input, "enr:") {
+		return nil, errMissingPrefix
+	}
+	bin, err := base64.RawURLEncoding.DecodeString(input[4:])
+	if err != nil {
+		return nil, err
+	}
+	var r enr.Record
+	if err := rlp.DecodeBytes(bin, &r); err != nil {
+		return nil, err
+	}
+	return New(validSchemes, &r)
+}
+
 // ID returns the node identifier.
 func (n *Node) ID() ID {
 	return n.id
-}
-
-// X8 returns 8 bytes of ecdsa.PublicKey.X
-func (n *Node) X8() (x8 [8]byte) {
-	buf := make([]byte, 32)
-	math.ReadBits(n.Pubkey().X, buf)
-	copy(x8[:], buf[:8])
-	return x8
-}
-
-// X8 returns 64 bytes of X & Y
-func (n *Node) XY() (xy [64]byte) {
-	pubkey := n.Pubkey()
-	math.ReadBits(pubkey.X, xy[:32])
-	math.ReadBits(pubkey.Y, xy[32:])
-	return xy
 }
 
 // Seq returns the sequence number of the underlying record.
@@ -85,11 +101,19 @@ func (n *Node) Load(k enr.Entry) error {
 	return n.r.Load(k)
 }
 
-// IP returns the IP address of the node.
+// IP returns the IP address of the node. This prefers IPv4 addresses.
 func (n *Node) IP() net.IP {
-	var ip net.IP
-	n.Load((*enr.IP)(&ip))
-	return ip
+	var (
+		ip4 enr.IPv4
+		ip6 enr.IPv6
+	)
+	if n.Load(&ip4) == nil {
+		return net.IP(ip4)
+	}
+	if n.Load(&ip6) == nil {
+		return net.IP(ip6)
+	}
+	return nil
 }
 
 // UDP returns the UDP port of the node.
@@ -115,6 +139,23 @@ func (n *Node) Pubkey() *ecdsa.PublicKey {
 	return &key
 }
 
+// X8 returns 8 bytes of ecdsa.PublicKey.X
+func (n *Node) X8() (x8 [8]byte) {
+	buf := make([]byte, 32)
+	math.ReadBits(n.Pubkey().X, buf)
+	copy(x8[:], buf[:8])
+	return x8
+}
+
+// X8 returns 64 bytes of X & Y
+func (n *Node) XY() (xy [64]byte) {
+	pubkey := n.Pubkey()
+	math.ReadBits(pubkey.X, xy[:32])
+	math.ReadBits(pubkey.Y, xy[32:])
+	return xy
+}
+
+
 // Record returns the node's record. The return value is a copy and may
 // be modified by the caller.
 func (n *Node) Record() *enr.Record {
@@ -122,10 +163,11 @@ func (n *Node) Record() *enr.Record {
 	return &cpy
 }
 
-// checks whether n is a valid complete node.
+// ValidateComplete checks whether n has a valid IP and UDP port.
+// Deprecated: don't use this method.
 func (n *Node) ValidateComplete() error {
 	if n.Incomplete() {
-		return errors.New("incomplete node")
+		return errors.New("missing IP address")
 	}
 	if n.UDP() == 0 {
 		return errors.New("missing UDP port")
@@ -139,20 +181,24 @@ func (n *Node) ValidateComplete() error {
 	return n.Load(&key)
 }
 
-// The string representation of a Node is a URL.
-// Please see ParseNode for a description of the format.
+// String returns the text representation of the record.
 func (n *Node) String() string {
-	return n.v4URL()
+	if isNewV4(n) {
+		return n.URLv4() // backwards-compatibility glue for NewV4 nodes
+	}
+	enc, _ := rlp.EncodeToBytes(&n.r) // always succeeds because record is valid
+	b64 := base64.RawURLEncoding.EncodeToString(enc)
+	return "enr:" + b64
 }
 
 // MarshalText implements encoding.TextMarshaler.
 func (n *Node) MarshalText() ([]byte, error) {
-	return []byte(n.v4URL()), nil
+	return []byte(n.String()), nil
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (n *Node) UnmarshalText(text []byte) error {
-	dec, err := ParseV4(string(text))
+	dec, err := Parse(ValidSchemes, string(text))
 	if err == nil {
 		*n = *dec
 	}

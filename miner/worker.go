@@ -91,7 +91,8 @@ type Result struct {
 
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
-	config *params.ChainConfig
+	config      *Config
+	chainConfig *params.ChainConfig
 	engine consensus.Engine
 
 	mu sync.Mutex
@@ -138,9 +139,10 @@ type worker struct {
 	stopper chan struct{}
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
+func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
-		config:         config,
+		config:             config,
+		chainConfig:        chainConfig,
 		engine:         engine,
 		eth:            eth,
 		mux:            mux,
@@ -237,7 +239,7 @@ func (self *worker) start() {
 }
 
 func (self *worker) seal(work *Work) {
-	if result, err := self.engine.Seal(self.chain, work.Block, self.quitCh); result != nil {
+	if result, err := self.engine.Seal(self.chain, work.Block, nil, self.quitCh); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash(), "diff", result.Difficulty())
 		self.recv <- &Result{work, result}
 	} else {
@@ -360,7 +362,7 @@ func (self *worker) update() {
 				self.currentMu.Unlock()
 			} else {
 				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 {
+				if self.chainConfig.Clique != nil && self.chainConfig.Clique.Period == 0 {
 					self.commitNewWork()
 				}
 			}
@@ -375,6 +377,8 @@ func (self *worker) update() {
 }
 
 func (self *worker) wait() {
+
+	var logs []*types.Log
 	for {
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
@@ -394,8 +398,9 @@ func (self *worker) wait() {
 			}
 			for _, log := range work.state.Logs() {
 				log.BlockHash = block.Hash()
+				logs = append(logs, log)
 			}
-			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
+			stat, err := self.chain.WriteBlockWithState(block, work.receipts, logs, work.state, true)
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
 				continue
@@ -442,8 +447,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := &Work{
-		config:    self.config,
-		signer:    types.NewEIP155Signer(self.config.ChainID),
+		config:    self.chainConfig,
+		signer:    types.NewEIP155Signer(self.chainConfig.ChainID),
 		state:     state,
 		ancestors: set.New(),
 		family:    set.New(),
@@ -494,7 +499,7 @@ func (self *worker) commitNewWork() (*Work, error) {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
+		GasLimit:   core.CalcGasLimit(parent, parent.GasLimit(), parent.GasLimit()),
 		Extra:      self.extra,
 		Time:       uint64(tstamp),
 	}
@@ -522,14 +527,14 @@ func (self *worker) commitNewWork() (*Work, error) {
 
 	// compute uncles for the new block.
 	var (
-		uncles    []*types.Header
+		uncles []*types.Header
 	)
-	if engine, ok := self.engine.(*devote.Devote); ok{
+	if engine, ok := self.engine.(*devote.Devote); ok {
 		engine.SetDevoteDB(self.chainDb)
 	}
 
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, nil); err != nil {
 		return nil, fmt.Errorf("Finalize block failed: %s", err)
 	}
 
@@ -660,7 +665,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 	snap := env.state.Snapshot()
 	devoteSnap := env.devoteDB.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
+	receipt, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		env.devoteDB.RevertToSnapShot(devoteSnap)

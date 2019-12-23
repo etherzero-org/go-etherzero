@@ -18,27 +18,27 @@ package eth
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
-	"errors"
-	"context"
 
+	"crypto/ecdsa"
+	"github.com/etherzero/go-etherzero"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/contracts/masternode/contract"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/masternode"
+	"github.com/etherzero/go-etherzero/crypto"
+	"github.com/etherzero/go-etherzero/eth/downloader"
 	"github.com/etherzero/go-etherzero/event"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
-	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/p2p/discover"
-	"crypto/ecdsa"
-	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/eth/downloader"
-	"github.com/etherzero/go-etherzero"
+	"github.com/etherzero/go-etherzero/params"
 )
 
 var (
@@ -71,9 +71,9 @@ func NewMasternodeManager(eth *Ethereum) (*MasternodeManager, error) {
 	}
 	// Create the masternode manager with its initial settings
 	manager := &MasternodeManager{
-		eth:                eth,
-		contract:           contract,
-		syncing:            0,
+		eth:      eth,
+		contract: contract,
+		syncing:  0,
 	}
 	return manager, nil
 }
@@ -81,7 +81,6 @@ func NewMasternodeManager(eth *Ethereum) (*MasternodeManager, error) {
 func (self *MasternodeManager) Clear() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-
 }
 
 func (self *MasternodeManager) Start(srvr *p2p.Server, mux *event.TypeMux) {
@@ -93,6 +92,7 @@ func (self *MasternodeManager) Start(srvr *p2p.Server, mux *event.TypeMux) {
 	self.NodeAccount = crypto.PubkeyToAddress(srvr.Config.PrivateKey.PublicKey)
 	self.PrivateKey = srvr.Config.PrivateKey
 
+	fmt.Printf("masternode Backend address:%s", self.NodeAccount.String())
 	go self.masternodeLoop()
 	go self.checkSyncing()
 }
@@ -103,6 +103,7 @@ func (self *MasternodeManager) Stop() {
 
 func (self *MasternodeManager) masternodeLoop() {
 	xy := self.srvr.Self().XY()
+
 	has, err := self.contract.Has(nil, self.srvr.Self().X8())
 	if err != nil {
 		log.Error("contract.Has", "error", err)
@@ -168,7 +169,7 @@ func (self *MasternodeManager) masternodeLoop() {
 				if has && err == nil {
 					fmt.Println("### Set masternode flag")
 					atomic.StoreUint32(&self.IsMasternode, 1)
-				}else{
+				} else {
 					continue
 				}
 			}
@@ -195,14 +196,8 @@ func (self *MasternodeManager) masternodeLoop() {
 				fmt.Println("Get gas error:", err)
 				continue
 			}
-			minPower := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
-			fmt.Println(logTime, "gasPrice ", gasPrice.String(), "minPower ", minPower.String())
-			if stateDB.GetPower(address, self.eth.blockchain.CurrentBlock().Number()).Cmp(minPower) < 0 {
-				fmt.Println(logTime, "Insufficient power for ping transaction.", address.Hex(), self.eth.blockchain.CurrentBlock().Number().String(), stateDB.GetPower(address, self.eth.blockchain.CurrentBlock().Number()).String())
-				break
-			}
 			tx := types.NewTransaction(
-				self.eth.txPool.State().GetNonce(address),
+				self.eth.txPool.Nonce(address),
 				params.MasterndeContractAddress,
 				big.NewInt(0),
 				gas,

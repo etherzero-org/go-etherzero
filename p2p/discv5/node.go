@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package discv5
 
@@ -64,23 +64,6 @@ func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16) *Node {
 
 func (n *Node) addr() *net.UDPAddr {
 	return &net.UDPAddr{IP: n.IP, Port: int(n.UDP)}
-}
-
-func (n *Node) setAddr(a *net.UDPAddr) {
-	n.IP = a.IP
-	if ipv4 := a.IP.To4(); ipv4 != nil {
-		n.IP = ipv4
-	}
-	n.UDP = uint16(a.Port)
-}
-
-// compares the given address against the stored values.
-func (n *Node) addrEqual(a *net.UDPAddr) bool {
-	ip := a.IP
-	if ipv4 := a.IP.To4(); ipv4 != nil {
-		ip = ipv4
-	}
-	return n.UDP == uint16(a.Port) && n.IP.Equal(ip)
 }
 
 // Incomplete returns true for nodes with no IP address.
@@ -324,14 +307,6 @@ func (n NodeID) Pubkey() (*ecdsa.PublicKey, error) {
 		return nil, errors.New("id is invalid secp256k1 curve point")
 	}
 	return p, nil
-}
-
-func (id NodeID) mustPubkey() ecdsa.PublicKey {
-	pk, err := id.Pubkey()
-	if err != nil {
-		panic(err)
-	}
-	return *pk
 }
 
 // recoverNodeID computes the public key used to sign the

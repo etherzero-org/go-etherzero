@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package discv5
 
@@ -50,7 +50,7 @@ func TestSimRandomResolve(t *testing.T) {
 			if err := net.SetFallbackNodes([]*Node{bootnode.Self()}); err != nil {
 				panic(err)
 			}
-			fmt.Printf("launched @ %v: %x\n", time.Now(), net.Self().ID[:16])
+			t.Logf("launched @ %v: %x\n", time.Now(), net.Self().ID[:16])
 		}
 	}()
 
@@ -294,15 +294,6 @@ func (s *simulation) launchNode(log bool) *Network {
 	return net
 }
 
-func (s *simulation) dropNode(id NodeID) {
-	s.mu.Lock()
-	n := s.nodes[id]
-	delete(s.nodes, id)
-	s.mu.Unlock()
-
-	n.Close()
-}
-
 type simTransport struct {
 	joinTime   time.Time
 	sender     NodeID
@@ -356,22 +347,6 @@ func (st *simTransport) sendPing(remote *Node, remoteAddr *net.UDPAddr, topics [
 		},
 	})
 	return hash
-}
-
-func (st *simTransport) sendPong(remote *Node, pingHash []byte) {
-	raddr := remote.addr()
-
-	st.sendPacket(remote.ID, ingressPacket{
-		remoteID:   st.sender,
-		remoteAddr: st.senderAddr,
-		hash:       st.nextHash(),
-		ev:         pongPacket,
-		data: &pong{
-			To:         rpcEndpoint{IP: raddr.IP, UDP: uint16(raddr.Port), TCP: 30303},
-			ReplyTok:   pingHash,
-			Expiration: uint64(time.Now().Unix() + int64(expiration)),
-		},
-	})
 }
 
 func (st *simTransport) sendFindnodeHash(remote *Node, target common.Hash) {

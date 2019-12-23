@@ -19,7 +19,10 @@ package miner
 
 import (
 	"fmt"
+	"github.com/etherzero/go-etherzero/common/hexutil"
+	"math/big"
 	"sync/atomic"
+	"time"
 
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
@@ -42,6 +45,20 @@ type Backend interface {
 	ChainDb() ethdb.Database
 }
 
+// Config is the configuration parameters of mining.
+type Config struct {
+	Etherbase common.Address `toml:",omitempty"` // Public address for block mining rewards (default = first account)
+	Notify    []string       `toml:",omitempty"` // HTTP URL list to be notified of new work packages(only useful in ethash).
+	ExtraData hexutil.Bytes  `toml:",omitempty"` // Block extra data set by the miner
+	GasFloor  uint64         // Target gas floor for mined blocks.
+	GasCeil   uint64         // Target gas ceiling for mined blocks.
+	GasPrice  *big.Int       // Minimum gas price for mining a transaction
+	Recommit  time.Duration  // The time interval for miner to re-create mining work.
+	Noverify  bool           // Disable remote mining solution verification(only useful in ethash).
+	Witness   string         // Node address for block mining
+}
+
+
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux *event.TypeMux
@@ -57,12 +74,13 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+
+func New(eth Backend,config *Config, chainConfig *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
 		eth:      eth,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, eth, mux),
+		worker:   newWorker(config, chainConfig, engine, common.Address{}, eth, mux),
 		canStart: 1,
 	}
 	//miner.Register(NewCpuAgent(eth.BlockChain(), engine))

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package enr
 
@@ -49,28 +49,28 @@ func TestGetSetID(t *testing.T) {
 }
 
 // TestGetSetIP4 tests encoding/decoding and setting/getting of the IP key.
-func TestGetSetIP4(t *testing.T) {
-	ip := IP{192, 168, 0, 3}
+func TestGetSetIPv4(t *testing.T) {
+	ip := IPv4{192, 168, 0, 3}
 	var r Record
 	r.Set(ip)
 
-	var ip2 IP
+	var ip2 IPv4
 	require.NoError(t, r.Load(&ip2))
 	assert.Equal(t, ip, ip2)
 }
 
-// TestGetSetIP6 tests encoding/decoding and setting/getting of the IP key.
-func TestGetSetIP6(t *testing.T) {
-	ip := IP{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68}
+// TestGetSetIP6 tests encoding/decoding and setting/getting of the IP6 key.
+func TestGetSetIPv6(t *testing.T) {
+	ip := IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68}
 	var r Record
 	r.Set(ip)
 
-	var ip2 IP
+	var ip2 IPv6
 	require.NoError(t, r.Load(&ip2))
 	assert.Equal(t, ip, ip2)
 }
 
-// TestGetSetDiscPort tests encoding/decoding and setting/getting of the DiscPort key.
+// TestGetSetUDP tests encoding/decoding and setting/getting of the UDP key.
 func TestGetSetUDP(t *testing.T) {
 	port := UDP(30309)
 	var r Record
@@ -83,7 +83,7 @@ func TestGetSetUDP(t *testing.T) {
 
 func TestLoadErrors(t *testing.T) {
 	var r Record
-	ip4 := IP{127, 0, 0, 1}
+	ip4 := IPv4{127, 0, 0, 1}
 	r.Set(ip4)
 
 	// Check error for missing keys.
@@ -185,13 +185,13 @@ func TestSeq(t *testing.T) {
 func TestGetSetOverwrite(t *testing.T) {
 	var r Record
 
-	ip := IP{192, 168, 0, 3}
+	ip := IPv4{192, 168, 0, 3}
 	r.Set(ip)
 
-	ip2 := IP{192, 168, 0, 4}
+	ip2 := IPv4{192, 168, 0, 4}
 	r.Set(ip2)
 
-	var ip3 IP
+	var ip3 IPv4
 	require.NoError(t, r.Load(&ip3))
 	assert.Equal(t, ip2, ip3)
 }
@@ -200,7 +200,7 @@ func TestGetSetOverwrite(t *testing.T) {
 func TestSignEncodeAndDecode(t *testing.T) {
 	var r Record
 	r.Set(UDP(30303))
-	r.Set(IP{127, 0, 0, 1})
+	r.Set(IPv4{127, 0, 0, 1})
 	require.NoError(t, signTest([]byte{5}, &r))
 
 	blob, err := rlp.EncodeToBytes(r)

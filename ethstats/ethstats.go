@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package ethstats implements the network stats reporting service.
 package ethstats
@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
+	"net/http"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -41,7 +41,7 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/p2p"
 	"github.com/etherzero/go-etherzero/rpc"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -200,21 +200,21 @@ func (s *Service) loop() {
 		path := fmt.Sprintf("%s/api", s.host)
 		urls := []string{path}
 
-		if !strings.Contains(path, "://") { // url.Parse and url.IsAbs is unsuitable (https://github.com/golang/go/issues/19779)
+		// url.Parse and url.IsAbs is unsuitable (https://github.com/golang/go/issues/19779)
+		if !strings.Contains(path, "://") {
 			urls = []string{"wss://" + path, "ws://" + path}
 		}
 		// Establish a websocket connection to the server on any supported URL
 		var (
-			conf *websocket.Config
 			conn *websocket.Conn
 			err  error
 		)
+		dialer := websocket.Dialer{HandshakeTimeout: 5 * time.Second}
+		header := make(http.Header)
+		header.Set("origin", "http://localhost")
 		for _, url := range urls {
-			if conf, err = websocket.NewConfig(url, "http://localhost/"); err != nil {
-				continue
-			}
-			conf.Dialer = &net.Dialer{Timeout: 5 * time.Second}
-			if conn, err = websocket.DialConfig(conf); err == nil {
+			conn, _, err = dialer.Dial(url, header)
+			if err == nil {
 				break
 			}
 		}
@@ -284,7 +284,7 @@ func (s *Service) readLoop(conn *websocket.Conn) {
 	for {
 		// Retrieve the next generic network packet and bail out on error
 		var msg map[string][]interface{}
-		if err := websocket.JSON.Receive(conn, &msg); err != nil {
+		if err := conn.ReadJSON(&msg); err != nil {
 			log.Warn("Failed to decode stats server message", "err", err)
 			return
 		}
@@ -399,12 +399,12 @@ func (s *Service) login(conn *websocket.Conn) error {
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
-	if err := websocket.JSON.Send(conn, login); err != nil {
+	if err := conn.WriteJSON(login); err != nil {
 		return err
 	}
 	// Retrieve the remote ack or connection termination
 	var ack map[string][]string
-	if err := websocket.JSON.Receive(conn, &ack); err != nil || len(ack["emit"]) != 1 || ack["emit"][0] != "ready" {
+	if err := conn.ReadJSON(&ack); err != nil || len(ack["emit"]) != 1 || ack["emit"][0] != "ready" {
 		return errors.New("unauthorized")
 	}
 	return nil
@@ -441,7 +441,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 			"clientTime": start.String(),
 		}},
 	}
-	if err := websocket.JSON.Send(conn, ping); err != nil {
+	if err := conn.WriteJSON(ping); err != nil {
 		return err
 	}
 	// Wait for the pong request to arrive back
@@ -463,7 +463,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 			"latency": latency,
 		}},
 	}
-	return websocket.JSON.Send(conn, stats)
+	return conn.WriteJSON(stats)
 }
 
 // blockStats is the information to report about individual blocks.
@@ -514,7 +514,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	report := map[string][]interface{}{
 		"emit": {"block", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }
 
 // assembleBlockStats retrieves any required metadata to report a single block
@@ -628,7 +628,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	report := map[string][]interface{}{
 		"emit": {"history", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }
 
 // pendStats is the information to report about pending transactions.
@@ -658,7 +658,7 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"pending", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }
 
 // nodeStats is the information to report about the local node.
@@ -713,5 +713,5 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"stats", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }

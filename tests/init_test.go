@@ -1,23 +1,24 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package tests
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,10 +34,22 @@ import (
 	"github.com/etherzero/go-etherzero/params"
 )
 
+// Command line flags to configure the interpreters.
+var (
+	testEVM   = flag.String("vm.evm", "", "EVM configuration")
+	testEWASM = flag.String("vm.ewasm", "", "EWASM configuration")
+)
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
+
 var (
 	baseDir            = filepath.Join(".", "testdata")
 	blockTestDir       = filepath.Join(baseDir, "BlockchainTests")
 	stateTestDir       = filepath.Join(baseDir, "GeneralStateTests")
+	legacyStateTestDir = filepath.Join(baseDir, "LegacyTests", "Constantinople", "GeneralStateTests")
 	transactionTestDir = filepath.Join(baseDir, "TransactionTests")
 	vmTestDir          = filepath.Join(baseDir, "VMTests")
 	rlpTestDir         = filepath.Join(baseDir, "RLPTests")
@@ -274,5 +287,16 @@ func runTestFunc(runTest interface{}, t *testing.T, name string, m reflect.Value
 		reflect.ValueOf(t),
 		reflect.ValueOf(name),
 		m.MapIndex(reflect.ValueOf(key)),
+	})
+}
+
+func TestMatcherWhitelist(t *testing.T) {
+	t.Parallel()
+	tm := new(testMatcher)
+	tm.whitelist("invalid*")
+	tm.walk(t, rlpTestDir, func(t *testing.T, name string, test *RLPTest) {
+		if name[:len("invalidRLPTest.json")] != "invalidRLPTest.json" {
+			t.Fatalf("invalid test found: %s != invalidRLPTest.json", name)
+		}
 	})
 }

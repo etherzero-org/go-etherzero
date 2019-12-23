@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package eth
 
@@ -28,7 +28,6 @@ import (
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/internal/ethapi"
-	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/etherzero/go-etherzero/trie"
@@ -68,7 +67,7 @@ func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
 func (api *PublicEthereumAPI) ChainId() hexutil.Uint64 {
 	chainID := new(big.Int)
-	if config := api.e.chainConfig; config.IsEIP155(api.e.blockchain.CurrentBlock().Number()) {
+	if config := api.e.blockchain.Config(); config.IsEIP155(api.e.blockchain.CurrentBlock().Number()) {
 		chainID = config.ChainID
 	}
 	return (hexutil.Uint64)(chainID.Uint64())
@@ -143,9 +142,14 @@ func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
 	return true
 }
 
+//// SetRecommitInterval updates the interval for miner sealing work recommitting.
+//func (api *PrivateMinerAPI) SetRecommitInterval(interval int) {
+//	api.e.Miner().SetRecommitInterval(time.Duration(interval) * time.Millisecond)
+//}
+
 // GetHashrate returns the current hashrate of the miner.
-func (api *PrivateMinerAPI) GetHashrate() uint64 {
-	return uint64(api.e.miner.HashRate())
+func (api *PrivateMinerAPI) GetHashrate() int64 {
+	return api.e.miner.HashRate()
 }
 
 // PrivateAdminAPI is the collection of Ethereum full node-related APIs
@@ -162,6 +166,11 @@ func NewPrivateAdminAPI(eth *Ethereum) *PrivateAdminAPI {
 
 // ExportChain exports the current blockchain into a local file.
 func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
+	if _, err := os.Stat(file); err == nil {
+		// File already exists. Allowing overwrite could be a DoS vecotor,
+		// since the 'file' may point to arbitrary paths on the drive
+		return false, errors.New("location would overwrite an existing file")
+	}
 	// Make sure we can create the file to export into
 	out, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -260,7 +269,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
 		_, stateDb := api.eth.miner.Pending()
-		return stateDb.RawDump(), nil
+		return stateDb.RawDump(false, false, true), nil
 	}
 	var block *types.Block
 	if blockNr == rpc.LatestBlockNumber {
@@ -275,20 +284,19 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	if err != nil {
 		return state.Dump{}, err
 	}
-	return stateDb.RawDump(), nil
+	return stateDb.RawDump(false, false, true), nil
 }
 
 // PrivateDebugAPI is the collection of Ethereum full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
-	config *params.ChainConfig
-	eth    *Ethereum
+	eth *Ethereum
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
 // private debug methods of the Ethereum service.
-func NewPrivateDebugAPI(config *params.ChainConfig, eth *Ethereum) *PrivateDebugAPI {
-	return &PrivateDebugAPI{config: config, eth: eth}
+func NewPrivateDebugAPI(eth *Ethereum) *PrivateDebugAPI {
+	return &PrivateDebugAPI{eth: eth}
 }
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
@@ -327,6 +335,72 @@ func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]*BadBlockArgs, 
 		}
 	}
 	return results, nil
+}
+
+// AccountRangeResult returns a mapping from the hash of an account addresses
+// to its preimage. It will return the JSON null if no preimage is found.
+// Since a query can return a limited amount of results, a "next" field is
+// also present for paging.
+type AccountRangeResult struct {
+	Accounts map[common.Hash]*common.Address `json:"accounts"`
+	Next     common.Hash                     `json:"next"`
+}
+
+func accountRange(st state.Trie, start *common.Hash, maxResults int) (AccountRangeResult, error) {
+	if start == nil {
+		start = &common.Hash{0}
+	}
+	it := trie.NewIterator(st.NodeIterator(start.Bytes()))
+	result := AccountRangeResult{Accounts: make(map[common.Hash]*common.Address), Next: common.Hash{}}
+
+	if maxResults > AccountRangeMaxResults {
+		maxResults = AccountRangeMaxResults
+	}
+
+	for i := 0; i < maxResults && it.Next(); i++ {
+		if preimage := st.GetKey(it.Key); preimage != nil {
+			addr := &common.Address{}
+			addr.SetBytes(preimage)
+			result.Accounts[common.BytesToHash(it.Key)] = addr
+		} else {
+			result.Accounts[common.BytesToHash(it.Key)] = nil
+		}
+	}
+
+	if it.Next() {
+		result.Next = common.BytesToHash(it.Key)
+	}
+
+	return result, nil
+}
+
+// AccountRangeMaxResults is the maximum number of results to be returned per call
+const AccountRangeMaxResults = 256
+
+// AccountRange enumerates all accounts in the latest state
+func (api *PrivateDebugAPI) AccountRange(ctx context.Context, start *common.Hash, maxResults int) (AccountRangeResult, error) {
+	var statedb *state.StateDB
+	var err error
+	block := api.eth.blockchain.CurrentBlock()
+
+	if len(block.Transactions()) == 0 {
+		statedb, err = api.computeStateDB(block, defaultTraceReexec)
+		if err != nil {
+			return AccountRangeResult{}, err
+		}
+	} else {
+		_, _, statedb, err = api.computeTxEnv(block.Hash(), len(block.Transactions())-1, 0)
+		if err != nil {
+			return AccountRangeResult{}, err
+		}
+	}
+
+	trie, err := statedb.Database().OpenTrie(block.Header().Root)
+	if err != nil {
+		return AccountRangeResult{}, err
+	}
+
+	return accountRange(trie, start, maxResults)
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.
@@ -439,11 +513,11 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 	}
 	triedb := api.eth.BlockChain().StateCache().TrieDB()
 
-	oldTrie, err := trie.NewSecure(startBlock.Root(), triedb, 0)
+	oldTrie, err := trie.NewSecure(startBlock.Root(), triedb)
 	if err != nil {
 		return nil, err
 	}
-	newTrie, err := trie.NewSecure(endBlock.Root(), triedb, 0)
+	newTrie, err := trie.NewSecure(endBlock.Root(), triedb)
 	if err != nil {
 		return nil, err
 	}

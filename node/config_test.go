@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package node
 
@@ -38,13 +38,21 @@ func TestDatadirCreation(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	if _, err := New(&Config{DataDir: dir}); err != nil {
+	node, err := New(&Config{DataDir: dir})
+	if err != nil {
 		t.Fatalf("failed to create stack with existing datadir: %v", err)
+	}
+	if err := node.Close(); err != nil {
+		t.Fatalf("failed to close node: %v", err)
 	}
 	// Generate a long non-existing datadir path and check that it gets created by a node
 	dir = filepath.Join(dir, "a", "b", "c", "d", "e", "f")
-	if _, err := New(&Config{DataDir: dir}); err != nil {
+	node, err = New(&Config{DataDir: dir})
+	if err != nil {
 		t.Fatalf("failed to create stack with creatable datadir: %v", err)
+	}
+	if err := node.Close(); err != nil {
+		t.Fatalf("failed to close node: %v", err)
 	}
 	if _, err := os.Stat(dir); err != nil {
 		t.Fatalf("freshly created datadir not accessible: %v", err)
@@ -57,8 +65,12 @@ func TestDatadirCreation(t *testing.T) {
 	defer os.Remove(file.Name())
 
 	dir = filepath.Join(file.Name(), "invalid/path")
-	if _, err := New(&Config{DataDir: dir}); err == nil {
+	node, err = New(&Config{DataDir: dir})
+	if err == nil {
 		t.Fatalf("protocol stack created with an invalid datadir")
+		if err := node.Close(); err != nil {
+			t.Fatalf("failed to close node: %v", err)
+		}
 	}
 }
 

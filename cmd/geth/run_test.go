@@ -1,29 +1,32 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of go-etherzero.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-etherzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-etherzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/etherzero/go-etherzero/internal/cmdtest"
+	"github.com/etherzero/go-etherzero/rpc"
 )
 
 func tmpdir(t *testing.T) string {
@@ -95,4 +98,29 @@ func runGeth(t *testing.T, args ...string) *testgeth {
 	tt.Run("geth-test", args...)
 
 	return tt
+}
+
+// waitForEndpoint attempts to connect to an RPC endpoint until it succeeds.
+func waitForEndpoint(t *testing.T, endpoint string, timeout time.Duration) {
+	probe := func() bool {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		c, err := rpc.DialContext(ctx, endpoint)
+		if c != nil {
+			_, err = c.SupportedModules()
+			c.Close()
+		}
+		return err == nil
+	}
+
+	start := time.Now()
+	for {
+		if probe() {
+			return
+		}
+		if time.Since(start) > timeout {
+			t.Fatal("endpoint", endpoint, "did not open within", timeout)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }

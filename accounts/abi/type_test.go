@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 package abi
 
@@ -95,12 +95,18 @@ func TestTypeRegexp(t *testing.T) {
 		// {"fixed[2]", nil, Type{}},
 		// {"fixed128x128[]", nil, Type{}},
 		// {"fixed128x128[2]", nil, Type{}},
-		{"tuple", []ArgumentMarshaling{{Name: "a", Type: "int64"}}, Type{Kind: reflect.Struct, T: TupleTy, Type: reflect.TypeOf(struct{ A int64 }{}), stringKind: "(int64)",
+		{"tuple", []ArgumentMarshaling{{Name: "a", Type: "int64"}}, Type{Kind: reflect.Struct, T: TupleTy, Type: reflect.TypeOf(struct {
+			A int64 `json:"a"`
+		}{}), stringKind: "(int64)",
 			TupleElems: []*Type{{Kind: reflect.Int64, T: IntTy, Type: reflect.TypeOf(int64(0)), Size: 64, stringKind: "int64"}}, TupleRawNames: []string{"a"}}},
+		{"tuple with long name", []ArgumentMarshaling{{Name: "aTypicalParamName", Type: "int64"}}, Type{Kind: reflect.Struct, T: TupleTy, Type: reflect.TypeOf(struct {
+			ATypicalParamName int64 `json:"aTypicalParamName"`
+		}{}), stringKind: "(int64)",
+			TupleElems: []*Type{{Kind: reflect.Int64, T: IntTy, Type: reflect.TypeOf(int64(0)), Size: 64, stringKind: "int64"}}, TupleRawNames: []string{"aTypicalParamName"}}},
 	}
 
 	for _, tt := range tests {
-		typ, err := NewType(tt.blob, tt.components)
+		typ, err := NewType(tt.blob, "", tt.components)
 		if err != nil {
 			t.Errorf("type %q: failed to parse type string: %v", tt.blob, err)
 		}
@@ -275,7 +281,7 @@ func TestTypeCheck(t *testing.T) {
 			B *big.Int
 		}{{big.NewInt(0), big.NewInt(0)}, {big.NewInt(0), big.NewInt(0)}}, ""},
 	} {
-		typ, err := NewType(test.typ, test.components)
+		typ, err := NewType(test.typ, "", test.components)
 		if err != nil && len(test.err) == 0 {
 			t.Fatal("unexpected parse error:", err)
 		} else if err != nil && len(test.err) != 0 {

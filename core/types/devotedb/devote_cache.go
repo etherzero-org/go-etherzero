@@ -22,10 +22,10 @@ package devotedb
 import (
 	"encoding/binary"
 	"fmt"
+	"golang.org/x/crypto/sha3"
 	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 )
@@ -105,7 +105,7 @@ func (self *DevoteCache) Hash() (h common.Hash) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	hw := sha3.NewKeccak256()
+	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, self.sTrie.Hash())
 	rlp.Encode(hw, self.cTrie.Hash())
 	hw.Sum(h[:0])

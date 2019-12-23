@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"sync"
 	"time"
@@ -32,13 +33,15 @@ import (
 	"github.com/etherzero/go-etherzero/core/types"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/crypto"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/log"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/rpc"
 	"github.com/hashicorp/golang-lru"
+
+	"golang.org/x/crypto/sha3"
+
 )
 
 const (
@@ -100,36 +103,11 @@ type MasternodeListFn func(number *big.Int) ([]string, error)
 
 type GetGovernanceContractAddress func(number *big.Int) (common.Address, error)
 
-// NOTE: sigHash was copy from clique
-// sigHash returns the hash which is used as input for the proof-of-authority
-// signing. It is the hash of the entire header apart from the 65 byte signature
-// contained at the end of the extra data.
-//
-// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-// panics. This is done to avoid accidentally using both forms (signature present
-// or not), which could be abused to produce different hashes for the same header.
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
 
-	rlp.Encode(hasher, []interface{}{
-		header.ParentHash,
-		header.UncleHash,
-		header.Witness,
-		header.Coinbase,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.Difficulty,
-		header.Number,
-		header.GasLimit,
-		header.GasUsed,
-		header.Time,
-		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
-		header.MixDigest,
-		header.Nonce,
-		header.Protocol.Root(),
-	})
+// SealHash returns the hash of a block prior to it being sealed.
+func SealHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.NewLegacyKeccak256()
+	encodeSigHeader(hasher, header)
 	hasher.Sum(hash[:0])
 	return hash
 }
@@ -275,11 +253,11 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 
 	// Accumulate the rewards for the masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward, header.Number)
+	state.AddBalance(header.Coinbase, reward)
 
 	//  Accumulate the rewards to community account
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
-	state.AddBalance(govAddress, rewardForCommunity, header.Number)
+	state.AddBalance(govAddress, rewardForCommunity)
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -517,7 +495,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 	number := header.Number.Uint64()
 	// Sealing the genesis block is not supported
@@ -554,7 +532,7 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	}
 
 	// time's up, sign the block
-	sighash, err := signFn(d.signer, sigHash(header).Bytes())
+	sighash, err := signFn(d.signer, SealHash(header).Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -597,7 +575,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (string, error) {
 	}
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 	// Recover the public key and the Ethereum address
-	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
+	pubkey, err := crypto.Ecrecover(SealHash(header).Bytes(), signature)
 	if err != nil {
 		return "", err
 	}
@@ -655,6 +633,17 @@ func (d *Devote) updateConfirmedBlockHeader(chain consensus.ChainReader) error {
 	return nil
 }
 
+// FinalizeAndAssemble implements consensus.Engine, accumulating the block and
+// uncle rewards, setting the final state and assembling the block.
+func (d *Devote) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	// Accumulate any block and uncle rewards and commit the final state root
+	accumulateRewards(chain.Config(), state, header, uncles)
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+
+	// Header seems complete, assemble into a block and return
+	return types.NewBlock(header, txs, uncles, receipts), nil
+}
+
 // store inserts the snapshot into the database.
 func (d *Devote) storeConfirmedBlockHeader(db ethdb.Database) error {
 	db.Put(confirmedBlockHead, d.confirmedBlockHeader.Hash().Bytes())
@@ -689,7 +678,7 @@ func (d *Devote) APIs(chain consensus.ChainReader) []rpc.API {
 		Version:   "1.0",
 		Service:   &API{chain: chain, devote: d},
 		Public:    true,
-	}}
+	},}
 }
 
 // Close implements consensus.Engine. It's a noop for Devote as there is are no background threads.
@@ -699,9 +688,65 @@ func (d *Devote) Close() error {
 
 // SealHash returns the hash of a block prior to it being sealed.
 func (d *Devote) SealHash(header *types.Header) common.Hash {
-	return sigHash(header)
+	return SealHash(header)
 }
 
 func (d *Devote) SetDevoteDB(db ethdb.Database) {
 	d.db = db
 }
+
+func encodeSigHeader(w io.Writer, header *types.Header) {
+	err := rlp.Encode(w, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Witness,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
+		header.MixDigest,
+		header.Nonce,
+		header.Protocol.Root(),
+	})
+	if err != nil {
+		panic("can't encode: " + err.Error())
+	}
+}
+
+// Some weird constants to avoid constant memory allocs for them.
+var (
+	big8  = big.NewInt(8)
+	big32 = big.NewInt(32)
+)
+
+// AccumulateRewards credits the coinbase of the given block with the mining
+// reward. The total reward consists of the static block reward and rewards for
+// included uncles. The coinbase of each uncle block is also rewarded.
+func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+	// Select the correct block reward based on chain progression
+	blockReward := etherzeroBlockReward
+	// Accumulate the rewards for the miner and any included uncles
+	reward := new(big.Int).Set(blockReward)
+	r := new(big.Int)
+	for _, uncle := range uncles {
+		r.Add(uncle.Number, big8)
+		r.Sub(r, header.Number)
+		r.Mul(r, blockReward)
+		r.Div(r, big8)
+		state.AddBalance(uncle.Coinbase, r)
+
+		r.Div(blockReward, big32)
+		reward.Add(reward, r)
+	}
+	state.AddBalance(header.Coinbase, reward)
+}
+
+
+

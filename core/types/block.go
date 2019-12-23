@@ -1,31 +1,31 @@
-// Copyright 2014 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package types contains data types related to Ethereum consensus.
 package types
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
-	"sort"
+	"reflect"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
@@ -35,7 +35,7 @@ import (
 
 var (
 	EmptyRootHash  = DeriveSha(Transactions{})
-	EmptyUncleHash = CalcUncleHash(nil)
+	EmptyUncleHash = rlpHash([]*Header(nil))
 )
 
 // A BlockNonce is a 64-bit hash which proves (combined with the
@@ -69,24 +69,25 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash              `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash              `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address           `json:"miner"            gencodec:"required"`
-	Root        common.Hash              `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash              `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash              `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom                    `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int                 `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int                 `json:"number"           gencodec:"required"`
-	GasLimit    uint64                   `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64                   `json:"gasUsed"          gencodec:"required"`
-	Time        uint64                   `json:"timestamp"        gencodec:"required"`
-	Extra       []byte                   `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash              `json:"mixHash"`
-	Nonce       BlockNonce               `json:"nonce"`
+	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
+	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase    common.Address `json:"miner"            gencodec:"required"`
+	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
+	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
+	Number      *big.Int       `json:"number"           gencodec:"required"`
+	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
+	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
+	Time        uint64         `json:"timestamp"        gencodec:"required"`
+	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash    `json:"mixHash"`
+	Nonce       BlockNonce     `json:"nonce"`
 	Signature   common.Hash              `json:"signature"        gencodec:"required"`
 	Witness     string                   `json:"witness"          gencodec:"required"`
 	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
+
 }
 
 // field type overrides for gencodec
@@ -106,32 +107,31 @@ func (h *Header) Hash() common.Hash {
 	return rlpHash(h)
 }
 
-// HashNoNonce returns the hash which is used as input for the proof-of-work search.
-func (h *Header) HashNoNonce() common.Hash {
-	return rlpHash([]interface{}{
-		h.ParentHash,
-		h.UncleHash,
-		h.Coinbase,
-		h.Root,
-		h.TxHash,
-		h.ReceiptHash,
-		h.Bloom,
-		h.Difficulty,
-		h.Number,
-		h.GasLimit,
-		h.GasUsed,
-		h.Witness,
-		h.Time,
-		h.Extra,
-		h.Protocol.Root(),
-		h.Signature,
-	})
-}
+var headerSize = common.StorageSize(reflect.TypeOf(Header{}).Size())
 
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen())/8)
+	return headerSize + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen())/8)
+}
+
+// SanityCheck checks a few basic things -- these checks are way beyond what
+// any 'sane' production values should hold, and can mainly be used to prevent
+// that the unbounded fields are stuffed with junk data to add processing
+// overhead
+func (h *Header) SanityCheck() error {
+	if h.Number != nil && !h.Number.IsUint64() {
+		return fmt.Errorf("too large block number: bitlen %d", h.Number.BitLen())
+	}
+	if h.Difficulty != nil {
+		if diffLen := h.Difficulty.BitLen(); diffLen > 80 {
+			return fmt.Errorf("too large block difficulty: bitlen %d", diffLen)
+		}
+	}
+	if eLen := len(h.Extra); eLen > 100*1024 {
+		return fmt.Errorf("too large block extradata: size %d", eLen)
+	}
+	return nil
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -334,6 +334,7 @@ func (b *Block) Protocol() *devotedb.DevoteProtocol { return b.header.Protocol }
 
 func (b *Block) Signaute() common.Hash { return b.header.Signature }
 
+
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.
 func (b *Block) Size() common.StorageSize {
@@ -346,6 +347,12 @@ func (b *Block) Size() common.StorageSize {
 	return common.StorageSize(c)
 }
 
+// SanityCheck can be used to prevent that unbounded fields are
+// stuffed with junk data to add processing overhead
+func (b *Block) SanityCheck() error {
+	return b.header.SanityCheck()
+}
+
 type writeCounter common.StorageSize
 
 func (c *writeCounter) Write(b []byte) (int, error) {
@@ -354,6 +361,9 @@ func (c *writeCounter) Write(b []byte) (int, error) {
 }
 
 func CalcUncleHash(uncles []*Header) common.Hash {
+	if len(uncles) == 0 {
+		return EmptyUncleHash
+	}
 	return rlpHash(uncles)
 }
 
@@ -395,26 +405,3 @@ func (b *Block) Hash() common.Hash {
 }
 
 type Blocks []*Block
-
-type BlockBy func(b1, b2 *Block) bool
-
-func (self BlockBy) Sort(blocks Blocks) {
-	bs := blockSorter{
-		blocks: blocks,
-		by:     self,
-	}
-	sort.Sort(bs)
-}
-
-type blockSorter struct {
-	blocks Blocks
-	by     func(b1, b2 *Block) bool
-}
-
-func (self blockSorter) Len() int { return len(self.blocks) }
-func (self blockSorter) Swap(i, j int) {
-	self.blocks[i], self.blocks[j] = self.blocks[j], self.blocks[i]
-}
-func (self blockSorter) Less(i, j int) bool { return self.by(self.blocks[i], self.blocks[j]) }
-
-func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) < 0 }

@@ -1,18 +1,18 @@
-// Copyright 2018 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2018 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // +build none
 
@@ -69,7 +69,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		defer node.Stop()
+		defer node.Close()
 
 		for node.Server().NodeInfo().Ports.Listener == 0 {
 			time.Sleep(250 * time.Millisecond)
@@ -179,10 +179,12 @@ func makeMiner(genesis *core.Genesis) (*node.Node, error) {
 			TxPool:          core.DefaultTxPoolConfig,
 			GPO:             eth.DefaultConfig.GPO,
 			Ethash:          eth.DefaultConfig.Ethash,
-			MinerGasFloor:   genesis.GasLimit * 9 / 10,
-			MinerGasCeil:    genesis.GasLimit * 11 / 10,
-			MinerGasPrice:   big.NewInt(1),
-			MinerRecommit:   time.Second,
+			Miner: Config{
+				GasFloor: genesis.GasLimit * 9 / 10,
+				GasCeil:  genesis.GasLimit * 11 / 10,
+				GasPrice: big.NewInt(1),
+				Recommit: time.Second,
+			},
 		})
 	}); err != nil {
 		return nil, err

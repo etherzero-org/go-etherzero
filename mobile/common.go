@@ -1,18 +1,18 @@
-// Copyright 2016 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2016 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains all the wrappers from the common package.
 
@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -227,4 +228,14 @@ func (a *Addresses) Set(index int, address *Address) error {
 // Append adds a new address element to the end of the slice.
 func (a *Addresses) Append(address *Address) {
 	a.addresses = append(a.addresses, address.address)
+}
+
+// EncodeToHex encodes b as a hex string with 0x prefix.
+func EncodeToHex(b []byte) string {
+	return hexutil.Encode(b)
+}
+
+// DecodeFromHex decodes a hex string with 0x prefix.
+func DecodeFromHex(s string) ([]byte, error) {
+	return hexutil.Decode(s)
 }

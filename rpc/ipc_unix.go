@@ -1,18 +1,18 @@
-// Copyright 2015 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris
 
@@ -28,20 +28,10 @@ import (
 	"github.com/etherzero/go-etherzero/log"
 )
 
-/*
-#include <sys/un.h>
-
-int max_socket_path_size() {
-struct sockaddr_un s;
-return sizeof(s.sun_path);
-}
-*/
-import "C"
-
 // ipcListen will create a Unix socket on the given endpoint.
 func ipcListen(endpoint string) (net.Listener, error) {
-	if len(endpoint) > int(C.max_socket_path_size()) {
-		log.Warn(fmt.Sprintf("The ipc endpoint is longer than %d characters. ", C.max_socket_path_size()),
+	if len(endpoint) > int(max_path_size) {
+		log.Warn(fmt.Sprintf("The ipc endpoint is longer than %d characters. ", max_path_size),
 			"endpoint", endpoint)
 	}
 
@@ -60,5 +50,5 @@ func ipcListen(endpoint string) (net.Listener, error) {
 
 // newIPCConnection will connect to a Unix socket on the given endpoint.
 func newIPCConnection(ctx context.Context, endpoint string) (net.Conn, error) {
-	return dialContext(ctx, "unix", endpoint)
+	return new(net.Dialer).DialContext(ctx, "unix", endpoint)
 }

@@ -1,18 +1,18 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Contains the tests associated with the Whisper protocol Envelope object.
 
@@ -24,6 +24,33 @@ import (
 
 	"github.com/etherzero/go-etherzero/crypto"
 )
+
+func TestPoWCalculationsWithNoLeadingZeros(t *testing.T) {
+	e := Envelope{
+		TTL:   1,
+		Data:  []byte{0xde, 0xad, 0xbe, 0xef},
+		Nonce: 100000,
+	}
+
+	e.calculatePoW(0)
+
+	if e.pow != 0.07692307692307693 {
+		t.Fatalf("invalid PoW calculation. Expected 0.07692307692307693, got %v", e.pow)
+	}
+}
+
+func TestPoWCalculationsWith8LeadingZeros(t *testing.T) {
+	e := Envelope{
+		TTL:   1,
+		Data:  []byte{0xde, 0xad, 0xbe, 0xef},
+		Nonce: 276,
+	}
+	e.calculatePoW(0)
+
+	if e.pow != 19.692307692307693 {
+		t.Fatalf("invalid PoW calculation. Expected 19.692307692307693, got %v", e.pow)
+	}
+}
 
 func TestEnvelopeOpenAcceptsOnlyOneKeyTypeInFilter(t *testing.T) {
 	symKey := make([]byte, aesKeyLength)

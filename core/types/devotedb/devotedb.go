@@ -22,10 +22,10 @@ package devotedb
 import (
 	"encoding/binary"
 	"fmt"
+	"golang.org/x/crypto/sha3"
 	"sync"
 
 	"github.com/etherzero/go-etherzero/common"
-	"github.com/etherzero/go-etherzero/crypto/sha3"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/params"
 	"github.com/etherzero/go-etherzero/rlp"
@@ -33,6 +33,8 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"github.com/etherzero/go-etherzero/log"
 )
+
+type proofList [][]byte
 
 type DevoteDB struct {
 	db Database //etherzero db
@@ -106,7 +108,7 @@ func (db *DevoteDB) Root() (h common.Hash) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	hw := sha3.NewKeccak256()
+	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, db.cycleTrie.Hash())
 	rlp.Encode(hw, db.statsTrie.Hash())
 	hw.Sum(h[:0])
@@ -306,7 +308,7 @@ func (d *DevoteProtocol) Root() (h common.Hash) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	hw := sha3.NewKeccak256()
+	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, d.CycleHash)
 	rlp.Encode(hw, d.StatsHash)
 	hw.Sum(h[:0])
@@ -330,7 +332,7 @@ func (self statsTrie) Commit(onleaf trie.LeafCallback) (common.Hash, error) {
 	return root, err
 }
 
-func (self statsTrie) Prove(key []byte, fromLevel uint, proofDb ethdb.Putter) error {
+func (self statsTrie) Prove(key []byte, fromLevel uint, proofDb ethdb.KeyValueWriter) error {
 	return self.SecureTrie.Prove(key, fromLevel, proofDb)
 }
 
@@ -351,6 +353,6 @@ func (self cycleTrie) Commit(onleaf trie.LeafCallback) (common.Hash, error) {
 	return root, err
 }
 
-func (self cycleTrie) Prove(key []byte, fromLevel uint, proofDb ethdb.Putter) error {
+func (self cycleTrie) Prove(key []byte, fromLevel uint, proofDb ethdb.KeyValueWriter) error {
 	return self.SecureTrie.Prove(key, fromLevel, proofDb)
 }

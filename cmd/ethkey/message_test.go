@@ -1,18 +1,18 @@
-// Copyright 2018 The go-etherzero Authors
-// This file is part of go-etherzero.
+// Copyright 2018 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-etherzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-etherzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -37,8 +37,8 @@ func TestMessageSignVerify(t *testing.T) {
 	generate := runEthkey(t, "generate", keyfile)
 	generate.Expect(`
 !! Unsupported terminal, password will be echoed.
-Passphrase: {{.InputLine "foobar"}}
-Repeat passphrase: {{.InputLine "foobar"}}
+Password: {{.InputLine "foobar"}}
+Repeat password: {{.InputLine "foobar"}}
 `)
 	_, matches := generate.ExpectRegexp(`Address: (0x[0-9a-fA-F]{40})\n`)
 	address := matches[1]
@@ -48,7 +48,7 @@ Repeat passphrase: {{.InputLine "foobar"}}
 	sign := runEthkey(t, "signmessage", keyfile, message)
 	sign.Expect(`
 !! Unsupported terminal, password will be echoed.
-Passphrase: {{.InputLine "foobar"}}
+Password: {{.InputLine "foobar"}}
 `)
 	_, matches = sign.ExpectRegexp(`Signature: ([0-9a-f]+)\n`)
 	signature := matches[1]

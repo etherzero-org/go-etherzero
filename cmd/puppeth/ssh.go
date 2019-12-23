@@ -1,18 +1,18 @@
-// Copyright 2017 The go-etherzero Authors
-// This file is part of go-etherzero.
+// Copyright 2017 The go-ethereum Authors
+// This file is part of go-ethereum.
 //
-// go-etherzero is free software: you can redistribute it and/or modify
+// go-ethereum is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-etherzero is distributed in the hope that it will be useful,
+// go-ethereum is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-etherzero. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -129,15 +129,20 @@ func dial(server string, pubkey []byte) (*sshClient, error) {
 			fmt.Printf("SSH key fingerprint is %s [MD5]\n", ssh.FingerprintLegacyMD5(key))
 			fmt.Printf("Are you sure you want to continue connecting (yes/no)? ")
 
-			text, err := bufio.NewReader(os.Stdin).ReadString('\n')
-			switch {
-			case err != nil:
-				return err
-			case strings.TrimSpace(text) == "yes":
-				pubkey = key.Marshal()
-				return nil
-			default:
-				return fmt.Errorf("unknown auth choice: %v", text)
+			for {
+				text, err := bufio.NewReader(os.Stdin).ReadString('\n')
+				switch {
+				case err != nil:
+					return err
+				case strings.TrimSpace(text) == "yes":
+					pubkey = key.Marshal()
+					return nil
+				case strings.TrimSpace(text) == "no":
+					return errors.New("users says no")
+				default:
+					fmt.Println("Please answer 'yes' or 'no'")
+					continue
+				}
 			}
 		}
 		// If a public key exists for this SSH server, check that it matches

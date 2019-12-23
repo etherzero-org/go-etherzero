@@ -1,18 +1,18 @@
-// Copyright 2018 The go-etherzero Authors
-// This file is part of the go-etherzero library.
+// Copyright 2018 The go-ethereum Authors
+// This file is part of the go-ethereum library.
 //
-// The go-etherzero library is free software: you can redistribute it and/or modify
+// The go-ethereum library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-etherzero library is distributed in the hope that it will be useful,
+// The go-ethereum library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-etherzero library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // +build none
 
@@ -62,18 +62,22 @@ var (
 	skipPrefixes = []string{
 		// boring stuff
 		"vendor/", "tests/testdata/", "build/",
+
 		// don't relicense vendored sources
 		"cmd/internal/browser",
+		"common/bitutil/bitutil",
+		"common/prque/",
 		"consensus/ethash/xor.go",
 		"crypto/bn256/",
 		"crypto/ecies/",
-		"crypto/secp256k1/curve.go",
-		"crypto/sha3/",
+		"graphql/graphiql.go",
 		"internal/jsre/deps",
 		"log/",
-		"common/bitutil/bitutil",
-		// don't license generated files
-		"contracts/chequebook/contract/code.go",
+		"metrics/",
+		"signer/rules/deps",
+
+		// skip special licenses
+		"crypto/secp256k1", // Relicensed to BSD-3 via https://github.com/etherzero/go-etherzero/pull/17225
 	}
 
 	// paths with this prefix are licensed as GPL. all other files are LGPL.
@@ -84,13 +88,13 @@ var (
 	licenseCommentRE = regexp.MustCompile(`^//\s*(Copyright|This file is part of).*?\n(?://.*?\n)*\n*`)
 
 	// this text appears at the start of AUTHORS
-	authorsFileHeader = "# This is the official list of go-etherzero authors for copyright purposes.\n\n"
+	authorsFileHeader = "# This is the official list of go-ethereum authors for copyright purposes.\n\n"
 )
 
 // this template generates the license comment.
 // its input is an info structure.
 var licenseT = template.Must(template.New("").Parse(`
-// Copyright {{.Year}} The go-etherzero Authors
+// Copyright {{.Year}} The go-ethereum Authors
 // This file is part of {{.Whole false}}.
 //
 // {{.Whole true}} is free software: you can redistribute it and/or modify
@@ -129,12 +133,12 @@ func (i info) ShortLicense() string {
 
 func (i info) Whole(startOfSentence bool) string {
 	if i.gpl() {
-		return "go-etherzero"
+		return "go-ethereum"
 	}
 	if startOfSentence {
-		return "The go-etherzero library"
+		return "The go-ethereum library"
 	}
-	return "the go-etherzero library"
+	return "the go-ethereum library"
 }
 
 func (i info) gpl() bool {
@@ -145,6 +149,13 @@ func (i info) gpl() bool {
 	}
 	return false
 }
+
+// authors implements the sort.Interface for strings in case-insensitive mode.
+type authors []string
+
+func (as authors) Len() int           { return len(as) }
+func (as authors) Less(i, j int) bool { return strings.ToLower(as[i]) < strings.ToLower(as[j]) }
+func (as authors) Swap(i, j int)      { as[i], as[j] = as[j], as[i] }
 
 func main() {
 	var (
@@ -264,27 +275,32 @@ func mailmapLookup(authors []string) []string {
 }
 
 func writeAuthors(files []string) {
-	merge := make(map[string]bool)
-	// Add authors that Git reports as contributorxs.
+	var (
+		dedup = make(map[string]bool)
+		list  []string
+	)
+	// Add authors that Git reports as contributors.
 	// This is the primary source of author information.
 	for _, a := range gitAuthors(files) {
-		merge[a] = true
+		if la := strings.ToLower(a); !dedup[la] {
+			list = append(list, a)
+			dedup[la] = true
+		}
 	}
 	// Add existing authors from the file. This should ensure that we
 	// never lose authors, even if Git stops listing them. We can also
 	// add authors manually this way.
 	for _, a := range readAuthors() {
-		merge[a] = true
+		if la := strings.ToLower(a); !dedup[la] {
+			list = append(list, a)
+			dedup[la] = true
+		}
 	}
 	// Write sorted list of authors back to the file.
-	var result []string
-	for a := range merge {
-		result = append(result, a)
-	}
-	sort.Strings(result)
+	sort.Sort(authors(list))
 	content := new(bytes.Buffer)
 	content.WriteString(authorsFileHeader)
-	for _, a := range result {
+	for _, a := range list {
 		content.WriteString(a)
 		content.WriteString("\n")
 	}
