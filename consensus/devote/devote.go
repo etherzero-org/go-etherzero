@@ -253,11 +253,11 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 
 	// Accumulate the rewards for the masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward, header.Number)
 
 	//  Accumulate the rewards to community account
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
-	state.AddBalance(govAddress, rewardForCommunity)
+	state.AddBalance(govAddress, rewardForCommunity, header.Number)
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -740,12 +740,12 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		r.Sub(r, header.Number)
 		r.Mul(r, blockReward)
 		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
+		state.AddBalance(uncle.Coinbase, r, header.Number)
 
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
 	}
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward, header.Number)
 }
 
 

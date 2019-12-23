@@ -27,9 +27,13 @@ import (
 type StateDB interface {
 	CreateAccount(common.Address)
 
-	SubBalance(common.Address, *big.Int)
-	AddBalance(common.Address, *big.Int)
+	SubBalance(common.Address, *big.Int, *big.Int)
+	AddBalance(common.Address, *big.Int, *big.Int)
 	GetBalance(common.Address) *big.Int
+
+	SubPower(common.Address, *big.Int, *big.Int)
+	AddPower(common.Address, *big.Int)
+	GetPower(common.Address, *big.Int) *big.Int
 
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
@@ -61,6 +65,7 @@ type StateDB interface {
 	Snapshot() int
 
 	AddLog(*types.Log)
+	AddIntx(common.Address, common.Address, *big.Int)
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error

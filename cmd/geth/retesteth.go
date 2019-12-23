@@ -65,7 +65,6 @@ var (
 		Category:    "MISCELLANEOUS COMMANDS",
 		Description: `Launches geth in retesteth mode (no database, no network, only retesteth RPC interface)`,
 	}
-
 )
 
 type RetestethTestAPI interface {
@@ -225,9 +224,9 @@ func (e *NoRewardEngine) accumulateRewards(config *params.ChainConfig, state *st
 	// Simply touch miner and uncle coinbase accounts
 	reward := big.NewInt(0)
 	for _, uncle := range uncles {
-		state.AddBalance(uncle.Coinbase, reward)
+		state.AddBalance(uncle.Coinbase, reward, header.Number)
 	}
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, reward, header.Number)
 }
 
 func (e *NoRewardEngine) Finalize(chain consensus.ChainReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction,

@@ -37,6 +37,14 @@ var (
 	receiptStatusFailedRLP     = []byte{}
 	receiptStatusSuccessfulRLP = []byte{0x01}
 )
+// Internal Transaction of Contract
+type Intx struct {
+	From  common.Address `json:"from" gencodec:"required"`
+	To    common.Address `json:"to" gencodec:"required"`
+	Value big.Int        `json:"value" gencodec:"required"`
+}
+
+
 
 const (
 	// ReceiptStatusFailed is the status code of a transaction if execution failed.
@@ -57,6 +65,8 @@ type Receipt struct {
 
 	// Implementation fields: These fields are added by geth when processing a transaction.
 	// They are stored in the chain database.
+	Intxs           []*Intx        `json:"intxs"`
+
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
@@ -89,6 +99,7 @@ type receiptRLP struct {
 type storedReceiptRLP struct {
 	PostStateOrStatus []byte
 	CumulativeGasUsed uint64
+	Intxs             []*Intx
 	Logs              []*LogForStorage
 }
 
@@ -190,6 +201,7 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 	enc := &storedReceiptRLP{
 		PostStateOrStatus: (*Receipt)(r).statusEncoding(),
 		CumulativeGasUsed: r.CumulativeGasUsed,
+		Intxs:             r.Intxs,
 		Logs:              make([]*LogForStorage, len(r.Logs)),
 	}
 	for i, log := range r.Logs {

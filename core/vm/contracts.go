@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
@@ -61,6 +62,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}): &bn256AddByzantium{},
 	common.BytesToAddress([]byte{7}): &bn256ScalarMulByzantium{},
 	common.BytesToAddress([]byte{8}): &bn256PairingByzantium{},
+	common.BytesToAddress([]byte{11}): &ecrecoverByPublicKey{},
 }
 
 // PrecompiledContractsIstanbul contains the default set of pre-compiled Ethereum
@@ -75,6 +77,8 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMulIstanbul{},
 	common.BytesToAddress([]byte{8}): &bn256PairingIstanbul{},
 	common.BytesToAddress([]byte{9}): &blake2F{},
+	common.BytesToAddress([]byte{11}): &ecrecoverByPublicKey{},
+
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -501,4 +505,26 @@ func (c *blake2F) Run(input []byte) ([]byte, error) {
 		binary.LittleEndian.PutUint64(output[offset:offset+8], h[i])
 	}
 	return output, nil
+}
+
+type ecrecoverByPublicKey struct{}
+
+func (c *ecrecoverByPublicKey) RequiredGas(input []byte) uint64 {
+	return params.EcrecoverGas
+}
+
+func (c *ecrecoverByPublicKey) Run(input []byte) ([]byte, error) {
+	if len(input) < 64 {
+		return nil, nil
+	}
+	id := input[0:64]
+	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
+	half := len(id) / 2
+	p.X.SetBytes(id[:half])
+	p.Y.SetBytes(id[half:])
+	if !p.Curve.IsOnCurve(p.X, p.Y) {
+		return nil, nil
+	}
+	addr := crypto.PubkeyToAddress(*p)
+	return common.LeftPadBytes(addr[:], 32), nil
 }

@@ -86,6 +86,9 @@ type StateDB struct {
 	logs         map[common.Hash][]*types.Log
 	logSize      uint
 
+	intxs    map[common.Hash][]*types.Intx
+	intxSize uint
+
 	preimages map[common.Hash][]byte
 
 	// Journal of state modifications. This is the backbone of
@@ -118,6 +121,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		stateObjectsPending: make(map[common.Address]struct{}),
 		stateObjectsDirty:   make(map[common.Address]struct{}),
 		logs:                make(map[common.Hash][]*types.Log),
+		intxs:               make(map[common.Hash][]*types.Intx),
 		preimages:           make(map[common.Hash][]byte),
 		journal:             newJournal(),
 	}, nil
@@ -150,6 +154,8 @@ func (s *StateDB) Reset(root common.Hash) error {
 	s.txIndex = 0
 	s.logs = make(map[common.Hash][]*types.Log)
 	s.logSize = 0
+	s.intxs = make(map[common.Hash][]*types.Intx)
+	s.intxSize = 0
 	s.preimages = make(map[common.Hash][]byte)
 	s.clearJournalAndRefund()
 	return nil
@@ -176,6 +182,18 @@ func (s *StateDB) Logs() []*types.Log {
 		logs = append(logs, lgs...)
 	}
 	return logs
+}
+
+func (s *StateDB) AddIntx(from common.Address, to common.Address, value *big.Int) {
+	s.journal.append(addIntxChange{txhash: s.thash})
+	intx := &types.Intx{From: from, To: to}
+	intx.Value.SetBytes(value.Bytes())
+	s.intxs[s.thash] = append(s.intxs[s.thash], intx)
+	s.intxSize++
+}
+
+func (s *StateDB) GetIntxs(hash common.Hash) []*types.Intx {
+	return s.intxs[hash]
 }
 
 // AddPreimage records a SHA3 preimage seen by the VM.
@@ -230,6 +248,15 @@ func (s *StateDB) GetBalance(addr common.Address) *big.Int {
 	}
 	return common.Big0
 }
+
+func (s *StateDB) GetPower(addr common.Address, blockNumber *big.Int) *big.Int {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return CalculatePower(stateObject.BlockNumber(), blockNumber, stateObject.Power(), stateObject.Balance())
+	}
+	return common.Big0
+}
+
 
 func (s *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := s.getStateObject(addr)
@@ -346,25 +373,48 @@ func (s *StateDB) HasSuicided(addr common.Address) bool {
  */
 
 // AddBalance adds amount to the account associated with addr.
-func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
+func (s *StateDB) AddBalance(addr common.Address, amount *big.Int, blockNumber *big.Int) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddBalance(amount)
+		stateObject.AddBalance(amount, blockNumber)
 	}
 }
+
+func (s *StateDB) AddPower(addr common.Address, amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddPower(amount)
+	}
+}
+
 
 // SubBalance subtracts amount from the account associated with addr.
-func (s *StateDB) SubBalance(addr common.Address, amount *big.Int) {
+func (s *StateDB) SubBalance(addr common.Address, amount *big.Int, blockNumber *big.Int) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubBalance(amount)
+		stateObject.SubBalance(amount, blockNumber)
 	}
 }
 
-func (s *StateDB) SetBalance(addr common.Address, amount *big.Int) {
+func (s *StateDB) SubPower(addr common.Address, amount, blockNumber *big.Int) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SetBalance(amount)
+		stateObject.SubPower(amount, blockNumber)
+	}
+}
+
+
+func (s *StateDB) SetBalance(addr common.Address, amount *big.Int, blockNumber *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetBalance(amount, blockNumber)
+	}
+}
+
+func (self *StateDB) SetPower(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetPower(amount)
 	}
 }
 
@@ -578,6 +628,8 @@ func (s *StateDB) Copy() *StateDB {
 		refund:              s.refund,
 		logs:                make(map[common.Hash][]*types.Log, len(s.logs)),
 		logSize:             s.logSize,
+		intxs:               make(map[common.Hash][]*types.Intx, len(s.intxs)),
+		intxSize:            s.intxSize,
 		preimages:           make(map[common.Hash][]byte, len(s.preimages)),
 		journal:             newJournal(),
 	}
@@ -619,6 +671,14 @@ func (s *StateDB) Copy() *StateDB {
 			*cpy[i] = *l
 		}
 		state.logs[hash] = cpy
+	}
+	for hash, intxs := range s.intxs {
+		cpy := make([]*types.Intx, len(intxs))
+		for i, l := range intxs {
+			cpy[i] = new(types.Intx)
+			*cpy[i] = *l
+		}
+		state.intxs[hash] = cpy
 	}
 	for hash, preimage := range s.preimages {
 		state.preimages[hash] = preimage

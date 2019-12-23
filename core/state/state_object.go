@@ -100,10 +100,12 @@ func (s *stateObject) empty() bool {
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Root     common.Hash // merkle root of the storage trie
-	CodeHash []byte
+	Nonce       uint64
+	Balance     *big.Int
+	Power       *big.Int
+	BlockNumber *big.Int
+	Root        common.Hash // merkle root of the storage trie
+	CodeHash    []byte
 }
 
 // newObject creates a state object.
@@ -113,6 +115,12 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	}
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
+	}
+	if data.Power == nil {
+		data.Power = new(big.Int)
+	}
+	if data.BlockNumber == nil {
+		data.BlockNumber = new(big.Int)
 	}
 	if data.Root == (common.Hash{}) {
 		data.Root = emptyRoot
@@ -334,7 +342,7 @@ func (s *stateObject) CommitTrie(db Database) error {
 
 // AddBalance removes amount from c's balance.
 // It is used to add funds to the destination account of a transfer.
-func (s *stateObject) AddBalance(amount *big.Int) {
+func (s *stateObject) AddBalance(amount *big.Int, blockNumber *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
 	if amount.Sign() == 0 {
@@ -344,24 +352,67 @@ func (s *stateObject) AddBalance(amount *big.Int) {
 
 		return
 	}
-	s.SetBalance(new(big.Int).Add(s.Balance(), amount))
+	s.SetBalance(new(big.Int).Add(s.Balance(), amount), blockNumber)
 }
+
+// AddPower removes amount from c's power.
+func (c *stateObject) AddPower(amount *big.Int) {
+	if amount.Sign() == 0 {
+		if c.empty() {
+			c.touch()
+		}
+
+		return
+	}
+	c.SetPower(new(big.Int).Add(c.Power(), amount))
+}
+
 
 // SubBalance removes amount from c's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (s *stateObject) SubBalance(amount *big.Int) {
+func (s *stateObject) SubBalance(amount *big.Int, blockNumber *big.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
-	s.SetBalance(new(big.Int).Sub(s.Balance(), amount))
+	s.SetBalance(new(big.Int).Sub(s.Balance(), amount), blockNumber)
 }
 
-func (s *stateObject) SetBalance(amount *big.Int) {
+// SubPower removes amount from c's power.
+func (s *stateObject) SubPower(amount, blockNumber *big.Int) {
+	if amount.Sign() == 0 {
+		return
+	}
+	s.UpdatePower(blockNumber)
+	s.SetPower(new(big.Int).Sub(s.Power(), amount))
+}
+
+func (s *stateObject) SetBalance(amount, blockNumber *big.Int) {
+	s.UpdatePower(blockNumber)
 	s.db.journal.append(balanceChange{
 		account: &s.address,
 		prev:    new(big.Int).Set(s.data.Balance),
 	})
 	s.setBalance(amount)
+}
+
+func (self *stateObject) SetPower(amount *big.Int) {
+	self.db.journal.append(powerChange{
+		account: &self.address,
+		prev:    new(big.Int).Set(self.data.Power),
+	})
+	self.setPower(amount)
+}
+
+func (self *stateObject) UpdatePower(blockNumber *big.Int) {
+	prevpower := self.data.Power
+	prevblock := self.data.BlockNumber
+	power := CalculatePower(prevblock, blockNumber, prevpower, self.data.Balance)
+	self.db.journal.append(blockChange{
+		account:   &self.address,
+		prevpower: prevpower,
+		prevblock: prevblock,
+	})
+	self.setPowerAndBlock(power, blockNumber)
 }
 
 func (s *stateObject) setBalance(amount *big.Int) {
@@ -456,4 +507,21 @@ func (s *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func (self *stateObject) setPower(amount *big.Int) {
+	self.data.Power = amount
+}
+
+func (self *stateObject) setPowerAndBlock(amount *big.Int, blockNumber *big.Int) {
+	self.data.Power = amount
+	self.data.BlockNumber = blockNumber
+}
+
+func (self *stateObject) Power() *big.Int {
+	return self.data.Power
+}
+
+func (self *stateObject) BlockNumber() *big.Int {
+	return self.data.BlockNumber
 }
