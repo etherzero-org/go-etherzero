@@ -39,7 +39,7 @@ const (
 )
 
 const (
-	MASTERNODE_PING_INTERVAL = 1200 * time.Second
+	MASTERNODE_PING_INTERVAL = 600 * time.Second
 )
 
 var (
