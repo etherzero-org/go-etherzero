@@ -164,7 +164,7 @@ func (st *StateTransition) buyGas() error {
 	st.gas += st.msg.Gas()
 
 	st.initialGas = st.msg.Gas()
-	st.state.SubBalance(st.msg.From(), mgval, st.evm.BlockNumber)
+	st.state.SubPower(st.msg.From(), mgval, st.evm.BlockNumber)
 	return nil
 }
 

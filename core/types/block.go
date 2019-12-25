@@ -20,15 +20,16 @@ package types
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
 	"reflect"
+	"sort"
 	"sync/atomic"
 	"time"
 
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/rlp"
 	"golang.org/x/crypto/sha3"
 )
@@ -69,25 +70,24 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
-	Time        uint64         `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"`
-	Nonce       BlockNonce     `json:"nonce"`
+	ParentHash  common.Hash              `json:"parentHash"       gencodec:"required"`
+	UncleHash   common.Hash              `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase    common.Address           `json:"miner"            gencodec:"required"`
+	Root        common.Hash              `json:"stateRoot"        gencodec:"required"`
+	TxHash      common.Hash              `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash common.Hash              `json:"receiptsRoot"     gencodec:"required"`
+	Bloom       Bloom                    `json:"logsBloom"        gencodec:"required"`
+	Difficulty  *big.Int                 `json:"difficulty"       gencodec:"required"`
+	Number      *big.Int                 `json:"number"           gencodec:"required"`
+	GasLimit    uint64                   `json:"gasLimit"         gencodec:"required"`
+	GasUsed     uint64                   `json:"gasUsed"          gencodec:"required"`
+	Time        uint64                   `json:"timestamp"        gencodec:"required"`
+	Extra       []byte                   `json:"extraData"        gencodec:"required"`
+	MixDigest   common.Hash              `json:"mixHash"`
+	Nonce       BlockNonce               `json:"nonce"`
 	Signature   common.Hash              `json:"signature"        gencodec:"required"`
 	Witness     string                   `json:"witness"          gencodec:"required"`
 	Protocol    *devotedb.DevoteProtocol `json:"protocol"          gencodec:"required"`
-
 }
 
 // field type overrides for gencodec
@@ -334,7 +334,6 @@ func (b *Block) Protocol() *devotedb.DevoteProtocol { return b.header.Protocol }
 
 func (b *Block) Signaute() common.Hash { return b.header.Signature }
 
-
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previsouly cached value.
 func (b *Block) Size() common.StorageSize {
@@ -405,3 +404,26 @@ func (b *Block) Hash() common.Hash {
 }
 
 type Blocks []*Block
+
+type BlockBy func(b1, b2 *Block) bool
+
+func (self BlockBy) Sort(blocks Blocks) {
+	bs := blockSorter{
+		blocks: blocks,
+		by:     self,
+	}
+	sort.Sort(bs)
+}
+
+type blockSorter struct {
+	blocks Blocks
+	by     func(b1, b2 *Block) bool
+}
+
+func (self blockSorter) Len() int { return len(self.blocks) }
+func (self blockSorter) Swap(i, j int) {
+	self.blocks[i], self.blocks[j] = self.blocks[j], self.blocks[i]
+}
+func (self blockSorter) Less(i, j int) bool { return self.by(self.blocks[i], self.blocks[j]) }
+
+func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) < 0 }

@@ -20,6 +20,8 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/etherzero/go-etherzero/consensus/devote"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -35,6 +37,7 @@ import (
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
+
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
@@ -44,6 +47,7 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	lru "github.com/hashicorp/golang-lru"
+
 )
 
 var (
@@ -1678,6 +1682,27 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 
 		blockValidationTimer.Update(time.Since(substart) - (statedb.AccountHashes + statedb.StorageHashes - triehash))
 
+		// Validate validator
+		devoteEngine, isDevote := bc.engine.(*devote.Devote)
+		if isDevote {
+			mdb, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(bc.db), block.Header().Protocol)
+			if err != nil {
+				return it.index, err
+			}
+
+			// Validate the devote state using the default validator
+			err = bc.Validator().ValidateDevoteState(block, mdb)
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return it.index, err
+			}
+
+			err = devoteEngine.VerifySeal(bc, block.Header())
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				return it.index, err
+			}
+		}
 		// Write the block to the chain and get the status.
 		substart = time.Now()
 		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false)
