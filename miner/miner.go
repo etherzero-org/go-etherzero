@@ -20,6 +20,7 @@ package miner
 import (
 	"fmt"
 	"github.com/etherzero/go-etherzero/common/hexutil"
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -43,6 +44,8 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() ethdb.Database
+
+	DevoteDB() *devotedb.DevoteDB
 }
 
 // Config is the configuration parameters of mining.
@@ -83,7 +86,7 @@ func New(eth Backend,config *Config, chainConfig *params.ChainConfig, mux *event
 		worker:   newWorker(config, chainConfig, engine, common.Address{}, eth, mux),
 		canStart: 1,
 	}
-	//miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
 	go miner.update()
 
 	return miner
@@ -133,7 +136,7 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	self.worker.commitNewWork()
+	self.worker.commitNewWork(time.Now())
 }
 
 func (self *Miner) Stop() {

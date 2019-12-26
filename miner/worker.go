@@ -166,8 +166,8 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 
 	go worker.update()
 
+	worker.commitNewWork(time.Now())
 	go worker.wait()
-	worker.commitNewWork()
 
 	return worker
 }
@@ -250,14 +250,14 @@ func (self *worker) seal(work *Work) {
 	}
 }
 
-func (self *worker) mine(now int64) {
+func (self *worker) mine(now time.Time) {
 	engine, ok := self.engine.(*devote.Devote)
 	if !ok {
 		log.Error("Only the devote engine was allowed")
 		return
 	}
 	engine.SetDevoteDB(self.chainDb)
-	err := engine.CheckWitness(self.chain.CurrentBlock(), now)
+	err := engine.CheckWitness(self.chain.CurrentBlock(), now.Unix())
 	if err != nil {
 		switch err {
 		case devote.ErrWaitForPrevBlock,
@@ -271,7 +271,7 @@ func (self *worker) mine(now int64) {
 		return
 	}
 
-	work, err := self.commitNewWork()
+	work, err := self.commitNewWork(now)
 	if err != nil {
 		log.Error("Failed to create the new work", "err", err)
 		return
@@ -292,7 +292,7 @@ func (self *worker) mineLoop() {
 		select {
 		case now := <-ticker:
 			//	drift := time.Duration(discover.NanoDrift())
-			self.mine(now.Unix())
+			self.mine(now)
 		case <-self.stopper:
 			close(self.quitCh)
 			self.quitCh = make(chan struct{}, 1)
@@ -340,7 +340,7 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			self.commitNewWork()
+			self.commitNewWork(time.Now())
 
 			// Handle NewTxsEvent
 		case ev := <-self.txsCh:
@@ -363,7 +363,7 @@ func (self *worker) update() {
 			} else {
 				// If we're mining, but nothing is being processed, wake on new transactions
 				if self.chainConfig.Clique != nil && self.chainConfig.Clique.Period == 0 {
-					self.commitNewWork()
+					self.commitNewWork(time.Now())
 				}
 			}
 
@@ -377,7 +377,7 @@ func (self *worker) update() {
 }
 
 func (self *worker) wait() {
-
+	fmt.Printf("goWorker wait begin")
 	var logs []*types.Log
 	for {
 		for result := range self.recv {
@@ -394,6 +394,7 @@ func (self *worker) wait() {
 			for _, r := range work.receipts {
 				for _, l := range r.Logs {
 					l.BlockHash = block.Hash()
+					fmt.Printf("sefl.recv set receipts blockhash :%x",l.BlockHash)
 				}
 			}
 			for _, log := range work.state.Logs() {
@@ -473,7 +474,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() (*Work, error) {
+func (self *worker) commitNewWork(now time.Time) (*Work, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -481,15 +482,12 @@ func (self *worker) commitNewWork() (*Work, error) {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
-	tstart := time.Now()
+	tstart := now
 	parent := self.chain.CurrentBlock()
 
 	tstamp := tstart.Unix()
-	if int64(parent.Time()) >= tstamp {
-		tstamp = int64(parent.Time()) + 1
-	}
 	// this will ensure we're not going off too far in the future
-	if now := time.Now().Unix(); tstamp > now+1 {
+	if now := tstart.Unix(); tstamp > now+2 {
 		wait := time.Duration(tstamp-now) * time.Second
 		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 		time.Sleep(wait)

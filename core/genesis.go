@@ -577,7 +577,7 @@ func genesisAccounts(root common.Hash, db ethdb.Database) (common.Hash, error) {
 
 func masternodeContractAccount(masternodes []string) GenesisAccount {
 	addresses := []common.Address{
-		common.HexToAddress("0x47B613cfF04c4bE97f977e63Eb6835953f8CE03b"),
+		common.HexToAddress("0x23092257E65383e44841112A213293cBB971C914"),
 		common.HexToAddress("0xec38fc2dd43b359ece76747ef90a244a8d9160af"),
 		common.HexToAddress("0x35fddfbf6896e4d99366ee9ac7260b101a64563a"),
 		common.HexToAddress("0x4ecdec67d14b90dd7e4f95ac06ec81951ee3b1f3"),

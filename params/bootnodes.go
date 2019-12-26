@@ -17,7 +17,7 @@
 package params
 
 var MainnetBootnodes = []string{
-	"enode://6c3f8db1fbd61497c4a2ecc43bd6e78ad4d23255ef1aa0cbf4793deeb7b333c20d601db88e83878ac9b36c9d7d98041f7eb4c8669a45e19cb2662828fc9b0ca6@127.0.0.1:30303", // Canada
+	"enode://210bb61f78a1f95d62d831103a52e4fe27c29d6aab0516aa19e5d5fa100a9da8860cccebb241c4ef6457bc2d58eed09ef1cb757f032334e399ee966bc3fc6652@127.0.0.1:30303", // Canada
 	"enode://c4fed9426ad1355c845edbc6442ef6bc3e9edb9eacdc42f613c297e8b986dc8099956a1b79c3d2ad12118d77e20c71fc22e2876773d5508cd0d7707b91767e35@52.47.202.205:21212", // Paris
 	"enode://33e3f4ea45c3b20d1703be686ce6f6e1726fe6279451eda864a8e63d57324c89ebe3ba0167c457850e50a9ec153e063e4f4ff6344c821db93d06c0ab87d092f5@3.0.240.110:21212", // Singapore
 	"enode://3e5655447985a71d2c46097fe790c95310a7d075f7333ed3019897cbbde057624f31285999da192aa27ac48f801d24bbb61fac5bf1bacd30439018843d676e59@13.52.109.169:21212", // California
@@ -26,7 +26,7 @@ var MainnetBootnodes = []string{
 // MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
 // the main Ethereum network.
 var MainnetMasternodes = []string{
-	"enode://6c3f8db1fbd61497c4a2ecc43bd6e78ad4d23255ef1aa0cbf4793deeb7b333c20d601db88e83878ac9b36c9d7d98041f7eb4c8669a45e19cb2662828fc9b0ca6", // [1]
+	"enode://210bb61f78a1f95d62d831103a52e4fe27c29d6aab0516aa19e5d5fa100a9da8860cccebb241c4ef6457bc2d58eed09ef1cb757f032334e399ee966bc3fc6652", // [1]
 	"enode://190adef951323157d8e1024fc685429599c03e05f1cd62ccd74bd82afaca78a94e80bc92e17227460a9e2126f45097204fb32d67373737017f0dfd348d230abc", // [2]
 }
 
@@ -36,6 +36,7 @@ var TestnetMasternodes = []string{
 
 var MainnetInitIds = []string{
 	"6c3f8db1fbd61497",
+	"210bb61f78a1f95d",
 	"041515e0266f1265",
 	"f5ad3fe12339603f",
 	"550c6eee655f1893",
@@ -55,7 +56,6 @@ var MainnetInitIds = []string{
 	"48ba739314695e32",
 	"5fac251f8d9e66da",
 	"018b2a04e21a8f7e",
-	"d083475716830cfb",
 }
 
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the

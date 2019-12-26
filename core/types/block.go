@@ -219,7 +219,20 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = EmptyRootHash
 	} else {
+
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
+		fmt.Printf("NewBlock generate receipts[0] Intxs: %v  \n", receipts[0].Intxs)
+		fmt.Printf("NewBlock generate receipts[0] BlockHash: %v  \n", receipts[0].BlockHash)
+		fmt.Printf("NewBlock generate receipts[0] BlockNumber: %v  \n", receipts[0].BlockNumber)
+		fmt.Printf("NewBlock generate receipts[0] Bloom: %v  \n", receipts[0].Bloom)
+		fmt.Printf("NewBlock generate receipts[0] ContractAddress: %v  \n", receipts[0].ContractAddress)
+		fmt.Printf("NewBlock generate receipts[0] CumulativeGasUsed: %v  \n", receipts[0].CumulativeGasUsed)
+		fmt.Printf("NewBlock generate receipts[0] Logs: %v  \n", receipts[0].Logs)
+		fmt.Printf("NewBlock generate receipts[0] PostState: %v  \n", receipts[0].PostState)
+		fmt.Printf("NewBlock generate receipts[0] Status: %v  \n", receipts[0].Status)
+		fmt.Printf("NewBlock generate receipts[0] TransactionIndex: %v  \n", receipts[0].TransactionIndex)
+		fmt.Printf("NewBlock generate receipts[0] TxHash: %v  \n", receipts[0].TxHash)
+
 		b.header.Bloom = CreateBloom(receipts)
 	}
 
@@ -253,6 +266,7 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Number = new(big.Int); h.Number != nil {
 		cpy.Number.Set(h.Number)
 	}
+
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
@@ -401,6 +415,29 @@ func (b *Block) Hash() common.Hash {
 	v := b.header.Hash()
 	b.hash.Store(v)
 	return v
+}
+
+func (h *Header) String() string {
+	return fmt.Sprintf(`Header(%x):
+[
+	ParentHash:	    %x
+	UncleHash:	    %x
+	Coinbase:	    %x
+	Root:		    %x
+	TxSha		    %x
+	ReceiptSha:	    %x
+	Bloom:		    %x
+	Difficulty:	    %v
+	Number:		    %v
+	GasLimit:	    %v
+	GasUsed:	    %v
+	Time:		    %v
+	Extra:		    %s
+	MixDigest:      %x
+	Nonce:		    %x
+	Witness:		%x
+	Signature:		%x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.Witness, h.Signature)
 }
 
 type Blocks []*Block
