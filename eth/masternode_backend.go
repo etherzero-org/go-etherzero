@@ -61,6 +61,7 @@ type MasternodeManager struct {
 	ID          string
 	NodeAccount common.Address
 	PrivateKey  *ecdsa.PrivateKey
+
 }
 
 func NewMasternodeManager(eth *Ethereum) (*MasternodeManager, error) {
