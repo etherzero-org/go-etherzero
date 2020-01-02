@@ -19,13 +19,13 @@ package miner
 
 import (
 	"fmt"
-	"github.com/etherzero/go-etherzero/common/hexutil"
 	"math/big"
 	"sync/atomic"
 	"time"
 
 	"github.com/etherzero/go-etherzero/accounts"
 	"github.com/etherzero/go-etherzero/common"
+	"github.com/etherzero/go-etherzero/common/hexutil"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/core"
 	"github.com/etherzero/go-etherzero/core/state"
@@ -58,7 +58,6 @@ type Config struct {
 	Witness   string         // Node address for block mining
 }
 
-
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux *event.TypeMux
@@ -74,8 +73,7 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-
-func New(eth Backend,config *Config, chainConfig *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
 		eth:      eth,
 		mux:      mux,

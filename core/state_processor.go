@@ -17,7 +17,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/etherzero/go-etherzero/common"
 	"github.com/etherzero/go-etherzero/consensus"
 	"github.com/etherzero/go-etherzero/consensus/misc"
@@ -123,7 +122,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	fmt.Println("state_process blockHash vlaue:%x", statedb.BlockHash())
 	receipt.BlockHash = statedb.BlockHash()
 	receipt.BlockNumber = header.Number
 	receipt.TransactionIndex = uint(statedb.TxIndex())

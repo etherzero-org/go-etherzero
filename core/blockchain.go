@@ -20,8 +20,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/etherzero/go-etherzero/consensus/devote"
-	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -34,10 +32,11 @@ import (
 	"github.com/etherzero/go-etherzero/common/mclock"
 	"github.com/etherzero/go-etherzero/common/prque"
 	"github.com/etherzero/go-etherzero/consensus"
+	"github.com/etherzero/go-etherzero/consensus/devote"
 	"github.com/etherzero/go-etherzero/core/rawdb"
 	"github.com/etherzero/go-etherzero/core/state"
 	"github.com/etherzero/go-etherzero/core/types"
-
+	"github.com/etherzero/go-etherzero/core/types/devotedb"
 	"github.com/etherzero/go-etherzero/core/vm"
 	"github.com/etherzero/go-etherzero/ethdb"
 	"github.com/etherzero/go-etherzero/event"
@@ -47,7 +46,6 @@ import (
 	"github.com/etherzero/go-etherzero/rlp"
 	"github.com/etherzero/go-etherzero/trie"
 	lru "github.com/hashicorp/golang-lru"
-
 )
 
 var (

@@ -221,21 +221,8 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	} else {
 
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
-		fmt.Printf("NewBlock generate receipts[0] Intxs: %v  \n", receipts[0].Intxs)
-		fmt.Printf("NewBlock generate receipts[0] BlockHash: %v  \n", receipts[0].BlockHash)
-		fmt.Printf("NewBlock generate receipts[0] BlockNumber: %v  \n", receipts[0].BlockNumber)
-		fmt.Printf("NewBlock generate receipts[0] Bloom: %v  \n", receipts[0].Bloom)
-		fmt.Printf("NewBlock generate receipts[0] ContractAddress: %v  \n", receipts[0].ContractAddress)
-		fmt.Printf("NewBlock generate receipts[0] CumulativeGasUsed: %v  \n", receipts[0].CumulativeGasUsed)
-		fmt.Printf("NewBlock generate receipts[0] Logs: %v  \n", receipts[0].Logs)
-		fmt.Printf("NewBlock generate receipts[0] PostState: %v  \n", receipts[0].PostState)
-		fmt.Printf("NewBlock generate receipts[0] Status: %v  \n", receipts[0].Status)
-		fmt.Printf("NewBlock generate receipts[0] TransactionIndex: %v  \n", receipts[0].TransactionIndex)
-		fmt.Printf("NewBlock generate receipts[0] TxHash: %v  \n", receipts[0].TxHash)
-
 		b.header.Bloom = CreateBloom(receipts)
 	}
-
 	if len(uncles) == 0 {
 		b.header.UncleHash = EmptyUncleHash
 	} else {
@@ -245,7 +232,9 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
 	}
-
+	if len(receipts) > 0 {
+		fmt.Printf("NewBlock recepit hash of block :%x \n", header.ReceiptHash)
+	}
 	return b
 }
 

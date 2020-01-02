@@ -93,7 +93,7 @@ type Result struct {
 type worker struct {
 	config      *Config
 	chainConfig *params.ChainConfig
-	engine consensus.Engine
+	engine      consensus.Engine
 
 	mu sync.Mutex
 
@@ -141,8 +141,8 @@ type worker struct {
 
 func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
-		config:             config,
-		chainConfig:        chainConfig,
+		config:         config,
+		chainConfig:    chainConfig,
 		engine:         engine,
 		eth:            eth,
 		mux:            mux,
@@ -165,9 +165,9 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 
 	go worker.update()
+	go worker.wait()
 
 	worker.commitNewWork(time.Now())
-	go worker.wait()
 
 	return worker
 }
@@ -241,6 +241,19 @@ func (self *worker) start() {
 func (self *worker) seal(work *Work) {
 	if result, err := self.engine.Seal(self.chain, work.Block, nil, self.quitCh); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash(), "diff", result.Difficulty())
+
+		//fmt.Printf("NewBlock generate receipts[0] Intxs: %v  \n", receipts[0].Intxs)
+		//fmt.Printf("NewBlock generate receipts[0] BlockHash: %v  \n", receipts[0].BlockHash)
+		//fmt.Printf("NewBlock generate receipts[0] BlockNumber: %v  \n", receipts[0].BlockNumber)
+		//fmt.Printf("NewBlock generate receipts[0] Bloom: %v  \n", receipts[0].Bloom)
+		//fmt.Printf("NewBlock generate receipts[0] ContractAddress: %v  \n", receipts[0].ContractAddress)
+		//fmt.Printf("NewBlock generate receipts[0] CumulativeGasUsed: %v  \n", receipts[0].CumulativeGasUsed)
+		//fmt.Printf("NewBlock generate receipts[0] Logs: %v  \n", receipts[0].Logs)
+		//fmt.Printf("NewBlock generate receipts[0] PostState: %v  \n", receipts[0].PostState)
+		//fmt.Printf("NewBlock generate receipts[0] Status: %v  \n", receipts[0].Status)
+		//fmt.Printf("NewBlock generate receipts[0] TransactionIndex: %v  \n", receipts[0].TransactionIndex)
+		//fmt.Printf("NewBlock generate receipts[0] TxHash: %v  \n", receipts[0].TxHash)
+
 		self.recv <- &Result{work, result}
 	} else {
 		if err != nil {
@@ -377,8 +390,7 @@ func (self *worker) update() {
 }
 
 func (self *worker) wait() {
-	fmt.Printf("goWorker wait begin")
-	var logs []*types.Log
+
 	for {
 		for result := range self.recv {
 			atomic.AddInt32(&self.atWork, -1)
@@ -388,35 +400,60 @@ func (self *worker) wait() {
 			}
 			block := result.Block
 			work := result.Work
+			// Different block could share same sealhash, deep copy here to prevent write-write conflict.
+			var (
+				receipts = make([]*types.Receipt, len(work.receipts))
+				logs     []*types.Log
+			)
+			for i, receipt := range work.receipts {
+				fmt.Printf("hash of receipts before add location fields:blockHash %x \n", receipt.BlockHash)
+				fmt.Printf("add block location fields \n")
+
+				// add block location fields
+				receipt.BlockHash = block.Hash()
+				receipt.BlockNumber = block.Number()
+				receipt.TransactionIndex = uint(i)
+
+				receipts[i] = new(types.Receipt)
+				*receipts[i] = *receipt
+				// Update the block hash in all logs since it is now available and not when the
+				// receipt/log of individual transactions were created.
+				for _, log := range receipt.Logs {
+					log.BlockHash = block.Hash()
+				}
+				logs = append(logs, receipt.Logs...)
+			}
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
-			for _, r := range work.receipts {
-				for _, l := range r.Logs {
-					l.BlockHash = block.Hash()
-					fmt.Printf("sefl.recv set receipts blockhash :%x",l.BlockHash)
-				}
-			}
 			for _, log := range work.state.Logs() {
 				log.BlockHash = block.Hash()
 				logs = append(logs, log)
 			}
+			var header *types.Header
+			header = block.Header()
+			receiptHash := types.DeriveSha(types.Receipts(receipts))
 			stat, err := self.chain.WriteBlockWithState(block, work.receipts, logs, work.state, true)
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
 				continue
 			}
+			header.ReceiptHash = receiptHash
+			block = block.WithSeal(header)
+			if cap(work.receipts) > 0 {
+				fmt.Printf("sefl.recv set ReceiptHash of block :%x \n receiptHash:%x \n", block.ReceiptHash(), receiptHash)
+			}
 			// Broadcast the block and announce chain insertion event
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
 				events []interface{}
-				logs   = work.state.Logs()
+				slogs  = work.state.Logs()
 			)
-			events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+			events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: slogs})
 			if stat == core.CanonStatTy {
 				events = append(events, core.ChainHeadEvent{Block: block})
 			}
-			self.chain.PostChainEvents(events, logs)
+			self.chain.PostChainEvents(events, slogs)
 
 			// Insert the block into the set of pending ones to wait for confirmations
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
