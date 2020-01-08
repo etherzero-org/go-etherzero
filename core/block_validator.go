@@ -93,21 +93,6 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, R1]]))
 	receiptSha := types.DeriveSha(receipts)
 
-	if len(receipts) >0 {
-		fmt.Printf("ValidateState generate receipts[0] Intxs: %v  \n", receipts[0].Intxs)
-		fmt.Printf("ValidateState generate receipts[0] BlockHash: %v  \n", receipts[0].BlockHash)
-
-		fmt.Printf("ValidateState generate receipts[0] BlockNumber: %v  \n", receipts[0].BlockNumber)
-		fmt.Printf("ValidateState generate receipts[0] Bloom: %v  \n", receipts[0].Bloom)
-		fmt.Printf("ValidateState generate receipts[0] ContractAddress: %v  \n", receipts[0].ContractAddress)
-		fmt.Printf("ValidateState generate receipts[0] CumulativeGasUsed: %v  \n", receipts[0].CumulativeGasUsed)
-		fmt.Printf("ValidateState generate receipts[0] Logs: %v  \n", receipts[0].Logs)
-		fmt.Printf("ValidateState generate receipts[0] PostState: %v  \n", receipts[0].PostState)
-		fmt.Printf("ValidateState generate receipts[0] Status: %v  \n", receipts[0].Status)
-		fmt.Printf("ValidateState generate receipts[0] TransactionIndex: %v  \n", receipts[0].TransactionIndex)
-		fmt.Printf("ValidateState generate receipts[0] TxHash: %v  \n", receipts[0].TxHash)
-	}
-
 	if receiptSha != header.ReceiptHash {
 		return fmt.Errorf("invalid receipt root hash (remote: %x local: %x)", header.ReceiptHash, receiptSha)
 	}

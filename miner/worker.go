@@ -241,19 +241,6 @@ func (self *worker) start() {
 func (self *worker) seal(work *Work) {
 	if result, err := self.engine.Seal(self.chain, work.Block, nil, self.quitCh); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash(), "diff", result.Difficulty())
-
-		//fmt.Printf("NewBlock generate receipts[0] Intxs: %v  \n", receipts[0].Intxs)
-		//fmt.Printf("NewBlock generate receipts[0] BlockHash: %v  \n", receipts[0].BlockHash)
-		//fmt.Printf("NewBlock generate receipts[0] BlockNumber: %v  \n", receipts[0].BlockNumber)
-		//fmt.Printf("NewBlock generate receipts[0] Bloom: %v  \n", receipts[0].Bloom)
-		//fmt.Printf("NewBlock generate receipts[0] ContractAddress: %v  \n", receipts[0].ContractAddress)
-		//fmt.Printf("NewBlock generate receipts[0] CumulativeGasUsed: %v  \n", receipts[0].CumulativeGasUsed)
-		//fmt.Printf("NewBlock generate receipts[0] Logs: %v  \n", receipts[0].Logs)
-		//fmt.Printf("NewBlock generate receipts[0] PostState: %v  \n", receipts[0].PostState)
-		//fmt.Printf("NewBlock generate receipts[0] Status: %v  \n", receipts[0].Status)
-		//fmt.Printf("NewBlock generate receipts[0] TransactionIndex: %v  \n", receipts[0].TransactionIndex)
-		//fmt.Printf("NewBlock generate receipts[0] TxHash: %v  \n", receipts[0].TxHash)
-
 		self.recv <- &Result{work, result}
 	} else {
 		if err != nil {
@@ -561,22 +548,19 @@ func (self *worker) commitNewWork(now time.Time) (*Work, error) {
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
-	var (
-		uncles []*types.Header
-	)
 	if engine, ok := self.engine.(*devote.Devote); ok {
 		engine.SetDevoteDB(self.chainDb)
 	}
 
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, nil); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, nil, work.receipts); err != nil {
 		return nil, fmt.Errorf("Finalize block failed: %s", err)
 	}
 
 	// update the count for the miner of new block
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
-		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
+		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 	self.updateSnapshot()
