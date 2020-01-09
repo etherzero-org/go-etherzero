@@ -393,9 +393,6 @@ func (self *worker) wait() {
 				logs     []*types.Log
 			)
 			for i, receipt := range work.receipts {
-				fmt.Printf("hash of receipts before add location fields:blockHash %x \n", receipt.BlockHash)
-				fmt.Printf("add block location fields \n")
-
 				// add block location fields
 				receipt.BlockHash = block.Hash()
 				receipt.BlockNumber = block.Number()
@@ -427,9 +424,6 @@ func (self *worker) wait() {
 			}
 			header.ReceiptHash = receiptHash
 			block = block.WithSeal(header)
-			if cap(work.receipts) > 0 {
-				fmt.Printf("sefl.recv set ReceiptHash of block :%x \n receiptHash:%x \n", block.ReceiptHash(), receiptHash)
-			}
 			// Broadcast the block and announce chain insertion event
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
