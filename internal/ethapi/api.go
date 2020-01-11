@@ -539,6 +539,17 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
 }
 
+func (s *PublicBlockChainAPI) GetPower(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
+	b := state.GetPower(address, header.Number)
+	return b, state.Error()
+}
+
+
 // Result structs for GetProof
 type AccountResult struct {
 	Address      common.Address  `json:"address"`
@@ -1799,6 +1810,12 @@ func (s *PrivateAccountAPI) StartMasternode() bool {
 func (s *PrivateAccountAPI) StopMasternode() bool {
 	return s.b.StopMasternode()
 }
+
+// join nodeid from genesis block to witness
+func (b *PublicEthereumAPI) JoinMasternode(nodeid string) bool {
+	return true
+}
+
 
 // PublicNetAPI offers network related RPC methods
 type PublicNetAPI struct {
