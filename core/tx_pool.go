@@ -60,6 +60,12 @@ var (
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
 
+	// ErrInsufficientPowers is returned if the total cost of executing a transaction
+	// is higher than the balance of the user's account.
+	ErrInsufficientPowers = errors.New("insufficient funds for power * price + value")
+
+	ErrInsufficientMinFunds = errors.New("insufficient funds for 0.01 etz")
+
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
@@ -541,6 +547,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
+	}
+	if pool.currentState.GetPower(from,pool.chain.CurrentBlock().Number()).Cmp(tx.Cost()) < 0 {
+		return ErrInsufficientPowers
+	}
+	if pool.currentState.GetBalance(from).Cmp(big.NewInt(1e+16)) < 0 {
+		return ErrInsufficientMinFunds
 	}
 	// Ensure the transaction has more gas than the basic tx fee.
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, true, pool.istanbul)
