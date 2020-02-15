@@ -1,0 +1,32 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.13.4
+    working_directory: /go/src/github.com/gballet/go-libpcsclite
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+
+      - run: go build
+
+      - run: go get honnef.co/go/tools/cmd/staticcheck
+
+      - run:
+          name: Run unit tests
+          command: go test -coverage ./...
+
+      - run:
+          name: Run the static checkers
+          command: |
+            go vet
+            /go/bin/staticcheck
+
+      - save_cache: # Store cache in the /go/pkg directory
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
