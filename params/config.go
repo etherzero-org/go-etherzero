@@ -32,11 +32,13 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
-	ShardingAddress           = common.HexToAddress("0x000000000000000000000000000000000000000b")
+	ShardingAddress           = common.HexToAddress("0xe84cf1477439a789b8181c0a3feb071afb89c30c")
 
 	GenesisBlockNumber = uint64(22613000)
 
-	PreShardingBlockNumber = big.NewInt(31180000)
+	//PreShardingBlockNumber = big.NewInt(31180000)
+	PreShardingBlockNumber = big.NewInt(22613015)
+
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of

@@ -56,7 +56,7 @@ const (
 var (
 	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
 	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
-	rewardToSharding     = big.NewInt(12e+18)     // Block reward in wei to Masternode Sharding account when successfully mining a block
+	rewardToSharding     = "12000000000000000000" // Block reward in wei to Masternode Sharding account when successfully mining a block
 
 	timeOfFirstBlock   = uint64(0)
 	confirmedBlockHead = []byte("confirmed-block-head")
@@ -284,8 +284,9 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 
 	if isForked(params.PreShardingBlockNumber, header.Number) {
 		//  Accumulate the rewards to pre-sharding account
-		rewardForSharding := new(big.Int).Set(rewardToSharding)
-		state.AddBalance(params.ShardingAddress, rewardForSharding, header.Number)
+		reward = new(big.Int)
+		reward.SetString(rewardToSharding, 10)
+		state.AddBalance(params.ShardingAddress, reward, header.Number)
 	}
 }
 
@@ -321,6 +322,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("get current gov address failed from contract, err:%s", err)
 	}
+
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	cycle := header.Time / params.Epoch
