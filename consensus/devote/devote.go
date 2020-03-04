@@ -285,7 +285,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	if isForked(params.PreShardingBlockNumber, header.Number) {
 		//  Accumulate the rewards to pre-sharding account
 		reward = new(big.Int)
-		reward.SetString(rewardToSharding, 10)
+		reward, _ = reward.SetString(rewardToSharding, 10)
 		state.AddBalance(params.ShardingAddress, reward, header.Number)
 	}
 }
