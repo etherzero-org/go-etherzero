@@ -274,7 +274,7 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
 
-	// Accumulate the rewards for the masternode and any included uncles
+	// Accumulate the rewards for the Masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward, header.Number)
 
