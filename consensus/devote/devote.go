@@ -56,6 +56,7 @@ const (
 var (
 	etherzeroBlockReward = big.NewInt(0.3375e+18) // Block reward in wei to masternode account when successfully mining a block
 	rewardToCommunity    = big.NewInt(0.1125e+18) // Block reward in wei to community account when successfully mining a block
+	rewardToSharding     = "12000000000000000000" // Block reward in wei to Masternode Sharding account when successfully mining a block
 
 	timeOfFirstBlock   = uint64(0)
 	confirmedBlockHead = []byte("confirmed-block-head")
@@ -138,8 +139,8 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer     string   // master node nodeid
-	signFn     SignerFn // signature function
+	signer     string          // master node nodeid
+	signFn     SignerFn        // signature function
 	recents    *lru.ARCCache   // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache   // Signatures of recent blocks to speed up mining
 	proposals  map[string]bool // Current list of proposals we are pushing
@@ -273,13 +274,28 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
 
-	// Accumulate the rewards for the masternode and any included uncles
+	// Accumulate the rewards for the Masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward, header.Number)
 
 	//  Accumulate the rewards to community account
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
 	state.AddBalance(govAddress, rewardForCommunity, header.Number)
+
+	if isForked(params.PreShardingBlockNumber, header.Number) {
+		//  Accumulate the rewards to pre-sharding account
+		reward = new(big.Int)
+		reward, _ = reward.SetString(rewardToSharding, 10)
+		state.AddBalance(params.ShardingAddress, reward, header.Number)
+	}
+}
+
+// isForked returns whether a fork scheduled at block s is active at the given head block.
+func isForked(s, head *big.Int) bool {
+	if s == nil || head == nil {
+		return false
+	}
+	return s.Cmp(head) <= 0
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -306,6 +322,7 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("get current gov address failed from contract, err:%s", err)
 	}
+
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	cycle := header.Time / params.Epoch

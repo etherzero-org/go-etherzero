@@ -1617,6 +1617,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	log.Debug(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
+
 Witness:%s
 Number: %v
 Hash: 0x%x

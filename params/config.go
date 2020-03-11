@@ -32,8 +32,11 @@ var (
 
 	MasterndeContractAddress  = common.HexToAddress("0x000000000000000000000000000000000000000a")
 	GovernanceContractAddress = common.HexToAddress("0x000000000000000000000000000000000000000b")
+	ShardingAddress           = common.HexToAddress("0x4Cb5a4854622275dFE49C2B69fb4091aF05702a1")
+
 	GenesisBlockNumber = uint64(22613000)
 
+	PreShardingBlockNumber = big.NewInt(31180000)
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -46,7 +49,6 @@ var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{
 }
 
 var (
-
 	DevoteChainConfig = &ChainConfig{
 		ChainID:        big.NewInt(90),
 		EtherzeroBlock: big.NewInt(0),
@@ -168,16 +170,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),nil, nil, nil, new(EthashConfig), nil, &DevoteConfig{Period: 2, Epoch: 600}}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(EthashConfig), nil, &DevoteConfig{Period: 2, Epoch: 600}}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0),nil, nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, &DevoteConfig{Period: 2, Epoch: 600}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, &DevoteConfig{Period: 2, Epoch: 600}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0),big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig),nil,nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -218,7 +220,7 @@ type ChainConfig struct {
 	ConstantinopleBlock *big.Int `json:"constantinopleBlock,omitempty"` // Constantinople switch block (nil = no fork, 0 = already activated)
 	PetersburgBlock     *big.Int `json:"petersburgBlock,omitempty"`     // Petersburg switch block (nil = same as Constantinople)
 	EWASMBlock          *big.Int `json:"ewasmBlock,omitempty"`          // EWASM switch block (nil = no fork, 0 = already activated)
-	DevoteBlock    *big.Int `json:"devoteBlock,omitempty"`    // Devote switch block (nil = no fork, 0 = already on byzantium)
+	DevoteBlock         *big.Int `json:"devoteBlock,omitempty"`         // Devote switch block (nil = no fork, 0 = already on byzantium)
 
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
@@ -314,6 +316,10 @@ func (c *ChainConfig) IsByzantium(num *big.Int) bool {
 
 // IsEtherzero returns whether num is either equal to the Etherzero masternode fork block or greater.
 func (c *ChainConfig) IsEtherzero(num *big.Int) bool {
+	return isForked(c.EtherzeroBlock, num)
+}
+
+func (c *ChainConfig) IsPreSharding(num *big.Int) bool {
 	return isForked(c.EtherzeroBlock, num)
 }
 
@@ -472,9 +478,9 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID                                     *big.Int
-	IsHomestead, IsEIP150, IsEIP155, IsEIP158 bool
-	IsByzantium, IsDevote, IsConstantinople,IsPetersburg   bool
+	ChainID                                               *big.Int
+	IsHomestead, IsEIP150, IsEIP155, IsEIP158             bool
+	IsByzantium, IsDevote, IsConstantinople, IsPetersburg bool
 }
 
 // Rules ensures c's ChainID is not nil.
