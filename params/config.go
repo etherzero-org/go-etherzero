@@ -37,6 +37,9 @@ var (
 	GenesisBlockNumber = uint64(22613000)
 
 	PreShardingBlockNumber = big.NewInt(31180000)
+
+	Pre2ShardingBlockNumber = big.NewInt(35360000)
+
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of

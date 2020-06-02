@@ -93,6 +93,8 @@ const (
 
 	Epoch           uint64 = 600
 	Period          uint64 = 2
+	Period1Second          uint64 = 1
+
 )
 
 var (

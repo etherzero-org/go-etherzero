@@ -468,7 +468,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	snap := newSnapshot(d.config, devoteDB)
 	snap.sigcache = d.signatures
 
-	witness, err := snap.lookup(header.Time)
+	witness, err := snap.lookup(header.Time, header)
 	if err != nil {
 		return err
 	}
@@ -519,7 +519,7 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	snap := newSnapshot(d.config, devoteDB)
 	snap.sigcache = d.signatures
 
-	witness, err := snap.lookup(uint64(now))
+	witness, err := snap.lookup(uint64(now), lastBlock.Header())
 	if err != nil {
 		return err
 	}
