@@ -432,7 +432,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 
 	// Look up the sync boundaries: the common ancestor and the target block
 	latest, err := d.fetchHeight(p)
-	log.Info("downloader syncWithPeer height value:", "latest", latest, "p.peer", p.peer)
 	if err != nil {
 		return err
 	}

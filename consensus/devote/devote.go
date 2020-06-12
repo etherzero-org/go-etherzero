@@ -468,7 +468,7 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	snap := newSnapshot(d.config, devoteDB)
 	snap.sigcache = d.signatures
 
-	witness, err := snap.lookup(header.Time, header)
+	witness, err := snap.lookup(header.Time, parent)
 	if err != nil {
 		return err
 	}
