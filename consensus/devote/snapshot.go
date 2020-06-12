@@ -275,25 +275,34 @@ func (snap *Snapshot) uncastImproved(cycle uint64, nodes []string, safeSize int)
 }
 
 func (snap *Snapshot) lookup(now uint64, header *types.Header) (witness string, err error) {
-
 	log.Info("*******   lookup is begin   *******")
+
 	var (
 		cycle  uint64
 		period = params.Period
 	)
+	offset := now % params.Epoch
+
 	if isForked(params.Pre2ShardingBlockNumber, header.Number) {
 		log.Info("isForked(params.Pre2ShardingBlockNumber", "Pre2ShardingBlockNumber", params.Pre2ShardingBlockNumber, "header.Number", header.Number)
 		period = params.Period1Second
+		log.Info("lookup middle ", "now % params.Epoch", offset, "period", period)
+		if offset%period != 0 {
+			err = ErrInvalidMinerBlockTime
+			return
+		}
+		offset /= period
+	} else {
+		offset = now % params.Epoch
+		log.Info("lookup middle ", "now % params.Epoch", offset, "period", period)
+		if offset%period != 0 {
+			err = ErrInvalidMinerBlockTime
+			return
+		}
+		offset /= period
 	}
-	offset := now % params.Epoch
-	log.Info("lookup middle ", "now % params.Epoch", offset)
-	if offset%period != 0 {
-		err = ErrInvalidMinerBlockTime
-		return
-	}
-	offset /= period
 
-	log.Info("lookup middle ", "offset /= period", offset)
+	log.Info("lookup middle ", "offset /= period", offset, "period", period)
 	cycle = snap.devoteDB.GetCycle()
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
@@ -309,7 +318,7 @@ func (snap *Snapshot) lookup(now uint64, header *types.Header) (witness string, 
 	offset %= uint64(size)
 	witness = witnesses[offset]
 
-	log.Info("lookup end ", "now", now, "witness", witness, "uint64(size)", uint64(size), "offset", offset, "cycle", cycle, "witnesses", witnesses)
+	log.Info("lookup end ", "now", now, "period", period, "witness", witness, "uint64(size)", uint64(size), "offset", offset, "cycle", cycle, "witnesses", witnesses)
 	return
 }
 
