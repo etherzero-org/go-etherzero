@@ -275,7 +275,6 @@ func (snap *Snapshot) uncastImproved(cycle uint64, nodes []string, safeSize int)
 }
 
 func (snap *Snapshot) lookup(now uint64, header *types.Header) (witness string, err error) {
-
 	var (
 		cycle  uint64
 		period = params.Period
