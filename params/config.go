@@ -37,6 +37,15 @@ var (
 	GenesisBlockNumber = uint64(22613000)
 
 	PreShardingBlockNumber = big.NewInt(31180000)
+
+	Pre2ShardingBlockNumber = big.NewInt(35360000)
+
+	// blockNumber for 0401-Hard Fork
+	H0401BlockNumber = big.NewInt(84656689)
+
+	// Stable masternodes for 0401-Hard Fork
+	StableMasternodes = []string{"f256a2f0236dfc89","c372eed0f95450c9","ace643693c6079a9","ef6ee02ae68e0cd5","52690d6f2a153b39","b093fce91e2e7b20","baf96c7e50c9eab2","f108bfe2fa962d0c","6c423e09e6f588dd","5e417b30823a0e1f","85829079e61572f3","e807ca52e022ef45","6f06cd090739d02a","4b81d70ae45168ac","b904cb268b02ff04","f9f4b8f161831283","d495df32e381e3e1","9aca8194a662a51e","2b6cb5d3820f3c2f","467d6f04eaaae9fb","abcf18ff64ea7c09","f9c0c420789d13fd","906f947189d38e1e","9bfc18a8062c5b79","b43f3a3d75b136b5","f068f4ac0d90fd7f","7abe9752743d7d99","f8401a9d435d1dae","285c02345aeab4fe","fedcc075284e13dd","977415f00e1ab085","86e96e6b9dfddf67","747067dbdbd34b70","b38cc8a2e422442c","4f425441dda0075f","043eab7113267a02","765415475001ed16","34fd0e0ccde92c97","409eb295d6cfa56f","1839724c7b987614","1f92f0f456bc59ec","f2b265e8730e4c73","a4a3d94929c8529b","b5bef6c8b4aeb7a7","0a40aa7c772a3af9","bfee9a8ce20a73d3","8e4d1ec8c6ca4bbf","f20aeef0568f863a","ad51cc9e0758103b","f6427f341bb2fe1e","7721e340419c89da","5321590dc60cf400","fe34e4c6ca352f06"}
+
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of

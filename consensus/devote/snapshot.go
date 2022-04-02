@@ -40,13 +40,13 @@ import (
 
 type Snapshot struct {
 	devoteDB *devotedb.DevoteDB
-	config   *params.DevoteConfig                 // Consensus engine parameters to fine tune behavior
-	sigcache *lru.ARCCache                        // Cache of recent block signatures to speed up ecrecover
-	Hash     common.Hash                          //Block hash where the snapshot was created
-	Number   uint64                               //Cycle number where the snapshot was created
-	Cycle    uint64                               //Cycle number where the snapshot was created
-	Signers  map[string]struct{} `json:"signers"` // Set of authorized signers at this moment
-	Recents  map[uint64]string                    // set of recent masternodes for spam protections
+	config   *params.DevoteConfig // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
+	Hash     common.Hash          //Block hash where the snapshot was created
+	Number   uint64               //Cycle number where the snapshot was created
+	Cycle    uint64               //Cycle number where the snapshot was created
+	Signers  map[string]struct{}  `json:"signers"` // Set of authorized signers at this moment
+	Recents  map[uint64]string    // set of recent masternodes for spam protections
 
 	TimeStamp uint64
 	mu        sync.Mutex
@@ -62,7 +62,7 @@ func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
 	}
 	ary, err := db.GetWitnesses(db.GetCycle())
 	if err != nil {
-		log.Error("devote newSnapshot failed ", "cycle", db.GetCycle(), "err", err)
+		log.Debug("devote newSnapshot failed ", "cycle", db.GetCycle(), "err", err)
 	}
 	for _, s := range ary {
 		snap.Signers[s] = struct{}{}
@@ -73,10 +73,10 @@ func newSnapshot(config *params.DevoteConfig, db *devotedb.DevoteDB) *Snapshot {
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		Number:   s.Number,
-		Hash:     s.Hash,
-		Signers:  make(map[string]struct{}),
-		Recents:  make(map[uint64]string),
+		Number:  s.Number,
+		Hash:    s.Hash,
+		Signers: make(map[string]struct{}),
+		Recents: make(map[uint64]string),
 	}
 	for signer := range s.Signers {
 		cpy.Signers[signer] = struct{}{}
@@ -274,17 +274,20 @@ func (snap *Snapshot) uncastImproved(cycle uint64, nodes []string, safeSize int)
 	return result, nil
 }
 
-func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
-
+func (snap *Snapshot) lookup(now uint64, header *types.Header) (witness string, err error) {
 	var (
-		cycle uint64
+		cycle  uint64
+		period = params.Period
 	)
+	if isForked(params.Pre2ShardingBlockNumber, header.Number) {
+		period = params.Period1Second
+	}
 	offset := now % params.Epoch
-	if offset%params.Period != 0 {
+	if offset%period != 0 {
 		err = ErrInvalidMinerBlockTime
 		return
 	}
-	offset /= params.Period
+	offset /= period
 	cycle = snap.devoteDB.GetCycle()
 	witnesses, err := snap.devoteDB.GetWitnesses(cycle)
 	if err != nil {
@@ -299,6 +302,7 @@ func (snap *Snapshot) lookup(now uint64) (witness string, err error) {
 	}
 	offset %= uint64(size)
 	witness = witnesses[offset]
+	log.Info("snapshot lookup getwitness", "cycle", cycle, "header.Number", header.Number, "witnesses", witnesses, "witness", witness)
 	return
 }
 
@@ -369,12 +373,13 @@ func (snap *Snapshot) election(genesis, parent *types.Header, nodes []string, sa
 		for _, node := range masternodes {
 			sortedWitnesses = append(sortedWitnesses, node.nodeid)
 		}
-		// log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
+		log.Debug("Initializing a new cycle ", "precycle", precycle, "cycle", currentcycle, "count", len(sortedWitnesses), "sortedWitnesses", sortedWitnesses)
 		snap.devoteDB.SetWitnesses(currentcycle, sortedWitnesses)
 		snap.devoteDB.Commit()
 	}
 	return sortedWitnesses, nil
 }
+
 
 // nodeid  masternode nodeid
 // weight the number of polls for one nodeid

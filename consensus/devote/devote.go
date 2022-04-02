@@ -61,6 +61,7 @@ var (
 	timeOfFirstBlock   = uint64(0)
 	confirmedBlockHead = []byte("confirmed-block-head")
 	uncleHash          = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+
 )
 
 var (
@@ -139,8 +140,9 @@ type Devote struct {
 	config *params.DevoteConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	signer     string          // master node nodeid
-	signFn     SignerFn        // signature function
+	signer     string   // master node nodeid
+	signFn     SignerFn // signature function
+	witnesses  []string
 	recents    *lru.ARCCache   // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache   // Signatures of recent blocks to speed up mining
 	proposals  map[string]bool // Current list of proposals we are pushing
@@ -148,6 +150,9 @@ type Devote struct {
 	confirmedBlockHeader        *types.Header
 	masternodeListFn            MasternodeListFn             //get current all masternodes
 	governanceContractAddressFn GetGovernanceContractAddress //get current GovernanceContractAddress
+
+
+	devoteDB *devotedb.DevoteDB
 
 	mu   sync.RWMutex
 	lock sync.RWMutex
@@ -271,10 +276,12 @@ func (d *Devote) Prepare(chain consensus.ChainReader, header *types.Header) erro
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward.  The devote consensus allowed uncle block .
 func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+	var PreSharding = big.NewInt(31180000)
+
 	// Select the correct block reward based on chain progression
 	blockReward := etherzeroBlockReward
 
-	// Accumulate the rewards for the Masternode and any included uncles
+	// Accumulate the rewards for the masternode and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward, header.Number)
 
@@ -282,20 +289,14 @@ func AccumulateRewards(govAddress common.Address, state *state.StateDB, header *
 	rewardForCommunity := new(big.Int).Set(rewardToCommunity)
 	state.AddBalance(govAddress, rewardForCommunity, header.Number)
 
-	if isForked(params.PreShardingBlockNumber, header.Number) {
+	if isForked(PreSharding, header.Number) {
 		//  Accumulate the rewards to pre-sharding account
 		reward = new(big.Int)
+		reward.SetString(rewardToSharding, 10)
 		reward, _ = reward.SetString(rewardToSharding, 10)
 		state.AddBalance(params.ShardingAddress, reward, header.Number)
 	}
-}
 
-// isForked returns whether a fork scheduled at block s is active at the given head block.
-func isForked(s, head *big.Int) bool {
-	if s == nil || head == nil {
-		return false
-	}
-	return s.Cmp(head) <= 0
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
@@ -322,21 +323,25 @@ func (d *Devote) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	if err != nil {
 		return nil, fmt.Errorf("get current gov address failed from contract, err:%s", err)
 	}
-
 	AccumulateRewards(govaddress, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	cycle := header.Time / params.Epoch
 	devoteDB.SetCycle(cycle)
 	snap := &Snapshot{config: d.config, devoteDB: devoteDB}
 	snap.TimeStamp = header.Time
-
+	d.devoteDB = devoteDB
 	if timeOfFirstBlock == 0 {
 		if firstBlockHeader := chain.GetHeaderByNumber(params.GenesisBlockNumber + 1); firstBlockHeader != nil {
 			timeOfFirstBlock = firstBlockHeader.Time
 		}
 	}
+	var nodes []string
 
-	nodes, err := d.masternodeListFn(stableBlockNumber)
+	if isForked(params.H0401BlockNumber, header.Number) {
+		nodes = params.StableMasternodes
+	} else {
+		nodes, err = d.masternodeListFn(stableBlockNumber)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("get current masternodes failed from contract, err:%s", err)
 	}
@@ -409,6 +414,9 @@ func (d *Devote) verifyHeader(chain consensus.ChainReader, header *types.Header,
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
+	//if parent.Time+params.Period > header.Time {
+	//	return ErrInvalidTimestamp
+	//}
 	return nil
 }
 
@@ -462,18 +470,28 @@ func (d *Devote) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		log.Error("devote consensus verifySeal failed", "err", err)
 		return err
 	}
-
-	currentcycle := parent.Time / params.Epoch
-	devoteDB.SetCycle(currentcycle)
 	snap := newSnapshot(d.config, devoteDB)
 	snap.sigcache = d.signatures
 
-	witness, err := snap.lookup(header.Time)
-	if err != nil {
-		return err
-	}
-	if err := d.verifyBlockSigner(witness, header); err != nil {
-		return err
+	if isForked(params.H0401BlockNumber,header.Number){
+		currentcycle := header.Time / params.Epoch
+		devoteDB.SetCycle(currentcycle)
+		for i := 0; i < len(params.StableMasternodes); i++ {
+			if params.StableMasternodes[i] == header.Witness {
+				return d.updateConfirmedBlockHeader(chain)
+			}
+		}
+		return fmt.Errorf("invalid block, witness not in stable masternodes: %s\n", header.Witness)
+	}else{
+		currentcycle := parent.Time / params.Epoch
+		devoteDB.SetCycle(currentcycle)
+		witness, err := snap.lookup(header.Time, parent)
+		if err != nil {
+			return err
+		}
+		if err := d.verifyBlockSigner(witness, header); err != nil {
+			return err
+		}
 	}
 	return d.updateConfirmedBlockHeader(chain)
 }
@@ -484,6 +502,7 @@ func (d *Devote) verifyBlockSigner(witness string, header *types.Header) error {
 		return err
 	}
 	if signer != witness {
+		log.Info("invalid block witness signer", "witness", witness, "signer", signer)
 		return fmt.Errorf("invalid block witness signer: %s,witness: %s\n", signer, witness)
 	}
 	if signer != header.Witness {
@@ -509,27 +528,43 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
 	}
-	devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
-	if err != nil || devoteDB == nil {
-		log.Error("CheckWitness Failed ", "BlockNumber", lastBlock.Number(), "err", err)
-		return err
-	}
-	currentCycle := lastBlock.Time() / params.Epoch
-	devoteDB.SetCycle(currentCycle)
-	snap := newSnapshot(d.config, devoteDB)
-	snap.sigcache = d.signatures
 
-	witness, err := snap.lookup(uint64(now))
+	/*
+		devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
+		if err != nil || devoteDB == nil {
+			log.Error("CheckWitness Failed ", "BlockNumber", lastBlock.Number(), "err", err)
+			return err
+		}
+		currentCycle := uint64(now) / params.Epoch
+		devoteDB.SetCycle(currentCycle)
+
+	*/
+	snap := newSnapshot(d.config, d.devoteDB)
+	snap.sigcache = d.signatures
+	log.Info("CheckWitness begin ", "uint64(now)", uint64(now))
+
+	witness, err := snap.lookup(uint64(now), lastBlock.Header())
 	if err != nil {
 		return err
 	}
-	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", currentCycle, "blockNumber", lastBlock.Number())
-	if (witness == "") || witness != d.signer {
-		return ErrInvalidBlockWitness
+	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", d.devoteDB.GetCycle(), "blockNumber", lastBlock.Number())
+	// === single ===
+	//if (witness == "") || witness != d.signer {
+	//	return ErrInvalidBlockWitness
+	//}
+	//logTime := time.Now().Format("[2006-01-02 15:04:05]")
+	//fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
+	//return nil
+	// === multil ===
+	for _, signer := range d.witnesses {
+		if witness == signer {
+			d.signer = signer
+			logTime := time.Now().Format("[2006-01-02 15:04:05]")
+			fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
+			return nil
+		}
 	}
-	logTime := time.Now().Format("[2006-01-02 15:04:05]")
-	fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
-	return nil
+	return ErrInvalidBlockWitness
 }
 
 // Seal generates a new block for the given input block with the local miner's
@@ -545,28 +580,32 @@ func (d *Devote) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	d.lock.RLock()
 	signer, signFn := d.signer, d.signFn
 	d.lock.RUnlock()
-	// Bail out if we're unauthorized to sign a block
-	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return nil, err
-	}
 
-	last := chain.CurrentHeader()
-	now := time.Now().Unix()
-	diff := now - int64(last.Time)
-	if diff > 30 {
-		snap.Recents = make(map[uint64]string)
-	}
-	singerMap := snap.Signers
-	// If we're amongst the recent signers, wait for the next block
-	for seen, recent := range snap.Recents {
-		if recent == signer {
-			// Signer is among recents, only wait if the current block doesn't shift it out
-			if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
-				return nil, nil
+	// Don't verify recent blocks
+	if !isForked(params.H0401BlockNumber,header.Number) {
+		// Bail out if we're unauthorized to sign a block
+		snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		last := chain.CurrentHeader()
+		now := time.Now().Unix()
+		diff := now - int64(last.Time)
+		if diff > 30 {
+			snap.Recents = make(map[uint64]string)
+		}
+		singerMap := snap.Signers
+		// If we're amongst the recent signers, wait for the next block
+		for seen, recent := range snap.Recents {
+			if recent == signer {
+				// Signer is among recents, only wait if the current block doesn't shift it out
+				if limit := uint64(len(singerMap)/2 + 1); number < limit || seen > number-limit {
+					log.Info("Signed recently, must wait for others, ", "signer", signer, "seen", seen, "number", number, "limit", limit)
+					return nil, nil
+				}
+				log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
 			}
-			log.Info("Passed Signed recently, ", "signer", signer, "seen", seen, "number", number, "limit", uint64(len(singerMap)/2+1))
 		}
 	}
 
@@ -697,6 +736,14 @@ func PrevSlot(now uint64) uint64 {
 
 func NextSlot(now uint64) uint64 {
 	return ((now + params.Period - 1) / params.Period) * params.Period
+}
+
+// isForked returns whether a fork scheduled at block s is active at the given head block.
+func isForked(s, head *big.Int) bool {
+	if s == nil || head == nil {
+		return false
+	}
+	return s.Cmp(head) <= 0
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
