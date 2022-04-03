@@ -527,7 +527,6 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 	if err := d.checkTime(lastBlock, uint64(now)); err != nil {
 		return err
 	}
-
 	snap := newSnapshot(d.config, d.devoteDB)
 	snap.sigcache = d.signatures
 	log.Info("CheckWitness begin ", "uint64(now)", uint64(now))
@@ -604,9 +603,9 @@ func (d *Devote) Authorize(signer string, signFn SignerFn) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.signer = signer
-	d.signFn = signFn
-	log.Info("devote Authorize ", "signer", signer)
+		d.signer = signer
+		d.signFn = signFn
+		log.Info("devote Authorize ", "signer", signer)
 }
 
 func (d *Devote) Masternodes(masternodeListFn MasternodeListFn) {

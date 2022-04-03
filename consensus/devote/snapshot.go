@@ -302,7 +302,7 @@ func (snap *Snapshot) lookup(now uint64, header *types.Header) (witness string, 
 	}
 	offset %= uint64(size)
 	witness = witnesses[offset]
-	log.Info("snapshot lookup getwitness", "cycle", cycle, "header.Number", header.Number, "witnesses", witnesses, "witness", witness)
+	log.Debug("snapshot lookup getwitness", "cycle", cycle, "header.Number", header.Number, "witnesses", witnesses, "witness", witness)
 	return
 }
 
