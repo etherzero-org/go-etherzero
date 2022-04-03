@@ -142,7 +142,6 @@ type Devote struct {
 
 	signer     string   // master node nodeid
 	signFn     SignerFn // signature function
-	witnesses  []string
 	recents    *lru.ARCCache   // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache   // Signatures of recent blocks to speed up mining
 	proposals  map[string]bool // Current list of proposals we are pushing
@@ -529,16 +528,6 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 
-	/*
-		devoteDB, err := devotedb.NewDevoteByProtocol(devotedb.NewDatabase(d.db), lastBlock.Header().Protocol)
-		if err != nil || devoteDB == nil {
-			log.Error("CheckWitness Failed ", "BlockNumber", lastBlock.Number(), "err", err)
-			return err
-		}
-		currentCycle := uint64(now) / params.Epoch
-		devoteDB.SetCycle(currentCycle)
-
-	*/
 	snap := newSnapshot(d.config, d.devoteDB)
 	snap.sigcache = d.signatures
 	log.Info("CheckWitness begin ", "uint64(now)", uint64(now))
@@ -548,23 +537,12 @@ func (d *Devote) CheckWitness(lastBlock *types.Block, now int64) error {
 		return err
 	}
 	log.Info("devote checkWitness lookup", " witness", witness, "signer", d.signer, "cycle", d.devoteDB.GetCycle(), "blockNumber", lastBlock.Number())
-	// === single ===
-	//if (witness == "") || witness != d.signer {
-	//	return ErrInvalidBlockWitness
-	//}
-	//logTime := time.Now().Format("[2006-01-02 15:04:05]")
-	//fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
-	//return nil
-	// === multil ===
-	for _, signer := range d.witnesses {
-		if witness == signer {
-			d.signer = signer
-			logTime := time.Now().Format("[2006-01-02 15:04:05]")
-			fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
-			return nil
-		}
+	if (witness == "") || witness != d.signer {
+		return ErrInvalidBlockWitness
 	}
-	return ErrInvalidBlockWitness
+	logTime := time.Now().Format("[2006-01-02 15:04:05]")
+	fmt.Printf("%s [CheckWitness] Found my witness(%s)\n", logTime, witness)
+	return nil
 }
 
 // Seal generates a new block for the given input block with the local miner's

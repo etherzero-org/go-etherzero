@@ -35,8 +35,7 @@ var (
 	ShardingAddress           = common.HexToAddress("0x4Cb5a4854622275dFE49C2B69fb4091aF05702a1")
 
 	GenesisBlockNumber = uint64(22613000)
-
-	PreShardingBlockNumber = big.NewInt(31180000)
+	PreShardingBlockNumber = big.NewInt(22613015)
 
 	Pre2ShardingBlockNumber = big.NewInt(35360000)
 
